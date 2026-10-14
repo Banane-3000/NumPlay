@@ -53,6 +53,7 @@ jobs:
           python3 tests/test_small_ram.py build/NumPlay.nwa
           make -C games/numblocks host test
           make -C games/championisland host test
+          make -C games/undertale host test
 
       - uses: actions/upload-artifact@v4
         with:

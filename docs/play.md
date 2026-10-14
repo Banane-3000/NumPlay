@@ -254,6 +254,24 @@ Every sport shows its rules and keys before it starts. Your progress is also cop
 
 <br clear="right">
 
+## Undertale
+
+<img src="media/undertale.gif" width="320" align="right" alt="Undertale: Flowey's friendliness pellets, Toriel's tile puzzle, Napstablook's tears and Toriel's fire">
+
+Undertale comes as its own app, `Undertale.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** (or 4, 6, 8, 2) | Walk, move your SOUL, choose |
+| **OK**, **EXE** or 5 | Talk, read, confirm (Z in the game) |
+| **Back** or **⌫** | Cancel, show the whole text at once (X in the game) |
+| **toolbox**, **shift** or **var** | The menu: ITEM, STAT, CELL (C in the game) |
+| **Home** | Keep the moment and quit |
+
+Name the fallen human, then walk and talk your way through the Ruins. In a battle, FIGHT attacks (press **OK** when the bar crosses the middle), ACT checks a monster or does something to it, ITEM eats, and MERCY spares a monster that no longer wants to fight, or flees. Then move your SOUL to dodge. Walk up to a star and press **OK** to SAVE. Home keeps the moment you were at, and the next start is back there. Your save is also copied into `undertale_saves.py`, so installing the app again doesn't erase it. For now the game ends at the door out of the Ruins.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">
