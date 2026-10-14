@@ -176,7 +176,6 @@ void flowey_battle_update(uint32_t keys, uint32_t pressed) {
 
 void flowey_battle_draw(void) {
   int st = bt.state[0];
-  gfx_sprite(SPR_BATTLEBG, 0, 0, 0, 0, 255);
   int fx = 160 + bt.state[3];
   if (st <= F_FIREBALL) {
     int e = bt.state[2];

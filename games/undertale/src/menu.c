@@ -358,6 +358,14 @@ void menu_gameover_open(void) {
   w.speed = 2;
 }
 
+/* ---------------------------------------------------------------- the end of what there is */
+void menu_end_open(void) {
+  g_mode = MODE_END;
+  t = 0;
+  writer_start(&w, "The RUINS are behind you.|The rest of the underground\nis still to come...", 52, 100, FONT_MAIN);
+  w.speed = 2;
+}
+
 /* ---------------------------------------------------------------- the frame */
 void menu_update(uint32_t keys, uint32_t pressed) {
   (void)keys;
@@ -398,8 +406,8 @@ void menu_update(uint32_t keys, uint32_t pressed) {
         if (pressed & K_Z) {
           if (sel == 0) st = S_NAME;
           else {
-            if (same_lower(name, "frisk")) set_flag(F_HARDMODE, 1);
             game_new(name);
+            if (same_lower(name, "frisk")) set_flag(F_HARDMODE, 1);
             st = S_FADEIN;
           }
         }
@@ -421,6 +429,9 @@ void menu_update(uint32_t keys, uint32_t pressed) {
       if (t > 40 && !writer_update(&w, pressed)) {
         if (!save_load()) game_new(sv.name);
       }
+      break;
+    case MODE_END:
+      if (t > 30 && !writer_update(&w, pressed)) menu_title_open();
       break;
   }
 }
@@ -495,6 +506,9 @@ void menu_draw(void) {
     case MODE_GAMEOVER:
       gfx_sprite(SPR_GAMEOVERBG, 0, 0, 0, 0, (uint8_t)min_i(255, t * 6));
       if (t > 40) writer_draw(&w, C_WHITE);
+      break;
+    case MODE_END:
+      if (t > 30) writer_draw(&w, C_WHITE);
       break;
   }
 }

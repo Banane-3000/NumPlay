@@ -42,6 +42,7 @@ typedef struct {
   uint8_t alpha;
   uint8_t name;              /* an ACTOR_* (scripts find it by it) */
   int16_t fx, fy;            /* fractions (1/16 pixel) for slow walks */
+  const char *text;          /* what a sign or a plain thing says */
 } Obj;
 extern Obj objs[MAX_OBJS];
 
@@ -66,9 +67,23 @@ bool world_walkable(int x, int y, int w, int h, int ignore);   /* a box on the m
 void world_camera(void);       /* follows Frisk, inside the room */
 Obj *obj_new(int kind, int x, int y);
 Obj *obj_find(int name);
+Obj *obj_get(int name);   /* obj_find, or a spare object when there is none (events can't crash on it) */
 void obj_clear_all(void);
+/* the room's things, made by rooms.c */
+Obj *obj_npc(int name, const uint16_t spr[4], int x, int y, int dir, int event);
+Obj *obj_toriel(int x, int y, int dir);
+Obj *obj_sign(int x, int y, int w, int h, const char *text);
+Obj *obj_save(int x, int y, const char *text);
+Obj *obj_deco(uint16_t spr, int x, int y, bool solid);
+Obj *obj_trigger(int x, int y, int w, int h, int event, int name);
+Obj *obj_spikes(int x, int y, int cols, int rows, bool raised, int name);
+void obj_spikes_set(Obj *o, bool raised);
+Obj *obj_rock(int x, int y, int name, int event);   /* pushed by walking into it; with an event, it talks */
+void obj_set_box(Obj *o, int bx, int by, int bw, int bh);
+bool near_frisk(const Obj *o, int d);      /* within d pixels (their feet) */
 /* the room fades out, then in: room changes in the middle */
 void world_fade_to(int room, int x, int y, int dir);
+void world_fade_hold(int room, int x, int y, int dir, int hold);   /* black for `hold` frames in the middle */
 bool world_fading(void);
 extern uint8_t g_fade;         /* 0 clear, 255 black: drawn over the room */
 #endif

@@ -59,6 +59,22 @@ SPRITES = [
     ("toriel_fight", "wiki:Toriel_battle_in_fight.png", {"feet": True}),
     ("toriel_dead", "wiki:Toriel_battle_fatal_Neutral.png", {"feet": True}),
 ] + [
+    # the Ruins' things, from the demo (their top-left at their origin, as the game places them)
+    (n.replace("spr_", "o_"), "demo:" + n, {"keep": True}) for n in [
+        "spr_ruinsdoor1", "spr_switch", "spr_groundswitch1", "spr_spiketile", "spr_rock", "spr_colorswitch",
+        "spr_faceswitch", "spr_dummy", "spr_exc", "spr_floweygrow", "spr_floweyshrink", "spr_floweysink",
+        "spr_floweylaughoverworld", "spr_toriel_handhold_d", "spr_toriel_handhold_u", "spr_toriel_handhold_l",
+        "spr_toriel_handhold_r", "spr_hole", "spr_smallweb", "spr_bigweb", "spr_napstablook_gr", "spr_napstablook_grsm",
+        "spr_napstablook_l", "spr_chairempty", "spr_chairiel", "spr_chairielgetup", "spr_candydish", "spr_candydish2",
+        "spr_candydish_bad", "spr_cheesetable", "spr_mousehole", "spr_npc_d", "spr_npc_u", "spr_npc_l", "spr_npc_r",
+        "spr_pillar", "spr_pieslice", "spr_bigpie", "spr_vegetableoutside", "spr_smallfrog", "spr_ribbon",
+        "spr_groundknife", "spr_torielflame", "spr_winkstar", "spr_tornote", "spr_diningtable", "spr_nastytree",
+        "spr_toriel_d_phone", "spr_toriel_dt", "spr_toriel_ut", "spr_toriel_lt", "spr_toriel_rt", "spr_toriel_hug",
+        "spr_toriel_ruffle"]
+] + [
+    ("frog_ow", "wiki:Froggit_overworld.png", {"keep": True}),
+    ("napsta_ow", "wiki:Napstablook_overworld.png", {"keep": True}),
+] + [
     # the intro's pictures, the title, GAME OVER
     ("introimage", "demo:spr_introimage", {"keep": True, "clear_black": True}),
     ("introlast", "demo:spr_introlast", {"keep": True, "clear_black": True}),

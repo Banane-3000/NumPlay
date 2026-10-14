@@ -50,6 +50,11 @@ enum {
   F_FIRST_FROGGIT,
   F_TORIEL_SNAIL,
   F_WHIMSUN_TALK,
+  F_CALL_HELLO, F_CALL_MOM, F_CALL_FLIRT,
+  F_NAPSTA_LIE,          /* Napstablook went away from the room under the one switch puzzle */
+  F_HOME_TOUR,           /* Toriel showed Frisk the house */
+  F_SNAIL_TALK,
+  F_BED_SLEPT,           /* 1 slept; 2 the pie taken */
   FLAG_COUNT = 256
 };
 #endif

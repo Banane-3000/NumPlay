@@ -23,7 +23,7 @@ static int prev_mode;
 
 enum {
   P_INTRO, P_MENU, P_TARGET, P_ACTS, P_ITEMS, P_MERCY, P_BAR, P_STRIKE, P_RESULT, P_TALK, P_BOX_IN, P_ATTACK,
-  P_BOX_OUT, P_WON, P_FLEE, P_DEATH, P_END
+  P_BOX_OUT, P_WON, P_FLEE, P_DEATH, P_END, P_GLARE
 };
 enum { B_FIGHT, B_ACT, B_ITEM, B_MERCY };
 
@@ -117,6 +117,17 @@ void battle_start(int form) {
 
 bool battle_over(void) { return over; }
 int battle_result(void) { return bt.result; }
+int battle_ui(void) {
+  switch (bt.phase) {
+    case P_MENU: return BUI_MENU;
+    case P_TARGET: return BUI_TARGET;
+    case P_ACTS: return BUI_ACTS;
+    case P_ITEMS: return BUI_ITEMS;
+    case P_MERCY: return BUI_MERCY;
+    case P_BAR: return BUI_BAR;
+    default: return BUI_NONE;
+  }
+}
 
 static void battle_end(int result) {
   bt.result = result;
@@ -174,6 +185,13 @@ static void strike_land(void) {
 
 /* ---------------------------------------------------------------- the turns */
 static void begin_menu(void) {
+  /* the first Froggit: Toriel comes and glares at it, and it leaves */
+  if (bt.form == FORM_FROGGIT_FIRST && bt.turn >= 1 && count_alive()) {
+    bt.phase = P_GLARE, bt.t = 0;
+    box_menu();
+    say("");
+    return;
+  }
   bt.phase = P_MENU;
   box_menu();
   say(flavor_text());
@@ -286,8 +304,6 @@ static void do_spare(void) {
 static void do_flee(void) {
   bool can = !bt.no_flee;
   bt.last_action = 4;
-  for (int i = 0; i < bt.nmon; i++)
-    if (bt.mon[i].alive && !bt.mon[i].gone && (bt.mon[i].def->flags & MF_BOSS)) can = false;
   if (!can) {
     after_player_turn();
     return;
@@ -521,6 +537,10 @@ void battle_update(uint32_t keys, uint32_t pressed) {
     case P_DEATH:
       if (bt.t >= 70) battle_end(BR_DIED);
       break;
+    case P_GLARE:
+      if (bt.t == 40) bt.mon[0].gone = true, bt.mon[0].fade = 1;
+      if (bt.t >= 80) win();
+      break;
   }
 }
 
@@ -710,6 +730,8 @@ void battle_draw(void) {
   }
   gfx_sprite(SPR_BATTLEBG, 0, 0, 0, 0, 255);
   for (int i = 0; i < bt.nmon; i++) draw_monster(&bt.mon[i], i);
+  if (bt.phase == P_GLARE || (bt.form == FORM_FROGGIT_FIRST && bt.phase == P_WON))
+    gfx_sprite(SPR_TORIEL_B, 0, 330 - min_i(bt.phase == P_GLARE ? bt.t : 30, 30) * 2, 120, 0, 255);
   /* the box */
   gfx_rect(bt.x0, bt.y0, bt.x1 - bt.x0, bt.y1 - bt.y0, C_WHITE, 255);
   gfx_rect(bt.x0 + 2, bt.y0 + 2, bt.x1 - bt.x0 - 4, bt.y1 - bt.y0 - 4, C_BLACK, 255);

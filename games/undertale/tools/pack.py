@@ -22,6 +22,7 @@ import struct
 import sys
 
 import numpy as np
+from scipy import ndimage
 from PIL import Image, ImageDraw, ImageFont, ImageSequence
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -260,13 +261,27 @@ class Area:
 
     def patch(self, p):
         """changes to the map, before rooms are cut from it: ('fill', x, y, w, h, (r, g, b)),
-        ('copy', sx, sy, w, h, dx, dy) or ('mirror', ...) the same, flipped left to right"""
+        ('copy', sx, sy, w, h, dx, dy) or ('mirror', ...) the same, flipped left to right, or ('erase', x, y, w, h,
+        [colours]): what isn't one of the colours takes the colour of the nearest pixel that is (a monster painted
+        on the floor)"""
         if p[0] == "fill":
             _, x, y, w, h, c = p
             self.idx[y:y + h, x:x + w] = self.color_index(c)
         elif p[0] == "copy":
             _, sx, sy, w, h, dx, dy = p
             self.idx[dy:dy + h, dx:dx + w] = self.idx[sy:sy + h, sx:sx + w].copy()
+        elif p[0] == "erase":
+            # the nearest pixel of the colours, looking a little around the rectangle (only it changes)
+            _, x, y, w, h, cols = p
+            m = 4
+            x0, y0 = max(0, x - m), max(0, y - m)
+            win = self.idx[y0:y + h + m, x0:x + w + m]
+            keep = np.isin(win, [i for i, k in enumerate(self.rgb) if k in [tuple(c) for c in cols]])
+            if not keep.any():
+                raise ValueError("erase %s: none of its colours there" % (p,))
+            _, (iy, ix) = ndimage.distance_transform_edt(~keep, return_indices=True)
+            filled = win[iy, ix]
+            self.idx[y:y + h, x:x + w] = filled[y - y0:y - y0 + h, x - x0:x - x0 + w]
         elif p[0] == "mirror":
             _, sx, sy, w, h, dx, dy = p
             self.idx[dy:dy + h, dx:dx + w] = self.idx[sy:sy + h, sx:sx + w][:, ::-1].copy()
@@ -294,6 +309,47 @@ def room_pixels(area, r):
     return out, sub, (xs0 - x, ys0 - y)
 
 
+def floor_mask(area, r, x0, y0, x1, y1):
+    """the pixels of a rectangle of the map in the room's floor colours"""
+    walk_idx = [i for c in area.spec["floor"] + r.get("floor_colors", []) for i, k in enumerate(area.rgb)
+                if k == tuple(c) and i != area.transparent]
+    return np.isin(area.idx[y0:y1, x0:x1], walk_idx)
+
+
+def apply_links(area, rooms):
+    """the links between rooms one above the other through a dark doorway, ("v", lower, upper, x, w, y): a door
+    each way between the lower room's floor under the doorway (x .. x + w, y in it) and the upper's above it, the
+    floor made walkable up to them. ("up", lower, x, w, y, to, (tx, ty)): a one-way door, up a chute"""
+    for link in R.LINKS:
+        lo = rooms.get(link[1])
+        if lo is None or lo["area"] != area.spec["name"]:
+            continue
+        x, w, yd = link[3:6] if link[0] == "v" else link[2:5]
+        cx = x + w // 2
+        lx, ly, lw, lh = lo["rect"]
+        col = floor_mask(area, lo, cx, yd, cx + 1, ly + lh)[:, 0]
+        if not col.any():
+            sys.exit("link %s: no floor under the doorway" % (link,))
+        ya = yd + int(np.argmax(col))           # the lower room's floor, where the doorway ends
+        if link[0] == "up":
+            # a chute is narrow: a little room either side to walk into it
+            to, (tx, ty) = link[5:7]
+            lo.setdefault("fix", []).append(("walk", x - 4, ya - 8, w + 8, 12))
+            lo.setdefault("doors", []).append(((x - 2, ya - 6, w + 4, 4), to, (tx, ty), "down"))
+            continue
+        lo.setdefault("fix", []).append(("walk", x, ya - 8, w, 12))
+        up = rooms[link[2]]
+        ux, uy, uw, uh = up["rect"]
+        col = floor_mask(area, up, cx, uy, cx + 1, min(uy + uh, yd))[:, 0]
+        if not col.any():
+            sys.exit("link %s: no floor above the doorway" % (link,))
+        yb = uy + len(col) - int(np.argmax(col[::-1]))   # the upper room's floor, where the doorway starts
+        up.setdefault("fix", []).append(("walk", x, yb - 4, w, 4))
+        lo.setdefault("doors", []).append(((x, ya - 6, w, 4), link[2], (cx - 10, yb - 34), "up"))
+        up.setdefault("doors", []).append(((x, yb - 2, w, 2), link[1], (cx - 10, ya - 12), "down"))
+        print("link: %s floor at %d, %s at %d" % (link[1], ya, link[2], yb))
+
+
 def collision(area, r):
     """4-pixel cells over the room: walkable where the floor's colours fill at least half the cell and
     inside one of its floor rectangles (all of it if it has none), then its own fixes"""
@@ -305,22 +361,36 @@ def collision(area, r):
         for i, k in enumerate(area.rgb):
             if k == tuple(c) and i != area.transparent:
                 walk_idx.add(i)
-    sub = np.zeros((ch * 4, cw * 4), bool)
-    xs0, ys0, xs1, ys1 = max(x, 0), max(y, 0), min(x + w, W), min(y + h, H)
-    m = np.isin(area.idx[ys0:ys1, xs0:xs1], list(walk_idx))
-    sub[ys0 - y:ys1 - y, xs0 - x:xs1 - x] = m
-    cells = sub.reshape(ch, 4, cw, 4).mean(axis=(1, 3)) >= 0.5
-    # walls drawn in the floor's colours give themselves away by their lines: a cell is floor only with no
-    # other colour within `margin` pixels of it
+    # the map's pixels over the cells, and `margin` more around (what's beyond the room's edge counts too)
     margin = r.get("margin", area.spec.get("margin", 0))
+    X0, Y0, X1, Y1 = x - margin, y - margin, x + cw * 4 + margin, y + ch * 4 + margin
+    big = np.zeros((Y1 - Y0, X1 - X0), bool)
+    xs0, ys0, xs1, ys1 = max(X0, 0), max(Y0, 0), min(X1, W), min(Y1, H)
+    big[ys0 - Y0:ys1 - Y0, xs0 - X0:xs1 - X0] = np.isin(area.idx[ys0:ys1, xs0:xs1], list(walk_idx))
+    sub = big[margin:margin + ch * 4, margin:margin + cw * 4]
+    cells = sub.reshape(ch, 4, cw, 4).mean(axis=(1, 3)) >= 0.5
+    # piles of leaves are floor, outline and all
+    soft = area.spec.get("piles")
+    pile_big = np.zeros_like(big)
+    if soft:
+        win = np.zeros(big.shape, area.idx.dtype)
+        win[ys0 - Y0:ys1 - Y0, xs0 - X0:xs1 - X0] = area.idx[ys0:ys1, xs0:xs1]
+        pile = np.isin(win, [i for i, k in enumerate(area.rgb) if k in [tuple(c) for c in soft]])
+        lab, n = ndimage.label(ndimage.binary_dilation(pile, iterations=3))
+        for sl in ndimage.find_objects(lab):
+            if (sl[0].stop - sl[0].start) * (sl[1].stop - sl[1].start) >= 16:
+                pile_big[sl] = True
+    # walls drawn in the floor's colours give themselves away by their lines: a cell is floor only with no
+    # other colour within `margin` pixels of it (a pile's leaves don't count)
     if margin:
-        other = ~sub
-        pad = np.pad(other, margin, constant_values=False)
-        near = np.zeros_like(other)
+        other = ~big & ~pile_big
+        near = np.zeros_like(sub)
         for dy in range(2 * margin + 1):
             for dx in range(2 * margin + 1):
-                near |= pad[dy:dy + other.shape[0], dx:dx + other.shape[1]]
+                near |= other[dy:dy + sub.shape[0], dx:dx + sub.shape[1]]
         cells &= ~near.reshape(ch, 4, cw, 4).any(axis=(1, 3))
+    piles = pile_big[margin:margin + ch * 4, margin:margin + cw * 4]
+    cells |= piles.reshape(ch, 4, cw, 4).mean(axis=(1, 3)) >= 0.5
     if r.get("floor_rects"):
         keep = np.zeros_like(cells)
         for fx, fy, fw, fh in r["floor_rects"]:
@@ -440,6 +510,7 @@ def main():
     for ai, aspec in enumerate(R.AREAS):
         area = Area(ref, aspec)
         defines.append(("AREA_" + aspec["name"].upper(), ai))
+        apply_links(area, {r["name"]: r for r in R.ROOMS})
         for r in R.ROOMS:
             if r["area"] != aspec["name"]:
                 continue

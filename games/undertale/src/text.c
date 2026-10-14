@@ -257,8 +257,8 @@ void text_set_top(int top) { box_top = top; }
 
 void text_open(int face, const char *s) {
   box_face = face;
-  int tx = face ? 76 : 22;
-  wrap_width = face ? 300 - tx - 6 : 300 - tx - 8;
+  int tx = face ? 68 : 22;
+  wrap_width = face ? 301 - tx : 300 - tx - 8;
   box_at_top = box_top >= 0 ? box_top : (pl.y + 15 - cam_y > 130);
   writer_start(&box, s, tx, (box_at_top ? 5 : 160) + 11, FONT_MAIN);
   box_open = true;
@@ -272,11 +272,36 @@ void text_openf(int face, const char *fmt, ...) {
   text_open(face, fmt_buf);
 }
 
+static const char *const *menu_opts;
+static int menu_n, menu_sel, menu_cols;   /* long options: one a row */
+void text_open_menu(const char *const *opts, int n) {
+  menu_opts = opts, menu_n = n, menu_sel = 0, menu_cols = 2;
+  for (int i = 0; i < n; i++)
+    if (strlen(opts[i]) > 15) menu_cols = 1;
+  box_face = FACE_NONE;
+  box_at_top = box_top >= 0 ? box_top : (pl.y + 15 - cam_y > 130);
+  box_open = true;
+  box.finished = true;
+}
+
 bool text_active(void) { return box_open; }
 int text_choice(void) { return last_choice; }
+int text_menu_sel(void) { return box_open && menu_opts ? menu_sel : box_open && box.choices && box.done ? 100 + box.choice : -1; }
 
 void text_update(uint32_t pressed) {
   if (!box_open) return;
+  if (menu_opts) {
+    int k = menu_cols;
+    if (pressed & K_UP && menu_sel >= k) menu_sel -= k;
+    if (pressed & K_DOWN && menu_sel + k < menu_n) menu_sel += k;
+    if (k == 2 && pressed & K_LEFT && menu_sel % 2) menu_sel--;
+    if (k == 2 && pressed & K_RIGHT && !(menu_sel % 2) && menu_sel + 1 < menu_n) menu_sel++;
+    if (pressed & (K_Z | K_X)) {
+      last_choice = pressed & K_Z ? menu_sel : -1;
+      menu_opts = NULL, box_open = false;
+    }
+    return;
+  }
   int ch = box.choice;
   bool had = box.choices && box.done;
   if (!writer_update(&box, pressed)) {
@@ -294,8 +319,16 @@ void text_draw(void) {
     int e = box.face_expr < faces[box_face].n ? box.face_expr : 0;
     const Expr *x = &faces[box_face].e[e];
     int fr = writer_talking(&box) ? (box.shown / 2) & 1 : 0;
-    if (box_face == FACE_TORIEL) gfx_sprite(SPR_FACE_TORIELBODY, 0, 26, y + 13 + 32, 0, 255);
-    gfx_sprite(x->spr, fr, 26 + x->x, y + 13 + x->y, 0, 255);
+    if (box_face == FACE_TORIEL) gfx_sprite(SPR_FACE_TORIELBODY, 0, 22, y + 13 + 32, 0, 255);
+    gfx_sprite(x->spr, fr, 22 + x->x, y + 13 + x->y, 0, 255);
+  }
+  if (menu_opts) {
+    for (int i = 0; i < menu_n; i++) {
+      int x = 46 + (i % menu_cols) * 136, ty = y + 12 + (i / menu_cols) * 18;
+      gfx_text(FONT_MAIN, x, ty, menu_opts[i], C_WHITE, 255);
+      if (i == menu_sel) gfx_sprite(SPR_HEART, 0, x - 12, ty + 6, 0, 255);
+    }
+    return;
   }
   writer_draw(&box, C_WHITE);
 }

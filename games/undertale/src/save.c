@@ -130,6 +130,7 @@ static bool read_file(const char *name, Save *s) {
 }
 
 bool save_write(void) { return write_file(SAVE_NAME, &sv); }
+bool save_write_auto(void) { return write_file(SAVE_NAME, &sv); }
 bool save_exists(void) {
   Save s;
   return read_file(SAVE_NAME, &s);

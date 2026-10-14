@@ -33,12 +33,125 @@ static int nholds;
 #include "../src/event.h"
 #include "../src/text.h"
 static char path_buf[65536];
+extern bool g_no_encounters;
 static char *path_at;
 static int path_wait, path_stuck, path_last_x, path_last_y, path_room = -1;
+
+/* ---------------------------------------------------------------- "go:x,y": a way there (Frisk's top-left
+ * on a 4-pixel grid, over the floor and around the solid things), found once, then walked */
+#define GO_R 400                      /* cells each way: 1600 pixels */
+#define GO_N (2 * GO_R + 1)
+static int16_t go_wp[512][2];
+static int go_n, go_i;
+static bool go_free(int x, int y) { return world_walkable(x + 3, y + 20, 14, 9, -1); }
+static bool go_plan(int tx, int ty) {
+  static int16_t prev[GO_N * GO_N];
+  static int queue[GO_N * GO_N];
+  int ox = pl.x, oy = pl.y;
+  for (int i = 0; i < GO_N * GO_N; i++) prev[i] = -2;
+  int s = GO_R * GO_N + GO_R, qh = 0, qt = 0, best = s, bestd = 1 << 30;
+  prev[s] = -1, queue[qt++] = s;
+  while (qh < qt) {
+    int c = queue[qh++], cx = c % GO_N - GO_R, cy = c / GO_N - GO_R;
+    int d = abs(ox + cx * 4 - tx) + abs(oy + cy * 4 - ty);
+    if (d < bestd) bestd = d, best = c;
+    if (d <= 3) break;
+    static const int dx[4] = {1, -1, 0, 0}, dy[4] = {0, 0, 1, -1};
+    for (int k = 0; k < 4; k++) {
+      int nx = cx + dx[k], ny = cy + dy[k];
+      if (nx < -GO_R || nx > GO_R || ny < -GO_R || ny > GO_R) continue;
+      int n = (ny + GO_R) * GO_N + nx + GO_R;
+      if (prev[n] != -2 || !go_free(ox + nx * 4, oy + ny * 4)) continue;
+      prev[n] = (int16_t)k, queue[qt++] = n;
+    }
+  }
+  /* back from the end, a waypoint where the way turns */
+  int16_t rev[GO_N * 2][2];
+  int nr = 0, c = best, last = -1;
+  while (prev[c] >= 0 && nr < GO_N * 2) {
+    int k = prev[c], cx = c % GO_N - GO_R, cy = c / GO_N - GO_R;
+    if (k != last) rev[nr][0] = (int16_t)(ox + cx * 4), rev[nr][1] = (int16_t)(oy + cy * 4), nr++, last = k;
+    static const int dx[4] = {1, -1, 0, 0}, dy[4] = {0, 0, 1, -1};
+    c = (cy - dy[k] + GO_R) * GO_N + cx - dx[k] + GO_R;
+  }
+  go_n = 0;
+  for (int i = nr - 1; i >= 0 && go_n < 512; i--) go_wp[go_n][0] = rev[i][0], go_wp[go_n][1] = rev[i][1], go_n++;
+  if (nr && go_n < 512) {
+    /* (the last turn's waypoint is where the turn starts: the end too) */
+    int ex = ox + (best % GO_N - GO_R) * 4, ey = oy + (best / GO_N - GO_R) * 4;
+    go_wp[go_n][0] = (int16_t)ex, go_wp[go_n][1] = (int16_t)ey, go_n++;
+  }
+  go_i = 0;
+  if (bestd > 3) fprintf(stderr, "go: no way to %d,%d, as near as %d px\n", tx, ty, bestd);
+  if (getenv("GO_DEBUG"))
+    for (int i = 0; i < go_n; i++) fprintf(stderr, "go %d: %d,%d\n", i, go_wp[i][0], go_wp[i][1]);
+  return go_n > 0;
+}
 
 /* the keys the path holds this frame (0: it's done or waiting) */
 static uint32_t path_keys(int f) {
   if (!path_at || !*path_at) return 0;
+  /* a battle or a choice that came on the way to a point: the step after it is for it, if it says so */
+  {
+    char *e = strchr(path_at, ';');
+    if (e) {
+      const char *n = e + 1;
+      bool nb = !strncmp(n, "fight", 5) || !strncmp(n, "spare", 5) || !strncmp(n, "bt", 2) || !strncmp(n, "act:", 4) ||
+                !strncmp(n, "flee", 4);
+      bool hb = !strncmp(path_at, "fight", 5) || !strncmp(path_at, "spare", 5) || !strncmp(path_at, "bt", 2) ||
+                !strncmp(path_at, "act:", 4) || !strncmp(path_at, "flee", 4) || !strncmp(path_at, "pick:", 5);
+      if (!hb && ((g_mode == MODE_BATTLE && nb) || (g_mode == MODE_WORLD && text_menu_sel() >= 0 && !strncmp(n, "pick:", 5))))
+        path_at = e + 1;
+    }
+  }
+  /* "pick:N": the option N of the next list or choice */
+  if (!strncmp(path_at, "pick:", 5) && g_mode == MODE_WORLD) {
+    int n = atoi(path_at + 5), sel = text_menu_sel();
+    if (f & 1) return 0;
+    if (sel < 0) return text_active() ? K_Z : 0;
+    if (sel >= 100) sel -= 100;
+    if (sel == n) {
+      char *e = strchr(path_at, ';');
+      path_at = e ? e + 1 : path_at + strlen(path_at);
+      return K_Z;
+    }
+    return sel < n ? (text_menu_sel() >= 100 ? K_RIGHT : K_DOWN) : (text_menu_sel() >= 100 ? K_LEFT : K_UP);
+  }
+  /* a text in the way: read on (Z every other frame) */
+  if (g_mode == MODE_WORLD && text_active()) return (f & 1) ? K_Z : 0;
+  /* in a battle: "fight" FIGHTs, "spare" spares, "act:N" picks the ACT N (1: the first after Check) each turn,
+   * "bt" (a scripted battle) reads on; Z on whatever else comes (the bar, the texts). A battle the path didn't
+   * expect: Frisk flees it */
+  bool btok = !strncmp(path_at, "fight", 5) || !strncmp(path_at, "spare", 5) || !strncmp(path_at, "bt", 2) ||
+              !strncmp(path_at, "act:", 4) || !strncmp(path_at, "flee", 4);
+  static int idle;
+  if (g_mode == MODE_BATTLE) {
+    idle = 0;
+    if (battle_over()) return 0;
+    if (f & 1) return 0;
+    if (bt.scripted) return K_Z;   /* (Flowey's: read on) */
+    int want = !btok || !strncmp(path_at, "flee", 4) || !strncmp(path_at, "spare", 5) ? 3 : !strncmp(path_at, "act:", 4) ? 1 : 0;
+    int mercy = (!btok || !strncmp(path_at, "flee", 4)) && !bt.no_flee ? 1 : 0;
+    switch (battle_ui()) {
+      case BUI_MENU: return bt.button < want ? K_RIGHT : bt.button > want ? K_LEFT : K_Z;
+      case BUI_ACTS: {
+        int n = atoi(path_at + 4);
+        return bt.act + 2 <= n ? K_DOWN : bt.act < n ? K_RIGHT : bt.act - 2 >= n ? K_UP : bt.act > n ? K_LEFT : K_Z;
+      }
+      case BUI_MERCY: return bt.mercy < mercy ? K_DOWN : bt.mercy > mercy ? K_UP : K_Z;
+      case BUI_BAR: return abs(bt.bar_x / FX - 140) < 8 ? K_Z : 0;   /* (the middle: the best hit) */
+      default: return K_Z;
+    }
+  }
+  if (btok) {
+    /* (it waits for the battle: done when the world has been quiet a while) */
+    if (g_mode == MODE_WORLD && !event_blocking() && !text_active() && ++idle > 30) {
+      char *e = strchr(path_at, ';');
+      path_at = e ? e + 1 : path_at + strlen(path_at);
+      idle = 0;
+    }
+    return (f & 1) ? K_Z : 0;
+  }
   if (path_wait > 0) {
     path_wait--;
     return 0;
@@ -53,25 +166,65 @@ static uint32_t path_keys(int f) {
     path_wait = 1;
     return tok[0] == 'z' ? K_Z : tok[0] == 'x' ? K_X : K_C;
   }
+  /* u d l r: a key's press (to face something) */
+  if (!tok[1] && strchr("udlr", tok[0])) {
+    path_at = next;
+    path_wait = 1;
+    return tok[0] == 'u' ? K_UP : tok[0] == 'd' ? K_DOWN : tok[0] == 'l' ? K_LEFT : K_RIGHT;
+  }
   if (tok[0] == 'w') {
     path_wait = atoi(tok + 1);
     path_at = next;
     return 0;
   }
   if (!strcmp(tok, "talk")) {
-    if (!text_active() && !event_running() && g_mode == MODE_WORLD && !world_fading()) {
+    if (!text_active() && !event_blocking() && g_mode == MODE_WORLD && !world_fading()) {
       path_at = next;
       return 0;
     }
     return (f & 1) ? K_Z : 0;
+  }
+  if (!strncmp(tok, "go:", 3)) {
+    static char *planned;
+    if (g_mode != MODE_WORLD || text_active() || event_blocking() || world_fading()) return 0;
+    int gx, gy;
+    sscanf(tok + 3, "%d,%d", &gx, &gy);
+    static int planned_room;
+    if (planned != path_at || planned_room != g_room) {
+      planned = path_at, planned_room = g_room;
+      if (!go_plan(gx, gy)) {
+        path_at = next, planned = NULL;
+        return 0;
+      }
+    }
+    while (go_i < go_n && abs(go_wp[go_i][0] - pl.x) <= 1 && abs(go_wp[go_i][1] - pl.y) <= 1) go_i++;
+    /* (a waypoint on the axis it's walking: it may step over it by a pixel or two) */
+    if (go_i >= go_n) {
+      path_at = next, planned = NULL;
+      return 0;
+    }
+    if (pl.x == path_last_x && pl.y == path_last_y) {
+      if (++path_stuck > 30) {
+        planned = NULL, path_stuck = 0;   /* (something moved in the way: plan again) */
+        return 0;
+      }
+    } else
+      path_stuck = 0;
+    path_last_x = pl.x, path_last_y = pl.y;
+    /* one axis at a time, as the way was found */
+    int ddx = go_wp[go_i][0] - pl.x, ddy = go_wp[go_i][1] - pl.y;
+    if (abs(ddx) > 1) return ddx > 0 ? K_RIGHT : K_LEFT;
+    return ddy > 0 ? K_DOWN : K_UP;
   }
   int x, y;
   if (sscanf(tok, "%d,%d", &x, &y) != 2) {
     path_at = next;
     return 0;
   }
-  if (g_mode != MODE_WORLD || text_active() || event_running() || world_fading()) return 0;
-  /* a door took him to another room: that point is reached */
+  if (g_mode != MODE_WORLD || text_active() || event_blocking() || world_fading()) return 0;
+  /* a door took him to another room on the way to this point: it is reached */
+  static char *room_step;
+  if (room_step != path_at) room_step = path_at, path_room = g_room;
   if (path_room >= 0 && g_room != path_room) {
     path_room = g_room;
     path_at = next;
@@ -127,11 +280,29 @@ int main(int argc, char **argv) {
   int frames = 120, room = -1, ax = 0, ay = 0, battle = -1;
   const char *name = NULL;
   int nflags = 0, fl[64][2];
-  bool trace = false, coll = false;
+  bool trace = false, coll = false, god = false;
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "--frames") && i + 1 < argc) frames = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--keys") && i + 1 < argc) parse_keys(argv[++i]);
     else if (!strcmp(argv[i], "--path") && i + 1 < argc) snprintf(path_buf, sizeof path_buf, "%s", argv[++i]), path_at = path_buf;
+    else if (!strcmp(argv[i], "--path-file") && i + 1 < argc) {
+      /* a path one step a line; # starts a comment */
+      FILE *pf = fopen(argv[++i], "r");
+      if (!pf) fprintf(stderr, "no %s\n", argv[i]), exit(2);
+      char line[256];
+      size_t n = 0;
+      while (fgets(line, sizeof line, pf)) {
+        char *h = strchr(line, '#');
+        if (h) *h = 0;
+        char *a = line, *e = line + strlen(line);
+        while (*a == ' ' || *a == '\t') a++;
+        while (e > a && (e[-1] == '\n' || e[-1] == '\r' || e[-1] == ' ' || e[-1] == '\t')) *--e = 0;
+        if (!*a) continue;
+        n += (size_t)snprintf(path_buf + n, sizeof path_buf - n, "%s%s", n ? ";" : "", a);
+      }
+      fclose(pf);
+      path_at = path_buf;
+    }
     else if (!strcmp(argv[i], "--shots") && i + 1 < argc) shots = argv[++i];
     else if (!strcmp(argv[i], "--out") && i + 1 < argc) out = argv[++i];
     else if (!strcmp(argv[i], "--saves") && i + 1 < argc) saves = argv[++i];
@@ -143,6 +314,8 @@ int main(int argc, char **argv) {
       sscanf(argv[++i], "%d=%d", &fl[nflags][0], &fl[nflags][1]);
       nflags++;
     } else if (!strcmp(argv[i], "--trace")) trace = true;
+    else if (!strcmp(argv[i], "--noenc")) g_no_encounters = true;
+    else if (!strcmp(argv[i], "--god")) god = true;
     else if (!strcmp(argv[i], "--coll")) coll = true;
     else fprintf(stderr, "unknown option %s\n", argv[i]), exit(2);
   }
@@ -154,8 +327,10 @@ int main(int argc, char **argv) {
   host_save_dir(saves);
   ut_bin = ut_data;
   game_init();
-  if (room >= 0 || name) {
+  if (room >= 0 || name || battle >= 0) {
     game_new(name ? name : "Frisk");
+    for (int i = 0; i < nflags; i++) set_flag(fl[i][0], fl[i][1]);   /* (before the room is set up) */
+    if (room < 0 && battle >= 0) room = 0;   /* (a battle comes back to a room) */
     if (room >= 0) {
       if (!ax && !ay) {
         RoomInfo ri;
@@ -174,10 +349,11 @@ int main(int argc, char **argv) {
       if (f >= holds[i].a && f <= holds[i].b) k |= holds[i].k;
     if (!k) k = path_keys(f);
     host_keys = k;
+    if (god && g_mode == MODE_BATTLE && sv.hp < sv.maxhp) sv.hp = sv.maxhp;   /* (--god: the SOUL can't be hurt) */
     host_time += 33;
     game_frame(k);
     game_draw();
-    if (trace) printf("%d mode %d room %d frisk %d,%d cam %d,%d hp %d\n", f, g_mode, g_room, pl.x, pl.y, cam_x, cam_y, sv.hp);
+    if (trace) printf("%d mode %d room %d frisk %d,%d cam %d,%d hp %d ui %d btn %d keys %x path %.12s\n", f, g_mode, g_room, pl.x, pl.y, cam_x, cam_y, sv.hp, battle_ui(), bt.button, k, path_at ? path_at : "");
     char want[16];
     snprintf(want, sizeof want, "%d", f);
     bool shoot = all;
@@ -211,5 +387,12 @@ int main(int argc, char **argv) {
     }
   }
   if (gfx_dropped) printf("dropped %d draw commands\n", gfx_dropped);
+  printf("END mode %d room %d at %d,%d hp %d lv %d gold %d kills %d path %s\nFLAGS", g_mode, g_room, pl.x, pl.y, sv.hp,
+         sv.lv, sv.gold, sv.kills, path_at && *path_at ? "left" : "done");
+  for (int i = 0; i < FLAG_COUNT; i++)
+    if (sv.flags[i]) printf(" %d=%d", i, sv.flags[i]);
+  printf("\nITEMS");
+  for (int i = 0; i < NUM_ITEMS; i++) printf(" %d", sv.items[i]);
+  printf("\n");
   return 0;
 }

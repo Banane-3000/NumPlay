@@ -320,7 +320,8 @@ int form_setup(int form, Battle *b) {
     m->def = mon_def(f->mon[i]);
     m->x = (int16_t)(xs[f->n - 1][i] + m->def->dx), m->y = (int16_t)(120 + m->def->dy);
   }
-  if (form == FORM_NAPSTABLOOK || form == FORM_TORIEL || form == FORM_FLOWEY) b->no_flee = form == FORM_FLOWEY;
+  /* Toriel and Flowey can't be fled from; Napstablook can */
+  if (form == FORM_TORIEL || form == FORM_FLOWEY) b->no_flee = true;
   return 0;
 }
 const char *form_text(int form) { return forms[form].text; }

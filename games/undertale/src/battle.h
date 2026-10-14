@@ -139,6 +139,9 @@ extern Bullet bullets[MAX_BULLETS];
 void battle_start(int form);
 bool battle_over(void);
 int battle_result(void);
+/* what the battle waits for (for the tests): a button, a target, an ACT, an item, MERCY's choice or nothing */
+enum { BUI_NONE, BUI_MENU, BUI_TARGET, BUI_ACTS, BUI_ITEMS, BUI_MERCY, BUI_BAR };
+int battle_ui(void);
 void battle_update(uint32_t keys, uint32_t pressed);
 void battle_draw(void);
 

@@ -236,6 +236,12 @@ static void tor_falter(int t) {
 }
 
 void toriel_attack(int atk, int t) {
+  /* a SOUL down to 2 HP: she stops at once */
+  if (atk != ATK_TOR_FALTER && sv.hp <= 2) {
+    bullets_clear();
+    bt.atk_t = bt.atk_len;
+    return;
+  }
   switch (atk) {
     case ATK_TOR_HANDS: tor_hands(t); break;
     case ATK_TOR_WAVES: tor_waves(t); break;

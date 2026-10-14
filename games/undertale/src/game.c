@@ -1,4 +1,5 @@
 /* The game's state, its modes and its frame (game.h). */
+#include <stdio.h>
 #include <string.h>
 #include "battle.h"
 #include "event.h"
@@ -68,8 +69,10 @@ int item_count(void) {
 
 /* ---------------------------------------------------------------- a new game */
 void game_new(const char *name) {
+  char n[sizeof sv.name];
+  snprintf(n, sizeof n, "%s", name);   /* (it can be sv.name) */
   memset(&sv, 0, sizeof sv);
-  strncpy(sv.name, name, sizeof sv.name - 1);
+  memcpy(sv.name, n, sizeof n);
   memcpy(g_name, sv.name, sizeof g_name);
   sv.lv = 1, sv.maxhp = sv.hp = 20, sv.at = (uint8_t)lv_at(1), sv.df = (uint8_t)lv_df(1);
   sv.weapon = ITEM_STICK, sv.armor = ITEM_BANDAGE;

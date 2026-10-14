@@ -5,6 +5,7 @@
 #include "game.h"
 void save_restore_copy(void);
 bool save_write(void);
+bool save_write_auto(void);   /* the game's own SAVE at certain moments (sv's room and place set) */
 bool save_exists(void);
 bool save_load(void);
 bool save_peek(Save *s);   /* the SAVE's facts, without loading it */
