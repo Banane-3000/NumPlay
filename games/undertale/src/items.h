@@ -1,0 +1,35 @@
+/* Undertale: items (the game's ids are kept where it has them, for the record). */
+#ifndef UT_ITEMS_H
+#define UT_ITEMS_H
+#include <stdint.h>
+
+enum {
+  ITEM_NONE,
+  ITEM_MONSTER_CANDY,
+  ITEM_STICK,
+  ITEM_BANDAGE,
+  ITEM_SPIDER_DONUT,
+  ITEM_SPIDER_CIDER,
+  ITEM_BUTTERSCOTCH_PIE,
+  ITEM_SNAIL_PIE,
+  ITEM_FADED_RIBBON,
+  ITEM_TOY_KNIFE,
+  ITEM_COUNT
+};
+enum { IT_FOOD, IT_WEAPON, IT_ARMOR, IT_SPECIAL };
+
+typedef struct {
+  const char *name;        /* in the menu */
+  const char *short_name;  /* in battle, 9 letters at most */
+  uint8_t type;
+  int16_t heal;            /* HP, 999 all of it */
+  uint8_t at, df;
+  const char *info;        /* what Info says after its name */
+  const char *use;         /* what eating it says (before the HP) */
+  uint16_t sell;
+} ItemInfo;
+const ItemInfo *item_info(int id);
+/* uses the item in slot (the inventory's): fills `out` with what to say; in battle or not */
+void item_use(int slot, char *out, int cap, int in_battle);
+void item_info_text(int id, char *out, int cap);
+#endif
