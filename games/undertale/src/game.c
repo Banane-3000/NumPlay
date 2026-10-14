@@ -79,7 +79,8 @@ void game_new(const char *name) {
 
 void game_init(void) {
   save_restore_copy();
-  menu_title_open();
+  /* back where Home left it, or the intro */
+  if (!save_resume_load()) menu_title_open();
 }
 
 void game_open_menu(void) { menu_open(); }

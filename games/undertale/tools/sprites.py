@@ -20,7 +20,50 @@ SPRITES = [
     ("toriel_r", "demo:spr_toriel_r", {"origin": (0, 0), "keep": True}),
     ("savepoint", "demo:spr_savepoint", {"origin": (0, 0), "keep": True}),
     ("flowey", "demo:spr_flowey", {"origin": (0, 0), "keep": True}),
-    ("heart", "demo:spr_heart", {"center": True, "keep": True}),
+    # the SOUL, 8 x 8 as the game's 16 x 16 halved; frame 1: blue
+    ("heart", "demo2:spr_heart", {"center": True, "keep": True}),
+] + [
+    # the battle: its buttons (orange, then yellow when chosen), the FIGHT target and its bar, the slash, the HP label
+    (n, "demo2:spr_" + n, {"keep": True}) for n in [
+        "fightbt", "talkbt", "itembt", "sparebt", "target", "targetchoice", "hpname", "battlebg"]
+] + [
+    ("strike", "demo2:spr_strike", {"center": True, "keep": True}),
+    ("heartbreak", "demo2:spr_heartbreak", {"center": True, "keep": True}),
+    ("heartshards", "demo2:spr_heartshards", {"center": True, "keep": True}),
+    ("heartgtfo", "demo2:spr_heartgtfo", {"center": True, "keep": True}),
+] + [
+    # bullets, their middle at their origin
+    (n, "demo2:spr_" + n, {"center": True}) for n in [
+        "flybullet", "smallfrogbullet", "butterflybllt", "bulletmd", "bulletsm", "circlebulletmd1", "circlebulletsm",
+        "vegbullet", "carrotbullet", "roachbullet", "roachdance", "teardrop", "firebullet", "handbullet", "spinbullet",
+        "streambullet", "dirbullet", "bulletgenmd"]
+] + [
+    # the monsters, from the wiki (the game's battle sprites, halved); their origin at their feet
+    ("dummy_b", "wiki:Dummy_battle.png", {"feet": True}),
+    ("froggit_b", "wiki:Froggit_battle_idle.gif", {"feet": True, "dedupe": True, "every": 2}),
+    ("froggit_hurt", "wiki:Froggit_battle_hurt.png", {"feet": True}),
+    ("whimsun_b", "wiki:Whimsun_battle_idle.gif", {"feet": True, "dedupe": True, "every": 4}),
+    ("whimsun_hurt", "wiki:Whimsun_battle_hurt.png", {"feet": True}),
+    ("moldsmal_b", "wiki:Moldsmal_battle.gif", {"feet": True, "dedupe": True, "every": 4}),
+    ("loox_b", "wiki:Loox_battle_idle.gif", {"feet": True, "dedupe": True}),
+    ("loox_hurt", "wiki:Loox_battle_hurt.png", {"feet": True}),
+    ("vegetoid_b", "wiki:Vegetoid_battle_idle.gif", {"feet": True, "dedupe": True}),
+    ("vegetoid_hurt", "wiki:Vegetoid_battle_hurt.png", {"feet": True}),
+    ("migosp_b", "wiki:Migosp_battle_idle.gif", {"feet": True, "dedupe": True, "every": 2}),
+    ("migosp_hurt", "wiki:Migosp_battle_hurt.png", {"feet": True}),
+    ("napstablook_b", "wiki:Napstablook_battle_idle.gif", {"feet": True, "dedupe": True}),
+    ("napsta_hat", "demo:spr_blookhat", {"feet": True}),
+    ("toriel_b", "wiki:Toriel_battle.png", {"feet": True}),
+    ("toriel_hurt", "wiki:Toriel_battle_hurt.png", {"feet": True}),
+    ("toriel_away", "wiki:Toriel_battle_shocked.png", {"feet": True}),
+    ("toriel_fight", "wiki:Toriel_battle_in_fight.png", {"feet": True}),
+    ("toriel_dead", "wiki:Toriel_battle_fatal_Neutral.png", {"feet": True}),
+] + [
+    # the intro's pictures, the title, GAME OVER
+    ("introimage", "demo:spr_introimage", {"keep": True, "clear_black": True}),
+    ("introlast", "demo:spr_introlast", {"keep": True, "clear_black": True}),
+    ("undertaletitle", "demo:spr_undertaletitle", {"clear_black": True}),
+    ("gameoverbg", "demo2:spr_gameoverbg", {"clear_black": True}),
 ] + [
     # faces in the dialogue box (the demo's: a head, and Toriel's shoulders under it); 2 frames: talking
     ("face_" + n, "demo:spr_face_" + n, {"keep": True}) for n in [
@@ -38,6 +81,8 @@ SPRITES = [
 FONTS = [
     # the dialogue's font: Pixel Operator Mono Bold, 8 pixels a letter
     dict(name="main", ttf="PixelOperatorMono-Bold.ttf", size=16, height=12, advance=8, ascent=13),
+    # the menus' text: Pixel Operator Bold
+    dict(name="menu", ttf="PixelOperator-Bold.ttf", size=16, height=12, ascent=13),
     # small text (the menu's numbers)
     dict(name="small", ttf="PixelOperator8.ttf", size=8, height=8, ascent=8),
 ]

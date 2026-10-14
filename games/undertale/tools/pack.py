@@ -137,10 +137,32 @@ def halve(img):
     return Image.fromarray(b.astype(np.uint8), "RGBA")
 
 
+def shrink(img):
+    """art drawn for the original's 640 x 480 battle -> half its size: each 2 x 2 block becomes its most common
+    opaque colour (or clear, if most of it is)"""
+    a = np.array(img.convert("RGBA"))
+    h, w = a.shape[:2]
+    a = np.pad(a, ((0, h % 2), (0, w % 2), (0, 0)))
+    H, W = a.shape[0] // 2, a.shape[1] // 2
+    out = np.zeros((H, W, 4), np.uint8)
+    for y in range(H):
+        for x in range(W):
+            block = a[2 * y:2 * y + 2, 2 * x:2 * x + 2].reshape(4, 4)
+            op = block[block[:, 3] >= 128]
+            if len(op) < 2:
+                continue
+            cols, counts = np.unique(op[:, :3], axis=0, return_counts=True)
+            # ties: the darker colour keeps outlines
+            best = sorted(zip(counts, [-int(c.sum()) for c in cols], range(len(cols))))[-1][2]
+            out[y, x, :3] = cols[best]
+            out[y, x, 3] = 255
+    return Image.fromarray(out, "RGBA")
+
+
 def load_frames(ref, src):
     """'demo:spr_name' (all its numbered frames), 'wiki:File.png' or .gif (all frames, halved), 'png:path'"""
     kind, name = src.split(":", 1)
-    if kind == "demo":
+    if kind in ("demo", "demo2"):
         d = os.path.join(ref, "demo", "mac", "sprites")
         out, k = [], 0
         while os.path.exists(os.path.join(d, "%s %d.png" % (name, k))):
@@ -148,7 +170,7 @@ def load_frames(ref, src):
             k += 1
         if not out:
             raise FileNotFoundError(src)
-        return out
+        return [shrink(f) for f in out] if kind == "demo2" else out
     if kind == "demobg":
         return [Image.open(os.path.join(ref, "demo", "mac", "bgs", name + ".png")).convert("RGBA")]
     if kind in ("wiki", "wiki1"):
@@ -160,6 +182,9 @@ def load_frames(ref, src):
         return frames
     if kind == "png":
         return [Image.open(os.path.join(HERE, name)).convert("RGBA")]
+    if kind == "wiki2":   # a wiki file of the 640 x 480 battle, at the game's size: halved
+        im = Image.open(os.path.join(ref, "wiki", "sprites", name))
+        return [shrink(fr.convert("RGBA")) for fr in ImageSequence.Iterator(im)]
     raise ValueError(src)
 
 
@@ -374,6 +399,21 @@ def main():
         imgs = []
         for s in (src if isinstance(src, list) else [src]):
             imgs += load_frames(ref, s)
+        if opts.get("clear_black"):   # drawn over black anyway: its black is clear, and costs nothing
+            out = []
+            for im in imgs:
+                a = np.array(im)
+                a[(a[:, :, 0] < 8) & (a[:, :, 1] < 8) & (a[:, :, 2] < 8)] = 0
+                out.append(Image.fromarray(a, "RGBA"))
+            imgs = out
+        if opts.get("dedupe"):   # GIFs repeat a frame for its duration: once each
+            out = []
+            for im in imgs:
+                if not out or im.tobytes() != out[-1].tobytes():
+                    out.append(im)
+            imgs = out
+        if "every" in opts:
+            imgs = imgs[::opts["every"]]
         if "frames" in opts:
             imgs = [imgs[i] for i in opts["frames"]]
         if "scale" in opts:
