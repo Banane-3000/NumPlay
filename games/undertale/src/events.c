@@ -47,19 +47,19 @@ static int ev_phone(Ev *c) {
     case 0:
       set_flag(F_CALL_HELLO, flag(F_CALL_HELLO) + 1);
       if (flag(F_CALL_HELLO) == 1)
-        SAY(FACE_TORIEL, "`0* This is TORIEL.|* You only wanted to say\n  hello...?\n* Well then.|`2* 'Hello!'|`0* I hope that suffices.\n* Hee hee.");
+        SAY(FACE_TORIEL, "`0* TORIEL here.|* Just saying hello?|`2* Well, hello to you too!");
       else if (flag(F_CALL_HELLO) == 2)
         SAY(FACE_TORIEL, "`0* This is TORIEL.|* You want to say hello again?|`2* 'Salutations!'|`0* Is that enough?");
       else if (flag(F_CALL_HELLO) == 3)
-        SAY(FACE_TORIEL, "`0* This is TORIEL.|`1* Are you bored?\n* I should have given a book\n  to you.|* My apologies.|`0* Why not use your imagination\n  to divert yourself?|* Pretend you are...\n* A monarch!|`2* Rule over the leaf pile with\n  a fist of iron.|`0* Can you do that for me?");
+        SAY(FACE_TORIEL, "`0* TORIEL here.|`1* Bored? I should have\n  left you a book.|`0* Pretend to be royalty!|`2* Rule the leaf pile!");
       else
-        SAY(FACE_TORIEL, "`0* This is TORIEL.|* Hello, my child.|`1* Sorry, I do not have much to\n  say.|`0* It was nice to hear your\n  voice, though.");
+        SAY(FACE_TORIEL, "`0* TORIEL here.|`1* I have little to say...|`0* But it is nice to hear\n  from you.");
       break;
     case 1:
-      SAY(FACE_TORIEL, "`0* This is TORIEL.|* Help with a puzzle...?|`1* Um, you have not left the\n  room, have you?|`0* Wait patiently for me and we\n  can solve it together!");
+      SAY(FACE_TORIEL, "`0* TORIEL here.|* A puzzle?|`1* Please wait for me; we\n  can solve it together.");
       break;
     case 2:
-      SAY(FACE_TORIEL, "`0* This is TORIEL.|* You want to know more about\n  me?|`1* Well, I am afraid there is\n  not much to say.|`2* I am just a silly little lady\n  who worries too much!");
+      SAY(FACE_TORIEL, "`0* TORIEL here.|* About me?|`2* Oh, there is not much to\n  tell. I worry a lot!");
       break;
     case 3:
       set_flag(F_CALL_MOM, 1);
@@ -68,7 +68,7 @@ static int ev_phone(Ev *c) {
     case 4:
       set_flag(F_CALL_FLIRT, flag(F_CALL_FLIRT) + 1);
       if (flag(F_CALL_FLIRT) == 1)
-        SAY(FACE_TORIEL, "`3* ... huh???|`8* Oh, heh.. heh...\n* Ha ha ha!|`2* How adorable...\n* I could pinch your cheek!|`0* You can certainly find better\n  than an old woman like me.");
+        SAY(FACE_TORIEL, "`3* ...oh?|`8* Ha ha ha!|`2* How sweet of you.|`0* But you can do better than\n  an old lady like me.");
       else if (flag(F_CALL_MOM))
         SAY(FACE_TORIEL, "`3* Oh dear, are you serious...?|* And after you said you want\n  to call me \"mother...\"|`1* You are an... ...\n  \"interesting\" child.");
       else

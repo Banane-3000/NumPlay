@@ -126,7 +126,7 @@ void snow2_setup(int room, int from) {
   switch (room) {
     case ROOM_SPAGHETTI:
       obj_save(6745, 695, "* (Knowing the mouse might one day find a way to heat up the spaghetti...)\n* (It fills you with determination.)");
-      obj_sign(6690, 658, 16, 20, "* HUMAN!! PLEASE ENJOY THIS SPAGHETTI.|* (LITTLE DO YOU KNOW, THIS SPAGHETTI IS A TRAP...)\n* (DESIGNED TO ENTICE YOU!!!)|* (YOU'LL BE SO BUSY EATING IT...)\n* (THAT YOU WON'T REALIZE THAT YOU AREN'T PROGRESSING!!)|* (THOROUGHLY JAPED AGAIN BY THE GREAT PAPYRUS!!!)\n* NYEH HEH HEH, PAPYRUS");
+      obj_sign(6690, 658, 16, 20, "* (A note by the spaghetti.)|* ENJOY, HUMAN! (IT'S A TRAP: YOU'LL BE TOO BUSY EATING TO MOVE ON!)\n* - PAPYRUS");
       obj_sign(6734, 646, 38, 34, "* (It's a plate of frozen spaghetti.)\n* (It's so cold, it's stuck to the table.)");
       obj_sign(6788, 644, 38, 36, "* (It's a microwave.)\n* (Its only setting is \"spaghetti.\")\n* (It's unplugged.)");
       obj_sign(6742, 585, 18, 14, "* (Squeak!)");

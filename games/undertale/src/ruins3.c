@@ -107,7 +107,7 @@ void ruins3_setup(int room, int from) {
 static int ev_home_tour(Ev *c) {
   EV_BEGIN;
   WAIT_UNTIL(!world_fading());
-  SAY(FACE_TORIEL, "`0* Do you smell that?|`2* Surprise!|* It is a butterscotch-\n  cinnamon pie.|`0* I thought we might\n  celebrate your arrival.|* I want you to have a nice\n  time living here.|* So I will hold off on snail\n  pie for tonight.|`2* Here, I have another\n  surprise for you.");
+  SAY(FACE_TORIEL, "`0* Smell that?|`2* Surprise! A butterscotch-\n  cinnamon pie, for you!|`0* No snail pie tonight.|`2* And one more surprise...");
   WALK(obj_get(ACTOR_TORIEL), 8996, 2840, 3);
   WALK(obj_get(ACTOR_TORIEL), 9200, 2840, 3);
   obj_get(ACTOR_TORIEL)->kind = OBJ_NONE;
@@ -137,8 +137,8 @@ static int ev_toriel_chair(Ev *c) {
   CHOOSE(chair_opts, 2);
   if (CHOSEN() < 0) return 1;
   if (CHOSEN() == 0) {
-    SAY(FACE_TORIEL, "`3* What?|`1* This...^2 this IS your home\n  now.|`0* Um...^2 would you like to hear\n  about this book I am reading?|* It is called \"72 Uses for\n  Snails.\"|* How about it?@Yes@No");
-    if (CHOICE() == 0) SAY(FACE_TORIEL, "`2* Here is an exciting snail\n  fact.|`0* Did you know that snails\n  have a chainsaw-like tongue\n  called a radula?");
+    SAY(FACE_TORIEL, "`3* What?|`1* This is your home now.|`0* Would you like to hear about\n  my book on snails instead?@Yes@No");
+    if (CHOICE() == 0) SAY(FACE_TORIEL, "`2* A snail fact!|`0* Snails have a tongue like a\n  tiny saw.");
     else SAY(FACE_TORIEL, "`0* Oh...^2 Alright.");
     return 1;
   }
@@ -168,7 +168,7 @@ static int ev_stairs(Ev *c) {
     return 1;
   }
   if (!flag(F_HOME_TOUR)) return 1;
-  SAY(FACE_TORIEL, "`1* Oh, my child...|`0* There is nothing down there\n  for you.|* Come, let us go upstairs.");
+  SAY(FACE_TORIEL, "`1* My child...|`0* There is nothing for you\n  down there.|* Let us go back upstairs.");
   PL_WALK(pl.x + 14, pl.y + 14, 2);
   EV_END;
 }
@@ -189,10 +189,10 @@ static int ev_basement_talk(Ev *c) {
   obj_get(ACTOR_TORIEL)->dir = DIR_LEFT;
   switch (flag(F_BASEMENT_TALK)) {
     case 0:
-      SAY(FACE_TORIEL, "`0* You wish to know how to\n  return \"home,\" do you not?|* Ahead of us lies the end of\n  the RUINS.|* A one-way exit to the rest\n  of the underground.|`6* I am going to destroy it.|* No one will ever be able to\n  leave again.|`0* Now be a good child and go\n  upstairs.");
+      SAY(FACE_TORIEL, "`0* You want to go \"home\".|* The exit from the RUINS is\n  just ahead.|`6* I will seal it, so no one\n  can leave.|`0* Go upstairs, please.");
       break;
     case 1:
-      SAY(FACE_TORIEL, "`6* Every human that falls down\n  here meets the same fate.|* I have seen it again and\n  again.|* They come.|* They leave.|* They die.|* You naive child...|* If you leave the RUINS...|* They...^2 #RASGORE#X...^2 will kill\n  you.|* I am only protecting you,\n  do you understand?|* ...^2 Go to your room.");
+      SAY(FACE_TORIEL, "`6* Every human who falls here\n  leaves... and is never\n  seen again.|* Out there, #RASGORE#X will\n  take your life.|* I am keeping you safe.|* ...Go to your room.");
       break;
     default:
       obj_get(ACTOR_TORIEL)->dir = DIR_DOWN;
@@ -223,14 +223,14 @@ static int ev_basement_talk(Ev *c) {
 static int ev_toriel_door(Ev *c) {
   EV_BEGIN;
   if (c->self) c->self->kind = OBJ_NONE;
-  SAY(FACE_TORIEL, "`6* You want to leave so\n  badly?|* Hmph.|* You are just like the\n  others.|* There is only one solution\n  to this.|* Prove yourself...|* Prove to me you are strong\n  enough to survive.");
+  SAY(FACE_TORIEL, "`6* So you insist on leaving.|* Like all the others.|* Then show me you are\n  strong enough to survive.");
   BATTLE(FORM_TORIEL);
   if (flag(F_TORIEL_FIGHT) != 1) {
     obj_get(ACTOR_TORIEL)->kind = OBJ_NONE;
     if (!flag(F_TORIEL_FIGHT)) set_flag(F_TORIEL_FIGHT, battle_result() == BR_FLED ? 1 : 2);
     return 1;
   }
-  SAY(FACE_TORIEL, "`1* ...|* I understand.|* You would just be unhappy\n  trapped down here.|* The RUINS are very small\n  once you get used to them.|* It would not be right for\n  you to grow up in a place\n  like this.|* My expectations...|* My loneliness...|* My fear...|`0* For you, my child...|* I will put them aside.");
+  SAY(FACE_TORIEL, "`1* ...|* I see.|* You would not be happy\n  here.|* This small place is no\n  home for you to grow up in.|`0* My worries can wait.\n* For you, my child.");
   /* she holds Frisk */
   PL_WALK(10010, 2040, 2);
   pl.hidden = true;
@@ -239,7 +239,7 @@ static int ev_toriel_door(Ev *c) {
   WAIT(70);
   pl.hidden = false;
   obj_get(ACTOR_TORIEL)->spr[0] = SPR_TORIEL_D, obj_get(ACTOR_TORIEL)->y = 1984;
-  SAY(FACE_TORIEL, "`1* If you truly wish to leave\n  the RUINS...|* I will not stop you.|* However, when you leave...|* Please do not come back.|`0* I hope you understand.");
+  SAY(FACE_TORIEL, "`1* If you must leave...|* I will not stop you.|* But please do not come\n  back.|`0* I hope you understand.");
   WAIT(20);
   SAY(FACE_TORIEL, "`0* Goodbye, my child.");
   obj_get(ACTOR_TORIEL)->flags &= (uint16_t)~OF_SOLID;
@@ -250,23 +250,21 @@ static int ev_toriel_door(Ev *c) {
 }
 
 static const char flowey_spared[] =
-  "`1* Clever.^2 Verrrryy clever.|* You think you're really\n  smart, don't you?|"
-  "`0* In this world, it's KILL\n  or BE killed.|* So you were able to play by\n  your own rules.|"
-  "* You spared the life of a\n  single person.|`2* Hee hee hee...|* I bet you feel really\n  great.|"
-  "`1* You didn't kill anybody\n  this time.|* But what will you do if you\n  meet a relentless killer?|"
-  "`3* You'll die and you'll die\n  and you'll die.|* Until you tire of trying.|* What will you do then?|"
-  "* Will you kill out of\n  frustration?|* Or will you give up\n  entirely, and let ME take\n  your place?|";
+  "`1* Well, well. Aren't you\n  clever.|"
+  "`0* Down here it's kill or be\n  killed... and you spared\n  her anyway.|`2* Proud of yourself? Hee hee.|"
+  "`1* But what happens when you\n  meet someone who won't stop?|"
+  "`3* Over and over, until you're\n  sick of it.|* Then what? Will you fight\n  back... or let ME take over?|";
 static const char flowey_killed[] =
-  "`1* Clever.^2 Verrrryy clever.|* You think you're really\n  smart, don't you?|"
-  "`0* In this world, it's KILL\n  or BE killed.|`2* So you did kill her.|* Hee hee hee...|"
-  "`3* You really are a quick\n  learner.|";
+  "`1* Well, well. Aren't you\n  clever.|"
+  "`0* Kill or be killed, right?\n`2* And you chose. Hee hee.|"
+  "`3* You learn fast.|";
 static const char flowey_others[] =
-  "`1* Clever.^2 Verrrryy clever.|* You think you're really\n  smart, don't you?|"
-  "`0* In this world, it's KILL\n  or BE killed.|* You spared her...|"
-  "`2* ...but you killed everyone\n  else on the way.|* Hee hee hee...|";
+  "`1* Well, well. Aren't you\n  clever.|"
+  "`0* You spared her...|"
+  "`2* ...after everyone you hurt\n  on the way here. Hee hee.|";
 static const char flowey_last[] =
-  "`8* I am the prince of this\n  world's future.|`1* Don't worry, my little\n  monkey...|"
-  "* I won't interfere with your\n  little quest.|`2* Have fun?^4 Have fun...|`8* Ha ha ha...";
+  "`8* This world's future is\n  mine to decide.|`1* Go on, then.|"
+  "* I won't get in your way.|`2* Have fun...|`8* Ha ha ha...";
 
 static int ev_flowey_end(Ev *c) {
   EV_BEGIN;

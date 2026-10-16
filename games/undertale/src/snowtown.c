@@ -55,7 +55,7 @@ void town_setup(int room, int from) {
           if (s) s->event = EV_GRILLBYS, s->flags |= OF_TALK;
         }
       }
-      folk(1099, 1093, "* Yo! You're a kid too, right?\n* I can tell 'cause you're wearing a striped shirt.|* I'm going to see Undyne fight someday.\n* She's the coolest!");
+      folk(1099, 1093, "* Hey, another kid!|* Someday I'll watch Undyne\n  fight. She's the best!");
       break;
     case ROOM_TOWNNORTH:
       folk(1463, 851, "* The kids are playing \"monsters and humans.\"\n* Ah, to be young again...");
@@ -91,12 +91,12 @@ void town_setup(int room, int from) {
       }
       break;
     case ROOM_LIBRARY:
-      obj_sign(1830, 506, 30, 40, "* Monster funerals, technically speaking, are cool as heck.|* When monsters get old and kick the bucket, they turn into dust.\n* At funerals, we take that dust and spread it on that person's favorite thing.|* Then their essence will live on in that thing...\n* Uhhh, am I at the page minimum yet? I'm kinda sick of writing this.");
-      obj_sign(1874, 506, 30, 40, "* While monsters are mostly made of magic, human beings are mostly made of water.|* Humans, with their physical forms, are far stronger than us.\n* But they will never know the joy of expressing themselves through magic.|* They will never get a bullet-pattern birthday card...");
+      obj_sign(1830, 506, 30, 40, "* (A book about monster funerals.)|* (When a monster passes, its dust is spread on what it loved most.)\n* (The writer seems eager to reach the page count.)");
+      obj_sign(1874, 506, 30, 40, "* (A book comparing humans and monsters.)|* (Humans are sturdier... but they can't send a birthday card made of bullets.)");
       obj_sign(1918, 506, 30, 40, "* (Here I am... Writing this book.)\n* (A person comes in and picks up the book...)\n* (They start reading it...!)");
-      obj_sign(1962, 506, 30, 40, "* Because they are made of magic, monsters' bodies are attuned to their SOUL.|* If a monster doesn't want to fight, its defenses will weaken.\n* And the crueller the intentions of our enemies, the more their attacks will hurt us.|* Therefore, if a being with a powerful SOUL struck with the desire to kill...\n* Um, let's end the chapter here...");
-      obj_sign(2006, 506, 30, 40, "* Fearing the humans no longer, we moved out of our old city, HOME.|* We braved harsh cold, damp swampland, and searing heat...\n* Until we reached what we now call our capital.|* \"NEW HOME.\"\n* Again, our King is really bad at names...?");
-      obj_sign(2050, 506, 30, 40, "* Love, hope, compassion...\n* This is what people say monster SOULs are made of.|* But the absolute nature of the \"SOUL\" is unknown.\n* After all, humans have proven their SOULs don't need these things to exist.");
+      obj_sign(1962, 506, 30, 40, "* (A book about magic and the SOUL.)|* (A monster who won't fight grows weaker... and cruel intent hurts them most.)\n* (The chapter stops there.)");
+      obj_sign(2006, 506, 30, 40, "* (A history book. Monsters left their first city and crossed cold, swamp and heat.)|* (They named the new capital \"New Home.\" The book sighs about the King's naming.)");
+      obj_sign(2050, 506, 30, 40, "* (A book on what a SOUL is made of.)|* (Nobody knows for sure.)");
       folk(1896, 640, "* Yes, the sign outside says \"Librarby.\"\n* We made a typo when we were making it.");
       folk(2031, 655, flag(F_WORDSEARCH) == 2 ? "* I can see it in your eyes...\n* You think Junior Jumble is harder." : "* I can see it in your eyes...\n* You think crosswords are harder.");
       folk(2002, 589, "* There's no news around here, so the newspaper is mostly comics and puzzles.");
@@ -118,9 +118,9 @@ void town_setup(int room, int from) {
       obj_sign(2560, 600, 40, 40, "* (It's dark... A trash tornado swirls in the corner.)");
       break;
     case ROOM_SHED:
-      obj_sign(2650, 770, 30, 20, flag(F_PAP_CAPTURED) <= 1 ? "* SORRY, I HAVE TO LOCK YOU IN THE GUEST ROOM UNTIL UNDYNE ARRIVES.\n* FEEL FREE TO MAKE YOURSELF AT HOME!!!|* REFRESHMENTS AND ACCOMODATIONS HAVE BEEN PROVIDED.\n* - NYEHFULLY YOURS, PAPYRUS"
-                                                    : flag(F_PAP_CAPTURED) == 2 ? "* PLEASE ASK BEFORE YOU ESCAPE!!!\n* WHEN YOU WENT MISSING, I GOT WORRIED SICK!!!\n* - SLIGHTLY BONETROUSLED, PAPYRUS"
-                                                                                : "* IF YOU'RE JUST LOOKING FOR A PLACE TO STAY...\n* JUST ASK!!! YOU DON'T NEED TO FIGHT ME!!!\n* - YOUR HOST, PAPYRUS");
+      obj_sign(2650, 770, 30, 20, flag(F_PAP_CAPTURED) <= 1 ? "* (A note.)\n* SORRY ABOUT THE LOCK! UNDYNE IS ON HER WAY. MAKE YOURSELF COMFY!!!\n* - PAPYRUS"
+                                                    : flag(F_PAP_CAPTURED) == 2 ? "* (A note.)\n* NEXT TIME, ASK BEFORE ESCAPING! I WAS WORRIED!!!\n* - PAPYRUS"
+                                                                                : "* (A note.)\n* YOU CAN JUST STAY OVER, YOU KNOW! NO FIGHTING NEEDED!!!\n* - PAPYRUS");
       obj_sign(2680, 820, 40, 30, "* (A dog bed. It's warm.)");
       break;
     case ROOM_FOGROOM:

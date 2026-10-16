@@ -11,7 +11,7 @@
 /* ---------------------------------------------------------------- the ACTs */
 static void act_dummy(Battle *b, Monster *m, int act, char *t, int cap) {
   (void)b;
-  snprintf(t, (size_t)cap, "* You talk to the DUMMY.\n* ...|* It doesn't seem much for\n  conversation.|* TORIEL seems happy with you.");
+  snprintf(t, (size_t)cap, "* You chat with the DUMMY.\n* It doesn't answer.|* TORIEL looks pleased.");
   m->gone = true, m->fade = 1;
   set_flag(F_DUMMY, 1);
 }
@@ -59,7 +59,7 @@ static const char *flavor_whimsun(Battle *b, Monster *m) { return m->state ? "* 
 static int attack_whimsun(Battle *b, Monster *m) { return rnd_n(2) ? ATK_WHIM_RING : ATK_WHIM_COLS; }
 
 static void act_moldsmal(Battle *b, Monster *m, int act, char *t, int cap) {
-  if (act == 0) snprintf(t, (size_t)cap, "* You lie immobile with\n  Moldsmal.\n* You feel like you understand\n  the world a little better.");
+  if (act == 0) snprintf(t, (size_t)cap, "* You lie still beside\n  Moldsmal.\n* It feels peaceful.");
   else snprintf(t, (size_t)cap, "* You wiggle your hips.\n* Moldsmal wiggles back.\n* What a meaningful conversation!");
   m->spare_gold = 1;
   (void)b;
@@ -175,7 +175,7 @@ static void act_napsta(Battle *b, Monster *m, int act, char *t, int cap) {
 }
 static const char *talk_napsta(Battle *b, Monster *m) {
   if (b->state[2] == 3)
-    return "umm... you do\nknow you cant\nkill ghosts,\nright?|we're sorta\nincorporeal\nand all|i was just\nlowering my\nhp because i\ndidnt want to\nbe rude|sorry... i\njust made\nthis more\nawkward...|pretend you\nbeat me...|oooooooooo";
+    return "oh... i'm a\nghost, you\nknow|i just\nlowered my hp\nto be polite|sorry... that\nwas awkward|let's say you\nwon...";
   if (b->state[2] == 1) return "oh gee...";
   if (b->state[2] == 2) return "oh no...";
   if (b->state[3]) { b->state[3] = 0; return "i knew it..."; }

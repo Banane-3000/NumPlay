@@ -127,7 +127,7 @@ void snow1_setup(int room, int from) {
     }
     case ROOM_BOXROAD:
       obj_save(3240, 376, "* (The convenience of that lamp still fills you with determination.)");
-      obj_sign(3420, 334, 20, 22, "* (This is a box.)|* (You can put an item inside or take an item out.)|* (The same box will appear later, so don't worry about coming back.)|* (Sincerely, a box lover.)");
+      obj_sign(3420, 334, 20, 22, "* (A box. Put an item in, take one out.)|* (Boxes further on hold the same things.)");
       {
         Obj *b = obj_trigger(3444, 334, 26, 24, EV_BOX, ACTOR_ITEM);
         if (b) b->flags = OF_TALK | OF_SOLID;
@@ -139,7 +139,7 @@ void snow1_setup(int room, int from) {
       break;
     }
     case ROOM_PAPSENTRY:
-      obj_sign(3966, 296, 52, 64, "* YOU OBSERVE THE WELL-CRAFTED SENTRY STATION.|* WHO COULD HAVE BUILT THIS, YOU PONDER...|* I BET IT WAS THAT VERY FAMOUS ROYAL GUARDSMAN!|* (NOTE: NOT YET A VERY FAMOUS ROYAL GUARDSMAN.)");
+      obj_sign(3966, 296, 52, 64, "* (A sentry station, built with great care.)|* (A note brags it was made by a future Royal Guard.)");
       if (!flag(F_PAP_SENTRY)) {
         obj_sans(3616, 414, DIR_RIGHT);
         obj_papyrus(3660, 414, DIR_LEFT);
@@ -193,7 +193,7 @@ void snow1_setup(int room, int from) {
       break;
     }
     case ROOM_DOGI:
-      obj_sign(6426, 310, 24, 24, "* SMELL DANGER RATING|* Snow Smell - Snowman\n  WHITE Rating\n  Can become #YYELLOW#X Rating|* Unsuspicious Smell - Puppy\n  #BBLUE#X Rating\n  Smell of rolling around.|* Weird Smell - Humans\n  #GGREEN#X Rating\n  Destroy at all costs!");
+      obj_sign(6426, 310, 24, 24, "* (A chart of smells and how dangerous they are.)|* (Snowmen: harmless. Puppies: fine.)\n* (Humans: #GDANGER!#X)");
       break;
     case ROOM_WORDSEARCH:
       obj_sign(6434, 648, 18, 18, "* (It's a word search.)\n* (The top row says GIASFCLFUBREHBER.)");

@@ -158,7 +158,7 @@ static int ev_ruins2_toriel(Ev *c) {
   if (c->self) c->self->kind = OBJ_NONE;
   if (!t) return 1;
   t->dir = DIR_DOWN;
-  SAY(FACE_TORIEL, "`0* Welcome to your new\n  home, innocent one.|* Allow me to educate you in\n  the operation of the RUINS.");
+  SAY(FACE_TORIEL, "`0* Welcome to your new\n  home, little one.|* Let me show you how things\n  work in the RUINS.");
   /* over the switches, not the middle road */
   WALK(t, 534, 4952, 2);
   WALK(t, 534, 4898, 2);
@@ -184,7 +184,7 @@ static int ev_ruins2_toriel(Ev *c) {
   }
   WAIT(15);
   t->dir = DIR_DOWN;
-  SAY(FACE_TORIEL, "`0* The RUINS are full of\n  puzzles.|* Ancient fusions between\n  diversions and doorkeys.|* One must solve them to move\n  from room to room.|* Please adjust yourself to\n  the sight of them.");
+  SAY(FACE_TORIEL, "`0* The RUINS are full of\n  puzzles that open the way.|* Solve each one to reach\n  the next room.");
   set_flag(F_RUINS2_DONE, 1);
   WALK(t, 484, 4900, 2);
   WALK(t, 484, 4840, 2);
@@ -197,7 +197,7 @@ static int ev_ruins3_toriel(Ev *c) {
   EV_BEGIN;
   if (c->self) c->self->kind = OBJ_NONE;
   if (!t) return 1;
-  SAY(FACE_TORIEL, "`0* To make progress here, you\n  will need to trigger several\n  switches.|* Do not worry, I have\n  labelled the ones that you\n  need to flip.");
+  SAY(FACE_TORIEL, "`0* Here you must flip some\n  switches.|* I marked the right ones\n  for you.");
   WALK(t, 560, 4716, 3);
   WALK(t, 990, 4716, 3);
   t->dir = DIR_LEFT;
@@ -212,7 +212,7 @@ static int ev_ruins3_switch(Ev *c) {
     return 1;
   }
   if (k == 2 && !flag(F_RUINS3_DONE) && obj_find(ACTOR_TORIEL)) {
-    SAY(FACE_TORIEL, "`3* Oh? That switch is not\n  one of the ones I labelled.|`0* Please, my child,\n  flip only the switches\n  I marked for you.");
+    SAY(FACE_TORIEL, "`3* Oh? Not that switch.|`0* Only the ones I marked,\n  my child.");
     return 1;
   }
   set_flag(F_RUINS3_SW1 + k, 1);
@@ -238,7 +238,7 @@ static int ev_ruins3_switch(Ev *c) {
 static int ev_ruins4_toriel(Ev *c) {
   EV_BEGIN;
   if (c->self) c->self->kind = OBJ_NONE;
-  SAY(FACE_TORIEL, "`0* As a human living in the\n  UNDERGROUND, monsters may\n  attack you.|* You will need to be prepared\n  for this situation.|`2* However, worry not!\n* The process is simple.|`0* When you encounter a\n  monster, you will enter a\n  FIGHT.|* While you are in a FIGHT,\n  strike up a friendly\n  conversation.|* Stall for time.\n* I will come to resolve the\n  conflict.|* Practice talking to the\n  dummy.");
+  SAY(FACE_TORIEL, "`0* Monsters down here may\n  try to fight you.|`2* Do not fear!\n* It is simple.|`0* In a FIGHT, talk kindly\n  and wait.|* I will come and sort\n  things out.|* Try talking to the\n  dummy.");
   EV_END;
 }
 
@@ -251,14 +251,14 @@ static int ev_ruins4_dummy(Ev *c) {
   BATTLE(FORM_DUMMY);
   if (battle_result() == BR_FLED) {
     set_flag(F_DUMMY, 3);
-    SAY(FACE_TORIEL, "`3* ...ah, you ran away...|`0* Truthfully, that was not a\n  poor choice.|* It is better to avoid\n  conflict whenever possible.|* That, however, is only a\n  dummy.|* It cannot harm you.|* It is made of cotton.|* It has no desire for\n  revenge...|* Nevertheless, there is no\n  harm in practicing.|* Come now.");
+    SAY(FACE_TORIEL, "`3* ...you ran from it.|`0* Not a bad choice, really.\n* Avoiding a fight is often\n  wise.|* Still, it is just a\n  cotton dummy.|* Come along.");
   } else if (bt.mon[0].killed) {
     set_flag(F_DUMMY, 2);
     if (c->self) c->self->kind = OBJ_NONE;
-    SAY(FACE_TORIEL, "`3* Ah, the dummies are not for\n  fighting!\n* They are for talking!|`1* We do not want to hurt\n  anybody, do we...?|`0* Come now.");
+    SAY(FACE_TORIEL, "`3* Oh! Dummies are for\n  talking, not hitting!|`1* We do not want to hurt\n  anyone.|`0* Come along.");
   } else if (bt.turn >= 5 && !flag(F_DUMMY)) {
     set_flag(F_DUMMY, 4);
-    SAY(FACE_TORIEL, "`3* ...you stared so intently\n  at that dummy that it got\n  bored of you.|`0* I am sure there is a lesson\n  in that somewhere...|* Come now, let us continue.");
+    SAY(FACE_TORIEL, "`3* ...the dummy grew tired\n  of being looked at.|`0* Well. Let us move on.");
   } else {
     set_flag(F_DUMMY, 1);
     SAY(FACE_TORIEL, "`2* Ah, very good!\n* You are very good.");
@@ -317,7 +317,7 @@ static int ev_ruins6_toriel(Ev *c) {
   if (c->self) c->self->kind = OBJ_NONE;
   if (!t) return 1;
   t->dir = DIR_LEFT;
-  SAY(FACE_TORIEL, "`0* You have done excellently\n  thus far, my child.|`1* However...^2 I have a\n  difficult request to ask of\n  you.|* ...|`0* I would like you to walk to\n  the end of the room by\n  yourself.|`1* Forgive me for this.");
+  SAY(FACE_TORIEL, "`0* You are doing very well,\n  my child.|`1* Now, a hard request...|`0* Walk to the end of this\n  room on your own.|`1* I am sorry.");
   /* she hurries off, and hides behind the pillar */
   FREE(true);
   WALK(obj_get(ACTOR_TORIEL), 4560, 4466, 6);
@@ -346,7 +346,7 @@ static int ev_ruins6_reveal(Ev *c) {
   if (c->self) c->self->kind = OBJ_NONE;
   WALK(t, 4570, 4440, 2);
   t->dir = DIR_LEFT;
-  SAY(FACE_TORIEL, "`0* Greetings, my child.|* Do not worry, I did not\n  leave you.|* I was merely behind this\n  pillar the whole time.|`2* Thank you for trusting me.|`0* However, there was an\n  important reason for this\n  exercise.|* ...^2 to test your\n  independence.|`1* I must attend to some\n  business, and you must stay\n  alone for a while.|`0* Please remain here.|* It's dangerous to explore\n  by yourself.|`2* I have an idea.|* I will give you a CELL\n  PHONE.|`0* If you have a need for\n  anything, just call.|* Be good, alright?");
+  SAY(FACE_TORIEL, "`0* There you are!|* I was just behind the\n  pillar.|`2* Thank you for trusting\n  me.|`0* That was a test of your\n  independence.|`1* I have errands to run.\n* Please wait here for me.|`2* Take this CELL PHONE.|`0* Call me if you need\n  anything. Be good!");
   set_flag(F_PHONE, 1);
   WALK(obj_get(ACTOR_TORIEL), 4700, 4470, 3);
   WALK(obj_get(ACTOR_TORIEL), 4860, 4470, 3);
@@ -363,13 +363,13 @@ static int ev_ruins7_call(Ev *c) {
   WAIT_UNTIL(!world_fading());
   set_flag(F_LEAFPILE_CALL, 1);
   NARRATE("* Ring...");
-  SAY(FACE_TORIEL, "`0* Hello?\n* This is TORIEL.|* You have not left the room,\n  have you?|* There are a few puzzles\n  ahead that I have yet to\n  explain.|* It would be dangerous to\n  try to solve them yourself.|* Be good, alright?");
+  SAY(FACE_TORIEL, "`0* Hello? It is TORIEL.|* You are still in that\n  room, yes?|* The puzzles ahead are\n  tricky. Wait for me.|* Be good!");
   EV_END;
 }
 
 static int ev_ruins7_froggit(Ev *c) {
   EV_BEGIN;
-  NARRATE("* Ribbit, ribbit.|* (Excuse me, human.)|* (You look like you're going to\n  be fighting a lot of\n  monsters.)|* (Let me give you some\n  advice.)|* (If you ACT a certain way or\n  FIGHT until you almost defeat\n  them...)|* (They might not want to\n  battle you anymore.)|* (If a monster does not want\n  to fight you, please...)|* (Use some MERCY, human.)\n* Ribbit.");
+  NARRATE("* Ribbit, ribbit.|* (Some advice, human.)|* (ACT the right way, or weaken\n  a monster...)|* (...and it may stop wanting\n  to fight.)|* (Then show it MERCY.)\n* Ribbit.");
   EV_END;
 }
 

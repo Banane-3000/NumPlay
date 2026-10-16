@@ -340,22 +340,22 @@ static int ev_call(Ev *c) {
   switch (c->v[0]) {
     case CALL_FLAVOR:
       set_flag(F_FLAVOR_CALL, 1);
-      SAY(FACE_TORIEL, "* Ring...|`0* Hello?\n* This is TORIEL.|* For no reason in\n  particular...|* Which do you prefer?|* Cinnamon or butterscotch?@Cinnamon@Bscotch");
+      SAY(FACE_TORIEL, "* Ring...|`0* Hello? TORIEL here.|* A small question...|* Cinnamon or butterscotch?@Cinnamon@Bscotch");
       set_flag(F_FLAVOR, CHOICE() ? 2 : 1);
       SAY(FACE_TORIEL, "`0* Oh, I see.\n* Thank you very much!");
       break;
     case CALL_FLAVOR2:
       set_flag(F_FLAVOR_CALL, 2);
-      SAYF(FACE_TORIEL, "%s* You do not DISLIKE\n  %s, do you?|* I know what your preference\n  is, but...|* Would you turn up your nose\n  if you found it on your\n  plate?|* Right, right, I understand.|* Thank you for being\n  patient, by the way.",
+      SAYF(FACE_TORIEL, "%s* You would still eat\n  %s, though?|* Just checking!|* Thank you for waiting.",
            call_hello, flag(F_FLAVOR) == 2 ? "cinnamon" : "butterscotch");
       break;
     case CALL_ALLERGY:
       set_flag(F_FLAVOR_CALL, 3), set_flag(F_ALLERGY_CALL, 1);
-      SAY(FACE_TORIEL, "* Ring...|`0* Hello?|* You do not have any\n  allergies, do you?|`1* Huh? Why am I asking?|`0* No reason...\n* No reason at all.");
+      SAY(FACE_TORIEL, "* Ring...|`0* Hello?|* Any allergies, by the way?|`1* Why do I ask? Oh...|`0* No reason at all.");
       break;
     case CALL_ITEMS:
       set_flag(F_ITEM_CALL, 1);
-      SAY(FACE_TORIEL, "* Ring...|`0* Hello?|* I just realized that it has\n  been a while since I have\n  cleaned up.|* I was not expecting to have\n  company so soon.|* There are probably a lot of\n  things lying about here and\n  there.|* You can pick them up, but do\n  not carry more than you\n  need.|* Someday you might see\n  something you really like.|* You will want to leave room\n  in your pockets for that.");
+      SAY(FACE_TORIEL, "* Ring...|`0* Hello?|* Things are a bit messy\n  around here, I am afraid.|* Pick up what you like,\n  but leave room in your\n  pockets.|* You never know what you\n  will want later.");
       break;
   }
   EV_END;
@@ -367,7 +367,7 @@ static int ev_rock_talk(Ev *c) {
   if (!r) return 1;
   switch (flag(F_RUINS11_ROCK)) {
     case 0:
-      SAY(FACE_NONE, "* WHOA there, pardner!\n* Who said you could push me\n  around?|* ...|* Huh? You want me to move?\n* Well, why didn't ya just\n  say so?");
+      SAY(FACE_NONE, "* Hey now! Who's shoving?|* ...|* Oh, you want me to move?\n* You could have just asked.");
       set_flag(F_RUINS11_ROCK, 1);
       WALK(obj_get(ACTOR_ROCK3), 6740, 4875, 1);
       NARRATE("* (The rock moved a little,\n  and stopped.)");
@@ -392,7 +392,7 @@ static int ev_rock_talk(Ev *c) {
       break;
     case 4:
       NARRATE("* (You ask the rock to stay\n  on the switch.)");
-      SAY(FACE_NONE, "* Huh? You want me to stay\n  put?|* Well, alright.\n* It's easier when you just\n  ask, you know.");
+      SAY(FACE_NONE, "* Stay here? Sure thing.|* Asking works, you know.");
       set_flag(F_RUINS11_ROCK, 5);
       WALK(obj_get(ACTOR_ROCK3), 6780, 4875, 1);
       obj_spikes_set(obj_find(ACTOR_SPIKES), false);
@@ -415,7 +415,7 @@ static int ev_rock_off(Ev *c) {
 static int ev_napsta_sleep(Ev *c) {
   EV_BEGIN;
   if (flag(F_NAPSTA)) return 1;
-  NARRATE("* (This ghost keeps saying 'z'\n  out loud repeatedly,\n  pretending to sleep.)|* Move it with force?@Yes@No");
+  NARRATE("* (A ghost says 'z' over and\n  over, faking sleep.)|* Push through it?@Yes@No");
   if (CHOICE() != 0) {
     /* he steps back out of its way */
     PL_WALK(pl.x - 12, pl.y, 2);
@@ -473,16 +473,16 @@ static int ev_froggit(Ev *c) {
   c->v[0] = c->self ? c->self->arg : 0;
   switch (c->v[0]) {
     case 0:
-      NARRATE("* Ribbit, ribbit.|* (Excuse me, human.)|* (Did you know you can press\n  [BACK] to read text faster?)|* (Some say it's rude, but\n  the words won't mind.)");
+      NARRATE("* Ribbit, ribbit.|* (Tip: [BACK] shows the\n  whole text at once.)");
       break;
     case 1:
       NARRATE("* Ribbit, ribbit.|* (Hey, human.)|* (Have you seen the key with\n  a 4 on your calculator?)|* (I'm told 4 means \"four\n  frogs.\")|* (But I only see three frogs\n  in this room...)");
       break;
     case 2:
       if (!flag(F_FROGGIT_YELLOW))
-        NARRATE("* Ribbit, ribbit.|* (When a monster's name is\n  #YYELLOW#X, you can SPARE it.)|* (Some think that makes\n  things too easy.)|* (Shall I tell everyone to\n  stop using yellow names?)@Yes@No");
+        NARRATE("* Ribbit, ribbit.|* (A #YYELLOW#X name means you\n  can SPARE that monster.)|* (Too easy, some say.\n  Should we drop yellow?)@Yes@No");
       else if (flag(F_FROGGIT_YELLOW) == 1)
-        NARRATE("* Ribbit, ribbit.|* (Since I told everyone not\n  to use yellow names, everyone\n  threw theirs out.)|* (Shall I ask them to use\n  #PPINK#X names instead?)@Yes@No");
+        NARRATE("* Ribbit, ribbit.|* (Everyone dropped yellow.)|* (Try #PPINK#X names\n  instead?)@Yes@No");
       else
         NARRATE("* Ribbit, ribbit.|* (Pink names...^2 Or should\n  everyone go back to\n  #YYELLOW#X?)@Yellow@Pink");
       if (flag(F_FROGGIT_YELLOW) == 2) set_flag(F_FROGGIT_YELLOW, CHOICE() == 0 ? 0 : 2);
@@ -490,7 +490,7 @@ static int ev_froggit(Ev *c) {
       NARRATE("* Ribbit.");
       break;
     case 3:
-      NARRATE("* Ribbit, ribbit.|* (I saw #BTORIEL#X come out of\n  here just a little while\n  ago.)|* (She was carrying some\n  groceries.)|* (I didn't ask what they were\n  for...)|* (We're all too intimidated\n  to talk to her.)");
+      NARRATE("* Ribbit, ribbit.|* (#BTORIEL#X went by with\n  groceries a while ago.)|* (Nobody dared ask what\n  for.)");
       break;
   }
   EV_END;
@@ -546,7 +546,7 @@ static int ev_toriel_tree(Ev *c) {
   else if (sv.hp > 2) SAY(FACE_TORIEL, "`0* There, there, I will heal\n  you.");
   else SAY(FACE_TORIEL, "`5* Who did this to you?\n* You will get an apology.");
   sv.hp = sv.maxhp;
-  SAY(FACE_TORIEL, "`1* I should not have left you\n  alone for so long.|* It was irresponsible to try\n  to surprise you like this.|* Err...|`0* Well, I suppose I cannot\n  hide it any longer.|`2* Come, small one!");
+  SAY(FACE_TORIEL, "`1* I left you alone too long.\n* I am sorry.|`0* Oh, the surprise is\n  spoiled now...|`2* Come along, little one!");
   set_flag(F_TORIEL_HOME, 1);
   WALK(obj_get(ACTOR_TORIEL), 9006, 3070, 3);
   obj_get(ACTOR_TORIEL)->kind = OBJ_NONE;

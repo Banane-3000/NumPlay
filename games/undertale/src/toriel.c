@@ -9,12 +9,12 @@
 
 /* b->state[0]: spares; [1]: talks; [2]: 1 she stopped fighting, 2 she gives up, 3 defeated, 4 betrayed */
 static const char *const spare_lines[] = {
-  ".....", "..... .....", "..... ..... .....", "...?", "What are\nyou doing?", "Attack or\nrun away!",
-  "What are you\nproving this\nway?", "Fight me or\nleave!", "Stop it.", "Stop looking\nat me that\nway.", "Go away!", "...",
-  "... ...", "I know you\nwant to go\nhome, but...", "But please...\ngo upstairs\nnow.", "I promise I\nwill take\ngood care of\nyou here.",
-  "I know we do\nnot have\nmuch, but...", "We can have\na good life\nhere.", "Why are you\nmaking this\nso difficult?",
-  "Please, go\nupstairs.", ".....", "Ha ha...", "Pathetic, is\nit not? I\ncannot save\neven a single\nchild.", "...",
-  "No, I\nunderstand.|You would\njust be\nunhappy\ntrapped down\nhere.|The RUINS\nare very small\nonce you get\nused to them.|It would not\nbe right for\nyou to grow up\nin a place\nlike this.|My\nexpectations...\nMy\nloneliness...\nMy fear...|For you, my\nchild... I\nwill put them\naside."};
+  ".....", "..... .....", "..... ..... .....", "...?", "What is\nthis?", "Fight, or\ngo!",
+  "What do you\nhope to\nshow?", "Fight or\nflee!", "Enough.", "Do not look\nat me so.", "Leave!", "...", "... ...",
+  "I know you\nmiss home...", "Please, go\nupstairs.", "I will look\nafter you.", "It is not\nmuch here,\nbut...",
+  "We could be\nhappy here.", "Why must\nyou make\nthis hard?", "Go upstairs.\nPlease.", ".....", "Ha...",
+  "I cannot\nprotect\neven one\nchild...", "...",
+  "No... I\nsee.|You would\nnot be happy\nhere.|This small\nplace is no\nhome for\nyou.|My worries\ncan wait.|For you, my\nchild."};
 #define NSPARES (int)(sizeof spare_lines / sizeof spare_lines[0])
 
 static void act_toriel(Battle *b, Monster *m, int act, char *t, int cap) {
@@ -27,9 +27,9 @@ static void act_toriel(Battle *b, Monster *m, int act, char *t, int cap) {
 
 static const char *talk_toriel(Battle *b, Monster *m) {
   if (b->state[2] == 3)
-    return "Urgh...|You are\nstronger than\nI thought...|Listen to me,\nsmall one...|If you go\nbeyond this\ndoor,|Keep walking\nas far as you\ncan.|Eventually\nyou will reach\nan exit.|... ....|#RASGORE#X...\nDo not let\n#RASGORE#X\ntake your\nsoul.|His plan\ncannot be\nallowed to\nsucceed.|......|Be good,\nwon't you?|M y   c h i l d .";
+    return "Urgh...|You are\nstrong...|Go on, then.\nKeep going\nuntil you\nreach the\nexit.|And do not\nlet #RASGORE#X\ntake your\nSOUL.|Be good,\nmy child.";
   if (b->state[2] == 4)
-    return "You...|... at my\nmost\nvulnerable\nmoment...|To think I\nwas worried\nyou wouldn't\nfit in out\nthere...|Eheheheh!!!\nYou really are\nno different\nthan them!|Ha... ha...";
+    return "You...|...when I\nwas\nunguarded...|You are just\nlike the\nothers...|Ha... ha...";
   if (b->last_action == 3) {
     int k = b->state[0] - 1;
     if (k >= 0 && k < NSPARES) return spare_lines[k];
