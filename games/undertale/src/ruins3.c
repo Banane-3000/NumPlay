@@ -137,7 +137,7 @@ static int ev_toriel_chair(Ev *c) {
   CHOOSE(chair_opts, 2);
   if (CHOSEN() < 0) return 1;
   if (CHOSEN() == 0) {
-    SAY(FACE_TORIEL, "`3* What?|`1* This is your home now.|`0* Would you like to hear about\n  my book on snails instead?@Yes@No");
+    SAY(FACE_TORIEL, "`3* What?|`1* This is your home now.|`0* Would you rather hear about\n  my book on snails?@Yes@No");
     if (CHOICE() == 0) SAY(FACE_TORIEL, "`2* A snail fact!|`0* Snails have a tongue like a\n  tiny saw.");
     else SAY(FACE_TORIEL, "`0* Oh...^2 Alright.");
     return 1;

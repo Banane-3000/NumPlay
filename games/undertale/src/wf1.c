@@ -309,7 +309,7 @@ void wf1_setup(int room, int from) {
       if (!flag(F_WF_UNDYNE1)) obj_trigger(1770, 1496, 40, 44, EV_WF_UNDYNE1, ACTOR_TRIGGER);
       break;
     case ROOM_WF_SEEDS1:
-      obj_sign(2172, 1452, 20, 20, "* (Bridge seeds bloom when they touch the water.\n* Push them in, one after another.)");
+      obj_sign(2172, 1452, 20, 20, "* (Bridge seeds bloom when\n  they touch the water.)|* (Push them in, one after\n  another.)");
       seeds_setup(&seed_puzzles[0]);
       break;
     case ROOM_WF_SEEDS2:
@@ -567,7 +567,7 @@ static int ev_wf_grass(Ev *c) {
 static int ev_wf_telescope(Ev *c) {
   EV_BEGIN;
   if (!flag(F_WF_TELESCOPE)) {
-    SAY(FACE_SANS, "* hey. want to look through my telescope?\n* for you, it's free.@Sure@No thanks");
+    SAY(FACE_SANS, "* hey. want to look through\n  my telescope? it's free.@Sure@No thanks");
     if (CHOICE() == 1) {
       SAY(FACE_SANS, "* suit yourself.");
       return 1;

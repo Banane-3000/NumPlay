@@ -270,7 +270,7 @@ static int ev_sans_intro(Ev *c) {
   g_shake = 4;
   WAIT(20);
   s->flags &= (uint16_t)~OF_DARK;
-  SAY(FACE_SANS, "`1* heh. never gets old.\n`0* i'm sans. sans the skeleton.|* i'm meant to be watching for humans... but i'm not big on capturing.|* my brother papyrus, though? he's really into it.|* speak of the devil. quick, go through the gate.\n* the bars are too wide to stop anyone anyway.");
+  SAY(FACE_SANS, "`1* heh. never gets old.\n`0* i'm sans. sans the skeleton.|* i'm meant to be watching for humans... but i'm not big on capturing.|* my brother papyrus, though? he's really into it.|* speak of the devil.\n* quick, go through the gate.|* the bars are too wide to\n  stop anyone anyway.");
   /* through the gate, then behind the lamp */
   WALK_TO(s, 2660, 432, 2);
   PL_WALK(2720, 392, 2);
@@ -287,12 +287,12 @@ static int ev_sans_intro(Ev *c) {
   p = obj_get(ACTOR_PAPYRUS);
   WALK(p, 3000, 432, 3);
   SAY(FACE_SANS, "* sup, bro?");
-  SAY(FACE_PAPYRUS, "`3* SANS!!! YOUR PUZZLES STILL AREN'T RECALIBRATED!\n* YOU'VE BEEN LAZING AROUND FOR DAYS!!!");
+  SAY(FACE_PAPYRUS, "`3* SANS!!! YOUR PUZZLES STILL\n  AREN'T RECALIBRATED!|* YOU'VE BEEN LAZING AROUND\n  FOR DAYS!!!");
   SAY(FACE_SANS, "* staring at this lamp. it's really cool.");
-  SAY(FACE_PAPYRUS, "`3* WHAT IF A HUMAN SHOWS UP!?!|`2* I'LL BE READY! I'LL CAPTURE THEM!\n* AND THEN THE ROYAL GUARD WILL HAVE TO LET ME IN!!!");
+  SAY(FACE_PAPYRUS, "`3* WHAT IF A HUMAN SHOWS UP!?!|`2* I'LL BE READY!\n* I'LL CAPTURE THEM!|* AND THEN THE ROYAL GUARD\n  WILL HAVE TO LET ME IN!!!");
   SAY(FACE_SANS, "* hmm... maybe this lamp will help you.");
   SAY(FACE_PAPYRUS, "`3* SANS!!! YOU LAZYBONES!|* YOU GET LAZIER AND LAZIER EVERY DAY!!!");
-  SAY(FACE_SANS, "* hey, take it easy. i've gotten a ton of work done today.\n`2* a skele-ton.");
+  SAY(FACE_SANS, "* hey, take it easy. i've\n  done a ton of work today.|`2* a skele-ton.");
   SAY(FACE_PAPYRUS, "`3* SANS!!!");
   SAY(FACE_SANS, "`1* come on. you're smiling.");
   SAY(FACE_PAPYRUS, "`3* I AM AND I HATE IT!|`3* UGH!!!\n`0* I WILL ATTEND TO MY PUZZLES...|* AS FOR YOUR WORK?\n`2* PUT A LITTLE MORE, \"BACKBONE\" INTO IT!!!!|* NYEH HEH HEH HEH HEH HEH!!!");
@@ -335,7 +335,7 @@ static int ev_sans_talk(Ev *c) {
     case 2:   /* by the maze: his brother's outfit */
       if (flag(F_ELECMAZE) < 2) SAY(FACE_SANS, "* go on. he made this one just for you.");
       else if (!flag(F_SANS_COOL)) {
-        SAY(FACE_SANS, "* thanks. he's having a blast.|* that outfit? party costume. he won't take it off.\n* calls it his \"battle body.\"|* cool brother, right?@Cool@Uncool");
+        SAY(FACE_SANS, "* thanks. he's having a blast.|* that outfit? party costume.\n* he won't take it off.|* calls it his \"battle body.\"|* cool brother, right?@Cool@Uncool");
         set_flag(F_SANS_COOL, CHOICE() + 1);
         if (CHOICE() == 0) SAY(FACE_SANS, "`1* you'd better tell him that.");
         else SAY(FACE_SANS, "* hey, pal. sarcasm isn't funny, okay?\n* my brother's a real star.");
@@ -352,7 +352,7 @@ static int ev_sans_talk(Ev *c) {
       break;
     case 4:   /* by the word search */
       if (!flag(F_WORDSEARCH)) SAY(FACE_SANS, "* trust me. there's no way they can get past this one.");
-      else SAY(FACE_SANS, "* papyrus tried to solve yesterday's horoscope.\n`1* he says it was really tough.");
+      else SAY(FACE_SANS, "* papyrus tried to solve\n  yesterday's horoscope.|`1* says it was really tough.");
       break;
   }
   EV_END;
@@ -496,9 +496,9 @@ static int ev_nicecream(Ev *c) {
   if (!flag(F_NICECREAM)) {
     set_flag(F_NICECREAM, 1);
     NARRATE("* Nobody wants something cold today. Odd...|* OH!!!! A CUSTOMER!!!");
-    NARRATE("* Hello! Would you like some Nice Cream?|* It's the frozen treat that warms your heart!\n* Now just 15G!@Yes@No");
+    NARRATE("* Hello! Would you like some Nice Cream?|* The frozen treat that warms\n  your heart! Just 15G!@Yes@No");
   } else {
-    NARRATE("* Nice Cream! It's the frozen treat that warms your heart!\n* Now just 15G!@Yes@No");
+    NARRATE("* Nice Cream! The frozen treat\n  that warms your heart!|* Just 15G!@Yes@No");
   }
   if (CHOICE() == 1) {
     NARRATE("* Well then... Tell your friends...|* There's ice cream... Out in the middle of the woods...");
@@ -558,15 +558,15 @@ static int ev_wordsearch(Ev *c) {
   Obj *p = obj_get(ACTOR_PAPYRUS);
   EV_BEGIN;
   pl.dir = DIR_RIGHT;
-  SAY(FACE_PAPYRUS, "`0* HUMAN!!!\n* THE NEXT PUZZLE WILL NOT BE EASY!\n* IT IS DESIGNED BY MY BROTHER, SANS!");
-  SAY(FACE_SANS, "* it's right there. on the ground.\n* trust me. there's no way they can get past this one.");
+  SAY(FACE_PAPYRUS, "`0* HUMAN!!!|* THE NEXT PUZZLE WILL NOT\n  BE EASY!|* IT IS DESIGNED BY MY\n  BROTHER, SANS!");
+  SAY(FACE_SANS, "* it's right there.\n  on the ground.|* trust me. there's no way\n  they can get past this one.");
   FREE(true);
   WAIT_UNTIL(pl.x >= 6440);
   FREE(false);
   pl.dir = DIR_RIGHT;
   SAY(FACE_PAPYRUS, "`3* SANS!!! THE PUZZLE DIDN'T DO ANYTHING!!!");
   SAY(FACE_SANS, "* whoops. i knew i should have used today's crossword instead.");
-  SAY(FACE_PAPYRUS, "`3* CROSSWORD!?\n* IN MY OPINION, JUNIOR JUMBLE IS EASILY THE HARDEST.");
+  SAY(FACE_PAPYRUS, "`3* CROSSWORD!?|* IN MY OPINION, JUNIOR\n  JUMBLE IS EASILY THE\n  HARDEST.");
   SAY(FACE_SANS, "* what? really, dude? that easy-peasy word scramble?\n* that's for baby bones.");
   SAY(FACE_PAPYRUS, "`3* UNBELIEVABLE!!!\n* HUMAN!! SOLVE THIS DISPUTE!@Crossword@Junior Jumble");
   set_flag(F_WORDSEARCH, CHOICE() + 1);
@@ -581,7 +581,7 @@ static int ev_wordsearch(Ev *c) {
 
 static int ev_fishrod(Ev *c) {
   EV_BEGIN;
-  NARRATE("* (It's a fishing rod affixed to the ground.)\n* (Reel it in?)@Yes@No");
+  NARRATE("* (A fishing rod, stuck in\n  the ground. Reel it in?)@Yes@No");
   if (CHOICE() == 0) {
     set_flag(F_FISH, 1);
     NARRATE("* (You reeled in the line...)\n* (There's a note on the hook.)|* \"Call me! Here's my number!\"");

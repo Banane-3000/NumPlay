@@ -142,7 +142,7 @@ static int ev_dump_wake(Ev *c) {
 
 static int ev_cooler(Ev *c) {
   EV_BEGIN;
-  NARRATE("* (A cooler. There's Astronaut Food inside.)\n* (Take some?)@Yes@No");
+  NARRATE("* (A cooler, with Astronaut\n  Food inside. Take some?)@Yes@No");
   if (CHOICE() == 0) {
     if (!item_add(ITEM_ASTRONAUT_FOOD)) {
       NARRATE("* (You're carrying too much.)");
@@ -187,12 +187,12 @@ static int ev_napsta_room(Ev *c) {
     SAY(FACE_NONE, "* oh... hi again.\n* it's nice to have company... i think.");
     return 1;
   }
-  SAY(FACE_NONE, "* oh... you really came.|* uh... this is my room. it's not much.|* sometimes i just lie on the floor for a while...\n* want to do that with me?@Sure@No thanks");
+  SAY(FACE_NONE, "* oh... you really came.|* uh... this is my room. it's not much.|* sometimes i just lie on\n  the floor for a while...|* want to do that with me?@Sure@No thanks");
   if (CHOICE() == 0) {
     NARRATE("* (You lie down on the floor next to Napstablook.)");
     WAIT(60);
     NARRATE("* (Time passes.)\n* (It's oddly peaceful.)");
-    SAY(FACE_NONE, "* ...thanks. that was really nice.\n* i don't get to do that with anyone.");
+    SAY(FACE_NONE, "* ...thanks. that was\n  really nice.|* i don't get to do that\n  with anyone.");
     set_flag(F_NAPSTA_HOME, 2);
   } else {
     SAY(FACE_NONE, "* oh... that's okay...");
@@ -222,7 +222,7 @@ static int ev_snails(Ev *c) {
   WAIT(40);
   if (rnd_n(2)) {
     sv.gold = (uint16_t)(sv.gold + 9);
-    SAY(FACE_NONE, "* oh... your snail won... here's 9G.\n* ...sorry, that's all the prize money.");
+    SAY(FACE_NONE, "* oh... your snail won...\n  here's 9G.|* ...sorry, that's all the\n  prize money.");
   } else {
     SAY(FACE_NONE, "* oh... it lost. that's how it goes sometimes.");
   }

@@ -484,7 +484,7 @@ static int ev_froggit(Ev *c) {
       else if (flag(F_FROGGIT_YELLOW) == 1)
         NARRATE("* Ribbit, ribbit.|* (Everyone dropped yellow.)|* (Try #PPINK#X names\n  instead?)@Yes@No");
       else
-        NARRATE("* Ribbit, ribbit.|* (Pink names...^2 Or should\n  everyone go back to\n  #YYELLOW#X?)@Yellow@Pink");
+        NARRATE("* Ribbit, ribbit.|* (Pink names...^2 Or should\n  everyone go back to #YYELLOW#X?)@Yellow@Pink");
       if (flag(F_FROGGIT_YELLOW) == 2) set_flag(F_FROGGIT_YELLOW, CHOICE() == 0 ? 0 : 2);
       else if (CHOICE() == 0) set_flag(F_FROGGIT_YELLOW, flag(F_FROGGIT_YELLOW) + 1);
       NARRATE("* Ribbit.");

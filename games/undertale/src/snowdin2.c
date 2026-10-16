@@ -126,9 +126,9 @@ void snow2_setup(int room, int from) {
   switch (room) {
     case ROOM_SPAGHETTI:
       obj_save(6745, 695, "* (Knowing the mouse might one day find a way to heat up the spaghetti...)\n* (It fills you with determination.)");
-      obj_sign(6690, 658, 16, 20, "* (A note by the spaghetti.)|* ENJOY, HUMAN! (IT'S A TRAP: YOU'LL BE TOO BUSY EATING TO MOVE ON!)\n* - PAPYRUS");
-      obj_sign(6734, 646, 38, 34, "* (It's a plate of frozen spaghetti.)\n* (It's so cold, it's stuck to the table.)");
-      obj_sign(6788, 644, 38, 36, "* (It's a microwave.)\n* (Its only setting is \"spaghetti.\")\n* (It's unplugged.)");
+      obj_sign(6690, 658, 16, 20, "* (A note by the spaghetti.)|* ENJOY, HUMAN!|* (IT'S A TRAP: YOU'LL BE TOO\n  BUSY EATING TO MOVE ON!)\n* - PAPYRUS");
+      obj_sign(6734, 646, 38, 34, "* (A plate of frozen spaghetti.)|* (It's so cold, it's stuck\n  to the table.)");
+      obj_sign(6788, 644, 38, 36, "* (It's a microwave.)|* (Its only setting is\n  \"spaghetti.\")\n* (It's unplugged.)");
       obj_sign(6742, 585, 18, 14, "* (Squeak!)");
       break;
     case ROOM_SNOWPUZZLE:
@@ -329,7 +329,7 @@ static int ev_tiles(Ev *c) {
   Obj *p = obj_get(ACTOR_PAPYRUS);
   EV_BEGIN;
   pl.dir = DIR_RIGHT;
-  SAY(FACE_PAPYRUS, "`0* HUMAN!!! THE MULTICOLOR TILE PUZZLE!\n* ONE PULL AND THE TILES CHANGE COLOR!|* EVERY COLOR DOES SOMETHING DIFFERENT!\n* RED: WALL. YELLOW: ZAP. GREEN: MONSTER. PINK: NOTHING.|* ORANGE, BLUE AND PURPLE... IT GETS COMPLICATED.|`2* GOT ALL THAT???@Yes@No");
+  SAY(FACE_PAPYRUS, "`0* HUMAN!!! THE MULTICOLOR\n  TILE PUZZLE!|* ONE PULL, AND THE TILES\n  CHANGE COLOR!|* EVERY COLOR DOES SOMETHING\n  DIFFERENT!|* RED: WALL. YELLOW: ZAP.\n* GREEN: MONSTER.\n* PINK: NOTHING.|* ORANGE, BLUE AND PURPLE... IT GETS COMPLICATED.|`2* GOT ALL THAT???@Yes@No");
   if (CHOICE() == 1)
     SAY(FACE_PAPYRUS, "`3* OKAY! AGAIN!\n* PINK TILES ARE... WAIT, NO...|`4* ...|`0* JUST TRY IT ON YOUR OWN!");
   SAY(FACE_PAPYRUS, "`2* LET'S DO IT!!!");
@@ -394,7 +394,7 @@ static int ev_gauntlet(Ev *c) {
   WAIT(40);
   SAY(FACE_PAPYRUS, "`0* ONE WORD FROM ME AND IT ALL SWINGS INTO ACTION!!!|`3* HERE IT GOES!|`4* ...|* ANY MOMENT NOW...");
   SAY(FACE_SANS, "* well? what's the holdup?");
-  SAY(FACE_PAPYRUS, "`3* I'M GETTING TO IT!!!|`4* ...ACTUALLY, IT'S TOO EASY. NOT FAIR AT ALL.\n`2* A SKELETON HAS STANDARDS! NYEH HEH HEH!!!");
+  SAY(FACE_PAPYRUS, "`3* I'M GETTING TO IT!!!|`4* ...ACTUALLY, IT'S TOO EASY.\n* NOT FAIR AT ALL.|`2* A SKELETON HAS STANDARDS!\n* NYEH HEH HEH!!!");
   WALK(p, 12000, 1236, 6);
   gone(p);
   SAY(FACE_SANS, "* ...|* i don't know what my brother's going to do.|* if i were you, i would keep going.");
@@ -409,8 +409,8 @@ static int ev_sans_cliff(Ev *c) {
   int k = c->self ? c->self->arg : 0;
   EV_BEGIN;
   switch (k) {
-    case 1: SAY(FACE_SANS, "* hey, you could have asked me for help.\n`2* i know a thing or two about trees."); break;
-    case 2: SAY(FACE_SANS, "* his cooking's getting better.\n* give it a year, it might even be food."); break;
+    case 1: SAY(FACE_SANS, "* hey, you could have asked\n  me for help.|`2* i know a thing or two\n  about trees."); break;
+    case 2: SAY(FACE_SANS, "* his cooking's getting\n  better.|* give it a year. it might\n  even be food."); break;
     case 3:
       if (!flag(F_SNOW_SANS_TALK)) {
         set_flag(F_SNOW_SANS_TALK, 1);

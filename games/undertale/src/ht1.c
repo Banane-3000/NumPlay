@@ -187,7 +187,7 @@ void ht1_setup(int room, int from) {
       break;
     }
     case ROOM_HT_RIVER:
-      obj_sign(1010, 6440, 50, 60, "* (Someone in a hood waits by a boat, humming.)\n* (Maybe they'll give you a ride some other time.)");
+      obj_sign(1010, 6440, 50, 60, "* (Someone in a hood waits by\n  a boat, humming.)|* (Maybe they'll give you a\n  ride some other time.)");
       break;
     case ROOM_HT_LAB:
       if (!flag(F_HT_LAB)) obj_trigger(1450, 5860, 16, 460, EV_HT_LAB, ACTOR_TRIGGER);
@@ -271,7 +271,7 @@ static int ev_lab(Ev *c) {
   NARRATE("* (The lights come on.)\n* (A huge screen shows... you.)");
   a = obj_alphys(2212, 6275, DIR_LEFT);
   WALK(a, pl.x + 70, pl.y + 29, 2);
-  SAY(FACE_ALPHYS, "* Oh! Oh no, you're already here!|* Um. H-hi! I'm Dr. Alphys.\n* The Royal Scientist.|* I've been, um, watching you.\n* On my cameras.|* Ever since you left the Ruins.\n* Your fights, your friends...|* It's been kind of amazing?|* I was supposed to stop you.\n* But, um... I'd rather help.");
+  SAY(FACE_ALPHYS, "* Oh! Oh no, you're already here!|* Um. H-hi! I'm Dr. Alphys.\n* The Royal Scientist.|* I've been, um, watching you.\n* On my cameras.|* Ever since the Ruins.\n* The fights, the friends...|* It's been kind of amazing?|* I was supposed to stop you.\n* But, um... I'd rather help.");
   /* and through the wall comes Mettaton */
   g_shake = 10;
   m = obj_mtt(2215, 6232);
@@ -296,7 +296,7 @@ static int ev_lab(Ev *c) {
 static int ev_fridge(Ev *c) {
   EV_BEGIN;
   if (!flag(F_HT_NOODLES)) {
-    NARRATE("* (The fridge is full of instant noodles.)\n* (Take a cup?)@Take@Leave");
+    NARRATE("* (The fridge is full of\n  instant noodles. Take one?)@Take@Leave");
     if (CHOICE() == 0) {
       if (!item_add(ITEM_INSTANT_NOODLES)) {
         NARRATE("* (You're carrying too much.)");
@@ -369,11 +369,11 @@ static int ev_call(Ev *c) {
       break;
     case 3:
       set_flag(F_HT_CALL_ISLE, 1);
-      SAY(FACE_ALPHYS, "* Ring...|* Hi! So, those puzzles by the door:\n  shoot the blocks out of the way,\n  then...|* ...|* Oh. You already did them.|* Ha ha... never mind!\n* Bye!");
+      SAY(FACE_ALPHYS, "* Ring...|* Hi! So, those puzzles by\n  the door: shoot the blocks\n  out of the way, then...|* ...|* Oh. You already did them.|* Ha ha... never mind!\n* Bye!");
       break;
     case 4:
       set_flag(F_HT_CALL_CORE, 1);
-      SAY(FACE_ALPHYS, "* Ring...|* See that, far off? The CORE.\n* It powers the whole underground.|* The king's castle is past it.\n* We're almost there!|* D-don't worry. I've got your back.");
+      SAY(FACE_ALPHYS, "* Ring...|* See that, far off?\n* That's the CORE.|* It powers the whole\n  underground.|* The king's castle is past it.\n* We're almost there!|* D-don't worry. I've got your back.");
       break;
   }
   EV_END;
@@ -412,7 +412,7 @@ static int ev_cook(Ev *c) {
   NARRATE("* PERFECT! AND THE LAST INGREDIENT...\n* A HUMAN SOUL!");
   g_shake = 6;
   SAY(FACE_ALPHYS, "* Ring...|* W-wait! Mettaton!\n* What about a vegan option?\n* For the viewers at home?");
-  NARRATE("* ...OH, VERY WELL.\n* THE SUBSTITUTE IS ON THE COUNTER,\n  OVER THERE. GO GET IT!");
+  NARRATE("* ...OH, VERY WELL.|* THE SUBSTITUTE IS ON THE\n  COUNTER, OVER THERE.\n* GO GET IT!");
   PL_WALK(5900, 3114, 3);
   NARRATE("* (The counter starts to grow, taller and taller...)");
   SAY(FACE_ALPHYS, "* Your phone has a JETPACK button!\n* I'm turning it on... now!");

@@ -87,10 +87,10 @@ void town_setup(int room, int from) {
       }
       break;
     case ROOM_LIBRARY:
-      obj_sign(1830, 506, 30, 40, "* (A book about monster funerals.)|* (When a monster passes, its dust is spread on what it loved most.)\n* (The writer seems eager to reach the page count.)");
+      obj_sign(1830, 506, 30, 40, "* (A book about monster funerals.)|* (When a monster passes, its\n  dust is spread on what it\n  loved most.)|* (The writer seems eager to\n  reach the page count.)");
       obj_sign(1874, 506, 30, 40, "* (A book comparing humans and monsters.)|* (Humans are sturdier... but they can't send a birthday card made of bullets.)");
-      obj_sign(1918, 506, 30, 40, "* (Here I am... Writing this book.)\n* (A person comes in and picks up the book...)\n* (They start reading it...!)");
-      obj_sign(1962, 506, 30, 40, "* (A book about magic and the SOUL.)|* (A monster who won't fight grows weaker... and cruel intent hurts them most.)\n* (The chapter stops there.)");
+      obj_sign(1918, 506, 30, 40, "* (Here I am... Writing this\n  book.)|* (A person comes in and picks\n  up the book...)\n* (They start reading it...!)");
+      obj_sign(1962, 506, 30, 40, "* (A book about magic and the SOUL.)|* (A monster who won't fight\n  grows weaker...)|* (...and cruel intent hurts\n  them most.)\n* (The chapter stops there.)");
       obj_sign(2006, 506, 30, 40, "* (A history book. Monsters left their first city and crossed cold, swamp and heat.)|* (They named the new capital \"New Home.\" The book sighs about the King's naming.)");
       obj_sign(2050, 506, 30, 40, "* (A book on what a SOUL is made of.)|* (Nobody knows for sure.)");
       folk(1896, 640, "* Yes, the sign outside says \"Librarby.\"\n* We made a typo when we were making it.");
@@ -114,7 +114,7 @@ void town_setup(int room, int from) {
       obj_sign(2560, 600, 40, 40, "* (It's dark... A trash tornado swirls in the corner.)");
       break;
     case ROOM_SHED:
-      obj_sign(2650, 770, 30, 20, flag(F_PAP_CAPTURED) <= 1 ? "* (A note.)\n* SORRY ABOUT THE LOCK! UNDYNE IS ON HER WAY. MAKE YOURSELF COMFY!!!\n* - PAPYRUS"
+      obj_sign(2650, 770, 30, 20, flag(F_PAP_CAPTURED) <= 1 ? "* (A note.)|* SORRY ABOUT THE LOCK!\n* UNDYNE IS ON HER WAY.\n* MAKE YOURSELF COMFY!!!|* - PAPYRUS"
                                                     : flag(F_PAP_CAPTURED) == 2 ? "* (A note.)\n* NEXT TIME, ASK BEFORE ESCAPING! I WAS WORRIED!!!\n* - PAPYRUS"
                                                                                 : "* (A note.)\n* YOU CAN JUST STAY OVER, YOU KNOW! NO FIGHTING NEEDED!!!\n* - PAPYRUS");
       obj_sign(2680, 820, 40, 30, "* (A dog bed. It's warm.)");
@@ -178,7 +178,7 @@ static int ev_pap_fight(Ev *c) {
   pl.dir = DIR_RIGHT;
   WALK(p, 3400, 1100, 1);
   if (flag(F_PAP_CAPTURED) >= 3) {
-    SAY(FACE_PAPYRUS, "`0* HUMAN! YOU KEEP COMING BACK...\n* WOULD YOU LIKE TO SKIP OUR BATTLE?@Yes@No");
+    SAY(FACE_PAPYRUS, "`0* HUMAN! YOU KEEP COMING\n  BACK...|* SHALL WE SKIP OUR BATTLE?@Yes@No");
     if (CHOICE() == 0) {
       SAY(FACE_PAPYRUS, "`2* WELL THEN! LET'S BE FRIENDS INSTEAD!!!");
       set_flag(F_PAPYRUS, 1);
@@ -187,7 +187,7 @@ static int ev_pap_fight(Ev *c) {
   } else if (flag(F_PAP_CAPTURED)) {
     SAY(FACE_PAPYRUS, "`0* HUMAN! YOU ESCAPED!\n* LET'S TRY THIS AGAIN!!!");
   } else {
-    SAY(FACE_PAPYRUS, "`0* HUMAN. I HAVE BEEN THINKING.\n* YOU LIKE PASTA. YOU SOLVE PUZZLES. YOU SEEM... COOL.|`2* I COULD BE YOUR FRIEND!!!|`3* NO! A ROYAL GUARD CAN'T BEFRIEND A HUMAN!\n* I MUST CAPTURE YOU AND JOIN THE GUARD!!!");
+    SAY(FACE_PAPYRUS, "`0* HUMAN. I HAVE BEEN\n  THINKING.|* YOU LIKE PASTA.\n* YOU SOLVE PUZZLES.\n* YOU SEEM... COOL.|`2* I COULD BE YOUR FRIEND!!!|`3* NO! A ROYAL GUARD CAN'T\n  BEFRIEND A HUMAN!|* I MUST CAPTURE YOU, AND\n  JOIN THE GUARD!!!");
   }
   sv.hp = sv.maxhp;
   BATTLE(FORM_PAPYRUS);
@@ -215,7 +215,7 @@ static int ev_pap_fight(Ev *c) {
   }
   set_flag(F_PAPYRUS, 1);
 spared:
-  SAY(FACE_PAPYRUS, "`4* NYOO HOO HOO... I COULDN'T EVEN CAPTURE YOU.\n* SO MUCH FOR THE ROYAL GUARD.|`0* WAIT... YOU WANT TO BE FRIENDS???|`2* WOWIE!!! COME HANG OUT AT MY HOUSE LATER!|`0* (THE CAPITAL IS FURTHER ON, PAST THE TOWN.)");
+  SAY(FACE_PAPYRUS, "`4* NYOO HOO HOO...|* I COULDN'T EVEN CAPTURE\n  YOU.\n* SO MUCH FOR THE GUARD.|`0* WAIT... YOU WANT TO BE FRIENDS???|`2* WOWIE!!! COME HANG OUT AT MY HOUSE LATER!|`0* (THE CAPITAL IS FURTHER ON, PAST THE TOWN.)");
   set_flag(F_PAP_DATE, 1);
   set_flag(F_TOWN_HOUSE, 1);
   WALK(p, 3240, 1100, 6);
@@ -247,7 +247,7 @@ static int ev_pap_date(Ev *c) {
   SAY(FACE_PAPYRUS, "`0* MY ROOM!!! IMPRESSIVE, ISN'T IT?|`4* NOW... HANGING OUT. I READ A GUIDE ABOUT THIS.|`0* STEP ONE: A PRESENT!\n* FOR YOU: SPAGHETTI!@Eat it@Keep it");
   if (CHOICE() == 0) SAY(FACE_PAPYRUS, "`2* WOWIE!!! YOU LIKED IT?!?\n* I'LL HAVE TO MAKE MORE!!!");
   else SAY(FACE_PAPYRUS, "`2* SAVING IT FOR LATER?\n* A TRUE CONNOISSEUR!");
-  SAY(FACE_PAPYRUS, "`4* HUMAN... I'VE THOUGHT ABOUT IT.\n* LET'S STAY FRIENDS! THE BEST OF FRIENDS!!!|`2* TAKE MY PHONE NUMBER! CALL ANY TIME!\n* NYEH HEH HEH!!!");
+  SAY(FACE_PAPYRUS, "`4* HUMAN... I'VE THOUGHT\n  ABOUT IT.|* LET'S STAY FRIENDS!\n* THE BEST OF FRIENDS!!!|`2* TAKE MY PHONE NUMBER! CALL ANY TIME!\n* NYEH HEH HEH!!!");
   NARRATE("* (You got Papyrus's phone number.)");
   set_flag(F_PAP_DATE, 2);
   FADE_TO(ROOM_SNOWTOWN, 2240, 1096, DIR_DOWN);
@@ -261,7 +261,7 @@ static int ev_grillbys(Ev *c) {
     SAY(FACE_SANS, "* i'm on another break.\n* from my other break.");
     return 1;
   }
-  SAY(FACE_SANS, "* hey. i'm on break.\n* want to grab some food at grillby's?@Sure@Not now");
+  SAY(FACE_SANS, "* hey. i'm on break. want to\n  eat at grillby's?@Sure@Not now");
   if (CHOICE() == 1) {
     SAY(FACE_SANS, "* ok. maybe later.");
     return 1;
@@ -269,7 +269,7 @@ static int ev_grillbys(Ev *c) {
   SAY(FACE_SANS, "* well, i know a shortcut.");
   FADE_TO(ROOM_GRILLBYS, 1230, 880, DIR_UP);
   SAY(FACE_SANS, "* here's a good seat.|* so, what'll it be?\n`2* fries or burger?@Fries@Burger");
-  SAY(FACE_SANS, "* nice.|* say... papyrus says a #Yflower#X talks to him sometimes.\n* gives him advice. weird, right?|* if you see a talking flower, tell me, ok?|`1* oh, and thanks for paying.");
+  SAY(FACE_SANS, "* nice.|* say... papyrus says a\n  #Yflower#X talks to him\n  sometimes.|* gives him advice.\n* weird, right?|* if you see a talking flower, tell me, ok?|`1* oh, and thanks for paying.");
   set_flag(F_GRILLBYS, 1);
   FADE_TO(ROOM_WF1, 880, 1458, DIR_DOWN);
   EV_END;

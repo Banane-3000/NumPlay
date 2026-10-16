@@ -65,7 +65,7 @@ void wf3_setup(int room, int from) {
   if (room < ROOM_WF_LANTERN || room > ROOM_HT_ENTRANCE) return;
   switch (room) {
     case ROOM_WF_LANTERN:
-      obj_sign(21176, 2414, 48, 28, "* (The lanterns light the way through the crystals.\n* Their glow is dim, but it's enough.)");
+      obj_sign(21176, 2414, 48, 28, "* (The lanterns light the way\n  through the crystals.)|* (Their glow is dim, but\n  it's enough.)");
       {
         static const int16_t lx[5] = {21260, 21440, 21280, 21680, 21720}, ly[5] = {2440, 2640, 2740, 2800, 2420};
         for (int i = 0; i < 5; i++) obj_sign(lx[i], ly[i], 20, 20, "* (A lantern, glowing softly.)");
@@ -94,7 +94,7 @@ void wf3_setup(int room, int from) {
     case ROOM_WF_CHASM:
       /* the glyph at the end of the echo flowers' path, a SAVE, Monster Kid on the bridge */
       obj_sign(22180, 1978, 38, 44,
-               "* (Ancient glyphs, about a prophecy.)|* (An angel will come down from the surface...)\n* (...and the underground will go empty.)");
+               "* (Ancient glyphs, about a prophecy.)|* (An angel will come down\n  from the surface...)|* (...and the underground\n  will go empty.)");
       echo(22210, 2070, ECHO("\"Yo... where'd everybody go?\""));
       obj_save(22300, 2000, "* (The roar of the chasm fills you with determination.)");
       if (flag(F_MK_CHASM) == 1) set_flag(F_MK_CHASM, 4);   /* (left in the middle of it) */
@@ -297,7 +297,7 @@ static int ev_pap_neon(Ev *c) {
   EV_BEGIN;
   if (c->self) gone(c->self);
   set_flag(F_PAP_NEON, 1);
-  SAY(FACE_PAPYRUS, "* Ring...|`0* HUMAN! PAPYRUS HERE!|* I'VE BEEN THINKING ABOUT FRIENDSHIP.|`2* AND I THINK YOU AND UNDYNE\n  WOULD BE THE BEST OF FRIENDS!!!|* WE SHOULD ALL GET TOGETHER SOMETIME!|`0* WELL! BYE!");
+  SAY(FACE_PAPYRUS, "* Ring...|`0* HUMAN! PAPYRUS HERE!|* I'VE BEEN THINKING ABOUT FRIENDSHIP.|`2* AND I THINK YOU AND\n  UNDYNE WOULD BE THE BEST\n  OF FRIENDS!!!|* WE SHOULD ALL GET TOGETHER SOMETIME!|`0* WELL! BYE!");
   if (chasing) NARRATE("* (Undyne waited politely for you to hang up.)");
   EV_END;
 }
@@ -318,7 +318,7 @@ static int ev_hot_undyne(Ev *c) {
     u = obj_deco(SPR_UNDYNE_FALLEN, 534, 6213, false);
     if (u) u->name = ACTOR_UNDYNE, u->event = EV_HOT_UNDYNE, u->flags |= OF_TALK, obj_set_box(u, 0, 6, 50, 20);
     set_flag(F_UNDYNE, 3);
-    NARRATE("* (Undyne collapses on the bridge.)\n* (In all that armor, the heat is too much for her.)");
+    NARRATE("* (Undyne collapses on the\n  bridge.)|* (In all that armor, the\n  heat is too much for her.)");
     return 1;
   }
   if (flag(F_WATER_CUP) != 1) {
