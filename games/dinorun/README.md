@@ -16,6 +16,8 @@ This C game uses the original *rectangle-defined pixel art* decoded from [Lily's
 | **SHIFT** at title | Help screen |
 | **HOME** | Exit back to calculator |
 
+Physics now follows the Python original: **49-pixel jump apex**, 10–14 px/frame cactus speed, 5–14 px/frame bird speed, score advancing by one each frame, and night/day switching every 300 points. Actual real-time speed can still vary with the calculator and rendering cost.
+
 The game features the original pixel cacti, flying bird frames, scrolling clouds, moon/stars, gradually increasing speed, day/night changes, high-score storage (`dinorun.sav`) and instant restart.
 
 ## Build as an individual NumWorks app
@@ -34,7 +36,7 @@ Install the `.nwa` using https://my.numworks.com/apps (Chrome/Edge). **NumPlay i
 
 ## Integration into the combined NumPlay launcher
 
-`module` and `sim-module` targets are already included to support future integration. At present, **Dino Run is intentionally not added to `games/games.json`**, because the full NumPlay app was already close to the 2 MB flash cap. Adding the manifest entry now would make the full build fail unless enough flash is freed. See `INTEGRATION.md` in the standalone patch.
+`module` and `sim-module` targets are already included to support future integration. For a full English NumPlay hardware test, run `python3 tools/integrate_dinorun.py` at repo root and then push; the `Dino inside NumPlay (full launcher build)` workflow triggers automatically on `add-chrome-dino`. The integration reclaims flash by lowering the color depth of five carousel previews while preserving all games. See `FULL_NUMPLAY_README.md`.
 
 ## Development checks
 

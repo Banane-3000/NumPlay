@@ -31,14 +31,24 @@ int main(int argc,char **argv) {
   frame();
   if(argc>=2)screenshot(argv[1]);
   start_game();assert(scene==PLAY && score==0 && count==0);
+  /* Python H=-13, ad=2: first frame -13, apex -49 at frame 7. */
   int y=dino_y;
-  update(true,false);assert(dino_y<y && dino_vy<0);
-  for(int t=0;t<80;t++)update(false,false);
+  update(true,false);assert(dino_y==y-13*256);
+  for(int t=0;t<6;t++)update(false,false);
+  assert(dino_y==y-49*256);
+  for(int t=0;t<7;t++)update(false,false);
   assert(dino_y==DY*256);
-  update(false,true);assert(duck);
-  update(false,false);assert(!duck);
+  assert(score==14 && speed==10);
+  /* The old C game was -2600/+155 (over 80 px) and scrolled at 4 px.
+   * In Python speed is 10 at start, 11 after ~180 frames and 14 max. */
+  start_game();
+  ticks=179; cactus_meter=-9999; bird_meter=-9999;
+  update(false,false);
+  assert(speed==11 && score==180);
+  update(false,true);assert(duck && gravity_units==9);
+  update(false,false);assert(!duck && gravity_units==2);
   /* Force a collision, test the game-over state and restart. */
-  count=1;obstacles[0]=(obstacle){DX+12,DY-14,14,23,CACTUS};
+  high_score=0;count=1;obstacles[0]=(obstacle){DX+12,DY-14,14,23,CACTUS};
   update(false,false);assert(scene==DEAD && high_score==score);
   start_game();assert(scene==PLAY && score==0 && count==0);
   for(int i=0;i<160;i++){
@@ -53,6 +63,6 @@ int main(int argc,char **argv) {
   obstacles[2]=(obstacle){152,GROUND-28,21,18,BIRD};
   frame();
   if(argc>=3)screenshot(argv[2]);
-  printf("Host test passed: jump, crouch, collision, restart, rendering.\n");
+  printf("Host test passed: Python jump (49px), speed, crouch, collision, restart, rendering.\n");
   return 0;
 }

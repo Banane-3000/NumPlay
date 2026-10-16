@@ -1,6 +1,6 @@
 /* Dino Run — C gameplay for NumWorks / NumPlay with geometry converted from
  * the Python Chrome Dino sprites. See dino_sprites.h for source/rights note.
- * 320x240, RGB565, 16-row bands, 30 fps.
+ * 320x240, RGB565, 16-row bands; physics follows the Python frame steps.
  * Keyboard: OK/Up/Exe jump, Down duck, Back/Backspace pause, Home exit.
  */
 #include <eadk.h>
@@ -39,7 +39,11 @@ static color pixels[W * BAND];
 static int band_y, scene;
 static color bg, ink, faint;
 static obstacle obstacles[8];
-static int count, dino_y, dino_vy, duck, score, high_score, speed, spawn_left;
+static int count, dino_y, dino_vy, duck, score, high_score, speed;
+/* Python values: H=-13 for jump, gravity ad=2 (+7 each duck frame),
+ * cacti move Q=10..14 px/frame, birds move T=5..14 px/frame.
+ * The simulation uses one step per frame, just like the source. */
+static int gravity_units, cactus_meter, bird_meter;
 static uint32_t rng=0xA319F4B5u, ticks, distance_px;
 static bool new_record;
 
@@ -140,8 +144,9 @@ static void cactus(obstacle *o) {
 
 static void bird(obstacle *o) {
   /* Python aB/an: original flapping bird poses. */
-  if ((ticks/7)&1) SPRITE(BIRD_WING_DOWN,o->x,o->y+3,ink);
-  else             SPRITE(BIRD_WING_UP,o->x,o->y+3,ink);
+  /* Original sprite coordinates use the bird's y directly. */
+  if ((ticks/5)&1) SPRITE(BIRD_WING_DOWN,o->x,o->y,ink);
+  else             SPRITE(BIRD_WING_UP,o->x,o->y,ink);
 }
 
 static void scenery(void) {
@@ -188,21 +193,36 @@ static bool collision(void) {
   return false;
 }
 static void start_game(void) {
-  scene=PLAY;count=0;score=0;speed=4;spawn_left=260;distance_px=0;
+  scene=PLAY;count=0;score=0;speed=10;distance_px=0;
+  cactus_meter=0;bird_meter=0;gravity_units=2;
   duck=0;dino_y=DY*256;dino_vy=0;ticks=0;new_record=false;
 }
+/* Python Chrome Dino uses counters E (cactus) and q (birds), with random
+ * thresholds and 1-in-4 / 1-in-7 spawn chances. No obstacles initially. */
 static void spawn(void) {
-  if(count>=8)return;
-  obstacle *o=&obstacles[count++];
-  o->x=W+5;
-  if(score>350 && randint(5)==0) {
-    o->kind=BIRD;o->w=21;o->h=18;
-    /* Low birds require ducking; high birds can cross a jump. */
-    o->y=randint(2)?GROUND-28:GROUND-56;
-  } else {
-    o->kind=randint(3)==0?LARGE_CACTUS:CACTUS;
-    o->w=o->kind==LARGE_CACTUS?30:14;
-    o->h=23;o->y=DY-14;
+  int difficulty=(int)(ticks/60); /* original variable a */
+  int last_x=-1000, birds=0;
+  for(int i=0;i<count;i++) {
+    if (obstacles[i].kind==BIRD) birds++;
+    else if(obstacles[i].x>last_x)last_x=obstacles[i].x;
+  }
+  cactus_meter+=1+randint(4+difficulty/3);
+  int threshold=20+randint(40+21);
+  if(count<6 && cactus_meter>=threshold && randint(4)==0 && last_x<210) {
+    int amount=(randint(6)==0)?2+randint(2):1;
+    for(int i=0;i<amount && count<8;i++) {
+      obstacle *o=&obstacles[count++];
+      *o=(obstacle){(int16_t)(350+i*20),DY-14,14,23,CACTUS};
+    }
+    cactus_meter=0;
+  }
+  /* Original birds appear after 300 points, with positions y=150..180. */
+  bird_meter++;
+  int ready=40;
+  if(score>300 && birds==0 && count<8 && bird_meter>=ready+randint(40) && randint(7)==1) {
+    obstacle *o=&obstacles[count++];
+    *o=(obstacle){400,(int16_t)(150+randint(31)),21,18,BIRD};
+    bird_meter=0;
   }
 }
 static void lose(void) {
@@ -214,26 +234,37 @@ static void lose(void) {
   }
 }
 static void update(bool jump,bool down) {
-  ticks++;score=(int)(ticks/4);speed=4+(score/140);if(speed>10)speed=10;
-  if(jump && dino_y>=DY*256 && !down) dino_vy=-2600;
+  ticks++;
+  score=(int)ticks; /* Python's O increases by one every game frame. */
+  speed=10+(int)(ticks/180); if(speed>14)speed=14;
+
+  /* The original program updates position first, then acceleration, so a
+   * new jump goes: -13,-11,-9,-7,-5,-3,-1,+1,... = 49 px rise. */
+  if(jump && dino_y>=DY*256 && !down) dino_vy=-13*256;
   duck=down && dino_y>=DY*256;
-  if(dino_y<DY*256 || dino_vy<0) {
-    if(down)dino_vy+=220;
-    dino_y+=dino_vy;dino_vy+=155;
-    if(dino_y>=DY*256){dino_y=DY*256;dino_vy=0;}
+  dino_y+=dino_vy;
+  if(dino_y<DY*256) {
+    dino_vy+=gravity_units*256;
+  } else {
+    dino_y=DY*256;
+    dino_vy=0;
   }
+  /* Holding Down increases falling acceleration by 7 each frame, just
+   * like Python's ad += 7; release resets it to 2. */
+  if(down)gravity_units+=7;
+  else gravity_units=2;
+
   distance_px+=(uint32_t)speed;
   for(int i=0;i<count;) {
-    obstacles[i].x-=(int16_t)speed;
-    if(obstacles[i].x+obstacles[i].w<0) {
-      for(int j=i+1;j<count;j++) obstacles[j-1]=obstacles[j];
+    int move=(obstacles[i].kind==BIRD)?5+(int)(ticks/180):speed;
+    if(move>14)move=14;
+    obstacles[i].x-=(int16_t)move;
+    if(obstacles[i].x+obstacles[i].w<-24) {
+      for(int j=i+1;j<count;j++)obstacles[j-1]=obstacles[j];
       count--;
     } else i++;
   }
-  spawn_left-=speed;
-  if(spawn_left<=0) {
-    spawn();spawn_left=200+randint(95)+(speed-4)*13;
-  }
+  spawn();
   if(collision())lose();
 }
 static void frame(void) {

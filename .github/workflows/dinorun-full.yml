@@ -1,0 +1,75 @@
+name: Dino inside NumPlay (full launcher build)
+
+# Build on push to the feature branch; manual dispatch is also available if
+# the workflow is later added to the repo's default branch. No releases.
+on:
+  push:
+    branches: [add-chrome-dino]
+    paths:
+      - 'games/dinorun/**'
+      - 'games/games.json'
+      - 'tools/integrate_dinorun.py'
+      - '.github/workflows/dinorun-full.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  numplay-dino:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ARM toolchain
+        run: |
+          v=15.2.1-1.1
+          curl -fsSL "https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v$v/xpack-arm-none-eabi-gcc-$v-linux-x64.tar.gz" | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/xpack-arm-none-eabi-gcc-$v/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Tools
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq pngquant
+          pip install pillow numpy zopfli pyelftools unicorn==2.1.4
+          npm install -g nwlink@1.0.0
+          rustup target add thumbv7em-none-eabihf
+
+      - name: Verify integrated manifest
+        run: |
+          python3 - <<'PY'
+          import json
+          data = json.load(open('games/games.json', encoding='utf-8'))
+          names = [g['id'] for g in data]
+          assert 'dinorun' in names, 'Run python3 tools/integrate_dinorun.py and commit the manifest first'
+          print('Game count:', len(names), '; Dino index:', names.index('dinorun'))
+          PY
+
+      - name: Check Python-equivalent Dino physics
+        run: make -C games/dinorun host-test
+
+      - name: Build every game and the full NumPlay launcher, check flash/RAM
+        run: make -j4 nwa apps check NWLINK=nwlink
+
+      # Upload before lengthy emulator smoke tests. A later test failure should
+      # never discard a successfully compiled calculator app again.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NumPlay-with-Dino
+          path: |
+            build/NumPlay.nwa
+            build/NumPlay-Invisible.nwa
+            build/NumPlay-Matrices.nwa
+            build/NumPlay-Upsilon.nwa
+            build/apps/*.nwa
+          if-no-files-found: error
+
+      # A short independent check; the complete project suite still runs in build.yml.
+      - name: Emulator smoke test (Snake)
+        run: python3 tests/test_games.py build/apps --game snake
