@@ -29,6 +29,8 @@ static Obj *obj_undyne(int x, int y) {
   if (o) o->flags &= (uint16_t)~OF_SOLID;
   return o;
 }
+Obj *wf_mk(int x, int y, int dir) { return obj_mk(x, y, dir); }
+Obj *wf_undyne(int x, int y) { return obj_undyne(x, y); }
 /* a thing to pick up: its item and the flag that says it's taken (and what's drawn of it, at (x, y)) */
 static void pickup(int x, int y, int w, int h, int item, int fl, uint16_t spr) {
   if (flag(fl)) return;
@@ -545,7 +547,7 @@ static int ev_wf_grass(Ev *c) {
     WAIT(30);
     NARRATE("* (...and pulls out Monster Kid.)");
     WAIT(20);
-    NARRATE("* (She drops him, and walks away.)");
+    NARRATE("* (She drops them, and walks away.)");
   }
   u = obj_get(ACTOR_UNDYNE);
   WALK(u, 6560, 520, 2);

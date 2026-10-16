@@ -173,6 +173,30 @@ static const char *talk_temmie(Battle *b, Monster *m) {
 }
 static int attack_temmie(Battle *b, Monster *m) { (void)b, (void)m; return ATK_TEMMIE_HOPS; }
 
+/* ---------------------------------------------------------------- Undyne: no sparing her; she turns the SOUL green
+ * (block her spears with its shield), then red again (her spears from the ground). Running is the friendly way */
+static void act_undyne(Battle *b, Monster *m, int act, char *t, int cap) {
+  (void)m;
+  if (act == 0) snprintf(t, (size_t)cap, "* You tell Undyne you don't want to fight.\n* She isn't listening.");
+  else {
+    b->state[0]++;
+    snprintf(t, (size_t)cap, "* You tell Undyne her spears are too slow.\n* Her spears get faster!");
+  }
+}
+static const char *talk_undyne(Battle *b, Monster *m) {
+  (void)m;
+  static const char *const lines[] = {"Ha! You\ncan't run\nnow!", "Use the\nshield!\nBlock!", "Is that\nall you've\ngot?",
+                                      "For every\nmonster's\nfuture!", "You're\ntougher\nthan you\nlook!", "NGAAH!"};
+  return lines[(b->turn - 1) % 6];
+}
+static const char *flavor_undyne(Battle *b, Monster *m) {
+  (void)m;
+  static const char *const lines[] = {"* Undyne points her spear at you.", "* Undyne's eye is fixed on you.",
+                                      "* Undyne flips her spear around.", "* Smells like sushi."};
+  return lines[b->turn % 4];
+}
+static int attack_undyne(Battle *b, Monster *m) { (void)m; return b->turn % 2 ? ATK_UNDYNE_ARROWS : ATK_UNDYNE_SPEARS; }
+
 static const MonDef wf_defs[MON_COUNT - MON_SNOW_COUNT] = {
   [MON_AARON - MON_SNOW_COUNT] = {
     .name = "Aaron", .spare_gold = 30, .hp = 98, .at = 7, .df = 2, .exp = 52, .gold = 30, .spr_idle = SPR_AARON_B,
@@ -210,6 +234,11 @@ static const MonDef wf_defs[MON_COUNT - MON_SNOW_COUNT] = {
     .acts = {"Flex", "Talk", "Feed Flakes"}, .nacts = 3,
     .neutral = {"* Temmie is vibrating.", "* Temmie is trying to pet you.", "* Smells like Temmie Flakes."},
     .act = act_temmie, .talk = talk_temmie, .attack = attack_temmie},
+  [MON_UNDYNE - MON_SNOW_COUNT] = {
+    .name = "Undyne", .hp = 1500, .at = 6, .df = 20, .exp = 500, .gold = 0, .spr_idle = SPR_UNDYNE_B,
+    .spr_hurt = SPR_UNDYNE_B, .idle_speed = 5, .check = "Head of the Royal Guard. She does not back down.",
+    .acts = {"Plead", "Challenge"}, .nacts = 2, .act = act_undyne, .talk = talk_undyne, .attack = attack_undyne,
+    .flavor = flavor_undyne},
 };
 const MonDef *wf_mon_def(int id) { return &wf_defs[id - MON_SNOW_COUNT]; }
 
@@ -232,6 +261,7 @@ static const Form wf_forms[FORM_COUNT - FORM_SNOW_COUNT] = {
   [FORM_MAD_DUMMY - FORM_SNOW_COUNT] = {{MON_MAD_DUMMY}, 1, "* Mad Dummy blocks the way!"},
   [FORM_TEMMIE - FORM_SNOW_COUNT] = {{MON_TEMMIE}, 1, "* A Temmie bounces up!"},
   [FORM_TEMMIE_MOLDBYGG - FORM_SNOW_COUNT] = {{MON_TEMMIE, MON_MOLDBYGG}, 2, "* Temmie and Moldbygg come along."},
+  [FORM_UNDYNE - FORM_SNOW_COUNT] = {{MON_UNDYNE}, 1, "* Undyne attacks!"},
 };
 const Form *wf_form(int form) { return &wf_forms[form - FORM_SNOW_COUNT]; }
 
@@ -399,10 +429,45 @@ static void atk_temmie_hops(int t) {
   }
 }
 
+/* Undyne: spears fly at the green SOUL from all four sides, faster as she goes on (and as she's challenged) */
+static void atk_undyne_arrows(int t) {
+  int speed = P(2) + P(min_i(bt.turn, 10)) / 6 + P(bt.state[0]) / 3;
+  int every = max_i(10, 22 - bt.turn);
+  if (t < 140 && t % every == 0) {
+    static const int16_t ang[4] = {64, 192, 0, 128};    /* from above, below, the left, the right: pointing in */
+    static const int8_t fx[4] = {0, 0, -1, 1}, fy[4] = {-1, 1, 0, 0};
+    int side = rnd_n(4);
+    Bullet *b = shot(SPR_ARROW, board_cx() + fx[side] * 60, board_cy() + fy[side] * 60, -fx[side] * speed, -fy[side] * speed);
+    if (b) b->r = 3, b->angle = ang[side], b->flags |= BF_SHIELD | BF_NOCLIP;
+  }
+}
+/* and at the red SOUL: a glint on the ground, then a spear shoots up there */
+static void atk_undyne_spears(int t) {
+  if (t < 130 && t % 14 == 0) {
+    int x = clamp_i(soul_x() - 20 + rnd_n(41), bx0() + 6, bx1() - 6);
+    Bullet *b = shot(SPR_SPEAR, x, by1() - 4, 0, 0);
+    if (b) b->kind = BK_SCRIPT, b->flags |= BF_HARMLESS, b->alpha = 90, b->a = 0, b->r = 3;
+  }
+  for (int i = 0; i < MAX_BULLETS; i++) {
+    Bullet *b = &bullets[i];
+    if (b->kind != BK_SCRIPT || b->spr != SPR_SPEAR) continue;
+    if (++b->a == 16) b->flags &= (uint8_t)~BF_HARMLESS, b->alpha = 255, b->vy = -P(5);
+    b->y += b->vy;
+    if (b->y < P(by0() - 30)) b->kind = BK_NONE;
+  }
+}
+
 void wf_attack_run(Battle *b, int atk, int t) {
   (void)b;
   if (t < 0) {
-    board_set(atk == ATK_SHYREN_NOTES ? 160 : 130, 110);
+    if (atk == ATK_UNDYNE_ARROWS) {
+      board_set(80, 80);
+      soul_set_mode(SOUL_GREEN);
+      bt.shield = 1;
+    } else {
+      board_set(atk == ATK_SHYREN_NOTES ? 160 : 130, 110);
+      soul_set_mode(SOUL_RED);
+    }
     return;
   }
   switch (atk) {
@@ -416,5 +481,7 @@ void wf_attack_run(Battle *b, int atk, int t) {
     case ATK_DUMMY_MINIONS: atk_dummy_minions(t); break;
     case ATK_DUMMY_MISSILES: atk_dummy_missiles(t); break;
     case ATK_TEMMIE_HOPS: atk_temmie_hops(t); break;
+    case ATK_UNDYNE_ARROWS: atk_undyne_arrows(t); break;
+    case ATK_UNDYNE_SPEARS: atk_undyne_spears(t); break;
   }
 }

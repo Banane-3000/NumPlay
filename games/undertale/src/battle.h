@@ -102,7 +102,7 @@ typedef struct {
   int16_t angle;                   /* drawn turned (1/256 turns) */
   uint8_t owner;                   /* the monster that made it */
 } Bullet;
-enum { BF_NOCLIP = 1, BF_ONCE = 2, BF_HIDDEN = 4, BF_BOX = 8, BF_FRONT = 16, BF_HARMLESS = 32 };
+enum { BF_NOCLIP = 1, BF_ONCE = 2, BF_HIDDEN = 4, BF_BOX = 8, BF_FRONT = 16, BF_HARMLESS = 32, BF_SHIELD = 64 };   /* (shield: the green SOUL's blocks it) */
 
 typedef struct Battle {
   int form;
@@ -118,6 +118,7 @@ typedef struct Battle {
   /* the SOUL */
   int32_t sx, sy;              /* its middle, 1/16 pixels */
   int soul_mode;
+  int shield;                  /* green: the way its shield faces (DIR_*: down, up, left, right) */
   int inv;                     /* invincible for frames */
   int speed;                   /* 1/16 pixels a frame */
   /* the attack */
@@ -157,7 +158,7 @@ void bullets_update(void);
 void bullets_draw(void);
 bool soul_hit_test(void);              /* bullets touching the SOUL hurt it */
 void soul_update(uint32_t keys);
-enum { SOUL_RED, SOUL_BLUE };          /* (the heart's frame too) */
+enum { SOUL_RED, SOUL_BLUE, SOUL_GREEN };   /* (the heart's frame too): green stays put, its shield turns */
 void soul_set_mode(int mode);          /* blue: it falls, up jumps */
 void gfx_bone(int cx, int cy, int w, int h, uint16_t col, uint8_t a);
 void soul_hurt(int dmg, int color);

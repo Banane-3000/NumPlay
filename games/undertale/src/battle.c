@@ -756,6 +756,16 @@ void battle_draw(void) {
     attack_draw(&bt, bt.atk, bt.atk_t);
     bullets_draw();
     if (!bt.inv || (bt.inv / 2) % 2) gfx_sprite(SPR_HEART, bt.soul_mode, soul_x(), soul_y(), 0, 255);
+    if (bt.soul_mode == SOUL_GREEN) {
+      /* its ring, and the shield on the side it faces */
+      int cx = soul_x(), cy = soul_y();
+      for (int a = 0; a < 256; a += 8)
+        gfx_rect(cx + 13 * gfx_cos(a) / 1024, cy + 13 * gfx_sin(a) / 1024, 1, 1, rgb565(0x00C000), 255);
+      static const int8_t ox[4] = {0, 0, -11, 11}, oy[4] = {11, -11, 0, 0};
+      int x = cx + ox[bt.shield], y = cy + oy[bt.shield];
+      if (bt.shield < 2) gfx_rect(x - 7, y - 1, 15, 3, rgb565(0x3070FF), 255);
+      else gfx_rect(x - 1, y - 7, 3, 15, rgb565(0x3070FF), 255);
+    }
   }
   gfx_clip_all();
   if (bt.phase == P_FLEE) gfx_sprite(SPR_HEARTGTFO, (bt.t / 3) % 2, button_x[3] + 8 - bt.t * 3, BUTTON_Y + 11, 0, 255);

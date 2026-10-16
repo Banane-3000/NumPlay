@@ -32,7 +32,7 @@ ROOMS = {m.group(1): int(m.group(2)) for m in
          re.finditer(r"#define ROOM_(\w+) (\d+)", open(os.path.join(HERE, "..", "src", "data.h")).read())}
 FORM_SNOWDRAKE, FORM_PAPYRUS = 19, 31
 (FORM_AARON, FORM_WOSHUA, FORM_WOSHUA_AARON, FORM_MOLDBYGG, FORM_MOLDBYGG_MOLDSMAL, FORM_MOLDBYGG_WOSHUA, FORM_SHYREN,
- FORM_MAD_DUMMY, FORM_TEMMIE, FORM_TEMMIE_MOLDBYGG) = range(32, 42)
+ FORM_MAD_DUMMY, FORM_TEMMIE, FORM_TEMMIE_MOLDBYGG, FORM_UNDYNE) = range(32, 43)
 ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT, ITEM_ASTRONAUT_FOOD = range(17, 23)
 
 
@@ -103,8 +103,9 @@ check(s and s["mode"] == MODE_WORLD and s["hp"] == 1, f"Papyrus did not capture 
 
 # Waterfall's battles: fled from, fought, and each spared its own way (Aaron out-flexed, Woshua's green caught after
 # asking to be cleaned, Moldbygg hugged then let go, Shyren hummed along with, Temmie talked to); Mad Dummy can't be
-# fled or hurt: its fight lasts until Napstablook comes
-for form in list(range(FORM_AARON, FORM_SHYREN + 1)) + [FORM_TEMMIE, FORM_TEMMIE_MOLDBYGG]:
+# fled or hurt: its fight lasts until Napstablook comes. Undyne can't be spared: fled from (her arrows blocked with
+# the green SOUL's shield)
+for form in list(range(FORM_AARON, FORM_SHYREN + 1)) + [FORM_TEMMIE, FORM_TEMMIE_MOLDBYGG, FORM_UNDYNE]:
     s = run(["--god", "--battle", str(form), "--path", "flee"], 1500, what=f"battle {form}, fleeing")
     check(s and s["mode"] == MODE_WORLD, f"battle {form}: fleeing did not end it: {s}")
 for form in (FORM_AARON, FORM_WOSHUA, FORM_MOLDBYGG, FORM_SHYREN, FORM_TEMMIE):
@@ -173,17 +174,20 @@ if not QUICK:
 # Waterfall, the friendly way: Monster Kid, Grillby's with Sans, the tutu, Papyrus's report, the bridge seeds (and
 # the secret one to the quiche), the wishing room, Undyne's spears, the telescope, the punch card, the marsh (the
 # ballet shoes), Onionsan, the piano and the artifact, Shyren, the umbrellas, Monster Kid in the rain, the bridge cut,
-# the garbage dump, Mad Dummy, Napstablook's house, the snail farm, Gerson, the mushroom maze and Temmie Village
+# the garbage dump, Mad Dummy, Napstablook's house, the snail farm, Gerson, the mushroom maze and Temmie Village, the
+# dead end, Monster Kid helped up on the chasm's bridge, Undyne's fight (fled), her chase, Papyrus's call, and Hotland,
+# where she falls in the heat and gets the cooler's water
 if not QUICK:
     s = run(["--name", "Frisk", "--noenc", "--god", "--room", str(ROOMS["WF1"]), "--at", "30,1480", "--path-file",
              os.path.join(HERE, "waterfall.path")], 60000, what="Waterfall")
-    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["WF_MUSHROOM"], f"Waterfall did not end past the maze: {s}")
+    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["HT_ENTRANCE"], f"Waterfall did not end in Hotland: {s}")
     if s:
         for name, v in (("WF_MK", 1), ("GRILLBYS", 1), ("WF_TUTU", 1), ("WF_UNDYNE1", 1), ("SEEDS1", 1), ("SEEDS2", 1),
                         ("SEEDS3", 1), ("WF_QUICHE", 1), ("CHASE1", 1), ("WF_TELESCOPE", 1), ("WF_PUNCH", 1), ("WF_BALLET", 1),
                         ("WF_ONION", 2), ("PIANO", 1), ("WF_ARTIFACT", 1), ("SHYREN", 1),
                         ("UMBRELLA", 3), ("MK_RAIN", 2), ("WF_BRIDGE", 1), ("WF_DUMP", 1), ("WF_COOLER", 2),
-                        ("MAD_DUMMY", 1), ("NAPSTA_HOME", 2), ("TEM_VILLAGE", 1), ("WF_EAST1", 1)):
+                        ("MAD_DUMMY", 1), ("NAPSTA_HOME", 2), ("TEM_VILLAGE", 1), ("DEADEND", 1), ("MK_CHASM", 2),
+                        ("UNDYNE", 4), ("WATER_CUP", 2), ("PAP_NEON", 1), ("HOTLAND", 1)):
             check(flag(s, name) == v, f"Waterfall: F_{name} is {flag(s, name)}, not {v}")
         check(s["kills"] == 0, f"Waterfall: {s['kills']} killed on the friendly way")
         for item in (ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT, ITEM_ASTRONAUT_FOOD):

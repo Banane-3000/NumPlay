@@ -7,7 +7,6 @@
 #include "events.h"
 #include "game.h"
 #include "items.h"
-#include "menu.h"
 #include "monsters.h"
 #include "save.h"
 #include "shop.h"
@@ -112,11 +111,6 @@ void wf2_setup(int room, int from) {
       break;
     case ROOM_WF_TWIN:
       obj_sign(19860, 2290, 30, 20, "* (The water here is shallow. You wade on.)");
-      break;
-    case ROOM_WF_MUSHROOM:
-      if (!flag(F_WF_EAST1)) {
-        obj_trigger(21144, 2350, 16, 500, EV_WF_EAST_END, ACTOR_TRIGGER);
-      }
       break;
     case ROOM_WF_TEMMIE:
       set_flag(F_TEM_VILLAGE, 1);
@@ -253,15 +247,6 @@ static int ev_temmie(Ev *c) {
   EV_END;
 }
 
-static int ev_east_end(Ev *c) {
-  EV_BEGIN;
-  set_flag(F_WF_EAST1, 1);
-  sv.room = (int16_t)g_room, sv.x = (int16_t)(pl.x - 30), sv.y = pl.y;
-  save_write_auto();
-  menu_end_open();
-  EV_END;
-}
-
 int wf2_event(Ev *c) {
   switch (c->id) {
     case EV_DUMP_WAKE: return ev_dump_wake(c);
@@ -272,7 +257,6 @@ int wf2_event(Ev *c) {
     case EV_SNAILS: return ev_snails(c);
     case EV_GERSON: case EV_TEM_SHOP: return ev_shop_door(c);
     case EV_TEMMIE: return ev_temmie(c);
-    case EV_WF_EAST_END: return ev_east_end(c);
   }
   return -1;
 }

@@ -19,6 +19,7 @@ void room_setup(int room, int from) {
   town_setup(room, from);
   wf1_setup(room, from);
   wf2_setup(room, from);
+  wf3_setup(room, from);
 }
 
 /* each frame Frisk can walk: what a room watches (a rock on its switch, a cracked floor) */
@@ -27,6 +28,7 @@ void room_update(void) {
   snow1_update();
   snow2_update();
   wf1_update();
+  wf3_update();
 }
 
 /* what a room draws on its floor, under everything (world.c) */

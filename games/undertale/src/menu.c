@@ -368,7 +368,7 @@ void menu_gameover_open(void) {
 void menu_end_open(void) {
   g_mode = MODE_END;
   t = 0;
-  writer_start(&w, "Past the mushrooms, the path\ngoes on into the dark...|The rest of Waterfall,\nand the underground beyond,\nare still to come...", 40, 90, FONT_MAIN);
+  writer_start(&w, "Out of Waterfall at last,\ninto the heat of Hotland...|The rest of the underground\nis still to come...", 40, 90, FONT_MAIN);
   w.speed = 2;
 }
 

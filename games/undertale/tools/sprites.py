@@ -114,6 +114,14 @@ def gen_spear():
     return [im]
 
 
+def gen_arrow():
+    # Undyne's spear in battle, pointing right (turned as it flies)
+    im = _img(18, 7)
+    d = ImageDraw.Draw(im)
+    d.polygon([(17, 3), (11, 0), (11, 2), (0, 2), (0, 4), (11, 4), (11, 6)], fill=(255, 255, 255, 255))
+    return [im]
+
+
 def gen_note():
     im = _img(9, 11)
     d = ImageDraw.Draw(im)
@@ -153,7 +161,7 @@ def gen_debris():
 GEN = {"otile": gen_otile, "snowball": gen_snowball, "bone": gen_bone, "orb": gen_orb, "snowflake": gen_snowflake,
        "iceshard": gen_iceshard, "present": gen_present, "knife": gen_knife, "dogpaw": gen_dogpaw,
        "heartbullet": gen_heartbullet, "spear": gen_spear, "note": gen_note, "drop": gen_drop, "arm": gen_arm,
-       "debris": gen_debris}
+       "debris": gen_debris, "arrow": gen_arrow}
 
 SNOW_CLEAR = [(133, 163, 216), (114, 129, 177), (139, 163, 186), (180, 192, 201), (195, 207, 216)]
 PAP_GIF = "move:Papyrus_screenshot_back_and_forth.gif:0,280,640,450:"
@@ -171,7 +179,7 @@ SPRITES = [
     ("savepoint", "demo:spr_savepoint", {"origin": (0, 0), "keep": True}),
     ("flowey", "demo:spr_flowey", {"origin": (0, 0), "keep": True}),
     # the SOUL, 8 x 8 as the game's 16 x 16 halved; frame 1: blue
-    ("heart", "demo2:spr_heart", {"center": True, "keep": True, "tints": [(0, 60, 255)]}),   # red, blue
+    ("heart", "demo2:spr_heart", {"center": True, "keep": True, "tints": [(0, 60, 255), (0, 192, 0)]}),   # red, blue, green
 ] + [
     # the battle: its buttons (orange, then yellow when chosen), the FIGHT target and its bar, the slash, the HP label
     (n, "demo2:spr_" + n, {"keep": True}) for n in [
@@ -313,7 +321,14 @@ SPRITES = [
     ("tutu", "map:Waterfall_map.png:1240,1240,22,10", {"keep": True, "clear": [(23, 13, 43), (27, 21, 72), (27, 33, 90)]}),
     ("artifact", "map:Waterfall_map.png:10156,150,12,11",
      {"keep": True, "clear": [(27, 21, 72), (27, 33, 90), (54, 47, 121), (99, 102, 135)]}),
+    ("echo_ow", "wiki:Echo_Flower_overworld.png", {"feet": True}),
+    # Undyne fallen in Hotland's heat, on its bridge (cut from the map, the bridge and the rock behind see-through)
+    ("undyne_fallen", "map:Hotland_map.png:534,6213,50,27",
+     {"keep": True, "clear": [(169, 124, 41), (91, 65, 0), (62, 35, 0), (19, 35, 45), (18, 34, 44), (19, 35, 44),
+                              (23, 37, 53), (20, 37, 47), (20, 36, 46), (12, 29, 33), (19, 36, 46), (23, 36, 52)]}),
     ("spear", "gen:spear", {"center": True}),
+    ("arrow", "gen:arrow", {"center": True}),
+    ("undyne_b", "wiki:Undyne_battle_armor.gif", {"feet": True, "every": 6}),
     ("note", "gen:note", {"center": True}),
     ("drop", "gen:drop", {"center": True}),
     ("arm", "gen:arm", {"center": True}),

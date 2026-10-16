@@ -8,7 +8,7 @@
 
 <p align="center">
   <b>Fall into the Underground as a human child, on the NumWorks calculator.</b><br>
-  The Ruins, Snowdin and most of Waterfall, from the bed of golden flowers to Temmie Village. The rest of the Underground is on the way.
+  The Ruins, Snowdin and Waterfall, from the bed of golden flowers to Hotland's edge. The rest of the Underground is on the way.
 </p>
 
 <p align="center">
@@ -25,8 +25,8 @@
 * **The whole Ruins:** every room, from the golden flowers through Toriel's puzzles, the falling leaves, the spikes, the rocks, the cracked floors and the switches, to Toriel's home and the long corridor under it.
 * **Its people, with all they have to say:** Flowey, Toriel and her phone calls, Napstablook, the talking rock, the Froggits who give advice, the spider bake sale, the snail facts, and every sign, bookshelf and mirror.
 * **Snowdin:** Sans and Papyrus, and every one of Papyrus's puzzles: the invisible electricity maze, the X and O tiles, the one on ice, the multicolor tiles and the Gauntlet. Then Snowdin Town, with its shop, inn, library and Papyrus's house.
-* **Waterfall:** Monster Kid, Grillby's with Sans, the echo flowers, the bridge seeds (and the secret bridge to the quiche), the wishing room, Undyne chasing you with her spears, Sans's telescope, the marsh where the land is black and the water glows, Onionsan, the piano's secret song, the statue in the rain and Monster Kid under your umbrella. Then the fall into the garbage dump, Mad Dummy, Napstablook's house and snail farm, the small bird back over the gap, Gerson's shop, the mushroom maze and Temmie Village with its Tem Shop.
-* **Battles like in the game:** FIGHT with the timing bar, ACT, ITEM and MERCY, and your SOUL dodging each monster's own attacks in the box: Froggit, Whimsun, Moldsmal, Loox, Vegetoid, Migosp, Napstablook and Toriel in the Ruins; Snowdrake, Ice Cap, Gyftrot, Jerry, Chilldrake, Glyde, Doggo, Lesser Dog, Dogamy and Dogaressa, Greater Dog and Papyrus, whose blue attack makes your SOUL fall, in Snowdin; Aaron, Woshua, Moldbygg, Shyren, Temmie and Mad Dummy, who can't be hurt, in Waterfall.
+* **Waterfall:** Monster Kid, Grillby's with Sans, the echo flowers, the bridge seeds (and the secret bridge to the quiche), the wishing room, Undyne chasing you with her spears, Sans's telescope, the marsh where the land is black and the water glows, Onionsan, the piano's secret song, the statue in the rain and Monster Kid under your umbrella. Then the fall into the garbage dump, Mad Dummy, Napstablook's house and snail farm, the small bird back over the gap, Gerson's shop, the mushroom maze and Temmie Village with its Tem Shop. And at the end of Waterfall: the lantern maze, Undyne at the dead end (and Monster Kid in her way), the echo flowers' path, Monster Kid on the chasm's bridge, Undyne on her crag, her fight and her chase, and Hotland's edge, where the heat gets her and the water cooler helps.
+* **Battles like in the game:** FIGHT with the timing bar, ACT, ITEM and MERCY, and your SOUL dodging each monster's own attacks in the box: Froggit, Whimsun, Moldsmal, Loox, Vegetoid, Migosp, Napstablook and Toriel in the Ruins; Snowdrake, Ice Cap, Gyftrot, Jerry, Chilldrake, Glyde, Doggo, Lesser Dog, Dogamy and Dogaressa, Greater Dog and Papyrus, whose blue attack makes your SOUL fall, in Snowdin; Aaron, Woshua, Moldbygg, Shyren, Temmie, Mad Dummy, who can't be hurt, and Undyne, who turns your SOUL green, in Waterfall.
 * **Spare or fight:** every monster can be spared, and Flowey at the door remembers what you did. Lose to Papyrus and he only locks you in his shed.
 * **Saved like in the game:** SAVE at the stars, with the room and the time played. The C menu has your ITEM, STAT and CELL. Home keeps the moment you were at, and your save is also copied into `undertale_saves.py`, so installing the app again doesn't erase it.
 
@@ -87,6 +87,18 @@
     <td align="center"><img src="docs/gerson.png" width="390" alt="Gerson's shop"><br><sub>Gerson's shop</sub></td>
     <td align="center"><img src="docs/temmie.png" width="390" alt="Temmie Village"><br><sub>Temmie Village</sub></td>
   </tr>
+  <tr>
+    <td align="center"><img src="docs/deadend.png" width="390" alt="Undyne and Monster Kid at the dead end"><br><sub>Monster Kid gets in Undyne's way</sub></td>
+    <td align="center"><img src="docs/chasm.png" width="390" alt="Monster Kid hanging off the bridge"><br><sub>Monster Kid hangs off the bridge</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/crag.png" width="390" alt="Undyne on her crag"><br><sub>Undyne on her crag</sub></td>
+    <td align="center"><img src="docs/undyne.png" width="390" alt="Undyne's fight, the green SOUL"><br><sub>Block Undyne's spears with the green SOUL</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/neon.png" width="390" alt="The neon sign"><br><sub>Welcome to Hotland</sub></td>
+    <td align="center"><img src="docs/hotland.png" width="390" alt="Undyne in Hotland's heat"><br><sub>Water for Undyne, in Hotland's heat</sub></td>
+  </tr>
 </table>
 
 ## How to play
@@ -97,7 +109,7 @@ Monsters jump out as you walk. In a battle, choose FIGHT to attack (press OK whe
 
 Snowdin brings new things: when Papyrus turns your SOUL blue, it falls to the bottom of the box, and Up jumps over his bones. On ice you slide until something stops you. Snowdin Town's shop sells food and gear, and its inn gives you a night's rest.
 
-In Waterfall, walk into a bridge seed to push it: in the water it blooms into a flower you can walk on, and the bell calls the seeds back. A green bullet heals you instead of hurting. Talk to the piano to play it, and keep an umbrella for the rain. The Tem Shop is the one shop that buys what you carry.
+In Waterfall, walk into a bridge seed to push it: in the water it blooms into a flower you can walk on, and the bell calls the seeds back. A green bullet heals you instead of hurting. Talk to the piano to play it, and keep an umbrella for the rain. The Tem Shop is the one shop that buys what you carry. When Undyne turns your SOUL green, it can't move: turn its shield with the arrows to block her spears. She can't be spared: run, and she'll chase you.
 
 Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) shows your items, your STAT and the phone numbers you have.
 
@@ -114,7 +126,7 @@ Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) sh
 ## Good to know
 
 * **One app at a time:** Undertale is too big to sit next to NumPlay or the other big games. Installing it from the NumWorks website swaps them out, and installing them again swaps it out. Your saves in each one are kept.
-* **The Ruins, Snowdin and most of Waterfall, for now:** the way on past the mushroom maze ends the game, on a screen that says the rest of the Underground is still to come. Undyne's fight at the end of Waterfall, Hotland and New Home come next, one at a time.
+* **The Ruins, Snowdin and Waterfall, for now:** Hotland's first room ends the game, on a screen that says the rest of the Underground is still to come. Hotland, the CORE and New Home come next, one at a time.
 * **No music or sound:** the calculator has no speaker.
 * **The same Underground:** the rooms and pictures are the game's, everyone says what they say in the game (the longer speeches in shorter words of our own), and the puzzles and battles follow how the game plays them, at its 30 frames a second.
 

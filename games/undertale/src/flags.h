@@ -117,7 +117,13 @@ enum {
   F_NAPSTA_HOME,         /* 1 invited home, 2 lay on the floor with them */
   F_SNAIL_RACE,          /* Thundersnail races run */
   F_TEM_VILLAGE,         /* found */
-  F_WF_EAST1,            /* the way past the mushroom maze reached (where the game now ends) */
+  F_WF_EAST1,            /* (unused: the mushroom maze's far side once ended the game) */
+  F_DEADEND,             /* Undyne at the dead end, Monster Kid in her way: the way north lit */
+  F_MK_CHASM,            /* Monster Kid on the chasm's bridge: 1 hanging, 2 helped up, 3 let fall, 4 left behind */
+  F_UNDYNE,              /* her fight: 1 fled (she chases), 2 killed, 3 fallen in the heat, 4 given water */
+  F_WATER_CUP,           /* a cup of the cooler's water: 1 carried, 2 poured */
+  F_PAP_NEON,            /* Papyrus's call by the neon sign */
+  F_HOTLAND,             /* Hotland reached (where the game now ends) */
   FLAG_COUNT = 256
 };
 #endif

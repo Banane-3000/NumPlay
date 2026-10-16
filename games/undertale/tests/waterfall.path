@@ -1,4 +1,4 @@
-# Waterfall's west half from Snowdin's fog (play it with --room 85 --at 30,1480 --name Frisk --noenc --god), the
+# Waterfall from Snowdin's fog to Hotland's edge (play it with --room 85 --at 30,1480 --name Frisk --noenc --god), the
 # friendly way, as in snowdin.path. Monster Kid, Sans's booth (Grillby's), the echo flowers
 go:600,1480
 talk
@@ -282,7 +282,7 @@ w5
 z
 w30
 # the twin waterfalls, the mushroom maze, Temmie Village down its hidden path (a Temmie, the Tem Shop), and out at
-# the maze's far side, where the game now ends
+# the maze's far side
 go:20540,2310
 go:20700,2330
 go:21070,2860
@@ -305,4 +305,54 @@ z
 w20
 go:21070,2950
 go:21070,2840
-go:21150,2380
+go:21130,2380
+# the lantern maze, the dead end (its echo flower: Undyne, then Monster Kid in her way), the echo flowers' path north
+21175,2380
+go:21780,2665
+21830,2665
+go:22390,2660
+r
+z
+talk
+w30
+go:22190,2580
+22190,2530
+go:22190,2110
+22190,2030
+# the chasm: Monster Kid on the bridge, then hanging off it, helped up; Undyne on her crag, her fight (fled), her
+# chase by the river and the neon sign (Papyrus calls); Hotland: she falls in the heat, the cooler's water for her,
+# and on, where the game now ends
+go:22390,2030
+talk
+go:22626,2022
+d
+z
+talk
+go:23300,2030
+talk
+flee
+talk
+go:23449,1960
+23449,1930
+w20
+go:23449,920
+23449,890
+w20
+go:23690,780
+talk
+go:24200,780
+24215,780
+talk
+w20
+go:722,6188
+u
+z
+pick:0
+talk
+go:590,6206
+l
+z
+pick:0
+talk
+w20
+go:1010,6220

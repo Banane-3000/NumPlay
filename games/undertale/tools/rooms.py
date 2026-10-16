@@ -127,12 +127,26 @@ AREAS.append(dict(name="waterfall", map="Waterfall_map.png", floor=WF_FLOOR, mar
     ("erase", 18918, 2686, 22, 44, "ring"), ("erase", 18523, 2341, 16, 20, "ring", []), ("erase", 18578, 2058, 26, 48, "ring"),
     ("erase", 18811, 2113, 24, 42, "ring"), ("erase", 18976, 2100, 38, 52, "ring"), ("erase", 19108, 2330, 42, 54, "ring"),
     ("copy", 19276, 2090, 26, 52, 19316, 2090), ("erase", 18969, 1810, 26, 40, "ring"),
+    # by the chasm: Undyne on the bridge, Monster Kid hanging off it, the old monster beyond; Undyne on her crag
+    ("erase", 22494, 2006, 24, 52, "ring", []), ("erase", 22628, 2050, 24, 34, "ring"), ("erase", 23054, 2000, 32, 36, "ring"),
+    ("erase", 23436, 1510, 38, 62, "ring", []),
+    # the lantern maze, as the map draws it, has no way through for Frisk: two tufts of one wall left out
+    ("erase", 21618, 2654, 26, 44, [(0, 0, 0)]),
     # the bird (it waits across the gap), the tutu and the artifact (objects, gone once taken)
     ("erase", 8466, 578, 15, 19, [(27, 33, 90), (27, 21, 72), (23, 13, 43)]),
     ("erase", 1240, 1240, 22, 10, [(23, 13, 43), (27, 21, 72), (27, 33, 90)]),
     ("erase", 10156, 150, 12, 7, [(27, 21, 72), (27, 33, 90), (54, 47, 121)]),
     ("fill", 10156, 157, 12, 1, (0, 0, 0)), ("fill", 10156, 158, 12, 3, (99, 102, 135)),
     ("erase", 2380, 1500, 80, 20, "ring"), ("erase", 2850, 1240, 30, 80, "ring"), ("erase", 3040, 1540, 80, 20, "ring"),
+]))
+
+# Hotland: its orange rock floors (its black is nothing)
+HT_FLOOR = [(181, 85, 21), (169, 124, 41), (178, 83, 19), (91, 65, 0)]
+AREAS.append(dict(name="hotland", map="Hotland_map.png", floor=HT_FLOOR, margin=0, close=True, patches=[
+    # Undyne, fallen on the bridge in the heat (an object here, there only if she chased Frisk): the planks repeat
+    # every 40 pixels
+    ("copy", 454, 6219, 50, 21, 534, 6219),
+    ("erase", 536, 6208, 42, 11, [(19, 35, 45), (18, 34, 44), (19, 35, 44), (23, 37, 53), (20, 37, 47), (20, 36, 46)]),
 ]))
 
 ROOMS = [
@@ -432,12 +446,40 @@ ROOMS = [
     # (the way in, into the maze; out at its top right; the hidden way down to the village)
     dict(name="wf_temmie", area="waterfall", rect=(21040, 2880, 380, 280), title="Temmie Village", floor_colors=WF_WATER,
          fix=[("walk", 21056, 2880, 44, 24)]),
+    # the crystal maze of lanterns, the dark dead end where Undyne finds Frisk, the echo flowers' path north, the chasm's
+    # bridge (Monster Kid), Undyne's crag, the way north and the gate to Hotland
+    dict(name="wf_lantern", area="waterfall", rect=(21160, 2340, 640, 560), title="Waterfall", floor_colors=[(0, 0, 0)],
+         margin=3),
+    # (the dead end's hidden way north, through the grass, walked once Undyne has gone; the echo flowers' path goes
+    # on up into the chasm's room, the rooms meeting)
+    dict(name="wf_deadend", area="waterfall", rect=(21800, 2560, 640, 200), title="Waterfall",
+         floor_colors=[(0, 0, 0)] + WF_WATER + WF_DUMP, floor_rects=[(21800, 2616, 640, 90), (22160, 2556, 62, 64)],
+         fix=[("walk", 22164, 2560, 54, 60)]),
+    dict(name="wf_echopath", area="waterfall", rect=(21940, 2080, 420, 480), title="Waterfall",
+         floor_colors=[(0, 0, 0)] + WF_WATER + WF_DUMP, floor_rects=[(22160, 2080, 62, 480)]),
+    dict(name="wf_chasm", area="waterfall", rect=(22160, 1940, 1090, 160), title="Waterfall",
+         floor_colors=WF_WATER + WF_DUMP + [(23, 13, 43)],
+         fix=[("walk", 22416, 2040, 238, 20), ("walk", 23096, 2040, 70, 20)]),
+    dict(name="wf_arena", area="waterfall", rect=(23250, 1440, 370, 640), title="Waterfall",
+         floor_colors=WF_WATER + WF_DUMP + [(23, 13, 43)], floor_rects=[(23250, 1980, 370, 100), (23418, 1940, 80, 40)],
+         doors=[((23418, 1940, 80, 8), "wf_north", (23449, 1340), "up")]),
+    # the river under the crag, the neon sign's hall
+    dict(name="wf_north", area="waterfall", rect=(23280, 880, 360, 560), title="Waterfall", floor_colors=WF_WATER,
+         doors=[((23420, 1372, 78, 8), "wf_arena", (23449, 1950), "down"),
+                ((23420, 897, 78, 8), "wf_hotgate", (23512, 776), "right")]),
+    dict(name="wf_hotgate", area="waterfall", rect=(23480, 640, 740, 200), title="Waterfall", floor_colors=WF_WATER,
+         doors=[((23498, 775, 8, 47), "wf_north", (23449, 910), "down"),
+                ((24210, 775, 10, 47), "ht_entrance", (24, 6206), "right")]),
+    # Hotland's first room: Sans's station, the bridge over the lava, the water cooler
+    dict(name="ht_entrance", area="hotland", rect=(0, 6080, 1460, 320), title="Hotland",
+         doors=[((0, 6215, 6, 45), "wf_hotgate", (24180, 776), "left")]),
 ]
 
 # rooms one above the other through a dark doorway (tools/pack.py: apply_links); ("h", left, right, y, h): side
 # by side with a gap, a door each way along the rows y .. y + h
 LINKS = [
     ("h", "wf_hist", "wf_chase1", 540, 60),
+    ("h", "wf_mushroom", "wf_lantern", 2372, 26), ("h", "wf_lantern", "wf_deadend", 2682, 16),
     ("v", "wf_wish", "wf_hist", 3112, 36, 818),
     ("h", "snowdin1", "snowdin2", 404, 52),
     ("h", "snowdin2", "snowdin3", 404, 52),

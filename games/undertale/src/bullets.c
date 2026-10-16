@@ -42,6 +42,14 @@ void soul_update(uint32_t keys) {
   if (keys & K_X) sp /= 2;
   int dx = ((keys & K_RIGHT) != 0) - ((keys & K_LEFT) != 0), dy = ((keys & K_DOWN) != 0) - ((keys & K_UP) != 0);
   int x0 = (bt.x0 + 2 + 4) * FX, x1 = (bt.x1 - 2 - 4) * FX, y0 = (bt.y0 + 2 + 4) * FX, y1 = (bt.y1 - 2 - 4) * FX;
+  if (bt.soul_mode == SOUL_GREEN) {
+    /* it stays in the middle; the arrows turn its shield */
+    static const uint32_t bit[4] = {K_DOWN, K_UP, K_LEFT, K_RIGHT};
+    for (int d = 0; d < 4; d++)
+      if (keys & bit[d]) bt.shield = d;
+    bt.sx = board_cx() * FX, bt.sy = board_cy() * FX;
+    return;
+  }
   if (bt.soul_mode == SOUL_BLUE) {
     bt.sx += dx * sp;
     if (bt.sy >= y1) {
@@ -168,6 +176,15 @@ bool soul_hit_test(void) {
     Bullet *b = &bullets[i];
     if (b->kind == BK_NONE || (b->flags & (BF_HIDDEN | BF_HARMLESS))) continue;
     int bx = b->x / FX, by = b->y / FX;
+    if (bt.soul_mode == SOUL_GREEN && (b->flags & BF_SHIELD)) {
+      /* the shield stops what comes at it from the side it faces */
+      int dx = bx - sx, dy = by - sy;
+      int side = abs_i(dx) > abs_i(dy) ? (dx < 0 ? 2 : 3) : (dy < 0 ? 1 : 0);
+      if (side == bt.shield && abs_i(dx) + abs_i(dy) <= 15) {
+        b->kind = BK_NONE;
+        continue;
+      }
+    }
     bool touch;
     if (b->flags & BF_BOX) touch = sx + 3 > bx - b->w / 2 && sx - 3 < bx + b->w / 2 && sy + 3 > by - b->h / 2 && sy - 3 < by + b->h / 2;
     else touch = (sx - bx) * (sx - bx) + (sy - by) * (sy - by) <= (b->r + 3) * (b->r + 3);
