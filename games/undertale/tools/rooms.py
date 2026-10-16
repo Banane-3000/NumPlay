@@ -213,6 +213,16 @@ AREAS.append(dict(name="core", map="CORE_map.png", floor=CORE_FLOOR, margin=0, c
     ("copy", 2551, 836, 22, 84, 2519, 836),
 ]))
 
+# New Home: grey streets, Asgore's home, the basement's corridors, the Last Corridor, the throne room, the coffins,
+# the barrier. Its floors are cut by their rectangles alone (many colours: carpets, planks, flowers). Asgore (in the
+# throne room, at the barrier) is an object here, and the friends of the true ending are off the map
+AREAS.append(dict(name="newhome", map="New_Home_map.png", floor=[], margin=0, close=False, patches=[
+    ("erase", 5988, 1270, 62, 92, "ring", []), ("erase", 6310, 717, 64, 72, "ring", []),
+    ("erase", 5868, 906, 36, 54, "ring", []), ("erase", 5906, 921, 32, 42, "ring", []),
+    ("erase", 5944, 889, 36, 64, "ring", []), ("erase", 5976, 886, 38, 70, "ring", []),
+    ("erase", 6014, 921, 30, 42, "ring", []), ("erase", 6036, 911, 58, 64, "ring", []),
+]))
+
 ROOMS = [
     # the landing: the bed of golden flowers, a hallway, the Delta Rune arch
     dict(name="area1", area="ruins", rect=(0, 5900, 680, 260), title="Ruins", margin=0,
@@ -681,6 +691,44 @@ ROOMS = [
     dict(name="core_hall", area="core", rect=(3320, 60, 1100, 190), title="CORE",
          floor_rects=[(3340, 118, 1022, 42), (3340, 158, 60, 92)],
          doors=[((3340, 242, 60, 8), "core_mtt", (3348, 345), "down")]),
+    # New Home: the elevator up from the CORE, the city's street and the way to Asgore's home, its front yard
+    dict(name="nh_town", area="newhome", rect=(0, 2930, 1900, 1710), title="New Home", open=True,
+         floor_rects=[(40, 4536, 430, 44), (310, 4310, 100, 230), (250, 4310, 1450, 60), (1661, 3410, 34, 960),
+                      (1517, 3122, 311, 300)],
+         doors=[((1663, 3118, 34, 8), "nh_house", (1670, 2900), "up")]),
+    # Asgore's home: the hall (its chained stairs), the living room, the kitchen, the hallway and its two bedrooms
+    dict(name="nh_house", area="newhome", rect=(1190, 2440, 1460, 500), title="Asgore's Home", open=True,
+         floor_rects=[(1522, 2845, 316, 95), (1197, 2712, 325, 228), (1197, 2560, 200, 140), (1238, 2690, 42, 25),
+                      (1838, 2840, 734, 80), (1890, 2575, 200, 120), (2280, 2545, 220, 150)],
+         fix=[("wall", 1248, 2830, 90, 40), ("wall", 1290, 2735, 80, 45)],   # the dining table, the fireplace
+         doors=[((1663, 2934, 34, 6), "nh_town", (1670, 3125), "down"),
+                ((1978, 2836, 26, 6), "nh_house", (2040, 2658), "up"), ((2030, 2690, 42, 6), "nh_house", (1981, 2846), "down"),
+                ((2402, 2836, 26, 6), "nh_house", (2410, 2658), "up"), ((2397, 2690, 50, 6), "nh_house", (2405, 2846), "down")]),
+    # the basement: two long corridors (the story told on the way), the elevator back up at the end
+    dict(name="nh_basement", area="newhome", rect=(1520, 2040, 3460, 420), title="New Home", open=True,
+         floor_rects=[(1533, 2293, 1100, 94), (2517, 2143, 216, 250), (2633, 2143, 2200, 67), (4683, 2143, 117, 80)],
+         doors=[((4683, 2216, 117, 8), "nh_last", (4720, 2240), "down")]),
+    dict(name="nh_last", area="newhome", rect=(4580, 2210, 1400, 250), title="Last Corridor", open=True,
+         floor_rects=[(4585, 2335, 1300, 75), (4683, 2222, 117, 113), (5797, 2222, 88, 113)],
+         doors=[((4683, 2216, 117, 8), "nh_basement", (4720, 2180), "up"), ((5797, 2216, 88, 8), "nh_thall", (5790, 2180), "up")]),
+    # the throne room's entrance (its SAVE), the throne room, the stairs down to the coffins
+    dict(name="nh_thall", area="newhome", rect=(5640, 1700, 830, 530), title="Throne Entrance", open=True,
+         floor_rects=[(5760, 1797, 588, 75), (5760, 1872, 88, 350), (6260, 1872, 88, 350), (6005, 1785, 50, 12)],
+         doors=[((5760, 2216, 88, 8), "nh_last", (5820, 2240), "down"), ((6005, 1786, 50, 8), "nh_throne", (6010, 1600), "up"),
+                ((6260, 2216, 88, 8), "nh_coffins", (6300, 2240), "down")]),
+    dict(name="nh_throne", area="newhome", rect=(5880, 1080, 260, 600), title="Throne Room", open=True,
+         floor_rects=[(5903, 1238, 215, 381), (5963, 1110, 119, 128), (5940, 1096, 56, 20), (5998, 1619, 48, 60)],
+         doors=[((5998, 1662, 48, 8), "nh_thall", (6015, 1805), "down"), ((5940, 1096, 56, 8), "nh_barrier", (5955, 1040), "up")]),
+    dict(name="nh_coffins", area="newhome", rect=(6210, 2215, 500, 800), title="New Home", open=True,
+         floor_rects=[(6280, 2222, 60, 610), (6230, 2830, 460, 115)],
+         doors=[((6280, 2222, 60, 8), "nh_thall", (6290, 2180), "up")]),
+    # the room before the barrier ("The End"), and the barrier
+    dict(name="nh_barrier", area="newhome", rect=(5820, 850, 700, 240), title="The End", open=True,
+         floor_rects=[(5839, 977, 640, 44), (5839, 880, 262, 116), (5939, 1021, 62, 56), (6400, 960, 56, 20)],
+         doors=[((5939, 1070, 62, 8), "nh_throne", (5955, 1120), "down"), ((6400, 960, 56, 8), "nh_wall", (6330, 780), "up")]),
+    dict(name="nh_wall", area="newhome", rect=(6170, 560, 350, 270), title="The Barrier", open=True,
+         floor_rects=[(6190, 600, 320, 215)],
+         doors=[((6300, 810, 60, 8), "nh_barrier", (6415, 985), "down")]),
 ]
 
 # rooms one above the other through a dark doorway (tools/pack.py: apply_links); ("h", left, right, y, h): side

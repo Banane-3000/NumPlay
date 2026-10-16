@@ -321,9 +321,10 @@ int form_setup(int form, Battle *b) {
   /* Toriel and Flowey can't be fled from; Napstablook can */
   if (form == FORM_TORIEL || form == FORM_FLOWEY || form == FORM_PAPYRUS || form == FORM_MAD_DUMMY ||
       form == FORM_RGUARDS || form == FORM_BOMB || form == FORM_MUFFET || form == FORM_MTT_TILES || form == FORM_MTT_BOX ||
-      form == FORM_MTT_EX)
+      form == FORM_MTT_EX || form == FORM_ASGORE)
     b->no_flee = true;
   b->captures = form == FORM_PAPYRUS;
+  b->no_mercy = form == FORM_ASGORE;
   return 0;
 }
 const char *form_text(int form) { return form >= FORM_RUINS_COUNT ? snow_form(form)->text : forms[form].text; }

@@ -224,6 +224,10 @@ static uint32_t path_keys(int f) {
     return 0;
   }
   if (!strcmp(tok, "talk")) {
+    if (g_mode == MODE_END) {   /* (the end: nothing left to read on) */
+      path_at = next;
+      return 0;
+    }
     if (!text_active() && !event_blocking() && g_mode == MODE_WORLD && !world_fading()) {
       path_at = next;
       return 0;

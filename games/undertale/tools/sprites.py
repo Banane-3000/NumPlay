@@ -285,13 +285,60 @@ def gen_exarm():
     return [im]
 
 
+def gen_xshot():
+    # Omega Flowey's eyes' bullets: an X
+    im = _img(7, 7)
+    d = ImageDraw.Draw(im)
+    d.line([(0, 0), (6, 6)], fill=(255, 255, 255, 255), width=2)
+    d.line([(6, 0), (0, 6)], fill=(255, 255, 255, 255), width=2)
+    return [im]
+
+
+def gen_pan():
+    # the green SOUL's frying pan: a disc and its handle
+    im = _img(20, 8)
+    d = ImageDraw.Draw(im)
+    d.ellipse([0, 0, 12, 7], fill=(255, 255, 255, 255))
+    d.rectangle([12, 3, 19, 4], fill=(255, 255, 255, 255))
+    return [im]
+
+
+def gen_shoe():
+    # the blue SOUL's ballet shoe
+    im = _img(12, 7)
+    d = ImageDraw.Draw(im)
+    d.polygon([(0, 2), (8, 1), (11, 3), (11, 6), (1, 6)], fill=(255, 255, 255, 255))
+    d.line([(3, 0), (6, 3)], fill=(255, 255, 255, 255))
+    return [im]
+
+
+def gen_book():
+    # the purple SOUL's book
+    im = _img(10, 12)
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 9, 11], fill=(255, 255, 255, 255))
+    d.line([(2, 0), (2, 11)], fill=(0, 0, 0, 255))
+    return [im]
+
+
+def gen_actbutton():
+    # the ACT button, coming down among a SOUL's attack (touch it to call for help)
+    im = _img(26, 11)
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 25, 10], outline=(255, 160, 0, 255))
+    for x, ys in ((3, (2, 8)), (9, (2, 8)), (15, (2, 8)), (21, (2, 8))):
+        d.line([(x, ys[0]), (x + 2, ys[1])], fill=(255, 160, 0, 255))
+    return [im]
+
+
 GEN = {"otile": gen_otile, "snowball": gen_snowball, "bone": gen_bone, "orb": gen_orb, "snowflake": gen_snowflake,
        "iceshard": gen_iceshard, "present": gen_present, "knife": gen_knife, "dogpaw": gen_dogpaw,
        "heartbullet": gen_heartbullet, "spear": gen_spear, "note": gen_note, "drop": gen_drop, "arm": gen_arm,
        "debris": gen_debris, "arrow": gen_arrow, "plane": gen_plane, "bomb": gen_bomb, "cloud": gen_cloud,
        "bolt": gen_bolt, "star": gen_star, "croissant": gen_croissant, "donut": gen_donut,
        "mttmini": gen_mttmini, "exblock": gen_exblock, "exleg": gen_exleg, "mttheart": gen_mttheart,
-       "disco": gen_disco, "exarm": gen_exarm}
+       "disco": gen_disco, "exarm": gen_exarm, "xshot": gen_xshot, "pan": gen_pan, "shoe": gen_shoe, "book": gen_book,
+       "actbutton": gen_actbutton}
 
 SNOW_CLEAR = [(133, 163, 216), (114, 129, 177), (139, 163, 186), (180, 192, 201), (195, 207, 216)]
 PAP_GIF = "move:Papyrus_screenshot_back_and_forth.gif:0,280,640,450:"
@@ -474,6 +521,18 @@ SPRITES = [
     ("sausage", "map:CORE_map.png:117,1653,30,50", {"keep": True, "clear": [(33, 81, 164), (31, 130, 228), (34, 105, 164),
                                                                          (36, 62, 141), (71, 154, 204)]}),
     *[(n, "gen:" + n, {"center": True}) for n in ["exblock", "exleg", "mttheart", "disco", "exarm"]],
+    # New Home: Asgore (in the castle, in battle: his idle thinned out, hurt, kneeling), his face; Omega Flowey's
+    # screen (his smile, his laugh); the six SOULs; the shapes of their attacks
+    ("asgore_ow", "wiki:Asgore_Dreemurr_overworld.png", {"feet": True}),
+    ("asgore_b", "wiki:Asgore_Dreemurr_battle_idle.gif", {"feet": True, "clear_bg": True, "dedupe": True, "every": 24}),
+    ("asgore_hurt", "wiki:Asgore_Dreemurr_battle_hurt.png", {"feet": True, "clear_bg": True}),
+    ("asgore_kneel", "wiki:Asgore_Dreemurr_battle_kneeling.png", {"feet": True, "clear_bg": True}),
+    ("face_asgore", "wiki:Asgore_Dreemurr_face.png", {"keep": True}),
+    ("omega", "wiki:Omega_Flowey_battle_smile.png", {"center": True, "clear_bg": True}),
+    ("omega_laugh", "wiki:Omega_Flowey_battle_laugh.gif", {"center": True, "clear_bg": True, "dedupe": True, "every": 6}),
+    *[("soul_" + c.lower(), "wiki:" + c + "_SOUL_sprite.png", {"center": True})
+      for c in ["Light_blue", "Orange", "Blue", "Purple", "Green", "Yellow"]],
+    *[(n, "gen:" + n, {"center": True}) for n in ["xshot", "pan", "shoe", "book", "actbutton"]],
     ("bird", "map:Waterfall_map.png:8466,578,15,19", {"keep": True, "clear": [(27, 33, 90), (27, 21, 72), (23, 13, 43)]}),
     ("tutu", "map:Waterfall_map.png:1240,1240,22,10", {"keep": True, "clear": [(23, 13, 43), (27, 21, 72), (27, 33, 90)]}),
     ("artifact", "map:Waterfall_map.png:10156,150,12,11",

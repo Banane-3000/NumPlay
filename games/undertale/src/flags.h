@@ -177,7 +177,20 @@ enum {
   F_CORE_END,            /* the Core End reached (the lobby's elevator works) */
   F_CORE_MTT,            /* Mettaton EX: 1 his show a hit, 2 killed */
   F_CORE_HALL,           /* Alphys's talk by the last elevator */
-  F_CORE_DONE,           /* the elevator up to the castle taken (where the game now ends) */
+  F_CORE_DONE,           /* the elevator up to the castle taken */
+  F_NH_IN,               /* New Home reached */
+  F_NH_KEY1,             /* Asgore's home: the kitchen's key, the hallway's */
+  F_NH_KEY2,
+  F_NH_CHAIN,            /* the chain on the stairs down unlocked */
+  F_NH_DAGGER,           /* the presents opened: the Worn Dagger, the Heart Locket */
+  F_NH_LOCKET,
+  F_NH_STORY,            /* the basement's story: how many parts told */
+  F_NH_LIFT,             /* the basement's far end reached (the street's elevator works) */
+  F_NH_SANS,             /* Sans's judgment heard */
+  F_NH_THRONE,           /* Asgore met in the throne room */
+  F_NH_ASGORE,           /* Asgore, beaten: 1 spared (Flowey killed him), 2 killed */
+  F_NH_FLOWEY,           /* Omega Flowey, beaten: 1 spared, 2 killed */
+  F_NH_DONE,             /* through the barrier: the end */
   FLAG_COUNT = 256
 };
 #endif

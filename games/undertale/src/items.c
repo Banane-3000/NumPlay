@@ -75,6 +75,8 @@ static const ItemInfo items[ITEM_COUNT] = {
   [ITEM_MYSTERY_KEY] = {"Mystery Key", "MystryKey", IT_SPECIAL, 0, 0, 0, "A key, too bent to go on\n  your keychain.", "", 500},
   [ITEM_HUSH_PUPPY] = {"Hush Puppy", "HushPupy", IT_FOOD, 65, 0, 0, "A spell that keeps a dog\n  from casting magic.",
                        "* You eat the Hush Puppy.\n* Dog-magic is neutralized.", 150},
+  [ITEM_WORN_DAGGER] = {"Worn Dagger", "WornDG", IT_WEAPON, 0, 15, 0, "Good for cutting plants and\n  vines.", "", 250},
+  [ITEM_HEART_LOCKET] = {"Heart Locket", "H.Locket", IT_ARMOR, 0, 0, 15, "It says \"Best Friends\n  Forever.\"", "", 250},
 };
 
 const ItemInfo *item_info(int id) { return &items[id >= 0 && id < ITEM_COUNT ? id : 0]; }

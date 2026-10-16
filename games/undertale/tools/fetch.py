@@ -63,7 +63,10 @@ PAGES = ["Ruins", "Ruins/Puzzles", "Toriel", "Toriel/In_battle", "Toriel's_Home"
          "Madjick", "Knight_Knight", "Final_Froggit", "Whimsalot", "Astigmatism", "CORE", "MTT_Resort", "Burgerpants",
          "Heats_Flamesman", "Bratty_and_Catty", "Spider_Bake_Sale", "Elevator", "Sans/Hotland", "Hot_Dog...?",
          "Cell_Phone/Alphys", "Steam_Vent", "Conveyor_belt", "Mettaton_quiz_show", "Laser", "Royal_Guards", "Bomb",
-         "Stained_Apron", "Hot_Dog_Harpy", "Art_Club_room", "Spider_Entrance", "Multicolor_Tile_Puzzle", "Lab"]
+         "Stained_Apron", "Hot_Dog_Harpy", "Art_Club_room", "Spider_Entrance", "Multicolor_Tile_Puzzle", "Lab",
+         # New Home
+         "New_Home", "Asgore", "Asgore/In_battle", "Asgore's_Home", "Last_Corridor", "Throne_Room", "Barrier",
+         "Photoshop_Flowey", "Neutral_Route", "Worn_Dagger", "Heart_Locket"]
 # files the categories leave out, as their wiki names
 FILES = ["QC sprite.png", "QC screenshot shop.png", "Gerson screenshot shop.png", "Tem Shop screenshot Temmie Armor.png"]
 DEMO = {

@@ -380,10 +380,10 @@ void menu_gameover_open(void) {
 }
 
 /* ---------------------------------------------------------------- the end of what there is */
-void menu_end_open(void) {
+void menu_end_open(const char *text) {
   g_mode = MODE_END;
   t = 0;
-  writer_start(&w, "Up to the king's castle,\nthrough the CORE...|The rest of the underground\nis still to come...", 40, 90, FONT_MAIN);
+  writer_start(&w, text, 40, 90, FONT_MAIN);
   w.speed = 2;
 }
 

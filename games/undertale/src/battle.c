@@ -12,7 +12,8 @@
 #include "monsters.h"
 #include "world.h"
 
-/* the battles that play their own way: Flowey's first (flowey.c), Mettaton's shows and a laser's alarm (htshows.c) */
+/* the battles that play their own way: Flowey's first (flowey.c), Mettaton's shows and a laser's alarm (htshows.c),
+ * Omega Flowey's (nhmon.c) */
 typedef struct {
   int form;
   void (*start)(void);
@@ -24,6 +25,7 @@ static const Script scripts[] = {
   {FORM_MTT_QUIZ, quiz_start, quiz_update, quiz_draw},
   {FORM_MTT_COOK, cook_start, cook_update, cook_draw},
   {FORM_LASERS, lasers_start, lasers_update, lasers_draw},
+  {FORM_OMEGA, omega_start, omega_update, omega_draw},
 };
 static const Script *script;
 
@@ -345,6 +347,7 @@ static void menu_input(uint32_t pressed) {
     case P_MENU:
       if (pressed & K_LEFT) bt.button = (bt.button + 3) & 3;
       if (pressed & K_RIGHT) bt.button = (bt.button + 1) & 3;
+      if (bt.no_mercy && bt.button == 3) bt.button = pressed & K_LEFT ? 2 : 0;
       if (pressed & K_Z) {
         bt.target = 0, bt.act = 0, bt.item = 0, bt.mercy = 0, bt.page = 0;
         if (bt.button == B_FIGHT || bt.button == B_ACT) bt.phase = P_TARGET;
@@ -620,6 +623,10 @@ void battle_draw_buttons(void) {
   static const uint16_t spr[4] = {SPR_FIGHTBT, SPR_TALKBT, SPR_ITEMBT, SPR_SPAREBT};
   bool menu = bt.phase >= P_MENU && bt.phase <= P_MERCY;
   for (int i = 0; i < 4; i++) {
+    if (i == 3 && bt.no_mercy) {   /* (its pieces, where it was) */
+      for (int k = 0; k < 4; k++) gfx_rect(button_x[3] + 6 + k * 14, BUTTON_Y + 14 + (k % 2) * 6, 6, 3, rgb565(0xFF8020), 160);
+      continue;
+    }
     bool on = menu && bt.button == i;
     gfx_sprite(spr[i], on ? 1 : 0, button_x[i], BUTTON_Y, 0, 255);
     if (on && bt.phase == P_MENU) gfx_sprite(SPR_HEART, 0, button_x[i] + 8, BUTTON_Y + 11, 0, 255);

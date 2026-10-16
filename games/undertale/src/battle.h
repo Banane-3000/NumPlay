@@ -130,6 +130,7 @@ typedef struct Battle {
   int bar_x, bar_dir;          /* FIGHT: the bar, 1/16 px */
   int strike_t, strike_dmg;
   bool flee_ok, scripted, no_flee, no_buttons;
+  bool no_mercy;               /* MERCY broken (Asgore's): only FIGHT, ACT and ITEM */
   bool captures;               /* no death: at 0 HP the battle ends, HP 1 (Papyrus captures you) */
   int result;
   int exp_won, gold_won;
@@ -193,6 +194,9 @@ int cook_won(void);          /* the substitute reached in time */
 void lasers_start(void);
 void lasers_update(uint32_t keys, uint32_t pressed);
 void lasers_draw(void);
+void omega_start(void);      /* nhmon.c: Omega Flowey */
+void omega_update(uint32_t keys, uint32_t pressed);
+void omega_draw(void);
 
 /* the monsters and formations (monsters.c) */
 const MonDef *mon_def(int id);

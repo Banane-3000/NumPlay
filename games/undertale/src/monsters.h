@@ -15,7 +15,9 @@ enum {
   MON_VULKIN = MON_WF_COUNT, MON_TSUNDERPLANE, MON_PYROPE, MON_METTATON, MON_RG01, MON_RG02, MON_BOMB, MON_MUFFET,
   MON_MTT_TILES, MON_HT_COUNT,
   /* the CORE */
-  MON_FFROGGIT = MON_HT_COUNT, MON_WHIMSALOT, MON_ASTIG, MON_MADJICK, MON_KNIGHT, MON_MTT_BOX, MON_MTT_EX, MON_COUNT
+  MON_FFROGGIT = MON_HT_COUNT, MON_WHIMSALOT, MON_ASTIG, MON_MADJICK, MON_KNIGHT, MON_MTT_BOX, MON_MTT_EX, MON_CORE_COUNT,
+  /* New Home */
+  MON_ASGORE = MON_CORE_COUNT, MON_OMEGA, MON_COUNT
 };
 
 /* formations: who is fought */
@@ -35,7 +37,9 @@ enum {
   FORM_MTT_COOK, FORM_LASERS, FORM_RGUARDS, FORM_BOMB, FORM_MUFFET, FORM_MTT_TILES, FORM_HT_COUNT,
   /* the CORE */
   FORM_ASTIG = FORM_HT_COUNT, FORM_WHIM_FROG, FORM_WHIM_ASTIG, FORM_FROG_ASTIG, FORM_KNIGHT_MADJICK, FORM_FROG_ASTIG_WHIM,
-  FORM_KNIGHT, FORM_MADJICK, FORM_MTT_BOX, FORM_MTT_EX, FORM_COUNT
+  FORM_KNIGHT, FORM_MADJICK, FORM_MTT_BOX, FORM_MTT_EX, FORM_CORE_COUNT,
+  /* New Home */
+  FORM_ASGORE = FORM_CORE_COUNT, FORM_OMEGA, FORM_COUNT
 };
 
 enum {
@@ -59,7 +63,9 @@ enum {
   ATK_MADJICK_CHASER = ATK_HT_COUNT, ATK_MADJICK_CORNER, ATK_KNIGHT_MOON, ATK_KNIGHT_SUN, ATK_KNIGHT_STAR,
   /* (Mettaton EX's from here on) */
   ATK_EX_LEGS, ATK_EX_BOMBS, ATK_EX_REWIND, ATK_EX_ARMS, ATK_EX_HEART, ATK_EX_LASER, ATK_EX_BOTS, ATK_EX_DISCO,
-  ATK_EX_PAIRS, ATK_EX_BREAK, ATK_COUNT
+  ATK_EX_PAIRS, ATK_EX_BREAK, ATK_CORE_COUNT,
+  /* New Home */
+  ATK_ASG_HELIX = ATK_CORE_COUNT, ATK_ASG_RAIN, ATK_ASG_RINGS, ATK_ASG_HANDS, ATK_ASG_TRIDENT, ATK_COUNT
 };
 
 /* a formation: up to three monsters, and what the first turn says */
@@ -90,6 +96,10 @@ const struct MonDef *core_mon_def(int id);
 void core_attack_run(struct Battle *b, int atk, int t);
 int core_attack_length(int atk);
 int core_encounter(int room);
+const Form *nh_form(int form);                /* nhmon.c */
+const struct MonDef *nh_mon_def(int id);
+void nh_attack_run(struct Battle *b, int atk, int t);
+int nh_attack_length(int atk);
 void mttex_reset(void);                       /* before Mettaton EX's battle: the show's ratings back to the start */
 int mttex_ratings(void);
 extern int g_bomb_kind;                       /* the bomb fought next (BOMB_*: htmon.c) */

@@ -346,7 +346,7 @@ static void draw_mttex(Battle *b, Monster *m, int x, int y) {
 }
 
 /* ---------------------------------------------------------------- the definitions */
-static const MonDef core_defs[MON_COUNT - MON_HT_COUNT] = {
+static const MonDef core_defs[MON_CORE_COUNT - MON_HT_COUNT] = {
   [MON_FFROGGIT - MON_HT_COUNT] = {
     .name = "Final Froggit", .spare_gold = 50, .hp = 100, .at = 8, .df = 0, .exp = 120, .gold = 80,
     .spr_idle = SPR_FFROGGIT_B, .spr_hurt = SPR_FFROGGIT_HURT, .idle_speed = 6, .check = "Its future looks brighter and brighter.",
@@ -397,9 +397,9 @@ static const MonDef core_defs[MON_COUNT - MON_HT_COUNT] = {
     .flags = MF_BOSS, .act = act_mttex, .talk = talk_mttex, .attack = attack_mttex, .flavor = flavor_mttex,
     .on_hit = hit_mttex, .draw = draw_mttex, .ends = ends_mttex, .on_item = item_mttex},
 };
-const MonDef *core_mon_def(int id) { return &core_defs[id - MON_HT_COUNT]; }
+const MonDef *core_mon_def(int id) { return id >= MON_CORE_COUNT ? nh_mon_def(id) : &core_defs[id - MON_HT_COUNT]; }
 
-static const Form core_forms[FORM_COUNT - FORM_HT_COUNT] = {
+static const Form core_forms[FORM_CORE_COUNT - FORM_HT_COUNT] = {
   [FORM_ASTIG - FORM_HT_COUNT] = {{MON_ASTIG}, 1, "* Astigmatism draws near."},
   [FORM_WHIM_FROG - FORM_HT_COUNT] = {{MON_WHIMSALOT, MON_FFROGGIT}, 2, "* Whimsalot and Final Froggit appear."},
   [FORM_WHIM_ASTIG - FORM_HT_COUNT] = {{MON_WHIMSALOT, MON_ASTIG}, 2, "* Whimsalot and Astigmatism appear."},
@@ -411,7 +411,7 @@ static const Form core_forms[FORM_COUNT - FORM_HT_COUNT] = {
   [FORM_MTT_BOX - FORM_HT_COUNT] = {{MON_MTT_BOX}, 1, "* Mettaton attacks!"},
   [FORM_MTT_EX - FORM_HT_COUNT] = {{MON_MTT_EX}, 1, "* Mettaton EX makes his premiere!"},
 };
-const Form *core_form(int form) { return &core_forms[form - FORM_HT_COUNT]; }
+const Form *core_form(int form) { return form >= FORM_CORE_COUNT ? nh_form(form) : &core_forms[form - FORM_HT_COUNT]; }
 
 /* random encounters in the Core Branch (Astigmatism alone just once) */
 int core_encounter(int room) {
@@ -724,6 +724,7 @@ static void atk_ex_disco(int t, bool fast) {
 }
 
 int core_attack_length(int atk) {
+  if (atk >= ATK_CORE_COUNT) return nh_attack_length(atk);
   switch (atk) {
     case ATK_EX_BREAK: return 90;
     case ATK_EX_REWIND: return 200;
@@ -732,7 +733,10 @@ int core_attack_length(int atk) {
 }
 
 void core_attack_run(Battle *b, int atk, int t) {
-  (void)b;
+  if (atk >= ATK_CORE_COUNT) {
+    nh_attack_run(b, atk, t);
+    return;
+  }
   bool ex_atk = atk >= ATK_EX_LEGS;
   if (t < 0) {
     int w = atk == ATK_EX_BOMBS || atk == ATK_EX_REWIND ? 76 : atk == ATK_EX_PAIRS ? 44 : ex_atk ? 120 : 130;

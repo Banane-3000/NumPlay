@@ -6,6 +6,7 @@
 #include "battle.h"
 #include "game.h"
 #include "hotland.h"
+#include "newhome.h"
 #include "menu.h"
 #include "ruins.h"
 #include "snowdin.h"
@@ -127,6 +128,8 @@ int event_run(Ev *c) {
   r = res_event(c);
   if (r >= 0) return r;
   r = core_event(c);
+  if (r >= 0) return r;
+  r = nh_event(c);
   if (r >= 0) return r;
   return 1;
 }

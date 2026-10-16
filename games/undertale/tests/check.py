@@ -39,6 +39,7 @@ ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT, I
 ITEM_BURNT_PAN, ITEM_INSTANT_NOODLES, ITEM_HOT_DOG, ITEM_STAINED_APRON = 28, 29, 30, 31
 ITEM_NICE_CREAM = 13
 ITEM_STARFAIT, ITEM_GLAMBURGER = 32, 33
+ITEM_WORN_DAGGER, ITEM_HEART_LOCKET = 41, 42
 
 
 def run(args, frames, saves=None, what=""):
@@ -289,11 +290,11 @@ if not QUICK:
         check(ITEM_STARFAIT in s["items"], f"the MTT Resort: no Starfait: {s['items']}")
 
 # the CORE: Madjick and Knight Knight spared, the switch's lasers, the bridge's power, the sage's puzzle, a Glamburger,
-# Mettaton turned round and his show a hit, Alphys by the last elevator, up to the castle
+# Mettaton turned round and his show a hit, Alphys by the last elevator, up to New Home
 if not QUICK:
     s = run(["--name", "Frisk", "--noenc", "--god", "--room", str(ROOMS["RES_LOBBY"]), "--at", "1210,160",
              "--path-file", os.path.join(HERE, "core.path")], 24000, what="the CORE")
-    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["CORE_HALL"], f"the CORE did not end at the castle's elevator: {s}")
+    check(s and s["mode"] == MODE_WORLD and s["room"] == ROOMS["NH_TOWN"], f"the CORE did not end up in New Home: {s}")
     if s:
         for name, v in (("CORE_IN", 1), ("CORE_MADJICK", 1), ("CORE_KNIGHT", 1), ("CORE_SWITCH", 1), ("CORE_POWER", 2),
                         ("CORE_SAGE", 1), ("CORE_FIELD", 1), ("CORE_TRASH1", 1), ("CORE_END", 1), ("CORE_MTT", 1),
@@ -302,6 +303,21 @@ if not QUICK:
         check(s["kills"] == 0, f"the CORE: {s['kills']} killed on the friendly way")
         check(s["gold"] == 130, f"the CORE: Madjick's and Knight Knight's gold went wrong: {s['gold']}")
         check(ITEM_GLAMBURGER in s["items"], f"the CORE: no Glamburger from the trash can: {s['items']}")
+
+# New Home: the keys and the chain, the presents, the story, Sans's judgment, Asgore in the throne room; at the
+# barrier, Asgore beaten (FIGHT) and spared; Omega Flowey (the six SOULs called on); Flowey spared; the end
+if not QUICK:
+    s = run(["--name", "Frisk", "--noenc", "--god", "--room", str(ROOMS["NH_TOWN"]), "--at", "90,4545",
+             "--path-file", os.path.join(HERE, "newhome.path")], 26000, what="New Home")
+    check(s and s["mode"] == MODE_END, f"New Home did not reach the end: {s}")
+    if s:
+        for name, v in (("NH_KEY1", 1), ("NH_KEY2", 1), ("NH_CHAIN", 1), ("NH_DAGGER", 1), ("NH_LOCKET", 1),
+                        ("NH_STORY", 11), ("NH_SANS", 1), ("NH_THRONE", 1), ("NH_ASGORE", 1), ("NH_FLOWEY", 1),
+                        ("NH_DONE", 1)):
+            check(flag(s, name) == v, f"New Home: F_{name} is {flag(s, name)}, not {v}")
+        check(s["kills"] == 0, f"New Home: {s['kills']} killed on the friendly way")
+        for item in (ITEM_WORN_DAGGER, ITEM_HEART_LOCKET):
+            check(item in s["items"], f"New Home: item {item} not found: {s['items']}")
 
 if failures:
     print("\n".join("FAIL " + f for f in failures))

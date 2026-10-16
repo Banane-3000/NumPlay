@@ -3,7 +3,7 @@
  * room north (Knight Knight), the laser bridge (Alphys cuts the power; it keeps coming back), the Core Branch: the
  * sage's path (its puzzle), the warrior's path (three fights, a switch) and the force field east that a patient one
  * waits out; The End's bridge, the Core End, and Mettaton's last show; the hallway, Alphys, and the elevator up to
- * the king's castle, where the game now ends. (As the Undertale Wiki describes them; what they say is ours, in
+ * the king's castle (newhome.c). (As the Undertale Wiki describes them; what they say is ours, in
  * short.) */
 #include <stddef.h>
 #include "battle.h"
@@ -442,9 +442,7 @@ static int ev_lift(Ev *c) {
     NARRATE("* (Take the elevator up to the\n  castle?)@Yes@No");
     if (CHOICE() == 1) return 1;
     set_flag(F_CORE_DONE, 1);
-    sv.room = (int16_t)g_room, sv.x = 4285, sv.y = 125;
-    save_write_auto();
-    menu_end_open();
+    FADE_TO(ROOM_NH_TOWN, 90, 4545, DIR_DOWN);
     return 1;
   }
   if (c->v[0] == 0 && !flag(F_CORE_END)) {
@@ -480,7 +478,7 @@ static int ev_mtt(Ev *c) {
   }
   text_set_top(0);
   g_shake = 10;
-  NARRATE("* (Smoke pours out of Mettaton.)\n* OHHH MY...|* YOU FLIPPED MY SWITCH?\n* SO YOU'RE DYING TO SEE MY NEW\n  BODY. HOW RUDE...|* LUCKY FOR YOU, I'VE BEEN\n  ACHING TO SHOW IT OFF!");
+  NARRATE("* (Smoke pours out of Mettaton.)\n* WELL, WELL...|* MY SWITCH, DARLING? COULDN'T\n  WAIT FOR MY NEW LOOK?|* NAUGHTY. BUT FINE...\n* IT'S TIME FOR MY PREMIERE!");
   text_set_top(-1);
   mttex_reset();
   BATTLE(FORM_MTT_EX);

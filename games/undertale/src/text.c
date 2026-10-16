@@ -31,6 +31,7 @@ static const Expr flowey_faces[] = {
 };
 static const Expr sans_faces[] = {{SPR_FACE_SANS, 4, 0}, {SPR_FACE_SANSCHUCKLE, 4, 0}, {SPR_FACE_SANSWINK, 4, 0}};
 static const Expr alphys_faces[] = {{SPR_FACE_ALPHYS, 4, 0}};
+static const Expr asgore_faces[] = {{SPR_FACE_ASGORE, 4, -4}};
 static const Expr papyrus_faces[] = {
   {SPR_FACE_PAPYRUS, 4, -4}, {SPR_FACE_PAPYRUSEVIL, 4, -4}, {SPR_FACE_PAPYRUSLAUGH, 4, -4},
   {SPR_FACE_PAPYRUSMAD, 4, -4}, {SPR_FACE_PAPYRUSSIDE, 4, -4},
@@ -44,6 +45,7 @@ static const struct {
   [FACE_SANS] = {sans_faces, sizeof sans_faces / sizeof sans_faces[0]},
   [FACE_PAPYRUS] = {papyrus_faces, sizeof papyrus_faces / sizeof papyrus_faces[0]},
   [FACE_ALPHYS] = {alphys_faces, 1},
+  [FACE_ASGORE] = {asgore_faces, 1},
 };
 
 /* ---------------------------------------------------------------- the writer */

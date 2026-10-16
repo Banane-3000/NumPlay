@@ -6,6 +6,7 @@
 #include "game.h"
 #include "hotland.h"
 #include "monsters.h"
+#include "newhome.h"
 #include "ruins.h"
 #include "snowdin.h"
 #include "waterfall.h"
@@ -26,6 +27,7 @@ void room_setup(int room, int from) {
   ht3_setup(room, from);
   res_setup(room, from);
   core_setup(room, from);
+  nh_setup(room, from);
 }
 
 /* each frame Frisk can walk: what a room watches (a rock on its switch, a cracked floor) */
