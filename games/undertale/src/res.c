@@ -1,5 +1,6 @@
 /* data.bin: sections, sprites, tiles, rooms and strings (see res.h). */
 #include <stddef.h>
+#include "blk.h"
 #include "res.h"
 
 const uint8_t *ut_bin;
@@ -10,6 +11,13 @@ int spr_frames(uint16_t spr) {
   return rd16(s + 4 + 4 * spr + 2);
 }
 
+/* a frame's or tile's bytes: in its block, unpacked (blk.h) */
+static const uint8_t *in_block(int sec, int k) {
+  const uint8_t *t = section(sec) + 4 + 4 * k;
+  const uint8_t *b = blk_get(rd16(t));
+  return b ? b + rd16(t + 2) : NULL;
+}
+
 bool frame_get(uint16_t spr, int i, Frame *f) {
   const uint8_t *s = section(SEC_SPRITES);
   if (spr >= rd32(s)) return false;
@@ -17,8 +25,8 @@ bool frame_get(uint16_t spr, int i, Frame *f) {
   if (n <= 0) return false;
   i %= n;
   if (i < 0) i += n;
-  const uint8_t *fs = section(SEC_FRAMES);
-  const uint8_t *p = fs + rd32(fs + 4 + 4 * (first + i));
+  const uint8_t *p = in_block(SEC_FRAMES, first + i);
+  if (!p) return false;
   f->w = rd16(p), f->h = rd16(p + 2);
   f->ox = rds16(p + 4), f->oy = rds16(p + 6);
   f->bpp = p[8], f->ncol = p[9];
@@ -39,8 +47,9 @@ int spr_h(uint16_t spr) {
 }
 
 void tile_get(uint16_t id, Tile *t) {
-  const uint8_t *s = section(SEC_TILES);
-  const uint8_t *p = s + rd32(s + 4 + 4 * id);
+  static const uint8_t black[4] = {0, 1, 0, 0};
+  const uint8_t *p = in_block(SEC_TILES, id);
+  if (!p) p = black;
   t->bpp = p[0], t->ncol = p[1];
   t->pal = p + 2;
   t->bits = p + 2 + 2 * t->ncol;

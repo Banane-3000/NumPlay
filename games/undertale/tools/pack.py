@@ -16,7 +16,13 @@ data.bin: "UTD1", the number of sections, their offsets, then the sections (SEC_
   bitmap offset u16) and the bitmaps (rows of whole bytes, highest bit first)
 - STRINGS: the room names and other texts the data refers to
 - DOORS: for each room its first door and how many (u16, u16), then the doors: 16 bytes each (x, y, w, h on
-  the map, the room it leads to, where Frisk's top-left lands, the way he faces)"""
+  the map, the room it leads to, where Frisk's top-left lands, the way he faces)
+- BLOCKS: the frames and tiles themselves, in LZMA streams the game unpacks when it needs them (blk.c): the
+  count, the 5 LZMA properties bytes (3 of padding), then for each block its stream's offset (u32) and its size
+  unpacked (u32), then the streams. FRAMES and TILES only say where each frame or tile is: its block and its
+  offset in it (u16, u16). A sprite's frames share blocks (of 16 KB at most); a room's tiles go in 8 x 8 squares,
+  so the tiles a screen shows sit in few blocks (of 2 KB)."""
+import lzma
 import os
 import struct
 import sys
@@ -32,7 +38,55 @@ import sprites as S  # noqa: E402
 
 OUT_BIN = os.path.join(HERE, "..", "src", "data.bin")
 OUT_H = os.path.join(HERE, "..", "src", "data.h")
-SECTIONS = ["SPRITES", "FRAMES", "TILES", "ROOMS", "GRID", "COLL", "FONTS", "STRINGS", "DOORS"]
+SECTIONS = ["SPRITES", "FRAMES", "TILES", "ROOMS", "GRID", "COLL", "FONTS", "STRINGS", "DOORS", "BLOCKS"]
+BLOCK_TILES, BLOCK_FRAMES = 2048, 16384   # the most bytes a block holds, unpacked (a frame bigger: alone)
+MAX_BLOCKS = 4096                         # (blk.c's table)
+LZMA_FILTERS = [{"id": lzma.FILTER_LZMA1, "dict_size": 1 << 16, "lc": 0, "lp": 0, "pb": 0}]
+
+
+class Blocks:
+    """the BLOCKS section, and the tables that point into it"""
+    def __init__(self):
+        self.raw = []
+
+    def place(self, entries, groups):
+        """entries (bytes) put in blocks, one per group of their indices -> u32 count, (block, offset) each"""
+        where = [None] * len(entries)
+        for g in groups:
+            data = bytearray()
+            for i in g:
+                where[i] = (len(self.raw), len(data))
+                data += entries[i]
+            assert len(data) < 65536
+            self.raw.append(bytes(data))
+        return struct.pack("<I", len(entries)) + b"".join(struct.pack("<HH", b, o) for b, o in where)
+
+    def section(self):
+        assert len(self.raw) <= MAX_BLOCKS
+        streams = [lzma.compress(r, format=lzma.FORMAT_RAW, filters=LZMA_FILTERS) for r in self.raw]
+        props = bytes([0]) + struct.pack("<I", 1 << 16) + bytes(3)   # lc = lp = pb = 0, a 64 KB dictionary
+        head = struct.pack("<I", len(streams)) + props
+        base = len(head) + 8 * len(streams)
+        table, body = bytearray(), bytearray()
+        for r, c in zip(self.raw, streams):
+            table += struct.pack("<II", base + len(body), len(r))
+            body += c
+        return head + bytes(table) + bytes(body)
+
+
+def groups_by_size(sizes, limit, starts=()):
+    """consecutive indices grouped up to limit bytes, a new group at each of starts too"""
+    out, cur, n = [], [], 0
+    starts = set(starts)
+    for i, sz in enumerate(sizes):
+        if cur and (n + sz > limit or i in starts):
+            out.append(cur)
+            cur, n = [], 0
+        cur.append(i)
+        n += sz
+    if cur:
+        out.append(cur)
+    return out
 
 
 def rgb565(r, g, b):
@@ -517,11 +571,16 @@ def pack_room(area, r, tiles, strings):
     cols, rows = (gx1 - gx) // 20, (gy1 - gy) // 20
     big = np.zeros((rows * 20, cols * 20), np.int32)
     big[y - gy:y - gy + h, x - gx:x - gx + w] = px
-    grid = bytearray()
-    for ty in range(rows):
-        for tx in range(cols):
-            block = big[ty * 20:ty * 20 + 20, tx * 20:tx * 20 + 20]
-            grid += struct.pack("<H", 0xFFFF if not block.any() else tiles.add(block.astype(np.uint16)))
+    # (new tiles numbered square by square: a screen's tiles are close together, in few blocks)
+    ids = {}
+    for cy in range(0, rows, 8):
+        for cx in range(0, cols, 8):
+            for ty in range(cy, min(rows, cy + 8)):
+                for tx in range(cx, min(cols, cx + 8)):
+                    block = big[ty * 20:ty * 20 + 20, tx * 20:tx * 20 + 20]
+                    if block.any():
+                        ids[ty, tx] = tiles.add(block.astype(np.uint16))
+    grid = b"".join(struct.pack("<H", ids.get((ty, tx), 0xFFFF)) for ty in range(rows) for tx in range(cols))
     coll, cw, ch = collision(area, r)
     flags = r.get("flags", 0)
     if r.get("ice"):
@@ -625,7 +684,8 @@ def main():
             frames.append(encode_frame(im, ox, oy))
         defines.append(("SPR_" + name.upper(), k))
     sec_sprites = struct.pack("<I", len(spr_entries)) + b"".join(struct.pack("<HH", a, b) for a, b in spr_entries)
-    sec_frames = table(frames)
+    blocks = Blocks()
+    sec_frames = blocks.place(frames, groups_by_size([len(f) for f in frames], BLOCK_FRAMES, [a for a, _ in spr_entries]))
 
     # areas and rooms
     tiles = TileSet()
@@ -662,7 +722,7 @@ def main():
             doors += struct.pack("<hhhhHhhH", dx, dy, dw, dh, names[to], tx, ty, dirs[d])
             ndoors += 1
     sec_doors = bytes(door_index) + bytes(doors)
-    sec_tiles = table(tiles.blobs)
+    sec_tiles = blocks.place(tiles.blobs, groups_by_size([len(t) for t in tiles.blobs], BLOCK_TILES))
 
     # fonts
     fonts = []
@@ -672,7 +732,7 @@ def main():
     sec_fonts = table(fonts)
 
     sections = [sec_sprites, sec_frames, sec_tiles, sec_rooms, bytes(grid_blob), bytes(coll_blob), sec_fonts,
-                strings.blob(), sec_doors]
+                strings.blob(), sec_doors, blocks.section()]
     head = b"UTD1" + struct.pack("<I", len(sections))
     offs, body = [], bytearray()
     base = len(head) + 4 * len(sections)
@@ -694,8 +754,9 @@ def main():
         f.write("#define NUM_SPRITES %d\n#define NUM_ROOMS %d\n#define NUM_FONTS %d\n" % (len(spr_entries), len(packed), len(fonts)))
         f.write("#endif\n")
     sizes = dict(zip(SECTIONS, map(len, sections)))
-    print("data.bin: %d bytes (%s); %d tiles, %d frames, %d rooms" % (
-        len(blob), ", ".join("%s %d" % kv for kv in sizes.items()), len(tiles.blobs), len(frames), len(packed)))
+    print("data.bin: %d bytes (%s); %d tiles, %d frames, %d rooms, %d blocks (%d bytes unpacked)" % (
+        len(blob), ", ".join("%s %d" % kv for kv in sizes.items()), len(tiles.blobs), len(frames), len(packed),
+        len(blocks.raw), sum(map(len, blocks.raw))))
 
 
 if __name__ == "__main__":

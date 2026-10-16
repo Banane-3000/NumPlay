@@ -5,6 +5,7 @@
  * (skip, length, pixels), so a band only reads the rows it shows. Alpha has
  * 33 steps (0..32), applied with the usual RGB565 trick. */
 #include <string.h>
+#include "blk.h"
 #include "gfx.h"
 #include "res.h"
 #include "world.h"
@@ -46,6 +47,7 @@ int gfx_dropped;
 static int dropped_now;
 
 void gfx_begin(void) {
+  blk_frame();
   nitems = 0, npool = 0, dropped_now = 0;
   gfx_clip_all();
 }

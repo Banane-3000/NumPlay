@@ -10,6 +10,7 @@
 #define SEC_FONTS 6
 #define SEC_STRINGS 7
 #define SEC_DOORS 8
+#define SEC_BLOCKS 9
 #define SPR_FRISK_D 0
 #define SPR_FRISK_U 1
 #define SPR_FRISK_L 2

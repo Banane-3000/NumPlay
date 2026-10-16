@@ -1,7 +1,9 @@
 /* Undertale: data.bin (tools/pack.py), read where it lies in flash.
  *
  * Its sections (SEC_* in data.h): sprites and their frames, the areas' tiles,
- * rooms (a tile grid and a collision map each), fonts and strings. */
+ * rooms (a tile grid and a collision map each), fonts and strings. Frames and
+ * tiles are packed in LZMA blocks (blk.h): their pointers hold until the next
+ * frame_get or tile_get. */
 #ifndef UT_RES_H
 #define UT_RES_H
 #include <stdbool.h>

@@ -15,6 +15,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include "../src/battle.h"
+#include "../src/blk.h"
 #include "../src/game.h"
 #include "../src/gfx.h"
 #include "../src/menu.h"
@@ -433,6 +434,7 @@ int main(int argc, char **argv) {
     }
   }
   if (gfx_dropped) printf("dropped %d draw commands\n", gfx_dropped);
+  if (getenv("BLK_STATS")) fprintf(stderr, "blocks unpacked %u, at most %u in a frame\n", blk_unpacked, blk_most_in_frame);
   printf("END mode %d room %d at %d,%d hp %d lv %d gold %d kills %d path %s\nFLAGS", g_mode, g_room, pl.x, pl.y, sv.hp,
          sv.lv, sv.gold, sv.kills, path_at && *path_at ? "left" : "done");
   for (int i = 0; i < FLAG_COUNT; i++)
