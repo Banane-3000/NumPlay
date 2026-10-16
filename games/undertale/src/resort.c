@@ -1,5 +1,5 @@
 /* The MTT Resort: the street outside (Sans, and dinner with him in the restaurant), the lobby (its fountain, the
- * MTT-Brand Burger Emporium, the elevator that's out of order, the door north to the CORE), the hotel's hallway and
+ * MTT-Brand Burger Emporium, the elevator that's out of order, the door north to the CORE: core.c), the hotel's hallway and
  * its room service. (As the Undertale Wiki describes them; what they say is ours, in short.) */
 #include <stddef.h>
 #include "event.h"
@@ -49,7 +49,6 @@ void res_setup(int room, int from) {
       obj_sign(1432, 284, 22, 34, "* Out of order?! The ONE\n  elevator to the capital?!");
       obj_sign(1394, 320, 52, 34, "* The elevator's broken, so\n  we're trying to fit in all\n  the guests going up.");
       obj_sign(1290, 510, 22, 22, "* (A box. It's locked tight.)");
-      thing(1182, 84, 76, 56, EV_RES_CORE, ACTOR_DOOR, 0);
       break;
     case ROOM_RES_DINER:
       obj_sign(820, 330, 60, 52, "* Welcome to the restaurant!|* ...you needed a reservation,\n  darling. Sorry.");
@@ -169,24 +168,12 @@ static int ev_door(Ev *c) {
   EV_END;
 }
 
-static int ev_core(Ev *c) {
-  EV_BEGIN;
-  NARRATE("* (The door to the CORE.)\n* (Go through?)@Yes@No");
-  if (CHOICE() == 1) return 1;
-  set_flag(F_RES_CORE, 1);
-  sv.room = (int16_t)g_room, sv.x = 1205, sv.y = 150;
-  save_write_auto();
-  menu_end_open();
-  EV_END;
-}
-
 int res_event(Ev *c) {
   switch (c->id) {
     case EV_RES_SANS: return ev_sans(c);
     case EV_RES_SHOP: return ev_shop(c);
     case EV_RES_DOOR: return ev_door(c);
     case EV_RES_DESK: return ev_desk(c);
-    case EV_RES_CORE: return ev_core(c);
   }
   return -1;
 }

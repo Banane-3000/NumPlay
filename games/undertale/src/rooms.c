@@ -25,6 +25,7 @@ void room_setup(int room, int from) {
   ht2_setup(room, from);
   ht3_setup(room, from);
   res_setup(room, from);
+  core_setup(room, from);
 }
 
 /* each frame Frisk can walk: what a room watches (a rock on its switch, a cracked floor) */
@@ -37,6 +38,7 @@ void room_update(void) {
   ht1_update();
   ht2_update();
   ht3_update();
+  core_update();
 }
 
 /* what a room draws on its floor, under everything (world.c) */
@@ -46,6 +48,7 @@ void room_draw_floor(void) {
   ht1_draw();
   ht2_draw();
   ht3_draw();
+  core_draw();
 }
 
 /* what a room draws over everything (a clock) */

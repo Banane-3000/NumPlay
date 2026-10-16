@@ -237,12 +237,61 @@ def gen_star():
     return [im]
 
 
+def gen_exblock():
+    # Mettaton EX's blocks: a white square, a black ring in it (only the bomb beside it breaks it)
+    im = _img(14, 14)
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 13, 13], fill=(255, 255, 255, 255))
+    d.ellipse([3, 3, 10, 10], fill=(0, 0, 0, 255))
+    d.ellipse([5, 5, 8, 8], fill=(255, 255, 255, 255))
+    return [im]
+
+
+def gen_exleg():
+    # one of his legs, kicking in from the side: black, long, a pink boot
+    im = _img(9, 60)
+    d = ImageDraw.Draw(im)
+    d.rectangle([1, 0, 7, 46], fill=(40, 40, 40, 255), outline=(255, 255, 255, 255))
+    d.polygon([(0, 46), (8, 46), (8, 56), (4, 59), (0, 59)], fill=(255, 90, 170, 255))
+    return [im]
+
+
+def gen_mttheart():
+    # his heart, out of the box on his waist: pink, a white rim
+    im = _img(16, 14)
+    d = ImageDraw.Draw(im)
+    d.polygon([(0, 3), (3, 0), (8, 3), (12, 0), (15, 3), (15, 6), (8, 13), (0, 6)], fill=(255, 255, 255, 255))
+    d.polygon([(2, 3), (4, 2), (8, 5), (11, 2), (13, 3), (13, 6), (8, 11), (2, 6)], fill=(255, 60, 140, 255))
+    return [im]
+
+
+def gen_disco():
+    # the disco ball: a grey ball of little squares
+    im = _img(16, 16)
+    d = ImageDraw.Draw(im)
+    d.ellipse([0, 0, 15, 15], fill=(190, 190, 200, 255))
+    for k in range(3, 15, 4):
+        d.line([(k, 1), (k, 14)], fill=(110, 110, 130, 255))
+        d.line([(1, k), (14, k)], fill=(110, 110, 130, 255))
+    return [im]
+
+
+def gen_exarm():
+    # a piece of his long arms, coming down: a segment, a box on it to shoot
+    im = _img(10, 12)
+    d = ImageDraw.Draw(im)
+    d.rectangle([3, 0, 6, 11], fill=(255, 255, 255, 255))
+    d.rectangle([0, 3, 9, 8], fill=(255, 190, 40, 255), outline=(255, 255, 255, 255))
+    return [im]
+
+
 GEN = {"otile": gen_otile, "snowball": gen_snowball, "bone": gen_bone, "orb": gen_orb, "snowflake": gen_snowflake,
        "iceshard": gen_iceshard, "present": gen_present, "knife": gen_knife, "dogpaw": gen_dogpaw,
        "heartbullet": gen_heartbullet, "spear": gen_spear, "note": gen_note, "drop": gen_drop, "arm": gen_arm,
        "debris": gen_debris, "arrow": gen_arrow, "plane": gen_plane, "bomb": gen_bomb, "cloud": gen_cloud,
        "bolt": gen_bolt, "star": gen_star, "croissant": gen_croissant, "donut": gen_donut,
-       "mttmini": gen_mttmini}
+       "mttmini": gen_mttmini, "exblock": gen_exblock, "exleg": gen_exleg, "mttheart": gen_mttheart,
+       "disco": gen_disco, "exarm": gen_exarm}
 
 SNOW_CLEAR = [(133, 163, 216), (114, 129, 177), (139, 163, 186), (180, 192, 201), (195, 207, 216)]
 PAP_GIF = "move:Papyrus_screenshot_back_and_forth.gif:0,280,640,450:"
@@ -405,6 +454,26 @@ SPRITES = [
     # Bratty and Catty's alley: its trash cans and door, the two of them in front
     ("shop_bratty", "wiki:Bratty_and_Catty_sprite_shop.png", {"keep": True, "box": (0, 0, 320, 120)}),
     ("bratty_catty", "wiki:Bratty_and_Catty_sprite.png", {"feet": True}),
+    # the CORE: its monsters (their idle animations thinned out), Mettaton EX (whole, without arms, then just his
+    # top: the armless one cut at the waist), his box, a black sausage cut from the map, the shapes of his attacks
+    ("ffroggit_b", "wiki:Final_Froggit_battle_idle.gif", {"feet": True, "clear_bg": True, "dedupe": True, "every": 4}),
+    ("ffroggit_hurt", "wiki:Final_Froggit_battle_hurt.png", {"feet": True, "clear_bg": True}),
+    ("whimsalot_b", "wiki:Whimsalot_battle_idle.gif", {"feet": True, "clear_bg": True, "dedupe": True, "every": 4}),
+    ("whimsalot_hurt", "wiki:Whimsalot_battle_hurt.png", {"feet": True, "clear_bg": True}),
+    ("astig_b", "wiki:Astigmatism_battle_idle.gif", {"feet": True, "clear_bg": True, "dedupe": True, "every": 27}),
+    ("astig_hurt", "wiki:Astigmatism_battle_hurt.png", {"feet": True, "clear_bg": True}),
+    ("madjick_b", "wiki:Madjick_battle_idle.gif", {"feet": True, "clear_bg": True, "dedupe": True, "every": 4}),
+    ("madjick_hurt", "wiki:Madjick_battle_hurt.png", {"feet": True, "clear_bg": True}),
+    ("knight_b", "wiki:Knight_Knight_battle_idle.gif", {"feet": True, "clear_bg": True, "dedupe": True, "every": 50}),
+    ("knight_hurt", "wiki:Knight_Knight_battle_hurt.png", {"feet": True, "clear_bg": True}),
+    ("mttex_b", "wiki:Mettaton_EX_battle.gif", {"feet": True, "clear_bg": True, "dedupe": True, "every": 3}),
+    ("mttex_hurt", "wiki:Mettaton_EX_battle_hurt.png", {"feet": True, "clear_bg": True}),
+    ("mttex_armless", "wiki:Mettaton_EX_battle_armless.png", {"feet": True, "clear_bg": True}),
+    ("mttex_top", "wiki:Mettaton_EX_battle_armless.png", {"feet": True, "clear_bg": True, "box": (0, 0, 106, 70)}),
+    ("mttex_ow", "wiki:Mettaton_EX_overworld_limbless.png", {"feet": True}),
+    ("sausage", "map:CORE_map.png:117,1653,30,50", {"keep": True, "clear": [(33, 81, 164), (31, 130, 228), (34, 105, 164),
+                                                                         (36, 62, 141), (71, 154, 204)]}),
+    *[(n, "gen:" + n, {"center": True}) for n in ["exblock", "exleg", "mttheart", "disco", "exarm"]],
     ("bird", "map:Waterfall_map.png:8466,578,15,19", {"keep": True, "clear": [(27, 33, 90), (27, 21, 72), (23, 13, 43)]}),
     ("tutu", "map:Waterfall_map.png:1240,1240,22,10", {"keep": True, "clear": [(23, 13, 43), (27, 21, 72), (27, 33, 90)]}),
     ("artifact", "map:Waterfall_map.png:10156,150,12,11",

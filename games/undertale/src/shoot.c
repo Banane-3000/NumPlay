@@ -3,7 +3,7 @@
  * A grid of blocks stands between Frisk's ship, below, and the target, above. Each arrow pushes every dark block one
  * cell that way, where there's room inside the grid; the light blocks never move. Z shoots straight up: a shot
  * breaks the first dark block it meets, a light one stops it, and a clear way hits the target. Two shots a try on
- * the first floor, one on the third: out of them, it starts over. (The rules are worked out from the solutions the Undertale Wiki gives for them; the
+ * the first floor and in the CORE, one on the third: out of them, it starts over. (The rules are worked out from the solutions the Undertale Wiki gives for them; the
  * grids are the game's, as its screenshots show them.) */
 #include <string.h>
 #include "game.h"
@@ -21,6 +21,7 @@ static const Puzzle puzzles[SHOOT_COUNT] = {
   [SHOOT_LEFT] = {4, 4, 2, 2, {"#  #", "ooo ", " #o#", "#oo "}},
   [SHOOT_NORTH] = {5, 5, 2, 1, {"## o#", " o # ", " #o o", " o o#", "## ##"}},
   [SHOOT_SOUTH] = {5, 4, 3, 1, {"###o ", "   o#", "###o ", "###o#"}},
+  [SHOOT_SAGE] = {5, 5, 2, 2, {"## # ", " #o# ", " oooo", " #o# ", " # ##"}},   /* (up, up, left, down, left, down, left) */
 };
 #define CELL 24
 

@@ -20,4 +20,8 @@ void ht3_draw_top(void);  /* over everything: the tile puzzle's clock */
 int ht3_speed(int x, int y);
 void res_setup(int room, int from);
 int res_event(Ev *c);
+void core_setup(int room, int from);   /* core.c: the CORE */
+int core_event(Ev *c);
+void core_update(void);    /* its lasers, the force field's patience */
+void core_draw(void);      /* under everything: the lasers, the force fields */
 #endif

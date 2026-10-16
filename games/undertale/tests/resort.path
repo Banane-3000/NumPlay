@@ -1,6 +1,6 @@
 # the MTT Resort, up the crossroads' stairs (play it with --room 159 --at 7550,420 --name Frisk --noenc --god
 # --gold 400): Sans out front, dinner with him; the lobby, a Starfait from Burgerpants; a room at the desk, door 2
-# and its bed; doors 1 and 4 (nothing to give); the CORE's door
+# and its bed; doors 1 and 4 (nothing to give); through the door north, into the CORE
 w5
 7550,410
 7550,276
@@ -58,7 +58,5 @@ go:1500,396
 1470,396
 w10
 go:1210,122
-u
-z
-pick:0
+1210,100
 w60

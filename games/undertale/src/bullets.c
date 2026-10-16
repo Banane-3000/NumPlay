@@ -175,6 +175,10 @@ void bullets_draw(void) {
     if (b->kind == BK_NONE || (b->flags & BF_HIDDEN)) continue;
     uint16_t color = b->color == BC_BLUE ? rgb565(0x14A9FF) : b->color == BC_ORANGE ? rgb565(0xFCA600) : b->color == BC_GREEN ? rgb565(0x00C000)
                      : b->color == BC_YELLOW ? rgb565(0xFFFF00) : 0;
+    if (b->spr == SPR_RECT) {
+      gfx_rect(b->x / FX - b->w / 2, b->y / FX - b->h / 2, b->w, b->h, color ? color : C_WHITE, b->alpha);
+      continue;
+    }
     if (b->spr == SPR_BONE) {
       gfx_bone(b->x / FX, b->y / FX, b->w, b->h, color ? color : C_WHITE, b->alpha);
       continue;

@@ -197,6 +197,22 @@ AREAS.append(dict(name="hotland", map="Hotland_map.png", floor=HT_FLOOR, margin=
 AREAS.append(dict(name="resort", map="MTT_Resort_map.png", floor=RES_FLOOR, margin=0, close=True,
                   patches=[("copy", 1289, 818, 26, 36, 1131, 818)]))   # Sans out front (a sprite here)
 
+# the CORE: blue steel, mesh and purple bridges; the floors are cut by their rectangles (its walls are drawn in the
+# same blues). The black sausages (only there on the way to the true ending), Mettaton in his room and Alphys in the
+# last hallway are the map's: off it (Mettaton and Alphys are objects here)
+CORE_FLOOR = [(33, 81, 164), (31, 130, 228), (34, 105, 164), (36, 62, 141), (71, 154, 204), (85, 121, 151),
+              (67, 97, 107), (51, 70, 62), (71, 101, 103), (54, 52, 156), (78, 77, 189), (29, 28, 90), (69, 102, 153),
+              (32, 29, 112), (30, 74, 218), (15, 62, 216), (22, 101, 221), (85, 116, 138), (131, 44, 66), (70, 32, 58),
+              (225, 148, 55), (169, 132, 94), (145, 96, 11), (166, 165, 237), (18, 14, 53), (244, 254, 190),
+              (59, 58, 138)]
+AREAS.append(dict(name="core", map="CORE_map.png", floor=CORE_FLOOR, margin=0, close=True, patches=[
+    ("erase", 117, 1653, 30, 50, "ring"), ("erase", 462, 1759, 32, 50, "ring"), ("erase", 826, 1088, 28, 54, "ring"),
+    ("erase", 2096, 832, 28, 50, "ring"), ("erase", 2646, 164, 34, 48, "ring"), ("erase", 3344, 466, 34, 36, "ring", []),
+    ("copy", 3624, 112, 36, 52, 3560, 112),   # (Alphys, in the last hallway: the hallway further on, over her)
+    # the force field before The End (an object here, drawn while it's up): the bridge 32 pixels on, over it
+    ("copy", 2551, 836, 22, 84, 2519, 836),
+]))
+
 ROOMS = [
     # the landing: the bed of golden flowers, a hallway, the Delta Rune arch
     dict(name="area1", area="ruins", rect=(0, 5900, 680, 260), title="Ruins", margin=0,
@@ -610,7 +626,7 @@ ROOMS = [
          floor_rects=[(1080, 278, 380, 162), (1080, 440, 280, 98), (1060, 380, 20, 60), (1460, 380, 20, 60),
                       (1200, 136, 40, 142), (1200, 538, 40, 72)],
          doors=[((1195, 600, 50, 6), "res_outside", (1205, 840), "down"), ((1060, 380, 6, 60), "res_diner", (1030, 396), "left"),
-                ((1474, 380, 6, 60), "res_hall", (1488, 396), "right")]),
+                ((1474, 380, 6, 60), "res_hall", (1488, 396), "right"), ((1200, 132, 40, 8), "core_approach", (310, 2700), "up")]),
     dict(name="res_diner", area="resort", rect=(60, 220, 1000, 300), title="MTT Resort", floor_colors=RES_DINER + RES_FLOOR,
          floor_rects=[(82, 342, 698, 156), (780, 382, 280, 56)],
          doors=[((1054, 380, 6, 60), "res_lobby", (1068, 396), "right")]),
@@ -620,6 +636,51 @@ ROOMS = [
     dict(name="res_room", area="resort", rect=(1640, 0, 200, 250), title="MTT Resort",
          floor_rects=[(1644, 84, 192, 116), (1720, 200, 40, 50)],
          doors=[((1720, 232, 40, 8), "res_hall", (1735, 364), "down")]),
+    # the CORE: its approach up from the Resort, the lobby (its elevator out of order) and the two rooms north of it
+    dict(name="core_approach", area="core", rect=(160, 2200, 330, 560), title="CORE",
+         floor_rects=[(300, 2290, 40, 470), (270, 2690, 100, 70)],
+         fix=[("walk", 300, 2290, 40, 170)],   # (the way in, lit blue)
+         doors=[((300, 2752, 40, 8), "res_lobby", (1210, 150), "down"), ((304, 2292, 32, 8), "core_lobby", (310, 2090), "up")]),
+    dict(name="core_lobby", area="core", rect=(160, 1930, 330, 210), title="CORE",
+         floor_rects=[(177, 2040, 305, 75), (177, 1977, 63, 63), (402, 1977, 59, 63), (298, 2115, 42, 25)],
+         doors=[((300, 2134, 40, 6), "core_approach", (310, 2302), "down"), ((180, 1972, 40, 6), "core_doorway", (150, 1860), "up"),
+                ((420, 1972, 44, 6), "core_pit", (470, 1860), "up")]),
+    dict(name="core_doorway", area="core", rect=(95, 1490, 130, 410), title="CORE",
+         floor_rects=[(100, 1582, 120, 238), (140, 1819, 40, 80), (142, 1492, 38, 92)],
+         fix=[("walk", 142, 1492, 38, 92)],   # (its doorway, north)
+         doors=[((140, 1892, 40, 8), "core_lobby", (190, 1985), "down"), ((142, 1492, 38, 8), "core_west", (150, 1460), "up")]),
+    dict(name="core_pit", area="core", rect=(430, 1680, 100, 220), title="CORE",
+         floor_rects=[(440, 1761, 79, 75), (461, 1836, 37, 62)],
+         doors=[((461, 1892, 37, 8), "core_lobby", (432, 1985), "down")]),
+    # the laser ambush (its switch), the crossroads and the room north of it
+    dict(name="core_west", area="core", rect=(100, 990, 1140, 540), title="CORE",
+         floor_rects=[(119, 1339, 159, 147), (125, 1486, 77, 34), (278, 1356, 265, 32), (543, 1339, 694, 66),
+                      (796, 1236, 65, 105), (819, 1196, 53, 42), (766, 1068, 147, 130)],
+         doors=[((125, 1512, 77, 8), "core_doorway", (150, 1505), "down"), ((1228, 1360, 12, 40), "core_bridge", (1236, 1362), "right")]),
+    # the laser bridge (the power cut), up to the Core Branch
+    dict(name="core_bridge", area="core", rect=(1220, 1140, 920, 340), title="CORE",
+         floor_rects=[(1220, 1358, 845, 44), (2062, 1145, 58, 270)],
+         doors=[((1220, 1360, 6, 40), "core_west", (1200, 1362), "left"), ((2062, 1145, 58, 8), "core_branch", (2080, 1098), "up")]),
+    # the Core Branch: three columns, three bridges; west the sage's path (its puzzle), east the force field to The End
+    dict(name="core_branch", area="core", rect=(1390, 280, 1220, 870), title="Core Branch",
+         floor_rects=[(1740, 357, 60, 785), (2060, 282, 58, 860), (2379, 357, 60, 785), (1710, 357, 120, 83),
+                      (2340, 357, 120, 83), (1740, 620, 700, 42), (1400, 862, 1210, 38), (1620, 1102, 820, 40)],
+         doors=[((2060, 1142, 58, 8), "core_bridge", (2080, 1160), "down"), ((2060, 282, 58, 8), "core_warrior", (2080, 255), "up"),
+                ((2602, 862, 8, 38), "core_end", (2670, 860), "right")]),
+    # the warrior's path: its three fights, its switch
+    dict(name="core_warrior", area="core", rect=(2050, 60, 700, 240), title="CORE",
+         floor_rects=[(2060, 160, 100, 60), (2060, 218, 60, 72), (2160, 160, 460, 40), (2620, 160, 80, 60)],
+         doors=[((2060, 290, 60, 8), "core_branch", (2080, 300), "down")]),
+    # The End: the bridge, the Core End (a SAVE, the elevator to the lobby, the door to Mettaton)
+    dict(name="core_end", area="core", rect=(2650, 750, 880, 260), title="Core End",
+         floor_rects=[(2660, 852, 600, 46), (3260, 852, 240, 66)],
+         doors=[((2660, 852, 6, 46), "core_branch", (2580, 862), "left"), ((3342, 856, 36, 8), "core_mtt", (3348, 740), "up")]),
+    dict(name="core_mtt", area="core", rect=(3250, 230, 280, 550), title="CORE", open=True,
+         floor_rects=[(3342, 330, 36, 450), (3282, 460, 156, 120), (3302, 440, 116, 160), (3322, 420, 76, 200)],
+         doors=[((3342, 772, 36, 8), "core_end", (3348, 862), "down"), ((3342, 330, 36, 8), "core_hall", (3355, 212), "up")]),
+    dict(name="core_hall", area="core", rect=(3320, 60, 1100, 190), title="CORE",
+         floor_rects=[(3340, 118, 1022, 42), (3340, 158, 60, 92)],
+         doors=[((3340, 242, 60, 8), "core_mtt", (3348, 345), "down")]),
 ]
 
 # rooms one above the other through a dark doorway (tools/pack.py: apply_links); ("h", left, right, y, h): side

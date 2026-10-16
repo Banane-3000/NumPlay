@@ -346,7 +346,7 @@ static const Form bomb_forms[BOMB_COUNT] = {
   [BOMB_GAME] = {{MON_BOMB}, 1, "* Defuse the game!"},
 };
 
-static const MonDef ht_defs[MON_COUNT - MON_WF_COUNT] = {
+static const MonDef ht_defs[MON_HT_COUNT - MON_WF_COUNT] = {
   [MON_VULKIN - MON_WF_COUNT] = {
     .name = "Vulkin", .spare_gold = 40, .hp = 20, .at = 8, .df = 0, .exp = 70, .gold = 40, .spr_idle = SPR_VULKIN_B,
     .spr_hurt = SPR_VULKIN_HURT, .idle_speed = 6, .check = "Thinks its lava makes people feel better.",
@@ -399,9 +399,12 @@ static const MonDef ht_defs[MON_COUNT - MON_WF_COUNT] = {
     .flags = MF_BOSS | MF_NOT_KILLABLE, .act = act_mtt_tiles, .talk = talk_mtt_tiles, .attack = attack_mtt_tiles,
     .flavor = flavor_mtt_tiles, .on_hit = hit_mtt_tiles, .ends = ends_mtt_tiles},
 };
-const MonDef *ht_mon_def(int id) { return id == MON_BOMB ? &bomb_defs[g_bomb_kind] : &ht_defs[id - MON_WF_COUNT]; }
+const MonDef *ht_mon_def(int id) {
+  if (id >= MON_HT_COUNT) return core_mon_def(id);
+  return id == MON_BOMB ? &bomb_defs[g_bomb_kind] : &ht_defs[id - MON_WF_COUNT];
+}
 
-static const Form ht_forms[FORM_COUNT - FORM_WF_COUNT] = {
+static const Form ht_forms[FORM_HT_COUNT - FORM_WF_COUNT] = {
   [FORM_VULKIN - FORM_WF_COUNT] = {{MON_VULKIN}, 1, "* Vulkin strolls in, happy as can be."},
   [FORM_TSUNDERPLANE - FORM_WF_COUNT] = {{MON_TSUNDERPLANE}, 1, "* Tsunderplane gets in the way!\n* Not on purpose or anything."},
   [FORM_TSUNDER_VULKIN - FORM_WF_COUNT] = {{MON_VULKIN, MON_TSUNDERPLANE}, 2,
@@ -416,7 +419,10 @@ static const Form ht_forms[FORM_COUNT - FORM_WF_COUNT] = {
   [FORM_MUFFET - FORM_WF_COUNT] = {{MON_MUFFET}, 1, "* Muffet blocks the way!"},
   [FORM_MTT_TILES - FORM_WF_COUNT] = {{MON_MTT_TILES}, 1, "* Mettaton attacks!"},
 };
-const Form *ht_form(int form) { return form == FORM_BOMB ? &bomb_forms[g_bomb_kind] : &ht_forms[form - FORM_WF_COUNT]; }
+const Form *ht_form(int form) {
+  if (form >= FORM_HT_COUNT) return core_form(form);
+  return form == FORM_BOMB ? &bomb_forms[g_bomb_kind] : &ht_forms[form - FORM_WF_COUNT];
+}
 
 /* random encounters: past the Lab (the belts and the Magma Chamber); on the second floor, the crossroads and the
  * Bad Opinion Zone */
@@ -431,7 +437,7 @@ int ht_encounter(int room) {
       return pool[rnd_n(4)];
     }
   }
-  return -1;
+  return core_encounter(room);
 }
 
 /* ---------------------------------------------------------------- the attacks */
@@ -678,10 +684,13 @@ static void atk_mtt_yellow(int t) {
   }
 }
 
-int ht_attack_length(int atk) { return atk == ATK_MUFFET_PET ? 150 : 160; }
+int ht_attack_length(int atk) { return atk >= ATK_HT_COUNT ? core_attack_length(atk) : atk == ATK_MUFFET_PET ? 150 : 160; }
 
 void ht_attack_run(Battle *b, int atk, int t) {
-  (void)b;
+  if (atk >= ATK_HT_COUNT) {
+    core_attack_run(b, atk, t);
+    return;
+  }
   if (t < 0) {
     bool muffet = atk >= ATK_MUFFET_SPIDERS && atk <= ATK_MUFFET_PET;
     board_set(muffet ? 190 : atk == ATK_TSUNDER_BOMBS || atk == ATK_PYROPE_ROPE ? 150 : atk == ATK_MTT_BOXES ? 140 : 120,

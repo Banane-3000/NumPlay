@@ -38,7 +38,7 @@ FORM_SNOWDRAKE, FORM_PAPYRUS = 19, 31
 ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT, ITEM_ASTRONAUT_FOOD = range(17, 23)
 ITEM_BURNT_PAN, ITEM_INSTANT_NOODLES, ITEM_HOT_DOG, ITEM_STAINED_APRON = 28, 29, 30, 31
 ITEM_NICE_CREAM = 13
-ITEM_STARFAIT = 32
+ITEM_STARFAIT, ITEM_GLAMBURGER = 32, 33
 
 
 def run(args, frames, saves=None, what=""):
@@ -277,16 +277,31 @@ if not QUICK:
         check(ITEM_NICE_CREAM in s["items"], f"Hotland's third floor: no Nice Cream: {s['items']}")
 
 # the MTT Resort: dinner with Sans, a Starfait from Burgerpants, a night in the hotel (200G), room service and the
-# dog's door (nothing to give), up to the CORE's door
+# dog's door (nothing to give), through the door north into the CORE
 if not QUICK:
     s = run(["--name", "Frisk", "--noenc", "--god", "--gold", "400", "--room", str(ROOMS["HT_CROSS3"]), "--at", "7550,420",
              "--path-file", os.path.join(HERE, "resort.path")], 5000, what="the MTT Resort")
-    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["RES_LOBBY"], f"the MTT Resort did not end at the CORE: {s}")
+    check(s and s["mode"] == MODE_WORLD and s["room"] == ROOMS["CORE_APPROACH"], f"the MTT Resort did not end in the CORE: {s}")
     if s:
-        for name, v in (("HT_FLOOR3", 1), ("RES_SANS", 1), ("RES_ROOM", 2), ("RES_CORE", 1), ("RES_TEA", 0), ("RES_DOG", 0)):
+        for name, v in (("HT_FLOOR3", 1), ("RES_SANS", 1), ("RES_ROOM", 2), ("RES_TEA", 0), ("RES_DOG", 0)):
             check(flag(s, name) == v, f"the MTT Resort: F_{name} is {flag(s, name)}, not {v}")
         check(s["gold"] == 140, f"the MTT Resort: the Starfait or the room went wrong: {s['gold']}")
         check(ITEM_STARFAIT in s["items"], f"the MTT Resort: no Starfait: {s['items']}")
+
+# the CORE: Madjick and Knight Knight spared, the switch's lasers, the bridge's power, the sage's puzzle, a Glamburger,
+# Mettaton turned round and his show a hit, Alphys by the last elevator, up to the castle
+if not QUICK:
+    s = run(["--name", "Frisk", "--noenc", "--god", "--room", str(ROOMS["RES_LOBBY"]), "--at", "1210,160",
+             "--path-file", os.path.join(HERE, "core.path")], 24000, what="the CORE")
+    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["CORE_HALL"], f"the CORE did not end at the castle's elevator: {s}")
+    if s:
+        for name, v in (("CORE_IN", 1), ("CORE_MADJICK", 1), ("CORE_KNIGHT", 1), ("CORE_SWITCH", 1), ("CORE_POWER", 2),
+                        ("CORE_SAGE", 1), ("CORE_FIELD", 1), ("CORE_TRASH1", 1), ("CORE_END", 1), ("CORE_MTT", 1),
+                        ("CORE_HALL", 1), ("CORE_DONE", 1)):
+            check(flag(s, name) == v, f"the CORE: F_{name} is {flag(s, name)}, not {v}")
+        check(s["kills"] == 0, f"the CORE: {s['kills']} killed on the friendly way")
+        check(s["gold"] == 130, f"the CORE: Madjick's and Knight Knight's gold went wrong: {s['gold']}")
+        check(ITEM_GLAMBURGER in s["items"], f"the CORE: no Glamburger from the trash can: {s['items']}")
 
 if failures:
     print("\n".join("FAIL " + f for f in failures))

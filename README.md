@@ -79,7 +79,7 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
   <tr>
     <td align="center"><a href="games/celeste/README.md"><img src="docs/media/thumb_celeste.png" width="200" alt="Celeste"><br><b>Celeste</b></a><br><sub>The whole climb, with every B-side and C-side</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/Celeste.nwa">Download</a></td>
     <td align="center"><a href="games/championisland/README.md"><img src="docs/media/thumb_championisland.png" width="200" alt="Champion Island"><br><b>Champion Island</b></a><br><sub>The whole island and its seven sports</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/ChampionIsland.nwa">Download</a></td>
-    <td align="center"><a href="games/undertale/README.md"><img src="docs/media/thumb_undertale.png" width="200" alt="Undertale"><br><b>Undertale</b></a><br><sub>The Ruins, Snowdin, Waterfall, Hotland and the MTT Resort, from the golden flowers to the CORE's door</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/Undertale.nwa">Download</a></td>
+    <td align="center"><a href="games/undertale/README.md"><img src="docs/media/thumb_undertale.png" width="200" alt="Undertale"><br><b>Undertale</b></a><br><sub>The Ruins, Snowdin, Waterfall, Hotland and the CORE, from the golden flowers to the king's castle</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/Undertale.nwa">Download</a></td>
   </tr>
   <tr>
     <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>The rest of Undertale, The Binding of Isaac, Plants vs. Zombies, Doom and more: see the roadmap</sub></td>
@@ -174,7 +174,7 @@ Filmed on my own calculator, no emulator.
 - [x] The Final Earth 2
 - [x] The Powder Toy (NumPowder)
 - [x] Block Blast
-- [ ] Undertale: the Ruins, Snowdin, Waterfall, Hotland and the MTT Resort are out, the CORE and New Home are next
+- [ ] Undertale: the Ruins, Snowdin, Waterfall, Hotland, the MTT Resort and the CORE are out, New Home is next
 - [ ] The Binding of Isaac
 - [ ] Plants vs. Zombies
 - [ ] Doom

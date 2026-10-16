@@ -102,6 +102,7 @@ typedef struct {
   int16_t angle;                   /* drawn turned (1/256 turns) */
   uint8_t owner;                   /* the monster that made it */
 } Bullet;
+#define SPR_RECT 0xFFFF   /* a bullet drawn as its box: a plain rectangle (white unless coloured) */
 enum { BF_NOCLIP = 1, BF_ONCE = 2, BF_HIDDEN = 4, BF_BOX = 8, BF_FRONT = 16, BF_HARMLESS = 32, BF_SHIELD = 64,
        BF_PLAYER = 128 };   /* (shield: the green SOUL's blocks it; player: the yellow SOUL's own shot) */
 

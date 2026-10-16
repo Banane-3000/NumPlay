@@ -161,7 +161,23 @@ enum {
   F_RES_BUN,
   F_RES_ROOM,            /* the hotel's room: 1 paid for, 2 slept in */
   F_RES_DOG,             /* the Hot Dog slid under door 4 (for a Hush Puppy) */
-  F_RES_CORE,            /* the CORE's door reached (where the game now ends) */
+  F_CORE_IN,             /* the CORE's approach: the black shapes seen backing away inside */
+  F_CORE_CALLS,          /* Alphys's calls in the CORE, a bit each (core.c's CALL_*), then the rest */
+  F_CORE_CALLS2,
+  F_CORE_MADJICK,        /* the doorway's ambush, the room north of the crossroads: 1 spared, 2 killed */
+  F_CORE_KNIGHT,
+  F_CORE_SWITCH,         /* the switch by the laser ambush pressed */
+  F_CORE_POWER,          /* the laser bridge: 1 its power cut, 2 crossed */
+  F_CORE_SAGE,           /* the sage's path's puzzle solved */
+  F_CORE_WARRIOR,        /* the warrior's path: its fights won (1 to 3), 4 its switch flipped */
+  F_CORE_FIELD,          /* the force field before The End down */
+  F_CORE_TRASH1,         /* the trash cans: the Glamburger, the 100G */
+  F_CORE_TRASH2,
+  F_CORE_ASTIG,          /* Astigmatism met on its own (just once) */
+  F_CORE_END,            /* the Core End reached (the lobby's elevator works) */
+  F_CORE_MTT,            /* Mettaton EX: 1 his show a hit, 2 killed */
+  F_CORE_HALL,           /* Alphys's talk by the last elevator */
+  F_CORE_DONE,           /* the elevator up to the castle taken (where the game now ends) */
   FLAG_COUNT = 256
 };
 #endif

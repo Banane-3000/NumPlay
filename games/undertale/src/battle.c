@@ -444,6 +444,11 @@ void battle_update(uint32_t keys, uint32_t pressed) {
     if (bt.result == BR_SCRIPTED) battle_end(BR_SCRIPTED);
     return;
   }
+  /* (a monster's ways may end it at once: Mettaton, his switch flipped or his show a hit) */
+  if (bt.result == BR_SCRIPTED) {
+    battle_end(BR_SCRIPTED);
+    return;
+  }
   for (int i = 0; i < bt.nmon; i++) {
     Monster *m = &bt.mon[i];
     if (m->hurt) m->hurt--;

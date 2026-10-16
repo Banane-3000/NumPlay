@@ -13,7 +13,9 @@ enum {
   MON_AARON = MON_SNOW_COUNT, MON_WOSHUA, MON_MOLDBYGG, MON_SHYREN, MON_MAD_DUMMY, MON_TEMMIE, MON_UNDYNE, MON_WF_COUNT,
   /* Hotland (htmon.c) */
   MON_VULKIN = MON_WF_COUNT, MON_TSUNDERPLANE, MON_PYROPE, MON_METTATON, MON_RG01, MON_RG02, MON_BOMB, MON_MUFFET,
-  MON_MTT_TILES, MON_COUNT
+  MON_MTT_TILES, MON_HT_COUNT,
+  /* the CORE */
+  MON_FFROGGIT = MON_HT_COUNT, MON_WHIMSALOT, MON_ASTIG, MON_MADJICK, MON_KNIGHT, MON_MTT_BOX, MON_MTT_EX, MON_COUNT
 };
 
 /* formations: who is fought */
@@ -30,7 +32,10 @@ enum {
   FORM_MOLDBYGG_WOSHUA, FORM_SHYREN, FORM_MAD_DUMMY, FORM_TEMMIE, FORM_TEMMIE_MOLDBYGG, FORM_UNDYNE, FORM_WF_COUNT,
   /* Hotland (Mettaton's shows and a laser's alarm play their own way: htshows.c) */
   FORM_VULKIN = FORM_WF_COUNT, FORM_TSUNDERPLANE, FORM_TSUNDER_VULKIN, FORM_PYROPE, FORM_PYROPE2, FORM_MTT_QUIZ,
-  FORM_MTT_COOK, FORM_LASERS, FORM_RGUARDS, FORM_BOMB, FORM_MUFFET, FORM_MTT_TILES, FORM_COUNT
+  FORM_MTT_COOK, FORM_LASERS, FORM_RGUARDS, FORM_BOMB, FORM_MUFFET, FORM_MTT_TILES, FORM_HT_COUNT,
+  /* the CORE */
+  FORM_ASTIG = FORM_HT_COUNT, FORM_WHIM_FROG, FORM_WHIM_ASTIG, FORM_FROG_ASTIG, FORM_KNIGHT_MADJICK, FORM_FROG_ASTIG_WHIM,
+  FORM_KNIGHT, FORM_MADJICK, FORM_MTT_BOX, FORM_MTT_EX, FORM_COUNT
 };
 
 enum {
@@ -49,7 +54,12 @@ enum {
   /* Hotland */
   ATK_VULKIN_THUNDER = ATK_WF_COUNT, ATK_VULKIN_FIRE, ATK_TSUNDER_BOMBS, ATK_TSUNDER_DIVE, ATK_PYROPE_BOMBS,
   ATK_PYROPE_ROPE, ATK_RG_TEAM, ATK_MUFFET_SPIDERS, ATK_MUFFET_CROISSANTS, ATK_MUFFET_DONUTS, ATK_MUFFET_PET,
-  ATK_MTT_BOXES, ATK_MTT_YELLOW, ATK_COUNT
+  ATK_MTT_BOXES, ATK_MTT_YELLOW, ATK_HT_COUNT,
+  /* the CORE */
+  ATK_MADJICK_CHASER = ATK_HT_COUNT, ATK_MADJICK_CORNER, ATK_KNIGHT_MOON, ATK_KNIGHT_SUN, ATK_KNIGHT_STAR,
+  /* (Mettaton EX's from here on) */
+  ATK_EX_LEGS, ATK_EX_BOMBS, ATK_EX_REWIND, ATK_EX_ARMS, ATK_EX_HEART, ATK_EX_LASER, ATK_EX_BOTS, ATK_EX_DISCO,
+  ATK_EX_PAIRS, ATK_EX_BREAK, ATK_COUNT
 };
 
 /* a formation: up to three monsters, and what the first turn says */
@@ -75,6 +85,13 @@ const struct MonDef *ht_mon_def(int id);
 void ht_attack_run(struct Battle *b, int atk, int t);
 int ht_attack_length(int atk);
 int ht_encounter(int room);
+const Form *core_form(int form);              /* coremon.c */
+const struct MonDef *core_mon_def(int id);
+void core_attack_run(struct Battle *b, int atk, int t);
+int core_attack_length(int atk);
+int core_encounter(int room);
+void mttex_reset(void);                       /* before Mettaton EX's battle: the show's ratings back to the start */
+int mttex_ratings(void);
 extern int g_bomb_kind;                       /* the bomb fought next (BOMB_*: htmon.c) */
 enum { BOMB_DOG, BOMB_WATER, BOMB_SCRIPT, BOMB_BALL, BOMB_PRESENT, BOMB_GAME, BOMB_COUNT };
 #endif
