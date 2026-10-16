@@ -1,8 +1,0 @@
----
-layout: null
----
-{%- comment -%}
-The README's version badge (a shields.io endpoint badge): the latest release, read when GitHub Pages
-builds the site (Build asks for a build after each release).
-{%- endcomment -%}
-{"schemaVersion": 1, "label": "version", "message": "{{ site.github.latest_release.tag_name }}", "color": "2D9F4F"}
