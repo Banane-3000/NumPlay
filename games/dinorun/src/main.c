@@ -1,6 +1,6 @@
-/* Dino Run — an original native endless runner for NumWorks / NumPlay.
- * Gameplay inspiration: offline dinosaur runners; no third-party source/sprites copied.
- * 320x240, 30 fps, RGB565; draws 16-row bands rather than using a full frame buffer.
+/* Dino Run — C gameplay for NumWorks / NumPlay with geometry converted from
+ * the Python Chrome Dino sprites. See dino_sprites.h for source/rights note.
+ * 320x240, RGB565, 16-row bands, 30 fps.
  * Keyboard: OK/Up/Exe jump, Down duck, Back/Backspace pause, Home exit.
  */
 #include <eadk.h>
@@ -8,17 +8,20 @@
 #include <stdint.h>
 #include "../../common/epsilon_app.h"
 #include "../../common/epsilon_files.h"
+#include "dino_sprites.h"
 
 #ifdef __ELF__
-const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name"))) = "Dino Run";
+const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name"))) = "Chrome Dino";
 const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level"))) = 0;
 #endif
 
 #define W 320
 #define H 240
-#define GROUND 194
-#define DX 34
-#define DY (GROUND - 40)
+#define GROUND 195
+#define DX 20
+/* In the original Python sprites (1 px per art pixel), standing is drawn
+ * around (20,190): 12 px above this anchor, 9 px below it. */
+#define DY 190
 #define BAND 16
 #define KEY(k) (1ull << (k))
 #define RGB(c) (uint16_t)((((c) >> 8) & 0xF800u) | (((c) >> 5) & 0x07E0u) | (((c) >> 3) & 0x1Fu))
@@ -104,74 +107,82 @@ static void number(int x,int y,unsigned n,int min_digits,int scale,color c) {
   s[i]=0;text_at(x,y,s,scale,c);
 }
 
+/* Draw the original rectangle lists without approximation or antialiasing.
+ * The existing banded framebuffer clips each individual rectangle for us. */
+static void sprite(const dino_sprite_rect *pieces, unsigned n,
+                   int x, int y, color c) {
+  for (unsigned i=0; i<n; i++)
+    rect(x+pieces[i].x, y+pieces[i].y,
+         pieces[i].w, pieces[i].h, c);
+}
+#define SPRITE(name, x, y, c) sprite(name, COUNT_OF(name), x, y, c)
+
 static void dino(int x,int y,bool crouch,int step) {
   if (crouch) {
-    rect(x+7,y+15,24,12,ink); rect(x+20,y+10,16,10,ink);
-    rect(x+32,y+17,7,5,ink); rect(x+3,y+19,9,4,ink);
-    rect(x+25,y+13,2,2,bg); rect(x+10,y+27,7,3,ink); rect(x+26,y+27,7,3,ink);
+    if (step & 1) SPRITE(DINO_DUCK_1,x,y,ink);
+    else          SPRITE(DINO_DUCK_2,x,y,ink);
+  } else if (y < DY) {
+    SPRITE(DINO_JUMP,x,y,ink);
+  } else if (step & 1) {
+    SPRITE(DINO_RUN_1,x,y,ink);
   } else {
-    rect(x+15,y+1,17,14,ink); rect(x+23,y+13,14,5,ink);
-    rect(x+17,y+17,14,5,ink);rect(x+10,y+15,16,21,ink);
-    rect(x+5,y+22,10,6,ink); rect(x+1,y+19,5,4,ink);
-    rect(x+22,y+22,9,3,ink);rect(x+23,y+26,4,4,ink);
-    rect(x+24,y+4,3,3,bg);rect(x+30,y+15,7,2,bg);
-    if (step&1) {rect(x+12,y+35,5,6,ink);rect(x+25,y+34,6,3,ink);}
-    else {rect(x+12,y+34,7,3,ink);rect(x+25,y+35,5,6,ink);}
+    SPRITE(DINO_RUN_2,x,y,ink);
   }
 }
+
 static void cactus(obstacle *o) {
-  int x=o->x,y=o->y;
-  if (o->kind==LARGE_CACTUS) {
-    rect(x+8,y,10,o->h,ink);rect(x+4,y+12,6,6,ink);
-    rect(x,y+5,5,15,ink);rect(x+16,y+17,7,5,ink);
-    rect(x+19,y+8,5,18,ink);
-  } else {
-    rect(x+6,y,7,o->h,ink);rect(x+2,y+13,5,5,ink);
-    rect(x,y+7,4,12,ink);rect(x+12,y+18,5,4,ink);
-    rect(x+15,y+11,4,13,ink);
-  }
+  /* In the Python source S is drawn at (cactus position, F=190), and
+   * occupies x=[-20,-6], y=[-14,+9]. Use o->x/o->y as its top-left. */
+  SPRITE(CACTUS_ORIGINAL,o->x+20,o->y+14,ink);
+  if (o->kind==LARGE_CACTUS)
+    SPRITE(CACTUS_ORIGINAL,o->x+16+20,o->y+14,ink);
 }
+
 static void bird(obstacle *o) {
-  int x=o->x,y=o->y;
-  rect(x+6,y+7,20,7,ink);rect(x+25,y+9,7,3,ink);rect(x+3,y+10,5,3,ink);
-  rect(x+22,y+8,2,2,bg);
-  if ((ticks/7)&1) {rect(x+13,y,8,8,ink);rect(x+9,y+3,5,4,ink);}
-  else {rect(x+11,y+13,10,7,ink);rect(x+8,y+16,5,4,ink);}
+  /* Python aB/an: original flapping bird poses. */
+  if ((ticks/7)&1) SPRITE(BIRD_WING_DOWN,o->x,o->y+3,ink);
+  else             SPRITE(BIRD_WING_UP,o->x,o->y+3,ink);
 }
+
 static void scenery(void) {
-  rect(0,GROUND+1,W,2,ink);
-  /* Daytime clouds; tiny stars replace them in the night. */
+  rect(0,GROUND,W,1,ink);
   if ((score/300)&1) {
-    for(int i=0;i<23;i++) {
-      int x=(i*101+23 - (int)(distance_px/8)%570 +570)%570-80;
-      int y=34+(i*47)%102;
-      rect(x,y,2,2,faint);
+    /* aC is the original crescent moon; aG/aw are the stars. */
+    SPRITE(MOON_ORIGINAL,241,24,ink);
+    for(int i=0;i<18;i++) {
+      int x=(i*87+23-(int)(distance_px/9)%720+720)%720-20;
+      int y=20+(i*43)%127;
+      if (i&1) SPRITE(STAR_ORIGINAL_1,x,y,ink);
+      else     SPRITE(STAR_ORIGINAL_2,x,y,ink);
     }
   } else {
-    for(int i=0;i<4;i++) {
-      int x=(i*143+330 - (int)(distance_px/5)%620 +620)%620-85;
-      int y=49+(i*31)%70;
-      rect(x+10,y,31,2,faint);rect(x+17,y-7,18,2,faint);
-      rect(x+9,y-5,2,7,faint);rect(x+35,y-5,2,7,faint);
-      rect(x+16,y-9,3,3,faint);
+    /* at: the very same outlined cloud as in the Python version. */
+    for(int i=0;i<5;i++) {
+      int x=(i*143+330-(int)(distance_px/6)%690+690)%690-65;
+      int y=44+(i*29)%88;
+      SPRITE(CLOUD_ORIGINAL,x,y,faint);
     }
   }
-  for(int i=0;i<25;i++) {
-    int x=(i*43+17 - (int)(distance_px%1075)+1075)%1075;
-    if (x < W) rect(x,GROUND+9+(i*7)%21,3+(i%3),1,faint);
+  /* av and W: original little ground tufts/dots. */
+  for(int i=0;i<16;i++) {
+    int x=(i*58+17-(int)(distance_px%960)+960)%960;
+    if(x>W+22)continue;
+    if(i&1) SPRITE(GROUND_DETAIL_1,x,GROUND-5,faint);
+    else SPRITE(GROUND_DETAIL_2,x,GROUND-5,ink);
   }
 }
 static bool overlap(int x,int y,int w,int h,int xx,int yy,int ww,int hh) {
   return x<xx+ww && x+w>xx && y<yy+hh && y+h>yy;
 }
 static bool collision(void) {
-  int y=(dino_y+255)/256;
-  int x=DX+8, top=y+4, w=24,h=37;
-  if (duck && y>=DY) {x=DX+7;top=GROUND-26;w=32;h=26;}
+  int y=(dino_y+128)/256;
+  /* Aligned with the original Python sprite outlines, not the old 40px art. */
+  int x=DX+1, top=y-11, w=18,h=19;
+  if (duck && y>=DY) {x=DX+1;top=y-3;w=25;h=12;}
   for(int i=0;i<count;i++) {
     obstacle *o=&obstacles[i];
-    int ox=o->x+2, oy=o->y+2, ow=o->w-4, oh=o->h-3;
-    if (o->kind==BIRD) {oy=o->y+6;oh=10;ox=o->x+5;ow=22;}
+    int ox=o->x+1, oy=o->y+1, ow=o->w-2, oh=o->h-2;
+    if(o->kind==BIRD) {ox=o->x+2;oy=o->y+2;ow=19;oh=14;}
     if(overlap(x,top,w,h,ox,oy,ow,oh))return true;
   }
   return false;
@@ -185,13 +196,13 @@ static void spawn(void) {
   obstacle *o=&obstacles[count++];
   o->x=W+5;
   if(score>350 && randint(5)==0) {
-    o->kind=BIRD;o->w=33;o->h=22;
-    o->y=randint(2)?GROUND-46:GROUND-75;
+    o->kind=BIRD;o->w=21;o->h=18;
+    /* Low birds require ducking; high birds can cross a jump. */
+    o->y=randint(2)?GROUND-28:GROUND-56;
   } else {
     o->kind=randint(3)==0?LARGE_CACTUS:CACTUS;
-    o->w=o->kind==LARGE_CACTUS?24:19;
-    o->h=o->kind==LARGE_CACTUS?43:32;
-    o->y=GROUND-o->h;
+    o->w=o->kind==LARGE_CACTUS?30:14;
+    o->h=23;o->y=DY-14;
   }
 }
 static void lose(void) {
@@ -227,9 +238,10 @@ static void update(bool jump,bool down) {
 }
 static void frame(void) {
   bool night=((score/300)&1)!=0;
-  bg=RGB(night?0x181D2A:0xF7F7F7);
-  ink=RGB(night?0xF1F1F1:0x404040);
-  faint=RGB(night?0x7A8193:0xBBBBBB);
+  /* Exact daytime/nighttime palette from the Python version. */
+  bg=RGB(night?0x000000:0xFFFFFF);
+  ink=RGB(night?0xACACAC:0x535353);
+  faint=RGB(night?0x252525:0xDADADA);
   for(band_y=0;band_y<H;band_y+=BAND) {
     for(int i=0;i<W*BAND;i++)pixels[i]=bg;
     scenery();
@@ -241,12 +253,12 @@ static void frame(void) {
       text_at(11,11,"HI",2,faint);number(47,11,high_score,5,2,ink);
       number(245,11,(unsigned)score,5,2,ink);
     } else {
-      dino(134,101,0,ticks/8);
-      centered(40,"DINO RUN",3,ink);
-      centered(170,scene==HELP?"OK OR UP JUMP":"PRESS OK TO PLAY",2,ink);
-      centered(209,scene==HELP?"DOWN DUCK":"SHIFT FOR HELP",2,faint);
-      if(scene==HELP) centered(230,"BACK PAUSE",1,faint);
-      else {text_at(9,230,"BEST",1,faint);number(46,230,high_score,5,1,ink);}
+      /* The original title character is the separately encoded 3x sprite. */
+      SPRITE(DINO_MENU_LARGE,120,150,ink);
+      centered(40,"CHROME DINO",3,ink);
+      centered(202,scene==HELP?"OK OR UP JUMP":"PRESS OK TO PLAY",2,ink);
+      centered(225,scene==HELP?"DOWN DUCK, BACK PAUSE":"SHIFT FOR HELP",1,faint);
+      if(scene!=HELP) {text_at(9,230,"BEST",1,faint);number(46,230,high_score,5,1,ink);}
     }
     if(scene==DEAD) {
       rect(46,61,228,90,bg);

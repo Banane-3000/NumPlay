@@ -38,7 +38,7 @@ int main(int argc,char **argv) {
   update(false,true);assert(duck);
   update(false,false);assert(!duck);
   /* Force a collision, test the game-over state and restart. */
-  count=1;obstacles[0]=(obstacle){DX+12,GROUND-32,19,32,CACTUS};
+  count=1;obstacles[0]=(obstacle){DX+12,DY-14,14,23,CACTUS};
   update(false,false);assert(scene==DEAD && high_score==score);
   start_game();assert(scene==PLAY && score==0 && count==0);
   for(int i=0;i<160;i++){
@@ -48,9 +48,9 @@ int main(int argc,char **argv) {
   start_game();
   score=328; ticks=1312;distance_px=2100;
   count=3;
-  obstacles[0]=(obstacle){244,GROUND-32,19,32,CACTUS};
-  obstacles[1]=(obstacle){304,GROUND-43,24,43,LARGE_CACTUS};
-  obstacles[2]=(obstacle){152,GROUND-75,33,22,BIRD};
+  obstacles[0]=(obstacle){244,DY-14,14,23,CACTUS};
+  obstacles[1]=(obstacle){289,DY-14,30,23,LARGE_CACTUS};
+  obstacles[2]=(obstacle){152,GROUND-28,21,18,BIRD};
   frame();
   if(argc>=3)screenshot(argv[2]);
   printf("Host test passed: jump, crouch, collision, restart, rendering.\n");

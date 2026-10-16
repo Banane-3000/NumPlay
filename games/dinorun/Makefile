@@ -4,7 +4,7 @@ CC = arm-none-eabi-gcc
 NWLINK ?= npx --yes -- nwlink@1.0.0
 OUT = output
 SRC = src/main.c
-HEADERS = ../common/epsilon_app.h ../common/epsilon_files.h
+HEADERS = ../common/epsilon_app.h ../common/epsilon_files.h src/dino_sprites.h
 FLAGS = -std=c11 $(shell $(NWLINK) eadk-cflags-device) -Os -Wall -Wextra -Wno-unused-parameter \
         -fno-math-errno -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects \
         -fwhole-program -fvisibility=internal

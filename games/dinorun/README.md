@@ -1,6 +1,8 @@
-# Dino Run — NumWorks native C game (prototype)
+# Chrome Dino — NumWorks native C sprite port (prototype)
 
-An original endless runner inspired by offline dinosaur games, including the Chrome Dino game from Lily's NumWorks Python collection. The **C source code, pixel drawings and assets are independently written**; the Python version's code and sprites have not been copied. Unofficial, not affiliated with Google.
+This C game uses the original *rectangle-defined pixel art* decoded from [Lily's Python Chrome Dino version](https://github.com/LilyTheCuteCatgirl/lilys-small-numworks-games/blob/main/games/chrome_dino.py). The jump/duck/flying frames, cacti, outline clouds, stars, moon and ground details are now copied precisely as rectangles rather than hand-redrawn placeholders. The existing C gameplay/NumWorks integration remains independent. Unofficial, not affiliated with Google.
+
+**Art rights warning:** The source Python script credits **Diego KHELLADI** (2026) and displays an **all-rights-reserved** statement; Lily's collection also describes third-party contributions. These sprites are included for a private prototype only. **Confirm permission from the original rightsholder before pushing the sprite-based port as an upstream/public PR or distributing it.** Attribution alone does not establish permission.
 
 ![Gameplay screenshot](docs/shot.png)
 
@@ -14,7 +16,7 @@ An original endless runner inspired by offline dinosaur games, including the Chr
 | **SHIFT** at title | Help screen |
 | **HOME** | Exit back to calculator |
 
-The game features cacti, flying dinosaurs/birds, gradually increasing speed, day/night changes, high-score storage (`dinorun.sav`) and instant restart.
+The game features the original pixel cacti, flying bird frames, scrolling clouds, moon/stars, gradually increasing speed, day/night changes, high-score storage (`dinorun.sav`) and instant restart.
 
 ## Build as an individual NumWorks app
 
