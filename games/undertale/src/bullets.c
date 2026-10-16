@@ -29,12 +29,33 @@ int soul_x(void) { return bt.sx / FX; }
 int soul_y(void) { return bt.sy / FX; }
 
 /* the SOUL: 8 x 8, moved inside the board by the arrows (X held: slower, as in the game) */
+/* the blue SOUL: it falls, and up jumps (higher while held), as the game's (halved) */
+static int32_t soul_vy;
+#define BLUE_JUMP (3 * FX)
+#define BLUE_GRAVITY 3          /* 1/16 px a frame, each frame */
+void soul_set_mode(int mode) {
+  bt.soul_mode = mode;
+  soul_vy = 0;
+}
 void soul_update(uint32_t keys) {
   int sp = bt.speed;
   if (keys & K_X) sp /= 2;
   int dx = ((keys & K_RIGHT) != 0) - ((keys & K_LEFT) != 0), dy = ((keys & K_DOWN) != 0) - ((keys & K_UP) != 0);
-  bt.sx += dx * sp, bt.sy += dy * sp;
   int x0 = (bt.x0 + 2 + 4) * FX, x1 = (bt.x1 - 2 - 4) * FX, y0 = (bt.y0 + 2 + 4) * FX, y1 = (bt.y1 - 2 - 4) * FX;
+  if (bt.soul_mode == SOUL_BLUE) {
+    bt.sx += dx * sp;
+    if (bt.sy >= y1) {
+      soul_vy = (keys & K_UP) ? -BLUE_JUMP : 0;
+    } else {
+      /* letting go of up cuts the jump short */
+      if (soul_vy < -FX / 2 && !(keys & K_UP)) soul_vy = -FX / 2;
+      soul_vy += BLUE_GRAVITY;
+    }
+    bt.sy += soul_vy;
+    if (bt.sy < y0) bt.sy = y0, soul_vy = 0;
+  } else {
+    bt.sx += dx * sp, bt.sy += dy * sp;
+  }
   if (bt.sx < x0) bt.sx = x0;
   if (bt.sx > x1) bt.sx = x1;
   if (bt.sy < y0) bt.sy = y0;
@@ -87,11 +108,30 @@ void bullets_update(void) {
   }
 }
 
+/* a bone: its box w x h around (cx, cy), lying along its longer side; knobs at its ends */
+void gfx_bone(int cx, int cy, int w, int h, uint16_t col, uint8_t a) {
+  if (h >= w) {
+    int x = cx - w / 2, y = cy - h / 2, k = w / 2 > 1 ? w / 2 : 1;
+    gfx_rect(x + w / 4, y + k, w - 2 * (w / 4), h - 2 * k, col, a);
+    gfx_circle(x + k / 2 + 1, y + k, k, col, a), gfx_circle(x + w - k / 2 - 1, y + k, k, col, a);
+    gfx_circle(x + k / 2 + 1, y + h - k - 1, k, col, a), gfx_circle(x + w - k / 2 - 1, y + h - k - 1, k, col, a);
+  } else {
+    int x = cx - w / 2, y = cy - h / 2, k = h / 2 > 1 ? h / 2 : 1;
+    gfx_rect(x + k, y + h / 4, w - 2 * k, h - 2 * (h / 4), col, a);
+    gfx_circle(x + k, y + k / 2 + 1, k, col, a), gfx_circle(x + k, y + h - k / 2 - 1, k, col, a);
+    gfx_circle(x + w - k - 1, y + k / 2 + 1, k, col, a), gfx_circle(x + w - k - 1, y + h - k / 2 - 1, k, col, a);
+  }
+}
+
 void bullets_draw(void) {
   for (int i = 0; i < MAX_BULLETS; i++) {
     const Bullet *b = &bullets[i];
     if (b->kind == BK_NONE || (b->flags & BF_HIDDEN)) continue;
     uint16_t color = b->color == BC_BLUE ? rgb565(0x14A9FF) : b->color == BC_ORANGE ? rgb565(0xFCA600) : b->color == BC_GREEN ? rgb565(0x00C000) : 0;
+    if (b->spr == SPR_BONE) {
+      gfx_bone(b->x / FX, b->y / FX, b->w, b->h, color ? color : C_WHITE, b->alpha);
+      continue;
+    }
     if (b->angle) gfx_sprite_ex(b->spr, b->frame, b->x / FX, b->y / FX, 256, 256, b->angle, color, b->alpha);
     else if (color) gfx_sprite_color(b->spr, b->frame, b->x / FX, b->y / FX, 0, color, b->alpha);
     else gfx_sprite(b->spr, b->frame, b->x / FX, b->y / FX, 0, b->alpha);

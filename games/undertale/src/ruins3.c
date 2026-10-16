@@ -297,10 +297,10 @@ static int ev_flowey_end(Ev *c) {
 /* the door out of the Ruins: the rest of the underground is still to come */
 static int ev_ruins_door(Ev *c) {
   EV_BEGIN;
+  /* out of the Ruins: Snowdin's snow */
   set_flag(F_RUINS_EXIT, 1);
-  sv.room = (int16_t)g_room, sv.x = pl.x, sv.y = (int16_t)(pl.y + 30);
-  save_write_auto();
-  menu_end_open();
+  world_fade_hold(ROOM_SNOWDIN1, 34, 392, DIR_DOWN, 20);
+  WAIT_UNTIL(!world_fading());
   EV_END;
 }
 

@@ -22,6 +22,18 @@ static const ItemInfo items[ITEM_COUNT] = {
                       "* You ate the Snail Pie.\n* Your HP was maxed. Almost.", 350},
   [ITEM_FADED_RIBBON] = {"Faded Ribbon", "Ribbon", IT_ARMOR, 0, 0, 3, "If you're cuter, monsters\n  won't hit you as hard.", "", 0},
   [ITEM_TOY_KNIFE] = {"Toy Knife", "Toy Knife", IT_WEAPON, 0, 3, 0, "Made of plastic.\n* A rarity nowadays.", "", 100},
+  [ITEM_TOUGH_GLOVE] = {"Tough Glove", "TuffGlove", IT_WEAPON, 0, 5, 0, "A worn pink leather glove.\n* For five-fingered folk.", "", 50},
+  [ITEM_MANLY_BANDANNA] = {"Manly Bandanna", "Mandanna", IT_ARMOR, 0, 0, 7, "It has seen some wear.\n* It has abs drawn on it.", "", 50},
+  [ITEM_SNOWMAN_PIECE] = {"Snowman Piece", "SnowPiece", IT_FOOD, 45, 0, 0, "Please take this to the\n  ends of the earth.",
+                          "* You ate the Snowman Piece.", 40},
+  [ITEM_NICE_CREAM] = {"Nice Cream", "NiceCream", IT_FOOD, 15, 0, 0, "Instead of a joke, the\n  wrapper says something nice.",
+                       "* You unwrapped the Nice Cream.", 2},
+  [ITEM_BISICLE] = {"Bisicle", "Bisicle", IT_FOOD, 11, 0, 0, "It's a two-pronged popsicle,\n  so you can eat it twice.",
+                    "* You eat one half of the\n  Bisicle.", 5},
+  [ITEM_UNISICLE] = {"Unisicle", "Unisicle", IT_FOOD, 11, 0, 0, "It's a SINGLE-pronged popsicle.\n* Wait, that's just normal...",
+                     "* You ate the Unisicle.", 2},
+  [ITEM_CINNAMON_BUNNY] = {"Cinnamon Bunny", "CinnaBun", IT_FOOD, 22, 0, 0, "A cinnamon roll in the\n  shape of a bunny.",
+                           "* You eat the Cinnamon Bunny.", 8},
 };
 
 const ItemInfo *item_info(int id) { return &items[id >= 0 && id < ITEM_COUNT ? id : 0]; }
@@ -82,7 +94,14 @@ void item_use(int slot, char *out, int cap, int in_battle) {
       }
     default: {
       int n = snprintf(out, (size_t)cap, "%s", it->use);
-      item_remove_at(slot);
+      if (id == ITEM_NICE_CREAM) {   /* its wrapper's kind words */
+        static const char *const nice[] = {"You're just great!", "You look nice today!", "Are those claws natural?",
+                                           "You're super spiffy!", "Have a wonderful day!", "Is this as sweet as you?"};
+        n += snprintf(out + n, (size_t)(cap - n), "\n* \"%s\"", nice[rnd_n(6)]);
+      }
+      /* half a Bisicle is a Unisicle */
+      if (id == ITEM_BISICLE) sv.items[slot] = ITEM_UNISICLE;
+      else item_remove_at(slot);
       if (it->heal >= 999) {
         sv.hp = sv.maxhp;
         snprintf(out + n, (size_t)(cap - n), "\n* Your HP was maxed out.");

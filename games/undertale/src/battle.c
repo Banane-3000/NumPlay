@@ -54,6 +54,7 @@ static void box_step(void) {
 /* ---------------------------------------------------------------- texts */
 static void say(const char *s) {
   if (s != bt.text) snprintf(bt.text, sizeof bt.text, "%s", s);
+  text_wrap_width(264);
   writer_start(&bt.w, bt.text, 26, 133, FONT_MAIN);
   bt.w.line_h = 16;
 }
@@ -99,9 +100,11 @@ void battle_start(int form) {
     if (!m->gold) m->gold = d->gold;
     m->alive = true;
     m->spare = d->flags & MF_SPARE_START;
+    m->spare_gold = d->spare_gold;
   }
   bt.x0 = bt.tx0 = BOX_X0, bt.y0 = bt.ty0 = BOX_Y0, bt.x1 = bt.tx1 = BOX_X1, bt.y1 = bt.ty1 = BOX_Y1;
   bt.speed = 2 * FX;
+  soul_set_mode(SOUL_RED);
   bt.hp_shown = sv.hp;
   heart_x = pl.x + 10 - cam_x, heart_y = pl.y + 17 - cam_y;
   prev_mode = g_mode;
@@ -294,11 +297,7 @@ static void do_spare(void) {
   }
   (void)any;
   bt.text[0] = 0;
-  if (all_gone()) {
-    win();
-    return;
-  }
-  after_player_turn();
+  after_player_turn();   /* (all spared: the battle's won, as BR_SPARED) */
 }
 
 static void do_flee(void) {
@@ -395,7 +394,14 @@ static void menu_input(uint32_t pressed) {
       if (pressed & K_X) bt.phase = P_MENU;
       if (pressed & K_Z) {
         bt.last_action = 2;
-        item_use(bt.item, bt.text, sizeof bt.text, 1);
+        /* a monster may answer the item (a dog and the Stick) */
+        bool answered = false;
+        for (int i = 0; i < bt.nmon && !answered; i++) {
+          Monster *m = &bt.mon[i];
+          if (m->alive && !m->gone && m->def->on_item)
+            answered = m->def->on_item(&bt, m, sv.items[bt.item], bt.text, sizeof bt.text);
+        }
+        if (!answered) item_use(bt.item, bt.text, sizeof bt.text, 1);
         say(bt.text);
         bt.phase = P_RESULT;
       }
@@ -469,6 +475,10 @@ void battle_update(uint32_t keys, uint32_t pressed) {
         if (m->killed && m->alive) {
           m->alive = false, m->gone = true, m->dust = 1;
           sv.kills++;
+          {
+            const RoomInfo *ri = world_room_info();
+            if (ri && (ri->area == AREA_SNOWDIN || ri->area == AREA_SNOWTOWN)) set_flag(F_KILLS_SNOWDIN, flag(F_KILLS_SNOWDIN) + 1);
+          }
         }
         after_player_turn();
       }
@@ -514,6 +524,11 @@ void battle_update(uint32_t keys, uint32_t pressed) {
       attack_run(&bt, bt.atk, bt.atk_t);
       bullets_update();
       soul_hit_test();
+      if (sv.hp <= 0 && bt.captures) {
+        sv.hp = 1;
+        battle_end(BR_SCRIPTED);
+        break;
+      }
       if (sv.hp <= 0) {
         bt.phase = P_DEATH, bt.t = 0;
         break;

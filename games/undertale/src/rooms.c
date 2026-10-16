@@ -6,17 +6,37 @@
 #include "game.h"
 #include "monsters.h"
 #include "ruins.h"
+#include "snowdin.h"
 #include "world.h"
 
 void room_setup(int room, int from) {
   ruins1_setup(room, from);
   ruins2_setup(room, from);
   ruins3_setup(room, from);
+  snow1_setup(room, from);
+  snow2_setup(room, from);
+  town_setup(room, from);
 }
 
 /* each frame Frisk can walk: what a room watches (a rock on its switch, a cracked floor) */
 void room_update(void) {
   ruins2_update();
+  snow1_update();
+  snow2_update();
+}
+
+/* what a room draws on its floor, under everything (world.c) */
+void room_draw_floor(void) {
+  snow1_draw();
+  snow2_draw();
+}
+
+bool room_ice(int x, int y) {
+  const RoomInfo *ri = world_room_info();
+  if (!ri || !ri->ice) return false;
+  int cx = (x - ri->x) >> 2, cy = (y - ri->y) >> 2;
+  if (cx < 0 || cy < 0 || cx >= ri->cw || cy >= ri->ch) return false;
+  return ri->ice[cy * ((ri->cw + 7) >> 3) + (cx >> 3)] >> (cx & 7) & 1;
 }
 
 /* random encounters: a room's formations and how many steps between them (the game counts its steps,
@@ -47,9 +67,11 @@ void encounter_step(void) {
   const Encounters *e = NULL;
   for (unsigned i = 0; i < sizeof enc / sizeof enc[0]; i++)
     if (enc[i].room == g_room) e = &enc[i];
-  if (!e) return;
+  /* Snowdin's are snowmon.c's (who comes depends on what's happened) */
+  int snow = e ? -1 : snow_encounter(g_room);
+  if (!e && snow < 0) return;
   if (--steps_left > 0) return;
   steps_left = 100 + rnd_n(200);
   event_start(EV_ENCOUNTER, NULL);
-  event_cur_arg(e->forms[rnd_n(e->n)]);
+  event_cur_arg(e ? e->forms[rnd_n(e->n)] : snow);
 }

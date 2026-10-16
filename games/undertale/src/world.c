@@ -245,10 +245,30 @@ static bool step(int sx, int sy, bool slide) {
   return false;
 }
 
+static int8_t slide_dx, slide_dy;
+bool pl_sliding(void) { return slide_dx || slide_dy; }
+
 static void player_move(uint32_t keys, uint32_t pressed) {
   int dx = ((keys & K_RIGHT) != 0) - ((keys & K_LEFT) != 0);
   int dy = ((keys & K_DOWN) != 0) - ((keys & K_UP) != 0);
   face_from_keys(keys, pressed);
+  /* on ice he slides the way he went on until he's off it, or something stops him */
+  if (room_ice(pl.x + PBX + PBW / 2, pl.y + PBY + PBH / 2)) {
+    if (!slide_dx && !slide_dy && (dx || dy)) {
+      static const int8_t ddx[4] = {0, 0, -1, 1}, ddy[4] = {1, -1, 0, 0};
+      slide_dx = ddx[pl.dir], slide_dy = ddy[pl.dir];
+    }
+    if (slide_dx || slide_dy) {
+      bool moved = false;
+      for (int i = 0; i < 4; i++) moved |= step(slide_dx, slide_dy, false);
+      if (!moved) slide_dx = slide_dy = 0;
+      pl.anim = 0, pl.frame = 0;
+      pl.moving = moved;
+      return;
+    }
+  } else {
+    slide_dx = slide_dy = 0;
+  }
   bool moved = false;
   for (int i = 0; i < SPEED; i++) {
     if (dx) moved |= step(dx, 0, !dy);
@@ -343,7 +363,9 @@ void world_update(uint32_t keys, uint32_t pressed) {
     /* a door */
     for (int i = 0; i < ndoors; i++)
       if (boxes_meet(pl.x + PBX, pl.y + PBY, PBW, PBH, doors[i].x, doors[i].y, doors[i].w, doors[i].h)) {
-        world_fade_to(doors[i].room, doors[i].tx, doors[i].ty, doors[i].dir);
+        /* (a side door between rooms with a gap keeps Frisk's height: DOOR_KEEP) */
+        world_fade_to(doors[i].room, doors[i].tx == DOOR_KEEP ? pl.x : doors[i].tx,
+                      doors[i].ty == DOOR_KEEP ? pl.y : doors[i].ty, doors[i].dir);
         fade.walked = true;
         return;
       }
@@ -376,8 +398,9 @@ Obj *obj_npc(int name, const uint16_t spr[4], int x, int y, int dir, int event) 
   Frame f;
   frame_get(spr[0], 0, &f);
   o->name = (uint8_t)name, o->dir = (uint8_t)dir, o->event = (uint16_t)event;
-  o->bx = (int16_t)(f.w / 5), o->bw = (int16_t)(f.w - 2 * (f.w / 5)), o->bh = (int16_t)(f.h / 4 < 8 ? 8 : f.h / 4);
-  o->by = (int16_t)(f.h - o->bh);
+  /* its box: the bottom of its sprite, a little narrower (from the sprite's origin: its top-left or its feet) */
+  o->bx = (int16_t)(f.w / 5 - f.ox), o->bw = (int16_t)(f.w - 2 * (f.w / 5)), o->bh = (int16_t)(f.h / 4 < 8 ? 8 : f.h / 4);
+  o->by = (int16_t)(f.h - o->bh - f.oy);
   o->flags = OF_SOLID | (event ? OF_TALK : 0) | OF_WALKANIM;
   return o;
 }
@@ -449,8 +472,22 @@ bool near_frisk(const Obj *o, int d) {
   return abs_i(ox - px) <= d && abs_i(oy - py) <= d;
 }
 
+bool cam_pan(int x, int y, int sp) {
+  cam_locked = true;
+  cam_x += clamp_i(x - cam_x, -sp, sp), cam_y += clamp_i(y - cam_y, -sp, sp);
+  return cam_x == x && cam_y == y;
+}
+void cam_free(void) { cam_locked = false; }
+
+void room_draw_floor(void);   /* rooms.c */
+
+int g_shake;   /* frames the view shakes */
+
 void world_draw(void) {
+  int keep_x = cam_x, keep_y = cam_y;
+  if (g_shake > 0) cam_x += (rnd_n(3) - 1) * 2, cam_y += (rnd_n(3) - 1) * 2, g_shake--;
   gfx_tiles(cam_x, cam_y);
+  room_draw_floor();
   /* the room's objects and Frisk, the lower ones in front */
   DrawRef order[MAX_OBJS + 1];
   int n = 0;
@@ -480,7 +517,9 @@ void world_draw(void) {
           for (int k = 0; k < o->arg; k++) gfx_sprite(o->spr[0], o->frame, o->x + k * 20 - cam_x, o->y + r * 20 - cam_y, 0, 255);
         continue;
       }
-      gfx_sprite(obj_sprite(o), o->frame, o->x - cam_x, o->y - cam_y, 0, o->alpha);
+      if (o->flags & OF_DARK) gfx_sprite_color(obj_sprite(o), o->frame, o->x - cam_x, o->y - cam_y, 0, C_BLACK, o->alpha);
+      else gfx_sprite(obj_sprite(o), o->frame, o->x - cam_x, o->y - cam_y, (o->flags & OF_FLIP) ? GFX_FLIPX : 0, o->alpha);
     }
   }
+  cam_x = keep_x, cam_y = keep_y;
 }

@@ -218,7 +218,7 @@ static bool hit_napsta(Battle *b, Monster *m, int dmg) {
 }
 
 /* ---------------------------------------------------------------- the monsters */
-static const MonDef defs[MON_COUNT] = {
+static const MonDef defs[MON_RUINS_COUNT] = {
   [MON_DUMMY] = {
     .name = "Dummy", .hp = 15, .at = 0, .df = -5, .exp = 0, .gold = 0, .spr_idle = SPR_DUMMY_B, .spr_hurt = SPR_DUMMY_B,
     .check = "A cotton heart and a button\n  eye\n* You are the apple of my eye",
@@ -280,15 +280,13 @@ static const MonDef defs[MON_COUNT] = {
 };
 
 extern const MonDef toriel_def;
-const MonDef *mon_def(int id) { return id == MON_TORIEL ? &toriel_def : &defs[id]; }
+const MonDef *mon_def(int id) {
+  if (id >= MON_RUINS_COUNT) return snow_mon_def(id);
+  return id == MON_TORIEL ? &toriel_def : &defs[id];
+}
 
 /* ---------------------------------------------------------------- formations */
-typedef struct {
-  uint8_t mon[MAX_MON];
-  uint8_t n;
-  const char *text;
-} Form;
-static const Form forms[FORM_COUNT] = {
+static const Form forms[FORM_RUINS_COUNT] = {
   [FORM_DUMMY] = {{MON_DUMMY}, 1, "* You encountered the Dummy."},
   [FORM_FROGGIT_FIRST] = {{MON_FROGGIT_FIRST}, 1, "* Froggit attacks you!"},
   [FORM_FROGGIT] = {{MON_FROGGIT}, 1, "* Froggit hopped close!"},
@@ -311,7 +309,7 @@ static const Form forms[FORM_COUNT] = {
 };
 
 int form_setup(int form, Battle *b) {
-  const Form *f = &forms[form];
+  const Form *f = form >= FORM_RUINS_COUNT ? snow_form(form) : &forms[form];
   static const int16_t xs[3][3] = {{160}, {108, 212}, {70, 160, 250}};
   b->nmon = f->n;
   for (int i = 0; i < f->n; i++) {
@@ -321,10 +319,11 @@ int form_setup(int form, Battle *b) {
     m->x = (int16_t)(xs[f->n - 1][i] + m->def->dx), m->y = (int16_t)(120 + m->def->dy);
   }
   /* Toriel and Flowey can't be fled from; Napstablook can */
-  if (form == FORM_TORIEL || form == FORM_FLOWEY) b->no_flee = true;
+  if (form == FORM_TORIEL || form == FORM_FLOWEY || form == FORM_PAPYRUS) b->no_flee = true;
+  b->captures = form == FORM_PAPYRUS;
   return 0;
 }
-const char *form_text(int form) { return forms[form].text; }
+const char *form_text(int form) { return form >= FORM_RUINS_COUNT ? snow_form(form)->text : forms[form].text; }
 
 /* ---------------------------------------------------------------- attacks */
 /* the board's inside, in pixels */
@@ -644,14 +643,17 @@ static void atk_napsta_hat(int t) {
   if (t == 70) bt.mon[0].spr_override = SPR_NAPSTA_HAT;
 }
 
-static const int16_t lengths[ATK_COUNT] = {
+static const int16_t lengths[ATK_RUINS_COUNT] = {
   [ATK_FROG_FLIES] = 150, [ATK_FROG_JUMP] = 150, [ATK_FROG_RAIN] = 150, [ATK_WHIM_RING] = 150, [ATK_WHIM_COLS] = 150,
   [ATK_MOLD_ZIG] = 150, [ATK_MOLD_BURST] = 150, [ATK_LOOX_BOUNCE] = 160, [ATK_LOOX_WORM] = 150, [ATK_VEG_FALL] = 150,
   [ATK_VEG_CARROT] = 150, [ATK_MIGOSP_ROACH] = 150, [ATK_MIGOSP_DANCE] = 180, [ATK_NAPSTA_TEARS] = 150,
   [ATK_NAPSTA_WIGGLE] = 150, [ATK_NAPSTA_TEXT] = 120, [ATK_NAPSTA_HAT] = 100, [ATK_NAPSTA_FLOOD] = 150,
   [ATK_TOR_HANDS] = 170, [ATK_TOR_WAVES] = 180, [ATK_TOR_HELIX] = 180, [ATK_TOR_FALTER] = 150, [ATK_IDLE] = 60,
 };
-int attack_length(int atk) { return atk >= 0 && atk < ATK_COUNT && lengths[atk] ? lengths[atk] : 150; }
+int attack_length(int atk) {
+  if (atk >= ATK_RUINS_COUNT) return snow_attack_length(atk);
+  return atk >= 0 && lengths[atk] ? lengths[atk] : 150;
+}
 
 void toriel_attack(int atk, int t);   /* toriel.c */
 
@@ -677,7 +679,7 @@ void attack_run(Battle *b, int atk, int t) {
     case ATK_NAPSTA_TEXT: atk_napsta_text(t); break;
     case ATK_NAPSTA_HAT: atk_napsta_hat(t); break;
     case ATK_TOR_HANDS: case ATK_TOR_WAVES: case ATK_TOR_HELIX: case ATK_TOR_FALTER: toriel_attack(atk, t); break;
-    default: break;
+    default: if (atk >= ATK_RUINS_COUNT) snow_attack_run(b, atk, t); break;
   }
 }
 
@@ -694,4 +696,5 @@ void attack_draw(Battle *b, int atk, int t) {
     }
   }
   if (atk >= ATK_TOR_HANDS && atk <= ATK_TOR_FALTER) toriel_draw_attack(atk, t);
+  if (atk >= ATK_RUINS_COUNT) snow_attack_draw(b, atk, t);
 }

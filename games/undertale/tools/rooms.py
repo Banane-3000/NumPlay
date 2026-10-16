@@ -58,6 +58,51 @@ AREAS = [
     ]),
 ]
 
+SNOW = [(133, 163, 216), (114, 129, 177)]
+ICE = [(139, 163, 186), (180, 192, 201), (195, 207, 216)]
+WOOD = [(169, 124, 41), (91, 65, 0), (62, 35, 0)]
+# the paths' outlines
+SNOW_LINES = [(44, 46, 63)]
+INN_FLOOR = [(249, 210, 97)]
+PS_FLOOR = [(109, 85, 127), (74, 109, 127)]
+# the XOXO puzzles' tiles (drawn by the game, X or O), the spikes it raises and lowers
+XOXO1 = [(7460, 1240), (7540, 1240)]
+XOXO2 = [(8180, 1200), (8240, 1200), (8280, 1200), (8240, 1220), (8280, 1220), (8200, 1240), (8240, 1240),
+         (8260, 1240), (8280, 1240), (8180, 1260), (8240, 1260), (8180, 1280), (8200, 1280), (8220, 1280), (8240, 1280)]
+XOXO3 = [(9540, 1160), (9700, 1160), (9540, 1180), (9580, 1180), (9660, 1180), (9620, 1220), (9580, 1240),
+         (9620, 1240), (9580, 1260), (9660, 1260), (9540, 1300), (9700, 1300)]
+SNOW_SPIKES = [(7120, 940), (7120, 960), (7120, 980), (7680, 1220), (7680, 1240), (7680, 1260)] + \
+              [(8360, 1160 + 20 * i) for i in range(8)]
+BLUE = [(0, 0, 255)]
+SPIKE_COLOURS = [(128, 128, 128), (192, 192, 192), (255, 255, 255), (0, 0, 0)]
+AREAS.append(dict(name="snowdin", map="Snowdin_map.png", floor=SNOW + ICE + WOOD, margin=2, lines=SNOW_LINES, ice=ICE,
+                  patches=[
+    # Sans, Papyrus and the monsters who come out after Papyrus' fight or at the very end; the SAVE stars
+    ("erase", 2881, 400, 26, 40, "ring"), ("erase", 3236, 374, 28, 34, "ring"), ("erase", 4668, 380, 37, 37, "ring"),
+    ("erase", 5440, 290, 42, 56, "ring"), ("erase", 6108, 280, 54, 58, "ring"), ("erase", 6508, 610, 54, 56, "ring"),
+    ("erase", 6743, 695, 24, 27, "ring"), ("erase", 7332, 944, 94, 52, "ring"), ("erase", 7858, 1170, 44, 60, "ring"),
+    ("erase", 8008, 1160, 44, 49, "ring"), ("erase", 8374, 1186, 32, 42, "ring"), ("erase", 8816, 1254, 34, 46, "ring"),
+    ("erase", 9258, 1300, 24, 27, "ring"), ("erase", 9692, 1488, 36, 44, "ring"), ("erase", 10630, 1270, 38, 50, "ring"),
+    ("erase", 11772, 1176, 38, 48, "ring"), ("erase", 10182, 2274, 38, 46, "ring"),
+    ("erase", 10328, 2255, 69, 58, "ring"), ("erase", 10532, 2274, 38, 46, "ring"),
+    ("erase", 7026, 576, 58, 50, "ring"), ("erase", 5948, 258, 54, 52, "ring"),
+    # Snowdrake and his parents by Papyrus' sentry station: the trees and the path there from beside (the trees
+    # repeat every 40 pixels)
+    ("copy", 3620, 316, 80, 72, 3700, 316), ("copy", 3620, 316, 80, 72, 3780, 316), ("copy", 3620, 316, 30, 72, 3860, 316),
+]))
+# (the puzzles' tiles and spikes first: what's beside them is erased after)
+AREAS[-1]["patches"][:0] = [("erase", x, y, 20, 20, "ring", BLUE) for x, y in XOXO1 + XOXO2 + XOXO3] + \
+    [("erase", x, y, 20, 20, "ring", SPIKE_COLOURS) for x, y in SNOW_SPIKES]
+AREAS.append(dict(name="snowtown", map="Snowdin_Town_map.png", floor=SNOW, margin=2, lines=SNOW_LINES, patches=[
+    # the SAVE star; Papyrus and Undyne by the house, the dogs at the library, Papyrus in the fog and at home
+    # (they come later)
+    ("erase", 518, 1076, 22, 22, "ring"),
+    ("erase", 1860, 1008, 34, 82, "ring"), ("erase", 1898, 1010, 56, 78, "ring"), ("erase", 1952, 1004, 44, 86, "ring"),
+    ("erase", 1998, 1012, 40, 78, "ring"), ("erase", 2038, 1018, 40, 72, "ring"),
+    ("erase", 2132, 1026, 32, 84, "ring"), ("erase", 2163, 1040, 32, 72, "ring"),
+    ("erase", 3376, 1036, 30, 66, "ring"), ("erase", 2212, 854, 32, 50, "ring"), ("erase", 2262, 580, 36, 52, "ring"),
+]))
+
 ROOMS = [
     # the landing: the bed of golden flowers, a hallway, the Delta Rune arch
     dict(name="area1", area="ruins", rect=(0, 5900, 680, 260), title="Ruins", margin=0,
@@ -176,10 +221,104 @@ ROOMS = [
          fix=[("walk", 10000, 1950, 40, 10)], doors=[((10000, 1956, 40, 4), "basement2", (10010, 2034), "down")]),
     dict(name="ruinsexit", area="ruins", floor_colors=[(0, 0, 0), (97, 44, 97)], margin=0, rect=(9940, 0, 200, 300),
          floor_rects=[(9980, 70, 80, 230)], title="Ruins - Exit"),
+
+    # ---- Snowdin: the forest, from the Ruins' door to the town
+    # the forest's walkway: the path is walked all along (trunks and a branch drawn over it are in front)
+    dict(name="snowdin1", area="snowdin", rect=(0, 240, 1070, 240), title="Snowdin Forest",
+         fix=[("walk", 40, 404, 1030, 52)]),
+    dict(name="snowdin2", area="snowdin", rect=(1100, 240, 670, 240), title="Snowdin Forest", fix=[("walk", 1100, 404, 670, 52)]),
+    dict(name="snowdin3", area="snowdin", rect=(1800, 240, 410, 240), title="Snowdin Forest", fix=[("walk", 1800, 404, 410, 52)]),
+    dict(name="snowdin4", area="snowdin", rect=(2240, 240, 300, 240), title="Snowdin Forest", fix=[("walk", 2240, 404, 300, 52)]),
+    # Papyrus' gate on the bridge: its bars are too wide to stop anyone
+    dict(name="snowdin5", area="snowdin", rect=(2570, 240, 590, 240), title="Snowdin Forest",
+         fix=[("walk", 2570, 412, 100, 44)]),
+    dict(name="boxroad", area="snowdin", rect=(3160, 240, 380, 240), title="Snowdin - Box Road"),
+    dict(name="river", area="snowdin", rect=(3220, 0, 320, 240), title="Snowdin Forest"),
+    dict(name="papsentry", area="snowdin", rect=(3540, 240, 580, 240), title="Snowdin Forest"),
+    dict(name="doggo", area="snowdin", rect=(4120, 240, 460, 240), title="Snowdin Forest"),
+    dict(name="icefield", area="snowdin", rect=(4580, 240, 620, 240), ice=True, title="Snowdin Forest"),
+    dict(name="snowman", area="snowdin", rect=(4720, 0, 380, 240), title="Snowdin Forest"),
+    dict(name="elecmaze", area="snowdin", rect=(5200, 240, 300, 240), title="Snowdin Forest"),
+    dict(name="ballgame", area="snowdin", rect=(5500, 240, 800, 580), ice=True, title="Snowdin Forest",
+         fix=[("walk", 5716, 318, 68, 22)]),   # the plank bridge over the chasm
+    dict(name="dogi", area="snowdin", rect=(6300, 240, 300, 220), title="Snowdin Forest"),
+    dict(name="wordsearch", area="snowdin", rect=(6300, 520, 320, 300), title="Snowdin Forest"),
+    dict(name="spaghetti", area="snowdin", rect=(6620, 520, 300, 300), title="Snowdin - Spaghetti"),
+    dict(name="snowpuzzle", area="snowdin", rect=(6920, 540, 620, 580), title="Snowdin Forest",
+         fix=[("walk", 7254, 958, 50, 22)]),   # the plank bridge
+    dict(name="xoxo1", area="snowdin", rect=(7260, 1120, 440, 240), title="Snowdin Forest"),
+    dict(name="xoxo2", area="snowdin", rect=(7700, 1120, 800, 240), title="Snowdin Forest"),
+    dict(name="tilepuzzle", area="snowdin", rect=(8500, 1120, 400, 240), title="Snowdin Forest",
+         floor_colors=[(255, 192, 192)], fix=[("walk", 8614, 1238, 52, 22)]),   # the plank bridge
+    dict(name="doghouse", area="snowdin", rect=(8900, 1120, 540, 240), title="Snowdin - Dog House"),
+    # the ice puzzle: once solved, a bridge to the trees Frisk slides through (an object blocks it until then)
+    dict(name="xoxo3", area="snowdin", rect=(9440, 1120, 400, 220), ice=True, title="Snowdin Forest",
+         fix=[("walk", 9780, 1204, 60, 36), ("walk", 9520, 1320, 264, 20)], doors=[((9836, 1205, 4, 40), "poffzone", (10196, 1200), "right")]),
+    dict(name="xoxofail", area="snowdin", rect=(9440, 1340, 340, 260), title="Snowdin Forest"),
+    dict(name="poffzone", area="snowdin", rect=(10140, 1120, 820, 240), title="Snowdin Forest",
+         fix=[("walk", 10190, 1212, 40, 24), ("walk", 10840, 1260, 120, 14)],
+         doors=[((10190, 1195, 4, 30), "xoxo3", (9796, 1200), "left"),
+                ((10302, 1350, 36, 8), "southcliff", (10590, 2190), "down")]),
+    dict(name="dangerbridge", area="snowdin", rect=(10960, 1120, 1040, 240), title="Snowdin Forest",
+         fix=[("walk", 11110, 1226, 690, 26)], doors=[((11990, 1236, 10, 50), "snowtown", (4, 1088), "right")]),
+    # the mysterious door, up a long corridor from the cliff under the ice bridge
+    dict(name="doorroom", area="snowdin", rect=(9780, 1590, 320, 590), title="Snowdin Forest",
+         floor_colors=[(22, 67, 88), (27, 89, 109), (30, 106, 122), (6, 14, 22), (13, 37, 51), (19, 56, 75)]),
+    dict(name="southcliff", area="snowdin", rect=(9480, 2180, 1200, 240), title="Snowdin Forest",
+         fix=[("walk", 9922, 2180, 40, 60)], doors=[((10585, 2180, 30, 6), "poffzone", (10310, 1320), "up")]),
+
+    # ---- Snowdin Town
+    dict(name="snowtown", area="snowtown", rect=(0, 960, 3260, 240), title="Snowdin Town",
+         fix=[("walk", 0, 1080, 8, 50, "floor")],
+         doors=[((0, 1080, 4, 50), "dangerbridge", (11968, 1232), "left"),
+                ((624, 1066, 28, 24), "inn1", (628, 918), "up"), ((1312, 1070, 26, 20), "grillbys", (1236, 914), "up"),
+                ((1840, 1066, 26, 24), "library", (2026, 664), "up"),
+                # the undersnow tunnels: an igloo each end of the town
+                ((726, 1066, 24, 24), "snowtown", (2336, 1094), "down"), ((2336, 1084, 26, 16), "snowtown", (728, 1078), "down")]),
+    dict(name="townnorth", area="snowtown", rect=(1400, 700, 640, 260), title="Snowdin Town"),
+    dict(name="towndock", area="snowtown", rect=(1400, 480, 410, 220), title="Snowdin Town"),
+    dict(name="fogroom", area="snowtown", rect=(3260, 960, 360, 240), title="Snowdin Town",
+         fix=[("walk", 3440, 1084, 180, 48)]),   # the way on: Waterfall's blue ground
+    # the interiors: their floors are many colours, so their floor and furniture are rectangles
+    dict(name="inn1", area="snowtown", rect=(500, 740, 260, 220), title="Snowed Inn", open=True, margin=0,
+         floor_rects=[(520, 800, 222, 100), (600, 900, 80, 60), (536, 756, 44, 48)],
+         fix=[("wall", 705, 850, 37, 50)],
+         doors=[((604, 952, 72, 8), "snowtown", (626, 1078), "down"), ((536, 756, 44, 6), "inn2", (512, 676), "right")]),
+    dict(name="inn2", area="snowtown", rect=(500, 480, 320, 230), title="Snowed Inn", open=True, margin=0,
+         floor_rects=[(522, 600, 116, 76), (662, 600, 136, 76), (504, 684, 312, 22), (566, 670, 32, 16), (706, 670, 32, 16)],
+         doors=[((504, 684, 4, 22), "inn1", (548, 790), "down")]),
+    dict(name="grillbys", area="snowtown", rect=(1080, 710, 320, 250), title="Grillby's", open=True, margin=0,
+         floor_rects=[(1090, 800, 300, 150)],
+         fix=[("wall", 1092, 826, 64, 44), ("wall", 1140, 884, 104, 48), ("wall", 1300, 820, 90, 130),
+              ("wall", 1098, 924, 44, 26)],
+         doors=[((1220, 944, 50, 6), "snowtown", (1314, 1080), "down")]),
+    dict(name="library", area="snowtown", rect=(1810, 480, 300, 225), title="Librarby", open=True, margin=0,
+         floor_rects=[(1822, 566, 276, 132)], fix=[("wall", 1822, 620, 88, 80), ("wall", 1976, 616, 88, 66)],
+         doors=[((2000, 694, 70, 6), "snowtown", (1842, 1078), "down")]),
+    dict(name="pshouse", area="snowtown", rect=(2210, 710, 300, 245), title="Snowdin Town", open=True, margin=0,
+         floor_rects=[(2220, 848, 280, 100), (2220, 768, 280, 34), (2222, 800, 56, 52)],
+         fix=[("wall", 2300, 892, 82, 40), ("wall", 2318, 836, 52, 30), ("wall", 2462, 868, 40, 64)],
+         doors=[((2420, 944, 50, 8), "snowtown", (2240, 1096), "down"), ((2228, 766, 34, 4), "paproom", (2296, 660), "up"), ((2440, 766, 30, 4), "sansroom", (2560, 660), "up")]),
+    dict(name="paproom", area="snowtown", rect=(2150, 500, 260, 200), title="Snowdin Town", open=True, margin=0,
+         floor_rects=[(2160, 574, 240, 120)],
+         fix=[("wall", 2160, 636, 92, 56), ("wall", 2338, 556, 64, 44), ("wall", 2160, 556, 40, 64),
+              ("wall", 2358, 648, 44, 44)],
+         doors=[((2286, 690, 40, 8), "pshouse", (2234, 774), "down")]),
+    dict(name="sansroom", area="snowtown", rect=(2470, 510, 180, 190), title="Snowdin Town", open=True, margin=0,
+         floor_rects=[(2480, 566, 160, 126)], fix=[("wall", 2480, 560, 52, 32), ("wall", 2598, 556, 42, 56)],
+         doors=[((2550, 690, 40, 8), "pshouse", (2444, 774), "down")]),
+    dict(name="shed", area="snowtown", rect=(2550, 710, 290, 245), title="Snowdin Town", open=True, margin=0,
+         floor_rects=[(2580, 770, 180, 120), (2560, 886, 80, 64)], fix=[("wall", 2580, 730, 56, 100)],
+         doors=[((2560, 945, 80, 8), "snowtown", (2400, 1096), "down")]),
 ]
 
-# rooms one above the other through a dark doorway (tools/pack.py: apply_links)
+# rooms one above the other through a dark doorway (tools/pack.py: apply_links); ("h", left, right, y, h): side
+# by side with a gap, a door each way along the rows y .. y + h
 LINKS = [
+    ("h", "snowdin1", "snowdin2", 404, 52),
+    ("h", "snowdin2", "snowdin3", 404, 52),
+    ("h", "snowdin3", "snowdin4", 404, 52),
+    ("h", "snowdin4", "snowdin5", 404, 52),
     ("v", "ruins1", "ruins2", 506, 28, 5175),
     ("v", "ruins4", "ruins5", 1244, 32, 4640),
     ("v", "ruins7", "ruins7a", 4946, 28, 4400),

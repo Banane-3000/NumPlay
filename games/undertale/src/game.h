@@ -13,7 +13,8 @@ static inline int clamp_i(int v, int a, int b) { return v < a ? a : v > b ? b : 
 static inline int min_i(int a, int b) { return a < b ? a : b; }
 static inline int max_i(int a, int b) { return a > b ? a : b; }
 
-enum { MODE_TITLE, MODE_NAME, MODE_WORLD, MODE_BATTLE, MODE_MENU, MODE_SAVE, MODE_GAMEOVER, MODE_INTRO, MODE_END };
+enum { MODE_TITLE, MODE_NAME, MODE_WORLD, MODE_BATTLE, MODE_MENU, MODE_SAVE, MODE_GAMEOVER, MODE_INTRO, MODE_END,
+       MODE_SHOP };
 
 #define NUM_ITEMS 8
 typedef struct {

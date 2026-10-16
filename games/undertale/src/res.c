@@ -1,4 +1,5 @@
 /* data.bin: sections, sprites, tiles, rooms and strings (see res.h). */
+#include <stddef.h>
 #include "res.h"
 
 const uint8_t *ut_bin;
@@ -56,6 +57,7 @@ void room_info(int room, RoomInfo *r) {
   r->cw = rd16(p + 24), r->ch = rd16(p + 26);
   r->area = p[28], r->flags = p[29];
   r->name = rd16(p + 30);
+  r->ice = (r->flags & ROOM_ICE) ? r->coll + ((r->cw + 7) >> 3) * r->ch : NULL;
 }
 
 const char *str(uint16_t id) {

@@ -24,7 +24,9 @@ enum {
   OF_ANIM = 16,       /* its frames cycle (anim_speed) even standing */
   OF_WALKANIM = 32,   /* its frames cycle while it walks */
   OF_FRONT = 64,      /* drawn over everything else */
-  OF_BACK = 128       /* drawn under everything else */
+  OF_BACK = 128,      /* drawn under everything else */
+  OF_DARK = 256,      /* a silhouette */
+  OF_FLIP = 512       /* drawn mirrored */
 };
 #define MAX_OBJS 48
 typedef struct {
@@ -81,9 +83,12 @@ void obj_spikes_set(Obj *o, bool raised);
 Obj *obj_rock(int x, int y, int name, int event);   /* pushed by walking into it; with an event, it talks */
 void obj_set_box(Obj *o, int bx, int by, int bw, int bh);
 bool near_frisk(const Obj *o, int d);      /* within d pixels (their feet) */
+bool room_ice(int x, int y);               /* rooms.c: ice there (Frisk slides) */
+bool pl_sliding(void);
 /* the room fades out, then in: room changes in the middle */
 void world_fade_to(int room, int x, int y, int dir);
 void world_fade_hold(int room, int x, int y, int dir, int hold);   /* black for `hold` frames in the middle */
 bool world_fading(void);
 extern uint8_t g_fade;         /* 0 clear, 255 black: drawn over the room */
+extern int g_shake;            /* frames the view shakes */
 #endif

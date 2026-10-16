@@ -8,7 +8,7 @@
 
 <p align="center">
   <b>Fall into the Underground as a human child, on the NumWorks calculator.</b><br>
-  The Ruins, from the bed of golden flowers to the door out. The rest of the Underground is on the way.
+  The Ruins and Snowdin, from the bed of golden flowers to the edge of Waterfall. The rest of the Underground is on the way.
 </p>
 
 <p align="center">
@@ -24,8 +24,9 @@
 
 * **The whole Ruins:** every room, from the golden flowers through Toriel's puzzles, the falling leaves, the spikes, the rocks, the cracked floors and the switches, to Toriel's home and the long corridor under it.
 * **Its people, with all they have to say:** Flowey, Toriel and her phone calls, Napstablook, the talking rock, the Froggits who give advice, the spider bake sale, the snail facts, and every sign, bookshelf and mirror.
-* **Battles like in the game:** FIGHT with the timing bar, ACT, ITEM and MERCY, and your SOUL dodging each monster's own attacks in the box: Froggit, Whimsun, Moldsmal, Loox, Vegetoid, Migosp, Napstablook and Toriel.
-* **Spare or fight:** every monster can be spared, and Flowey at the door remembers what you did.
+* **Snowdin:** Sans and Papyrus, and every one of Papyrus's puzzles: the invisible electricity maze, the X and O tiles, the one on ice, the multicolor tiles and the Gauntlet. Then Snowdin Town, with its shop, inn, Grillby's, library and Papyrus's house.
+* **Battles like in the game:** FIGHT with the timing bar, ACT, ITEM and MERCY, and your SOUL dodging each monster's own attacks in the box: Froggit, Whimsun, Moldsmal, Loox, Vegetoid, Migosp, Napstablook and Toriel in the Ruins; Snowdrake, Ice Cap, Gyftrot, Jerry, Chilldrake, Glyde, Doggo, Lesser Dog, Dogamy and Dogaressa, Greater Dog and Papyrus, whose blue attack makes your SOUL fall, in Snowdin.
+* **Spare or fight:** every monster can be spared, and Flowey at the door remembers what you did. Lose to Papyrus and he only locks you in his shed.
 * **Saved like in the game:** SAVE at the stars, with the room and the time played. The C menu has your ITEM, STAT and CELL. Home keeps the moment you were at, and your save is also copied into `undertale_saves.py`, so installing the app again doesn't erase it.
 
 <table>
@@ -45,6 +46,22 @@
     <td align="center"><img src="docs/toriel.png" width="390" alt="Toriel's fight"><br><sub>Toriel won't let you leave</sub></td>
     <td align="center"><img src="docs/judgement.png" width="390" alt="Flowey at the door"><br><sub>Flowey waits at the door</sub></td>
   </tr>
+  <tr>
+    <td align="center"><img src="docs/sans.png" width="390" alt="Sans in Snowdin Forest"><br><sub>Sans, on the road through Snowdin Forest</sub></td>
+    <td align="center"><img src="docs/maze.png" width="390" alt="The invisible electricity maze"><br><sub>Papyrus's invisible electricity maze</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/ice.png" width="390" alt="The X and O puzzle on ice"><br><sub>The X and O puzzle on ice</sub></td>
+    <td align="center"><img src="docs/greaterdog.png" width="390" alt="Greater Dog"><br><sub>Greater Dog</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/town.png" width="390" alt="Snowdin Town"><br><sub>Snowdin Town</sub></td>
+    <td align="center"><img src="docs/shop.png" width="390" alt="The shop"><br><sub>The shop</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/papyrus.png" width="390" alt="Papyrus's blue attack"><br><sub>Papyrus's blue attack</sub></td>
+    <td align="center"><img src="docs/date.png" width="390" alt="Papyrus's room"><br><sub>Hanging out with Papyrus</sub></td>
+  </tr>
 </table>
 
 ## How to play
@@ -53,7 +70,9 @@ A new game starts with the story of the war between humans and monsters, then th
 
 Monsters jump out as you walk. In a battle, choose FIGHT to attack (press OK when the bar crosses the middle), ACT to check them, talk or do something else, ITEM to eat, and MERCY to spare them once they no longer want to fight, or to flee. Then move your SOUL, the red heart, to dodge what they throw at you. Each monster has its own way to be spared: try what ACT offers.
 
-Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) shows your items, your STAT and Toriel's phone number.
+Snowdin brings new things: when Papyrus turns your SOUL blue, it falls to the bottom of the box, and Up jumps over his bones. On ice you slide until something stops you. Snowdin Town's shop sells food and gear, and its inn gives you a night's rest.
+
+Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) shows your items, your STAT and the phone numbers you have.
 
 ## Controls
 
@@ -68,7 +87,7 @@ Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) sh
 ## Good to know
 
 * **One app at a time:** Undertale is too big to sit next to NumPlay or the other big games. Installing it from the NumWorks website swaps them out, and installing them again swaps it out. Your saves in each one are kept.
-* **Only the Ruins, for now:** the door out of the Ruins ends the game, on a screen that says the rest of the Underground is still to come. Snowdin, Waterfall, Hotland and New Home come next, one at a time.
+* **The Ruins and Snowdin, for now:** the way out of Snowdin ends the game, on a screen that says the rest of the Underground is still to come. Waterfall, Hotland and New Home come next, one at a time.
 * **No music or sound:** the calculator has no speaker.
 * **The same Underground:** the rooms, pictures and words are the game's, and the puzzles and battles follow how the game plays them, at its 30 frames a second.
 

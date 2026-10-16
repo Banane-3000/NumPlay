@@ -268,7 +268,7 @@ Undertale comes as its own app, `Undertale.nwa`: it is too big to share the calc
 | **toolbox**, **shift** or **var** | The menu: ITEM, STAT, CELL (C in the game) |
 | **Home** | Keep the moment and quit |
 
-Name the fallen human, then walk and talk your way through the Ruins. In a battle, FIGHT attacks (press **OK** when the bar crosses the middle), ACT checks a monster or does something to it, ITEM eats, and MERCY spares a monster that no longer wants to fight, or flees. Then move your SOUL to dodge. Walk up to a star and press **OK** to SAVE. Home keeps the moment you were at, and the next start is back there. Your save is also copied into `undertale_saves.py`, so installing the app again doesn't erase it. For now the game ends at the door out of the Ruins.
+Name the fallen human, then walk and talk your way through the Ruins and Snowdin. In a battle, FIGHT attacks (press **OK** when the bar crosses the middle), ACT checks a monster or does something to it, ITEM eats, and MERCY spares a monster that no longer wants to fight, or flees. Then move your SOUL to dodge; when it turns blue, it falls, and **Up** jumps. On ice you slide until something stops you. In Snowdin Town, walk into the shop to buy, and into the inn to rest. Walk up to a star and press **OK** to SAVE. Home keeps the moment you were at, and the next start is back there. Your save is also copied into `undertale_saves.py`, so installing the app again doesn't erase it. For now the game ends on the way out of Snowdin, at the edge of Waterfall.
 
 <br clear="right">
 

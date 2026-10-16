@@ -25,6 +25,7 @@ UA = {"User-Agent": "NumPlay-Undertale/1.0 (fan port for the NumWorks calculator
 CATEGORIES = {
     "maps": ["Maps"],
     "sprites": ["Overworld_sprites", "Battle_sprites", "Face_sprites", "Sprites", "Item_files", "Location_files"],
+    "screens": ["Screenshots", "Cut_content_files"],
 }
 PAGES = ["Ruins", "Ruins/Puzzles", "Toriel", "Toriel/In_battle", "Toriel's_Home", "Flowey", "Napstablook",
          "Cell_Phone/Toriel", "SAVE_Point", "Froggit", "Whimsun", "Moldsmal", "Loox", "Vegetoid", "Migosp",
@@ -33,7 +34,25 @@ PAGES = ["Ruins", "Ruins/Puzzles", "Toriel", "Toriel/In_battle", "Toriel's_Home"
          "HP", "AT", "DF", "Stats", "FIGHT", "ACT", "MERCY", "ITEM", "Flowey/In_battle", "Napstablook/In_battle",
          "Encounter", "Home", "Annoying_Dog", "Rock", "Mouse", "Golden_flower", "Chara", "Frisk", "Name",
          "Item", "Consumables", "Weapons", "Armor", "Cell_Phone", "Intro", "Game_Over", "Damage", "Monster_Candy",
-         "Toriel's_Home", "Blue_SOUL", "Bullet_board", "Spare", "Flee", "Gold", "Save"]
+         "Toriel's_Home", "Blue_SOUL", "Bullet_board", "Spare", "Flee", "Gold", "Save",
+         # Snowdin
+         "Snowdin", "Snowdin/Puzzles", "Snowdin_Town", "Sans", "Papyrus", "Papyrus/In_battle", "Sans/In_battle",
+         "Snowdrake", "Ice_Cap", "Gyftrot", "Doggo", "Lesser_Dog", "Greater_Dog", "Dogamy_and_Dogaressa", "Jerry",
+         "Chilldrake", "Glyde", "Snowman", "Monster_Kid", "Multicolor_Tile_Puzzle", "Nice_Cream_guy", "Nice_Cream",
+         "Dimensional_Box", "Ball_Game", "Grillby's", "Grillby", "Papyrus_and_Sans's_House", "Papyrus's_room",
+         "Sans's_room", "Shop", "Snowdin_Shop", "Snowed_Inn", "Innkeeper", "Librarby", "Gift_Bear", "Ice_Wolf",
+         "Cell_Phone/Papyrus", "Papyrus_date", "Mysterious_door", "Snowdin_Forest", "Royal_Guard", "Blue_attack",
+         "Faun", "Big_Mouth", "Crazy_Bun", "Drunk_Bun", "Politics_Bear", "Punk_Hamster", "Rabbit_Kid",
+         "Rabbit_Lady_and_Cinnamon", "Red_Bird", "Red_Demon", "Scarf_Lady", "Slime_family", "Ugly_Fish",
+         "Library_Lizard", "Library_Loox", "Knock_lover", "Lady_Garf", "Wrap_Mouse", "Innkeeper's_child",
+         "Snoring_guests", "Mad_Mew_Mew", "Snowdrake's_mother", "Snowdrake's_father", "Bonetrousle",
+         "Tough_Glove", "Manly_Bandanna", "Old_Tutu", "Ballet_Shoes", "Cinnamon_Bunny", "Bisicle", "Unisicle",
+         "Nice_Cream_(item)", "Snowman_Piece", "Snowman_Piece", "Punch_Card", "Dog_Residue", "Abandoned_Quiche",
+         "Astronaut_Food", "Hot_Dog...?", "Hot_Cat", "Spaghetti", "Glamburger", "Sea_Tea", "Temmie_Flakes",
+         "Junk_Food", "Annoying_Dog/In_battle", "Lesser_Dog/In_battle", "Greater_Dog/In_battle", "Doggo/In_battle",
+         "Dogamy_and_Dogaressa/In_battle"]
+# files the categories leave out, as their wiki names
+FILES = ["QC sprite.png", "QC screenshot shop.png"]
 DEMO = {
     "MacUnderTale.zip": "https://thisisatestofthevideogamedeliverysystem.sfo2.digitaloceanspaces.com/game/MacUnderTale.zip",
 }
@@ -97,6 +116,13 @@ def main():
                 if url:
                     print(kind, name)
                     save(path, get(url))
+    for name in FILES:
+        path = os.path.join(ref, "wiki", "sprites", name.replace(" ", "_"))
+        if not os.path.exists(path):
+            url = file_url("File:" + name)
+            if url:
+                print("file", name)
+                save(path, get(url))
     for page in PAGES:
         path = os.path.join(ref, "wiki", "pages", page.replace("/", "__") + ".txt")
         if os.path.exists(path):

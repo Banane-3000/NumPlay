@@ -32,9 +32,10 @@ enum { BR_WON, BR_SPARED, BR_FLED, BR_DIED, BR_SCRIPTED };
 struct Battle;
 struct Monster;
 
-typedef struct {
+typedef struct MonDef {
   const char *name;
   int16_t hp, at, df, exp, gold;
+  int16_t spare_gold;               /* the gold it gives when spared */
   uint16_t spr_idle, spr_hurt;      /* SPR_*: idle animation (its frames), hurt */
   uint8_t idle_speed;               /* frames between idle frames */
   int8_t dx, dy;                    /* where it stands, from its slot */
@@ -55,6 +56,8 @@ typedef struct {
   void (*draw)(struct Battle *b, struct Monster *m, int x, int y);
   bool (*ends)(struct Battle *b, struct Monster *m);   /* after its talk: true, it leaves the battle */
   void (*on_spare)(struct Battle *b, struct Monster *m);   /* spared while it isn't spareable (Toriel counts) */
+  /* an item used: true if it answers (the dogs and the Stick), its text in text */
+  bool (*on_item)(struct Battle *b, struct Monster *m, int item, char *text, int cap);
 } MonDef;
 enum {
   MF_ONE_HIT = 1,      /* dies in one hit (Whimsun) */
@@ -123,6 +126,7 @@ typedef struct Battle {
   int bar_x, bar_dir;          /* FIGHT: the bar, 1/16 px */
   int strike_t, strike_dmg;
   bool flee_ok, scripted, no_flee, no_buttons;
+  bool captures;               /* no death: at 0 HP the battle ends, HP 1 (Papyrus captures you) */
   int result;
   int exp_won, gold_won;
   int kr;                      /* (for later) */
@@ -152,6 +156,9 @@ void bullets_update(void);
 void bullets_draw(void);
 bool soul_hit_test(void);              /* bullets touching the SOUL hurt it */
 void soul_update(uint32_t keys);
+enum { SOUL_RED, SOUL_BLUE };          /* (the heart's frame too) */
+void soul_set_mode(int mode);          /* blue: it falls, up jumps */
+void gfx_bone(int cx, int cy, int w, int h, uint16_t col, uint8_t a);
 void soul_hurt(int dmg, int color);
 void board_set(int w, int h);          /* the board, centred, as the game resizes it */
 void board_set_rect(int x0, int y0, int x1, int y1);

@@ -10,7 +10,7 @@ data.bin: "UTD1", the number of sections, their offsets, then the sections (SEC_
   lowest first, the run padded to a byte), until the row's width
 - TILES: the areas' 20 x 20 tiles: bpp (0: one colour), colours, the colours (RGB565), 400 pixels of bpp bits
 - ROOMS: 32 bytes each (res.c room_info): the room's rectangle on its area's map, its tile grid and
-  collision map (4-pixel cells, 1 walkable), its area, flags and name
+  collision map (4-pixel cells, 1 walkable), its area, flags (1: ice, its bits after the collision's) and name
 - GRID, COLL: the rooms' tile ids (u16, 0xFFFF none) and collision bits
 - FONTS: height, first character, count, flags, then 8 bytes a glyph (advance, w, h, ox, oy, 0,
   bitmap offset u16) and the bitmaps (rows of whole bytes, highest bit first)
@@ -183,6 +183,35 @@ def load_frames(ref, src):
         return frames
     if kind == "png":
         return [Image.open(os.path.join(HERE, name)).convert("RGBA")]
+    if kind == "move":
+        # 'move:File.gif:x0,y0,x1,y1:i,j,...': the biggest thing that moves in a part of a screenshot GIF (against
+        # its median frame), in frames i, j...; halved
+        name, box, which = name.split(":")
+        x0, y0, x1, y1 = map(int, box.split(","))
+        im = Image.open(os.path.join(ref, "wiki", "screens", name))
+        st = np.stack([np.asarray(f.convert("RGB"))[y0:y1, x0:x1] for f in ImageSequence.Iterator(im)]).astype(int)
+        bg = np.median(st, axis=0)
+        out = []
+        for i in map(int, which.split(",")):
+            m = np.abs(st[i] - bg).sum(2) > 30
+            lab, n = ndimage.label(ndimage.binary_dilation(m, iterations=4))
+            k = int(np.argmax(ndimage.sum(m, lab, range(1, n + 1)))) + 1
+            sl = ndimage.find_objects(lab)[k - 1]
+            a = (m & (lab == k))[sl]
+            rgba = np.dstack([st[i][sl].astype(np.uint8), (a * 255).astype(np.uint8)])
+            # each frame on a canvas of the window's size, its feet at the bottom middle: frames line up
+            f = Image.fromarray(rgba, "RGBA")
+            canvas = Image.new("RGBA", (x1 - x0, y1 - y0), (0, 0, 0, 0))
+            canvas.paste(f, ((x1 - x0 - f.width) // 2, y1 - y0 - f.height), f)
+            out.append(halve(canvas))
+        return out
+    if kind == "map":
+        # 'map:Map.png:x,y,w,h': a piece of an area's map, as it is
+        name, box = name.split(":")
+        x, y, w, h = map(int, box.split(","))
+        return [Image.open(os.path.join(ref, "wiki", "maps", name)).convert("RGBA").crop((x, y, x + w, y + h))]
+    if kind == "gen":   # drawn by tools/sprites.py
+        return S.GEN[name]()
     if kind == "wiki2":   # a wiki file of the 640 x 480 battle, at the game's size: halved
         im = Image.open(os.path.join(ref, "wiki", "sprites", name))
         return [shrink(fr.convert("RGBA")) for fr in ImageSequence.Iterator(im)]
@@ -241,13 +270,19 @@ class Area:
 
     def __init__(self, ref, spec):
         im = Image.open(os.path.join(ref, "wiki", "maps", spec["map"]))
-        if im.mode != "P":
-            im = im.convert("RGB").quantize(256, method=Image.Quantize.MAXCOVERAGE)
-        self.idx = np.array(im)
-        p = im.getpalette()
-        self.rgb = [tuple(p[3 * i:3 * i + 3]) for i in range(len(p) // 3)]
-        self.transparent = im.info.get("transparency", None)
-        if isinstance(self.transparent, bytes):
+        if im.mode == "P":
+            self.idx = np.array(im)
+            p = im.getpalette()
+            self.rgb = [tuple(p[3 * i:3 * i + 3]) for i in range(len(p) // 3)]
+            self.transparent = im.info.get("transparency", None)
+            if not isinstance(self.transparent, int):   # (bytes: none of the palette's)
+                self.transparent = None
+        else:
+            # every colour exactly (some maps have more than 256)
+            a = np.asarray(im.convert("RGB")).astype(np.int32)
+            cols, inv = np.unique((a[..., 0] << 16) | (a[..., 1] << 8) | a[..., 2], return_inverse=True)
+            self.idx = inv.reshape(a.shape[:2]).astype(np.int32)
+            self.rgb = [(int(c) >> 16, int(c) >> 8 & 255, int(c) & 255) for c in cols]
             self.transparent = None
         self.spec = spec
         for patch in spec.get("patches", []):
@@ -272,11 +307,25 @@ class Area:
             self.idx[dy:dy + h, dx:dx + w] = self.idx[sy:sy + h, sx:sx + w].copy()
         elif p[0] == "erase":
             # the nearest pixel of the colours, looking a little around the rectangle (only it changes)
-            _, x, y, w, h, cols = p
+            _, x, y, w, h, cols, *drop = p
+            if cols == "ring":   # a little more than the box: the outline's last pixels
+                x, y, w, h = x - 2, y - 2, w + 4, h + 4
             m = 4
             x0, y0 = max(0, x - m), max(0, y - m)
             win = self.idx[y0:y + h + m, x0:x + w + m]
-            keep = np.isin(win, [i for i, k in enumerate(self.rgb) if k in [tuple(c) for c in cols]])
+            if cols == "ring":
+                # the colours just around the rectangle (but those of drop): what's behind the monster
+                ring = np.ones(win.shape, bool)
+                ring[y - y0:y - y0 + h, x - x0:x - x0 + w] = False
+                # (black: the outlines of what's erased, unless the patch says otherwise)
+                dropped = drop[0] if drop else [(0, 0, 0)]
+                # (only colours common around it: a few pixels of a colour are the monster's own, sticking out)
+                u, n = np.unique(win[ring], return_counts=True)
+                ids = {int(i) for i, c in zip(u, n) if c >= 0.05 * ring.sum()} - \
+                    {i for i, k in enumerate(self.rgb) if k in dropped}
+                keep = np.isin(win, list(ids))
+            else:
+                keep = np.isin(win, [i for i, k in enumerate(self.rgb) if k in [tuple(c) for c in cols]])
             if not keep.any():
                 raise ValueError("erase %s: none of its colours there" % (p,))
             _, (iy, ix) = ndimage.distance_transform_edt(~keep, return_indices=True)
@@ -302,7 +351,7 @@ def room_pixels(area, r):
     out = np.zeros((h, w), np.int32)
     xs0, ys0, xs1, ys1 = max(x, 0), max(y, 0), min(x + w, W), min(y + h, H)
     sub = area.idx[ys0:ys1, xs0:xs1]
-    lut = np.array([rgb565(*c) for c in area.rgb] + [0] * (256 - len(area.rgb)), np.int32)
+    lut = np.array([rgb565(*c) for c in area.rgb] + [0] * max(0, 256 - len(area.rgb)), np.int32)
     if area.transparent is not None:
         lut[area.transparent] = 0
     out[ys0 - y:ys1 - y, xs0 - x:xs1 - x] = lut[sub]
@@ -316,6 +365,9 @@ def floor_mask(area, r, x0, y0, x1, y1):
     return np.isin(area.idx[y0:y1, x0:x1], walk_idx)
 
 
+KEEP = -32768   # a door's landing: Frisk's own x or y, kept
+
+
 def apply_links(area, rooms):
     """the links between rooms one above the other through a dark doorway, ("v", lower, upper, x, w, y): a door
     each way between the lower room's floor under the doorway (x .. x + w, y in it) and the upper's above it, the
@@ -323,6 +375,17 @@ def apply_links(area, rooms):
     for link in R.LINKS:
         lo = rooms.get(link[1])
         if lo is None or lo["area"] != area.spec["name"]:
+            continue
+        if link[0] == "h":
+            # side by side: the left room's right edge and the right one's left edge, Frisk's height kept
+            ri = rooms[link[2]]
+            y, h = link[3:5]
+            lx, _, lw, _ = lo["rect"]
+            rx = ri["rect"][0]
+            lo.setdefault("fix", []).append(("walk", lx + lw - 8, y, 8, h))
+            ri.setdefault("fix", []).append(("walk", rx, y, 8, h))
+            lo.setdefault("doors", []).append(((lx + lw - 2, y, 2, h), link[2], (rx + 2, KEEP), "right"))
+            ri.setdefault("doors", []).append(((rx, y, 2, h), link[1], (lx + lw - 22, KEEP), "left"))
             continue
         x, w, yd = link[3:6] if link[0] == "v" else link[2:5]
         cx = x + w // 2
@@ -368,6 +431,8 @@ def collision(area, r):
     xs0, ys0, xs1, ys1 = max(X0, 0), max(Y0, 0), min(X1, W), min(Y1, H)
     big[ys0 - Y0:ys1 - Y0, xs0 - X0:xs1 - X0] = np.isin(area.idx[ys0:ys1, xs0:xs1], list(walk_idx))
     sub = big[margin:margin + ch * 4, margin:margin + cw * 4]
+    if r.get("open"):   # floors of many colours (a carpet, planks): its floor_rects alone say
+        sub = np.ones_like(sub)
     cells = sub.reshape(ch, 4, cw, 4).mean(axis=(1, 3)) >= 0.5
     # piles of leaves are floor, outline and all
     soft = area.spec.get("piles")
@@ -384,6 +449,12 @@ def collision(area, r):
     # other colour within `margin` pixels of it (a pile's leaves don't count)
     if margin:
         other = ~big & ~pile_big
+        # lines drawn on the floor (a path's outline) aren't walls
+        lines = area.spec.get("lines", []) + r.get("lines", [])
+        if lines:
+            win = np.zeros(big.shape, area.idx.dtype)
+            win[ys0 - Y0:ys1 - Y0, xs0 - X0:xs1 - X0] = area.idx[ys0:ys1, xs0:xs1]
+            other &= ~np.isin(win, [i for i, k in enumerate(area.rgb) if k in [tuple(c) for c in lines]])
         near = np.zeros_like(sub)
         for dy in range(2 * margin + 1):
             for dx in range(2 * margin + 1):
@@ -396,8 +467,12 @@ def collision(area, r):
         for fx, fy, fw, fh in r["floor_rects"]:
             keep[max(0, (fy - y) // 4):max(0, (fy + fh - y + 3) // 4), max(0, (fx - x) // 4):max(0, (fx + fw - x + 3) // 4)] = True
         cells &= keep
-    for kind, fx, fy, fw, fh in r.get("fix", []):
-        cells[max(0, (fy - y) // 4):max(0, (fy + fh - y + 3) // 4), max(0, (fx - x) // 4):max(0, (fx + fw - x + 3) // 4)] = kind == "walk"
+    raw = sub.reshape(ch, 4, cw, 4).mean(axis=(1, 3)) >= 0.5
+    for kind, fx, fy, fw, fh, *how in r.get("fix", []):
+        sl = (slice(max(0, (fy - y) // 4), max(0, (fy + fh - y + 3) // 4)),
+              slice(max(0, (fx - x) // 4), max(0, (fx + fw - x + 3) // 4)))
+        # "floor": walkable only where the floor's colours are (the edge of a room, past the margin rule)
+        cells[sl] = raw[sl] if how == ["floor"] else kind == "walk"
     out = bytearray()
     for row in cells:
         rb = bytearray((cw + 7) // 8)
@@ -448,8 +523,25 @@ def pack_room(area, r, tiles, strings):
             block = big[ty * 20:ty * 20 + 20, tx * 20:tx * 20 + 20]
             grid += struct.pack("<H", 0xFFFF if not block.any() else tiles.add(block.astype(np.uint16)))
     coll, cw, ch = collision(area, r)
+    flags = r.get("flags", 0)
+    if r.get("ice"):
+        # the ice: cells mostly of the area's ice colours, after the collision bits (ROOM_ICE)
+        ice_idx = [i for i, k in enumerate(area.rgb) if k in [tuple(c) for c in area.spec.get("ice", [])]]
+        m = np.zeros((ch * 4, cw * 4), bool)
+        sub = np.isin(area.idx[y:y + h, x:x + w], ice_idx)
+        m[:sub.shape[0], :sub.shape[1]] = sub
+        cells = m.reshape(ch, 4, cw, 4).mean(axis=(1, 3)) >= 0.5
+        for fx, fy, fw, fh in r.get("no_ice", []):
+            cells[max(0, (fy - y) // 4):(fy + fh - y + 3) // 4, max(0, (fx - x) // 4):(fx + fw - x + 3) // 4] = False
+        for row in cells:
+            rb = bytearray((cw + 7) // 8)
+            for i, v in enumerate(row):
+                if v:
+                    rb[i >> 3] |= 1 << (i & 7)
+            coll += rb
+        flags |= 1
     return dict(rect=(x, y, w, h), g=(gx, gy, cols, rows), grid=bytes(grid), coll=bytes(coll), cw=cw, ch=ch,
-                area=r["area_id"], flags=r.get("flags", 0), name=strings.add(r.get("title", "")))
+                area=r["area_id"], flags=flags, name=strings.add(r.get("title", "")))
 
 
 # ------------------------------------------------------------------ main
@@ -482,10 +574,41 @@ def main():
                 if not out or im.tobytes() != out[-1].tobytes():
                     out.append(im)
             imgs = out
+        if "box" in opts:
+            bx, by, bw, bh = opts["box"]
+            imgs = [im.crop((bx, by, bx + bw, by + bh)) for im in imgs]
         if "every" in opts:
             imgs = imgs[::opts["every"]]
         if "frames" in opts:
             imgs = [imgs[i] for i in opts["frames"]]
+        if opts.get("clear_bg"):   # the black around a monster (the wiki's GIFs have no see-through) is clear
+            out = []
+            for im in imgs:
+                a = np.array(im)
+                dark = (a[:, :, 0] < 8) & (a[:, :, 1] < 8) & (a[:, :, 2] < 8) | (a[:, :, 3] < 128)
+                lab, _ = ndimage.label(dark)
+                edge = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
+                a[np.isin(lab, list(edge))] = 0
+                out.append(Image.fromarray(a, "RGBA"))
+            imgs = out
+        if "clear" in opts:   # these colours are see-through (a map's floor behind a thing cut from it)
+            out = []
+            for im in imgs:
+                a = np.array(im)
+                for c in opts["clear"]:
+                    a[(a[:, :, 0] == c[0]) & (a[:, :, 1] == c[1]) & (a[:, :, 2] == c[2])] = 0
+                out.append(Image.fromarray(a, "RGBA"))
+            imgs = out
+        if opts.get("mirror"):
+            imgs = [im.transpose(Image.FLIP_LEFT_RIGHT) for im in imgs]
+        if "tints" in opts:   # the first frame, then it again in each colour (the SOUL's modes)
+            a = np.array(imgs[0].convert("RGBA"))
+            lum = a[:, :, :3].max(axis=2).astype(np.float32) / 255
+            imgs = [imgs[0]]
+            for t in opts["tints"]:
+                b = a.copy()
+                b[:, :, :3] = (lum[:, :, None] * np.array(t, np.float32)).astype(np.uint8)
+                imgs.append(Image.fromarray(b, "RGBA"))
         if "scale" in opts:
             imgs = [im.resize((im.width * opts["scale"], im.height * opts["scale"]), Image.NEAREST) for im in imgs]
         w0, h0 = imgs[0].size

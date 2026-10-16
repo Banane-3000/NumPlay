@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Checks of Undertale on a computer (make test): the host build, with
-AddressSanitizer and UBSan, through the menus, every battle, the saves and
-the whole Ruins.
+AddressSanitizer and UBSan, through the menus, every battle, the saves, the
+whole Ruins and the whole of Snowdin.
 
     python3 tests/check.py build/play [--quick]
 
---quick skips playing the whole Ruins (the longest part)."""
+--quick skips playing the whole Ruins and Snowdin (the longest parts)."""
 import os
 import re
 import shutil
@@ -26,7 +26,11 @@ body = re.sub(r"/\*.*?\*/", "", src[src.index("enum {") + 6:src.rindex("FLAG_COU
 for i, n in enumerate(n.strip() for n in body.split(",") if n.strip()):
     FLAGS[n] = i
 
-MODE_WORLD, MODE_BATTLE, MODE_END = 2, 3, 8
+MODE_WORLD, MODE_BATTLE, MODE_END, MODE_SHOP = 2, 3, 8, 9
+# rooms and battles (src/data.h, src/monsters.h)
+ROOMS = {m.group(1): int(m.group(2)) for m in
+         re.finditer(r"#define ROOM_(\w+) (\d+)", open(os.path.join(HERE, "..", "src", "data.h")).read())}
+FORM_SNOWDRAKE, FORM_PAPYRUS = 19, 31
 
 
 def run(args, frames, saves=None, what=""):
@@ -81,6 +85,28 @@ for form in (2, 3, 6, 10, 12):
 s = run(["--god", "--battle", "16", "--path", "act:3"], 6000, what="Napstablook, cheered up")
 check(s and s["mode"] == MODE_WORLD and s["kills"] == 0, f"Napstablook was not spared by cheering: {s}")
 
+# Snowdin's battles: fled from, fought (the Snowdrake, the Gyftrot, the Glyde, the Greater Dog...), and Papyrus,
+# who can't be fled: spared once he spares you, or (the SOUL hurt) he captures you
+for form in range(FORM_SNOWDRAKE, FORM_PAPYRUS):
+    s = run(["--god", "--battle", str(form), "--path", "flee"], 1500, what=f"battle {form}, fleeing")
+    check(s and s["mode"] == MODE_WORLD, f"battle {form}: fleeing did not end it: {s}")
+for form in (19, 20, 26, 27, 28, 30):
+    s = run(["--god", "--battle", str(form), "--path", "fight"], 4000, what=f"battle {form}, fighting")
+    check(s and s["mode"] == MODE_WORLD and s["kills"] >= 1, f"battle {form}: FIGHT did not win it: {s}")
+s = run(["--god", "--battle", str(FORM_PAPYRUS), "--path", "spare"], 15000, what="Papyrus, spared")
+check(s and s["mode"] == MODE_WORLD and s["kills"] == 0, f"Papyrus was not spared: {s}")
+s = run(["--battle", str(FORM_PAPYRUS), "--path", "spare"], 6000, what="Papyrus, captured")
+check(s and s["mode"] == MODE_WORLD and s["hp"] == 1, f"Papyrus did not capture Frisk: {s}")
+
+# the shop in Snowdin: a Cinnamon Bunny for 25G; Papyrus's date: his phone number
+s = run(["--name", "Frisk", "--noenc", "--room", str(ROOMS["SNOWTOWN"]), "--at", "446,1092", "--gold", "100", "--keys",
+         "2-24:up,60:z,90:down,100:down,110:down,120:z,140:z,170:x,190:down,200:down,210:down,220:z"], 400, what="the shop")
+check(s and s["gold"] == 75 and s["items"][0] == 16, f"the shop did not sell a Cinnamon Bunny: {s}")
+s = run(["--name", "Frisk", "--noenc", "--room", str(ROOMS["PSHOUSE"]), "--at", "2436,914", "--flag",
+         f"{FLAGS['F_PAPYRUS']}=1", "--flag", f"{FLAGS['F_PAP_DATE']}=1", "--path",
+         "go:2300,918;l;w5;l;w5;l;w5;z;pick:0;talk;w60"], 2500, what="Papyrus's date")
+check(s and flag(s, "PAP_DATE") == 2, f"the date did not end with Papyrus's number: {s}")
+
 # the leaf pile's SAVE, then Continue from the title
 d = tempfile.mkdtemp(prefix="undertale_check_")
 s = run(["--name", "Frisk", "--noenc", "--room", "8", "--at", "5012,4498", "--path", "u;z;w20;z;w30;x"], 300, saves=d,
@@ -99,7 +125,7 @@ shutil.rmtree(d, ignore_errors=True)
 if not QUICK:
     s = run(["--name", "Frisk", "--noenc", "--god", "--path-file", os.path.join(HERE, "ruins.path")], 40000,
             what="the Ruins")
-    check(s and s["mode"] == MODE_END, f"the Ruins did not end at their door: {s}")
+    check(s and s["mode"] == MODE_WORLD and s["room"] == ROOMS["SNOWDIN1"], f"the Ruins' door did not lead to Snowdin: {s}")
     if s:
         for name, v in (("FLOWEY_MET", 1), ("DUMMY", 1), ("RUINS5_DONE", 1), ("RUINS6_DONE", 1), ("PHONE", 1),
                         ("RUINS9_ROCK", 1), ("RUINS11_ROCK", 5), ("NAPSTA", 1), ("ONESWITCH", 1), ("ROTATE4", 1),
@@ -108,6 +134,20 @@ if not QUICK:
             check(flag(s, name) == v, f"the Ruins: F_{name} is {flag(s, name)}, not {v}")
         check(s["kills"] == 0, f"the Ruins: {s['kills']} killed on the friendly way")
         check(s["items"].count(1) == 2, f"the Ruins: not the two pieces of Monster Candy: {s['items']}")
+
+# the whole of Snowdin, the friendly way: Sans, Papyrus's puzzles (the maze, the X/O ones, the ice, the tiles),
+# Doggo, Dogamy and Dogaressa, Greater Dog, the Gauntlet, the town, Papyrus spared, the way on
+if not QUICK:
+    s = run(["--name", "Frisk", "--noenc", "--god", "--room", str(ROOMS["SNOWDIN1"]), "--at", "34,392", "--path-file",
+             os.path.join(HERE, "snowdin.path")], 30000, what="Snowdin")
+    check(s and s["mode"] == MODE_END, f"Snowdin did not end on the way to Waterfall: {s}")
+    if s:
+        for name, v in (("BRANCH", 1), ("SANS_MET", 1), ("PAP_SENTRY", 1), ("DOGGO", 1), ("ELECMAZE", 2),
+                        ("WORDSEARCH", 1), ("SNOWPUZZLE", 1), ("DOGI", 1), ("XOXO1", 1), ("XOXO2", 1), ("XOXO3", 1),
+                        ("PAP_XOXO1", 2), ("TILES", 1), ("GREATERDOG", 1), ("GAUNTLET", 1), ("PAPYRUS", 1),
+                        ("PAP_DATE", 1), ("TOWN_HOUSE", 1), ("SNOW_EXIT", 1)):
+            check(flag(s, name) == v, f"Snowdin: F_{name} is {flag(s, name)}, not {v}")
+        check(s["kills"] == 0, f"Snowdin: {s['kills']} killed on the friendly way")
 
 if failures:
     print("\n".join("FAIL " + f for f in failures))

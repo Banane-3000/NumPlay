@@ -46,16 +46,19 @@ typedef struct {
   uint16_t cw, ch;          /* 4-pixel cells over the rectangle */
   uint8_t area, flags;
   uint16_t name;            /* string: what SAVE shows */
+  const uint8_t *ice;       /* the same bits for ice (Frisk slides), NULL none */
 } RoomInfo;
+#define ROOM_ICE 1
 void room_info(int room, RoomInfo *r);
 
 /* a door of a room: walking into its rectangle takes Frisk to another room */
 typedef struct {
   int16_t x, y, w, h;
   uint16_t room;
-  int16_t tx, ty;
+  int16_t tx, ty;           /* where Frisk lands; DOOR_KEEP: where he is */
   uint16_t dir;
 } Door;
+#define DOOR_KEEP (-32768)
 int room_doors(int room, Door *out, int max);
 
 const char *str(uint16_t id);

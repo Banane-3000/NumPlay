@@ -254,6 +254,7 @@ static int last_choice;
 static char fmt_buf[512];
 
 void text_set_top(int top) { box_top = top; }
+void text_wrap_width(int w) { wrap_width = w; }
 
 void text_open(int face, const char *s) {
   box_face = face;

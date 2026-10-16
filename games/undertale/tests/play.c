@@ -1,7 +1,7 @@
 /* Plays Undertale on a computer, with scripted keys, and saves frames.
  *
  *   play [--frames N] [--keys "10-40:right,50:z,..."] [--shots 30,60|all] [--out DIR] [--saves DIR]
- *        [--room N --at X,Y] [--name NAME] [--flag F=V]... [--battle ID] [--trace]
+ *        [--room N --at X,Y] [--name NAME] [--flag F=V]... [--gold N] [--battle ID] [--trace]
  *
  * --path "x,y;x,y;z;w30;..." steers Frisk to each point in turn (holding arrows), presses Z ("z"), X ("x"),
  * waits ("wN": N frames) or mashes Z through talks ("talk": until no text or event is left), when the scripted
@@ -9,6 +9,7 @@
  * Keys: left right up down z x c home. "a-b:key" holds the key from frame a to b, "a:key" for one frame.
  * --room starts a new game in room N (its ROOM_* number) with Frisk's top-left at (X, Y), past the title.
  * Screenshots are DIR/shot_<frame>.ppm. */
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -97,12 +98,20 @@ static uint32_t path_keys(int f) {
     if (e) {
       const char *n = e + 1;
       bool nb = !strncmp(n, "fight", 5) || !strncmp(n, "spare", 5) || !strncmp(n, "bt", 2) || !strncmp(n, "act:", 4) ||
-                !strncmp(n, "flee", 4);
+                !strncmp(n, "flee", 4) || !strncmp(n, "seq:", 4);
       bool hb = !strncmp(path_at, "fight", 5) || !strncmp(path_at, "spare", 5) || !strncmp(path_at, "bt", 2) ||
-                !strncmp(path_at, "act:", 4) || !strncmp(path_at, "flee", 4) || !strncmp(path_at, "pick:", 5);
+                !strncmp(path_at, "act:", 4) || !strncmp(path_at, "flee", 4) || !strncmp(path_at, "pick:", 5) ||
+                !strncmp(path_at, "seq:", 4);
       if (!hb && ((g_mode == MODE_BATTLE && nb) || (g_mode == MODE_WORLD && text_menu_sel() >= 0 && !strncmp(n, "pick:", 5))))
         path_at = e + 1;
     }
+  }
+  /* a choice up while Frisk still walks: a "pick:" a few steps on (past "talk"s and points) is for it */
+  if (g_mode == MODE_WORLD && text_menu_sel() >= 0 && strncmp(path_at, "pick:", 5)) {
+    char *n = strchr(path_at, ';');
+    for (int k = 0; n && k < 3 && (!strncmp(n + 1, "talk", 4) || !strncmp(n + 1, "go:", 3) || isdigit((unsigned char)n[1])); k++)
+      n = strchr(n + 1, ';');
+    if (n && !strncmp(n + 1, "pick:", 5)) path_at = n + 1;
   }
   /* "pick:N": the option N of the next list or choice */
   if (!strncmp(path_at, "pick:", 5) && g_mode == MODE_WORLD) {
@@ -123,7 +132,28 @@ static uint32_t path_keys(int f) {
    * "bt" (a scripted battle) reads on; Z on whatever else comes (the bar, the texts). A battle the path didn't
    * expect: Frisk flees it */
   bool btok = !strncmp(path_at, "fight", 5) || !strncmp(path_at, "spare", 5) || !strncmp(path_at, "bt", 2) ||
-              !strncmp(path_at, "act:", 4) || !strncmp(path_at, "flee", 4);
+              !strncmp(path_at, "act:", 4) || !strncmp(path_at, "flee", 4) || !strncmp(path_at, "seq:", 4);
+  /* "seq:a,b@2,...": an ACT a turn (b@2: on the second monster), MERCY once one can be spared or they're done */
+  static char *seq_for;
+  static int seq_i;
+  int seq_act = 0, seq_target = 0;
+  bool seq = !strncmp(path_at, "seq:", 4);
+  if (seq) {
+    if (seq_for != path_at) seq_for = path_at, seq_i = 0;
+    const char *q = path_at + 4;
+    for (int k = 0; k < seq_i && q && *q && *q != ';'; k++) {
+      q = strchr(q, ',');
+      if (q) q++;
+    }
+    if (q && *q && *q != ';') {
+      seq_act = atoi(q);
+      const char *at = strchr(q, '@'), *comma = strchr(q, ','), *semi = strchr(q, ';');
+      if (at && (!comma || at < comma) && (!semi || at < semi)) seq_target = atoi(at + 1) - 1;
+    }
+    bool can = false;
+    for (int i = 0; i < bt.nmon; i++) can |= bt.mon[i].alive && !bt.mon[i].gone && bt.mon[i].spare;
+    if (can) seq_act = 0;
+  }
   static int idle;
   if (g_mode == MODE_BATTLE) {
     idle = 0;
@@ -131,11 +161,16 @@ static uint32_t path_keys(int f) {
     if (f & 1) return 0;
     if (bt.scripted) return K_Z;   /* (Flowey's: read on) */
     int want = !btok || !strncmp(path_at, "flee", 4) || !strncmp(path_at, "spare", 5) ? 3 : !strncmp(path_at, "act:", 4) ? 1 : 0;
+    if (seq) want = seq_act ? 1 : 3;
     int mercy = (!btok || !strncmp(path_at, "flee", 4)) && !bt.no_flee ? 1 : 0;
     switch (battle_ui()) {
       case BUI_MENU: return bt.button < want ? K_RIGHT : bt.button > want ? K_LEFT : K_Z;
+      case BUI_TARGET:
+        if (seq && bt.button == 1) return bt.target < seq_target ? K_DOWN : bt.target > seq_target ? K_UP : K_Z;
+        return K_Z;
       case BUI_ACTS: {
-        int n = atoi(path_at + 4);
+        int n = seq ? seq_act : atoi(path_at + 4);
+        if (seq && bt.act == n) seq_i++;
         return bt.act + 2 <= n ? K_DOWN : bt.act < n ? K_RIGHT : bt.act - 2 >= n ? K_UP : bt.act > n ? K_LEFT : K_Z;
       }
       case BUI_MERCY: return bt.mercy < mercy ? K_DOWN : bt.mercy > mercy ? K_UP : K_Z;
@@ -190,6 +225,15 @@ static uint32_t path_keys(int f) {
     int gx, gy;
     sscanf(tok + 3, "%d,%d", &gx, &gy);
     static int planned_room;
+    if (planned == path_at && planned_room != g_room) {
+      /* a door to another area on the way: the point was there, so it is reached */
+      RoomInfo a, b;
+      room_info(planned_room, &a), room_info(g_room, &b);
+      if (a.area != b.area) {
+        path_at = next, planned = NULL;
+        return 0;
+      }
+    }
     if (planned != path_at || planned_room != g_room) {
       planned = path_at, planned_room = g_room;
       if (!go_plan(gx, gy)) {
@@ -279,7 +323,7 @@ int main(int argc, char **argv) {
   const char *out = "build/play", *saves = NULL, *shots = "";
   int frames = 120, room = -1, ax = 0, ay = 0, battle = -1;
   const char *name = NULL;
-  int nflags = 0, fl[64][2];
+  int nflags = 0, fl[64][2], gold = -1;
   bool trace = false, coll = false, god = false;
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "--frames") && i + 1 < argc) frames = atoi(argv[++i]);
@@ -316,6 +360,7 @@ int main(int argc, char **argv) {
     } else if (!strcmp(argv[i], "--trace")) trace = true;
     else if (!strcmp(argv[i], "--noenc")) g_no_encounters = true;
     else if (!strcmp(argv[i], "--god")) god = true;
+    else if (!strcmp(argv[i], "--gold") && i + 1 < argc) gold = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--coll")) coll = true;
     else fprintf(stderr, "unknown option %s\n", argv[i]), exit(2);
   }
@@ -341,6 +386,7 @@ int main(int argc, char **argv) {
     }
   }
   for (int i = 0; i < nflags; i++) set_flag(fl[i][0], fl[i][1]);
+  if (gold >= 0) sv.gold = (uint16_t)gold;
   if (battle >= 0) battle_start(battle);
   bool all = !strcmp(shots, "all");
   for (int f = 0; f < frames && g_running; f++) {

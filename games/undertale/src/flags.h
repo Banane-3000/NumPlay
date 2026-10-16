@@ -55,6 +55,46 @@ enum {
   F_HOME_TOUR,           /* Toriel showed Frisk the house */
   F_SNAIL_TALK,
   F_BED_SLEPT,           /* 1 slept; 2 the pie taken */
+  /* Snowdin */
+  F_BRANCH,              /* the branch broke behind Frisk */
+  F_SANS_MET,            /* the gate, the lamp: Sans and Papyrus met */
+  F_SANS_FAVOR,          /* Sans asked his favour */
+  F_PAP_SENTRY,          /* Papyrus saw the human (not a rock) */
+  F_DOGGO,               /* 1 spared, 2 killed */
+  F_SANS_HINT,           /* the blue stop sign */
+  F_SNOWMAN,             /* pieces taken */
+  F_ELECMAZE,            /* 1 Papyrus zapped and gave the orb, 2 crossed */
+  F_SANS_COOL,           /* 1 cool, 2 uncool */
+  F_NICECREAM,           /* the Nice Cream guy met */
+  F_FRIED_SNOW,          /* times Sans named his price */
+  F_BALLGAME,            /* the flag won (1..7) */
+  F_WORDSEARCH,          /* 1 crossword, 2 junior jumble */
+  F_SPAGHETTI,
+  F_SNOWPUZZLE,          /* the switch under the snow */
+  F_DOGI,                /* 1 spared, 2 killed */
+  F_XOXO1, F_XOXO2, F_XOXO3,
+  F_PAP_XOXO1,           /* asked about the spaghetti */
+  F_TILES,               /* the multicolor tiles explained */
+  F_LESSERDOG,           /* 1 spared, 2 killed */
+  F_POFF_GOLD,
+  F_GREATERDOG,          /* 1 spared, 2 killed */
+  F_GAUNTLET,
+  F_SNOW_SANS_TALK,      /* Sans's talks along the way, a bit each */
+  F_PAPYRUS,             /* 1 spared, 2 killed, 3 fled */
+  F_PAP_CAPTURED,        /* times Papyrus captured Frisk */
+  F_PAP_DATE,            /* 1 promised, 2 done */
+  F_GRILLBYS,
+  F_INN,                 /* nights at the inn */
+  F_KILLS_SNOWDIN,
+  F_BOX0, F_BOX1, F_BOX2, F_BOX3, F_BOX4, F_BOX5, F_BOX6, F_BOX7, F_BOX8, F_BOX9,   /* the Dimensional Box */
+  F_SNOW_EXIT,
+  F_TOWN_HOUSE,          /* Papyrus's house open */
+  F_SNOWDIN_BOSSES,      /* boss fights (Bisicle's price) */
+  F_SNOW_SANS_LAMP,      /* hidden behind the lamp */
+  F_COUCH_GOLD,
+  F_FISH,                /* the fishing rod's note read */
+  F_SHOP_TALK,
+  F_SNOWDRAKE_DEAD,      /* (then Chilldrake comes instead) */
   FLAG_COUNT = 256
 };
 #endif

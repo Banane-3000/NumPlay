@@ -7,6 +7,7 @@
 #include "game.h"
 #include "menu.h"
 #include "ruins.h"
+#include "snowdin.h"
 
 static int ev_sign(Ev *c) {
   EV_BEGIN;
@@ -37,6 +38,10 @@ static int ev_phone(Ev *c) {
   static const char *const opts[] = {"Say Hello", "Puzzle Help", "About Yourself", "Call Her \"Mom\"", "Flirt"};
   EV_BEGIN;
   NARRATE("* Dialing...");
+  if (c->v[0] == 1) {   /* Papyrus */
+    SAY(FACE_PAPYRUS, "`0* HELLO! THIS IS PAPYRUS!\n* HOW DID YOU GET THIS NUMBER?|`2* OH, RIGHT, I GAVE IT TO YOU!\n* NYEH HEH HEH!");
+    return 1;
+  }
   CHOOSE(opts, 5);
   switch (CHOSEN()) {
     case 0:
@@ -81,6 +86,7 @@ static int ev_encounter(Ev *c) {
   WAIT(18);
   g_exclaim = 0;
   BATTLE(c->v[0]);
+  snow_battle_done(c->v[0]);
   EV_END;
 }
 
@@ -96,6 +102,12 @@ int event_run(Ev *c) {
   r = ruins2_event(c);
   if (r >= 0) return r;
   r = ruins3_event(c);
+  if (r >= 0) return r;
+  r = snow1_event(c);
+  if (r >= 0) return r;
+  r = snow2_event(c);
+  if (r >= 0) return r;
+  r = town_event(c);
   if (r >= 0) return r;
   return 1;
 }

@@ -218,13 +218,18 @@ static void c_menu_input(uint32_t pressed) {
     case M_STAT:
       if (pressed & (K_X | K_Z)) st = M_MAIN;
       break;
-    case M_CELL:
+    case M_CELL: {
+      int n = flag(F_PAP_DATE) == 2 ? 2 : 1;   /* Toriel's phone; Papyrus's once he gave it */
+      if (pressed & K_UP) sub = (sub + n - 1) % n;
+      if (pressed & K_DOWN) sub = (sub + 1) % n;
       if (pressed & K_X) st = M_MAIN;
       if (pressed & K_Z) {
         menu_close();
         event_start(EV_PHONE_MENU, NULL);
+        event_cur_arg(sub);
       }
       break;
+    }
   }
 }
 
@@ -298,7 +303,8 @@ static void draw_c_menu(void) {
   if (st == M_CELL) {
     panel(94, 26, 173, 60);
     gfx_text(FONT_MENU, 116, 38, "Toriel's Phone", C_WHITE, 255);
-    gfx_sprite(SPR_HEART, 0, 107, 44, 0, 255);
+    if (flag(F_PAP_DATE) == 2) gfx_text(FONT_MENU, 116, 56, "Papyrus's Phone", C_WHITE, 255);
+    gfx_sprite(SPR_HEART, 0, 107, 44 + sub * 18, 0, 255);
   }
 }
 
@@ -362,7 +368,7 @@ void menu_gameover_open(void) {
 void menu_end_open(void) {
   g_mode = MODE_END;
   t = 0;
-  writer_start(&w, "The RUINS are behind you.|The rest of the underground\nis still to come...", 52, 100, FONT_MAIN);
+  writer_start(&w, "Snowdin is behind you.|The rest of the underground\nis still to come...", 52, 100, FONT_MAIN);
   w.speed = 2;
 }
 
