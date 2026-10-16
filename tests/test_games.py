@@ -2,8 +2,9 @@
 """Plays each game's calculator build in the ARM emulator, twice, and checks
 what used to crash calculators or lose saves:
 
-- the app quits on Home by itself (Epsilon holds Home back while it runs) and
-  hands back its RAM cleared, so Epsilon's memory pools come back safely;
+- the app quits on Home by itself (Epsilon holds Home back while it runs), and
+  on On/Off (the second run), and hands back its RAM cleared, so Epsilon's
+  memory pools come back safely;
 - no unaligned multi-word access (a fault on the Cortex-M7), no write to flash
   or to the firmware's RAM outside the file system;
 - the file system stays valid: the game's save is there, the other files are
@@ -243,15 +244,15 @@ def through_launcher(index, keys, home):
     return lead + [(a + shift, b + shift, k) for a, b, k in keys], home + shift
 
 
-def run_once(nwa, storage, keys, home, out, tag):
+def run_once(nwa, storage, keys, home, out, tag, quit_key="home"):
     c = emu.Calculator(nwa, storage_file=storage)
     c.enable_checks(reads=True)
-    c.keys = keys + [(home, home + 400, K["home"])]
+    c.keys = keys + [(home, home + 400, K[quit_key])]
     c.pending_shots = [(home - 100, os.path.join(out, f"{tag}.png"))]
     c.run(home + 3000)
     problems = []
     if not c.exited:
-        problems.append("did not quit on Home")
+        problems.append(f"did not quit on {'Home' if quit_key == 'home' else 'On/Off'}")
     if c.violations:
         problems += sorted(set(c.violations))[:8]
     if not c.app_ram_clean():
@@ -279,7 +280,7 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     failed = False
     for name, (nwa, save, keys1, home1, keys2, home2) in GAMES.items():
-        if a.game and a.game != name:
+        if a.game and a.game != name or a.numplay and name not in order:  # (a big game: on its own only)
             continue
         path = os.path.join(a.apps, nwa)
         if a.numplay:  # Home in a game quits NumPlay altogether
@@ -311,7 +312,7 @@ def main():
             # a script added after the save, then a second session
             buf = bytearray(open(storage, "rb").read())
             lst = records(buf)
-            if name in COPIES:
+            if name in COPIES and not a.numplay:  # (NumPlay's own copy, packed: tests/test_progress.py)
                 copy = dict(lst).get(COPIES[name], b"")
                 tag = b"#>" + save.encode() + b":"
                 line = copy[copy.find(tag) + len(tag):].split(b"\n")[0] if tag in copy else b""
@@ -331,7 +332,8 @@ def main():
             buf[p + 2:p + size] = b"late.py\0" + late
             struct.pack_into("<H", buf, p + size, 0)
             open(storage, "wb").write(buf)
-            c2, problems2, stack2 = run_once(path, storage, keys2, home2, a.out, f"{name}_2")
+            # (quitting with On/Off this time: it saves and leaves as Home does)
+            c2, problems2, stack2 = run_once(path, storage, keys2, home2, a.out, f"{name}_2", "onoff")
             problems += [f"second run: {x}" for x in problems2]
             try:
                 recs2 = dict(records(open(storage, "rb").read()))
