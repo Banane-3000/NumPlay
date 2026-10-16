@@ -245,11 +245,14 @@ pub mod keyboard {
     /// flickers while it is held never makes a second press.
     const RELEASE_MS: u32 = 30;
     /// Up (the hard drop in Tetris) is easy to brush while pressing another
-    /// arrow on the round arrow pad. It is ignored when it goes down within
-    /// NEAR_MS of another arrow, and only counts once it has been held for
-    /// UP_MS without another arrow being pressed meanwhile.
-    const NEAR_MS: u32 = 80;
-    const UP_MS: u32 = 40;
+    /// arrow on the round arrow pad. It is ignored when it goes down while
+    /// another arrow is held, within NEAR_MS of another arrow going down or
+    /// ROLL_MS of one coming up (the thumb rolling over), and only counts
+    /// once it has been held for UP_MS without another arrow being pressed
+    /// meanwhile.
+    const NEAR_MS: u32 = 150;
+    const ROLL_MS: u32 = 60;
+    const UP_MS: u32 = 70;
     const OTHER_ARROWS: u64 = 1 << key::LEFT | 1 << key::RIGHT | 1 << key::DOWN;
 
     #[derive(PartialEq, Eq)]
@@ -264,6 +267,7 @@ pub mod keyboard {
         last_down: [u32; 64],
         prev: u64,
         arrow_at: u32,
+        arrow_off_at: u32,
         up: Up,
         up_at: u32,
     }
@@ -272,6 +276,7 @@ pub mod keyboard {
         last_down: [0; 64],
         prev: 0,
         arrow_at: 0,
+        arrow_off_at: 0,
         up: Up::Idle,
         up_at: 0,
     };
@@ -315,6 +320,9 @@ pub mod keyboard {
         if arrow_pressed {
             f.arrow_at = now;
         }
+        if f.prev & OTHER_ARROWS & !held != 0 {
+            f.arrow_off_at = now;
+        }
         f.prev = held;
         let up = 1u64 << key::UP;
         if held & up == 0 {
@@ -322,7 +330,10 @@ pub mod keyboard {
             return held;
         }
         if f.up == Up::Idle {
-            if f.arrow_at != 0 && now.wrapping_sub(f.arrow_at) < NEAR_MS {
+            if held & OTHER_ARROWS != 0
+                || f.arrow_at != 0 && now.wrapping_sub(f.arrow_at) < NEAR_MS
+                || f.arrow_off_at != 0 && now.wrapping_sub(f.arrow_off_at) < ROLL_MS
+            {
                 f.up = Up::Ignored;
             } else {
                 f.up = Up::Waiting;
