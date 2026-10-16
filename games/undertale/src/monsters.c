@@ -319,7 +319,7 @@ int form_setup(int form, Battle *b) {
     m->x = (int16_t)(xs[f->n - 1][i] + m->def->dx), m->y = (int16_t)(120 + m->def->dy);
   }
   /* Toriel and Flowey can't be fled from; Napstablook can */
-  if (form == FORM_TORIEL || form == FORM_FLOWEY || form == FORM_PAPYRUS) b->no_flee = true;
+  if (form == FORM_TORIEL || form == FORM_FLOWEY || form == FORM_PAPYRUS || form == FORM_MAD_DUMMY) b->no_flee = true;
   b->captures = form == FORM_PAPYRUS;
   return 0;
 }

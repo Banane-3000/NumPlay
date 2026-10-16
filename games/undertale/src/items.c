@@ -42,6 +42,16 @@ static const ItemInfo items[ITEM_COUNT] = {
                        "* You look at the punch card.\n* It makes you want to punch\n  something.", 15},
   [ITEM_ARTIFACT] = {"Legendary Artifact", "Artifact", IT_SPECIAL, 0, 0, 0, "A mysterious orb.\n* It's a little heavy.",
                      "* You hold the orb up.\n* Nothing happens.", 0},
+  [ITEM_ASTRONAUT_FOOD] = {"Astronaut Food", "AstroFood", IT_FOOD, 21, 0, 0, "Food for a trip to space,\n  found in a cooler.",
+                           "* You eat the Astronaut Food.", 25},
+  [ITEM_CRAB_APPLE] = {"Crab Apple", "CrabApple", IT_FOOD, 18, 0, 0, "A fruit with little claws.",
+                       "* You eat the Crab Apple.", 5},
+  [ITEM_SEA_TEA] = {"Sea Tea", "SeaTea", IT_FOOD, 10, 0, 0, "Tea made from sea grass.",
+                    "* You drink the Sea Tea.\n* Your feet feel lighter.", 5},
+  [ITEM_CLOUDY_GLASSES] = {"Cloudy Glasses", "Glasses", IT_ARMOR, 0, 0, 5, "Glasses you can barely\n  see through.", "", 30},
+  [ITEM_TORN_NOTEBOOK] = {"Torn Notebook", "TornNotbo", IT_WEAPON, 0, 2, 0, "An old notebook, torn up.\n* It doesn't hit very hard.", "", 50},
+  [ITEM_TEMMIE_FLAKES] = {"Temmie Flakes", "TemFlakes", IT_FOOD, 2, 0, 0, "Bits of paper, sold as\n  food.",
+                          "* You eat the Temmie Flakes.", 2},
 };
 
 const ItemInfo *item_info(int id) { return &items[id >= 0 && id < ITEM_COUNT ? id : 0]; }

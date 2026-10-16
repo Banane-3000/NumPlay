@@ -299,6 +299,16 @@ SPRITES = [
     ("bloom", "wiki:Bridge_Seed_overworld_flower.png", {"keep": True}),
     # what's about Waterfall (cut from the map, its floor made see-through): the small bird, and to be picked up,
     # the tutu, the artifact on its pedestal
+    # past the bridge: Mad Dummy and its dummies, Temmie, the shops' keepers
+    ("maddummy_ow", "wiki:Mad_Dummy_overworld.png", {"feet": True}),
+    ("maddummy_b", "wiki:Mad_Dummy_battle.gif", {"feet": True, "every": 9}),
+    ("dummy_minion", "wiki:Dummy_Minion_battle.png", {"center": True}),
+    ("dummy_bot", "wiki:Dummy_Bot_battle.png", {"center": True}),
+    ("temmie_ow", "wiki:Temmie_overworld.png", {"feet": True}),
+    ("temmie_b", "wiki:Temmie_battle_idle.gif", {"feet": True, "every": 8}),
+    ("temmie_hurt", "wiki:Temmie_battle_hurt.png", {"feet": True}),
+    ("shop_gerson", "wiki:Gerson_screenshot_shop.png", {"keep": True, "box": (0, 0, 320, 120)}),
+    ("shop_tem", "wiki:Tem_Shop_screenshot_Temmie_Armor.png", {"keep": True, "box": (0, 0, 320, 120)}),
     ("bird", "map:Waterfall_map.png:8466,578,15,19", {"keep": True, "clear": [(27, 33, 90), (27, 21, 72), (23, 13, 43)]}),
     ("tutu", "map:Waterfall_map.png:1240,1240,22,10", {"keep": True, "clear": [(23, 13, 43), (27, 21, 72), (27, 33, 90)]}),
     ("artifact", "map:Waterfall_map.png:10156,150,12,11",

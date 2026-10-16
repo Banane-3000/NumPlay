@@ -369,13 +369,9 @@ void wf1_setup(int room, int from) {
       if (m) m->flags |= OF_SOLID;
       break;
     }
-    case ROOM_WF_MARSH_TOP: {
-      /* the small bird waits across the gap of bright water: from its side, it carries Frisk back over */
-      obj_deco(SPR_BIRD, 8544, 578, false);
-      Obj *b = obj_trigger(8540, 574, 22, 26, EV_WF_BIRD, ACTOR_ANY);
-      if (b) b->flags = OF_TALK | OF_SOLID;
+    case ROOM_WF_MARSH_TOP:
+      wf_bird_setup(room);
       break;
-    }
     case ROOM_WF_MARSH:
       pickup(7578, 1230, 30, 30, ITEM_BALLET_SHOES, F_WF_BALLET, 0);
       {
@@ -583,12 +579,15 @@ static int ev_wf_telescope(Ev *c) {
   EV_END;
 }
 
+/* the small bird carries Frisk over the gap: east from the boardwalk (arg 2), west from the Quiet Area's side (1) */
 static int ev_wf_bird(Ev *c) {
   EV_BEGIN;
+  c->v[1] = c->self ? c->self->arg : 1;
   NARRATE("* (The little bird offers to carry you over the gap.)@Yes@No");
   if (CHOICE() == 0) {
-    FADE_TO(ROOM_WF_MARSH_TOP, 8440, 562, DIR_LEFT);
-    set_flag(F_WF_BIRD, 1);
+    set_flag(F_WF_BIRD, c->v[1]);
+    if (c->v[1] == 1) FADE_TO(ROOM_WF_MARSH_TOP, 8440, 562, DIR_LEFT);
+    else FADE_TO(ROOM_WF_BIRD2, 18548, 2318, DIR_RIGHT);
   }
   EV_END;
 }
@@ -733,9 +732,9 @@ static int ev_bridge_end(Ev *c) {
   WAIT(30);
   NARRATE("* (...and cuts the bridge from under you!)");
   set_flag(F_WF_BRIDGE, 1);
-  sv.room = (int16_t)g_room, sv.x = (int16_t)(pl.x - 40), sv.y = pl.y;
-  save_write_auto();
-  menu_end_open();
+  /* down, into the dark: the garbage dump */
+  world_fade_hold(ROOM_WF_DUMP, 17680, 3214, DIR_DOWN, 60);
+  WAIT_UNTIL(!world_fading());
   EV_END;
 }
 

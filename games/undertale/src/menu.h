@@ -6,7 +6,7 @@ void menu_title_open(void);
 void menu_open(void);
 void menu_save_open(void);
 void menu_gameover_open(void);
-void menu_end_open(void);    /* the fall from Waterfall's bridge: what comes next isn't made yet */
+void menu_end_open(void);    /* past Waterfall's mushroom maze: what comes next isn't made yet */
 void menu_update(uint32_t keys, uint32_t pressed);
 void menu_draw(void);
 void game_new(const char *name);

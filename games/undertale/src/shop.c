@@ -22,6 +22,7 @@ typedef struct {
   const char *topics[4];
   const char *answers[4];
   int ntopics;
+  bool buys;   /* Sell: it buys what you carry (the Tem Shop) */
 } Shop;
 
 static const Shop shops[SHOP_COUNT] = {
@@ -37,6 +38,27 @@ static const Shop shops[SHOP_COUNT] = {
                 "* Long ago, monsters lived in the RUINS back there.|* When we came here, the cold made it easy to get used to the snow.",
                 "* Life is the same as usual.\n* A little cold, though..."},
     .ntopics = 4},
+  [SHOP_GERSON] = {
+    .pic = SPR_SHOP_GERSON, .hello = "* Hello there, little one!\n* Pay no mind to the junk.", .again = "* Take a look around!",
+    .buying = "Take your\ntime.", .bought = "Wa ha ha!\nThank you!", .poor = "Not enough\nmoney, eh?",
+    .full = "Your pockets\nare full,\nkid.", .nobuy = "Hmm?",
+    .sell = "* Sell? I'm not that kind of shop, kid.\n* Try the Temmies, if you can find them.",
+    .wares = {{ITEM_CRAB_APPLE, 25}, {ITEM_SEA_TEA, 18}, {ITEM_CLOUDY_GLASSES, 35}, {ITEM_TORN_NOTEBOOK, 55}}, .nwares = 4,
+    .topics = {"About you", "About Undyne", "About the king", "About the junk"},
+    .answers = {"* Me? Just an old turtle who's seen a lot.\n* They used to call me a hero, way back when.",
+                "* Undyne? That girl's the head of the Royal Guard.\n* She'd fight anyone to protect us. Wa ha ha!",
+                "* The king's a big softie.\n* Lost his family a long while back. Still keeps smiling.",
+                "* All of this washed up in the dump.\n* One monster's trash is another's treasure!"},
+    .ntopics = 4},
+  [SHOP_TEM] = {
+    .pic = SPR_SHOP_TEM, .hello = "* hOI!\n* welcom to... da TEM SHOP!!!", .again = "* hOI!", .buying = "tem has\nstuff!!",
+    .bought = "thanks!!!", .poor = "no muns...", .full = "u hav too\nmany stuffs", .nobuy = "oh...",
+    .sell = "", .buys = true,
+    .wares = {{ITEM_TEMMIE_FLAKES, 1}}, .nwares = 1,
+    .topics = {"Say hello", "About Temmies", "Tem history", "About shop"},
+    .answers = {"* hOI!!! i'm temmie!!", "* temmies r the best!!!\n* we love humans... but some temmies r allergic...",
+                "* temmie village is very old...\n* tem forget the rest.", "* tem wants to go to colleg someday!!"},
+    .ntopics = 4},
 };
 
 static int shop_id, st, sel, sub;
@@ -44,7 +66,7 @@ static Writer w;
 static char buf[300];
 static const char *right_text;
 static bool is_box;
-enum { S_MENU, S_BUY, S_CONFIRM, S_TALK, S_SAY };
+enum { S_MENU, S_BUY, S_CONFIRM, S_TALK, S_SAY, S_SELL };
 
 static void left_say(const char *s) {
   snprintf(buf, sizeof buf, "%s", s);
@@ -135,6 +157,7 @@ void shop_update(uint32_t keys, uint32_t pressed) {
       if (pressed & K_DOWN) sel = (sel + 1) % 4;
       if (pressed & K_Z) {
         if (sel == 0) st = S_BUY, sub = 0, right_text = s->buying;
+        else if (sel == 1 && s->buys) st = S_SELL, sub = 0, right_text = "what u\nsell??";
         else if (sel == 1) st = S_SAY, left_say(s->sell);
         else if (sel == 2) st = S_TALK, sub = 0;
         else g_mode = MODE_WORLD;
@@ -173,6 +196,21 @@ void shop_update(uint32_t keys, uint32_t pressed) {
     case S_SAY:
       if (!typing) st = S_MENU, left_say(s->again);
       break;
+    case S_SELL: {
+      /* what's carried, and Exit: Z sells it for what it's worth */
+      if (pressed & K_UP) sub = (sub + NUM_ITEMS) % (NUM_ITEMS + 1);
+      if (pressed & K_DOWN) sub = (sub + 1) % (NUM_ITEMS + 1);
+      if (pressed & K_X || ((pressed & K_Z) && sub == NUM_ITEMS)) {
+        st = S_MENU, left_say(s->again);
+        break;
+      }
+      if ((pressed & K_Z) && sv.items[sub]) {
+        sv.gold = (uint16_t)min_i(9999, sv.gold + item_info(sv.items[sub])->sell);
+        item_remove_at(sub);
+        right_text = "thanks!!";
+      }
+      break;
+    }
   }
 }
 
@@ -186,6 +224,17 @@ static void wares_list(const Shop *s, bool topics) {
     gfx_text(FONT_MAIN, 30, 132 + i * 18, line, C_WHITE, 255);
   }
   if (!(st == S_CONFIRM)) gfx_sprite(SPR_HEART, 0, 20, 140 + sub * 18, 0, 255);
+}
+
+static void sell_list(void) {
+  for (int i = 0; i <= NUM_ITEMS; i++) {
+    char line[48];
+    if (i == NUM_ITEMS) snprintf(line, sizeof line, "Exit");
+    else if (sv.items[i]) snprintf(line, sizeof line, "%dG - %s", item_info(sv.items[i])->sell, item_info(sv.items[i])->short_name);
+    else line[0] = 0;
+    gfx_text(FONT_SMALL, 30, 127 + i * 12, line, C_WHITE, 255);
+  }
+  gfx_sprite(SPR_HEART, 0, 20, 130 + sub * 12, 0, 255);
 }
 
 void shop_draw(void) {
@@ -208,6 +257,11 @@ void shop_draw(void) {
     static const char *const opts[] = {"Buy", "Sell", "Talk", "Exit"};
     for (int i = 0; i < 4; i++) gfx_text(FONT_MAIN, 238, 132 + i * 20, opts[i], C_WHITE, 255);
     if (st == S_MENU) gfx_sprite(SPR_HEART, 0, 228, 140 + sel * 20, 0, 255);
+    return;
+  }
+  if (st == S_SELL) {
+    sell_list();
+    if (right_text) gfx_text(FONT_SMALL, 222, 130, right_text, C_WHITE, 255);
     return;
   }
   wares_list(s, st == S_TALK);

@@ -110,7 +110,14 @@ enum {
   F_SHYREN,              /* 1 spared, 2 killed */
   F_WF_BRIDGE,           /* the bridge cut: Frisk fell */
   F_KILLS_WATERFALL,
-  F_WF_BIRD,
+  F_WF_BIRD,             /* the small bird: 1 it carried Frisk west (it waits there), 2 back east */
+  F_WF_DUMP,             /* woke up in the garbage dump */
+  F_WF_COOLER,           /* the cooler's Astronaut Food taken: how many */
+  F_MAD_DUMMY,           /* its fight, over (Napstablook came) */
+  F_NAPSTA_HOME,         /* 1 invited home, 2 lay on the floor with them */
+  F_SNAIL_RACE,          /* Thundersnail races run */
+  F_TEM_VILLAGE,         /* found */
+  F_WF_EAST1,            /* the way past the mushroom maze reached (where the game now ends) */
   FLAG_COUNT = 256
 };
 #endif

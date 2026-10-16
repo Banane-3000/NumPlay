@@ -107,6 +107,8 @@ AREAS.append(dict(name="snowtown", map="Snowdin_Town_map.png", floor=SNOW, margi
 WF_FLOOR = [(54, 47, 121), (20, 26, 73)]
 WF_WATER = [(27, 33, 90), (27, 21, 72)]
 WF_CYAN = [(123, 251, 254), (47, 234, 255)]
+WF_DUMP = [(17, 11, 49), (18, 24, 71), (5, 6, 33), (15, 9, 47)]   # (the dump's water, waded in)
+NAPSTA_FLOOR = [(198, 88, 41), (100, 50, 17), (133, 59, 41), (136, 68, 41)]
 AREAS.append(dict(name="waterfall", map="Waterfall_map.png", floor=WF_FLOOR, margin=0, close=True, patches=[
     # the people the game moves about (they're the game's objects here): Monster Kid, the fish by the first
     # echo flower, Undyne (her black ledges kept black), Woshua, the Goner Kid, Onionsan, Shyren, the grey
@@ -120,6 +122,11 @@ AREAS.append(dict(name="waterfall", map="Waterfall_map.png", floor=WF_FLOOR, mar
     # the bridge seeds (the game's objects too) and the bridges they make, drawn solved
     *[("erase", x, y, 20, 20, WF_FLOOR) for x, y in [(2300, 1420), (2280, 1440), (2320, 1440), (2300, 1460),
                                                      (2960, 1340), (3000, 1340), (2960, 1380), (3000, 1380)]],
+    # past the bridge: Mad Dummy, the bird (on its side of the gap), Papyrus at Undyne's door, Napstablook (by the
+    # houses, at the snail farm, at home), Mettaton, the creature by the pond (all the game's objects)
+    ("erase", 18918, 2686, 22, 44, "ring"), ("erase", 18523, 2341, 16, 20, "ring", []), ("erase", 18578, 2058, 26, 48, "ring"),
+    ("erase", 18811, 2113, 24, 42, "ring"), ("erase", 18976, 2100, 38, 52, "ring"), ("erase", 19108, 2330, 42, 54, "ring"),
+    ("copy", 19276, 2090, 26, 52, 19316, 2090), ("erase", 18969, 1810, 26, 40, "ring"),
     # the bird (it waits across the gap), the tutu and the artifact (objects, gone once taken)
     ("erase", 8466, 578, 15, 19, [(27, 33, 90), (27, 21, 72), (23, 13, 43)]),
     ("erase", 1240, 1240, 22, 10, [(23, 13, 43), (27, 21, 72), (27, 33, 90)]),
@@ -395,6 +402,36 @@ ROOMS = [
          fix=[("walk", 12920, 1676, 1480, 48)]),
     dict(name="wf_aaron", area="waterfall", rect=(14400, 1560, 960, 260), title="Waterfall", floor_colors=WF_WATER),
     dict(name="wf_bridge", area="waterfall", rect=(15360, 1540, 2300, 460), title="Waterfall"),
+    # under the bridge: the garbage dump's landing (Frisk wades in its water), the Trash Zone, the walkway up to
+    # Mad Dummy
+    dict(name="wf_dump", area="waterfall", rect=(17580, 3120, 740, 260), title="Waterfall", floor_colors=WF_DUMP,
+         fix=[("walk", 17666, 3226, 64, 40)]),   # (the golden flowers Frisk wakes up on)
+    dict(name="wf_trash", area="waterfall", rect=(18320, 3120, 500, 240), title="Waterfall", floor_colors=WF_DUMP),
+    dict(name="wf_walkway", area="waterfall", rect=(18820, 2420, 160, 920), title="Waterfall", floor_colors=WF_DUMP),
+    # the Quiet Area and its pond, the small bird's side of the gap, Blook Acres (Undyne's, Napstablook's and
+    # Mettaton's houses, the snail farm), Napstablook's room, Gerson's crossroads
+    dict(name="wf_quiet", area="waterfall", rect=(18660, 2200, 480, 220), title="Waterfall", floor_colors=WF_WATER,
+         fix=[("walk", 18650, 2296, 50, 44)]),
+    dict(name="wf_bird2", area="waterfall", rect=(18250, 2200, 410, 240), title="Waterfall",
+         floor_colors=WF_WATER + [(23, 13, 43), (0, 0, 0)]),
+    dict(name="wf_acres", area="waterfall", rect=(18420, 1960, 1000, 240), title="Waterfall", floor_colors=WF_WATER,
+         fix=[("walk", 18876, 2088, 24, 30)],   # (Napstablook's doorway)
+         doors=[((18876, 2098, 24, 10), "wf_napsta_in", (18826, 1906), "up")]),
+    dict(name="wf_napsta_in", area="waterfall", rect=(18780, 1720, 260, 240), title="Napstablook's house",
+         floor_colors=NAPSTA_FLOOR, fix=[("walk", 18820, 1920, 40, 40)],
+         doors=[((18820, 1954, 40, 6), "wf_acres", (18877, 2116), "down")]),
+    dict(name="wf_gerson", area="waterfall", rect=(19140, 2200, 710, 280), title="Waterfall", floor_colors=WF_WATER),
+    # the twin waterfalls (waded through), the mushroom maze (its walls dotted lines of grass: kept clear of), Temmie
+    # Village below it
+    dict(name="wf_twin", area="waterfall", rect=(19850, 2200, 700, 220), title="Waterfall",
+         floor_colors=WF_WATER + WF_DUMP + [(0, 0, 0)], floor_rects=[(19850, 2286, 700, 48)]),
+    dict(name="wf_mushroom", area="waterfall", rect=(20550, 2280, 610, 600), title="Waterfall",
+         floor_colors=[(0, 0, 0)] + WF_WATER + WF_DUMP, margin=3, floor_rects=[(20550, 2306, 214, 48), (20555, 2350, 605, 530)],
+         fix=[("walk", 20550, 2310, 214, 40), ("walk", 20556, 2346, 212, 16), ("walk", 20764, 2320, 24, 40),
+              ("walk", 21020, 2372, 140, 26), ("walk", 21056, 2850, 44, 30)]),
+    # (the way in, into the maze; out at its top right; the hidden way down to the village)
+    dict(name="wf_temmie", area="waterfall", rect=(21040, 2880, 380, 280), title="Temmie Village", floor_colors=WF_WATER,
+         fix=[("walk", 21056, 2880, 44, 24)]),
 ]
 
 # rooms one above the other through a dark doorway (tools/pack.py: apply_links); ("h", left, right, y, h): side

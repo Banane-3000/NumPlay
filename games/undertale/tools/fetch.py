@@ -58,7 +58,7 @@ PAGES = ["Ruins", "Ruins/Puzzles", "Toriel", "Toriel/In_battle", "Toriel's_Home"
          "Junk_Food", "Annoying_Dog/In_battle", "Lesser_Dog/In_battle", "Greater_Dog/In_battle", "Doggo/In_battle",
          "Dogamy_and_Dogaressa/In_battle"]
 # files the categories leave out, as their wiki names
-FILES = ["QC sprite.png", "QC screenshot shop.png"]
+FILES = ["QC sprite.png", "QC screenshot shop.png", "Gerson screenshot shop.png", "Tem Shop screenshot Temmie Armor.png"]
 DEMO = {
     "MacUnderTale.zip": "https://thisisatestofthevideogamedeliverysystem.sfo2.digitaloceanspaces.com/game/MacUnderTale.zip",
 }

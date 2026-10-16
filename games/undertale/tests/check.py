@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Checks of Undertale on a computer (make test): the host build, with
 AddressSanitizer and UBSan, through the menus, every battle, the saves, the
-whole Ruins, the whole of Snowdin and Waterfall's west half.
+whole Ruins, the whole of Snowdin and Waterfall as far as it goes.
 
     python3 tests/check.py build/play [--quick]
 
@@ -31,9 +31,9 @@ MODE_WORLD, MODE_BATTLE, MODE_END, MODE_SHOP = 2, 3, 8, 9
 ROOMS = {m.group(1): int(m.group(2)) for m in
          re.finditer(r"#define ROOM_(\w+) (\d+)", open(os.path.join(HERE, "..", "src", "data.h")).read())}
 FORM_SNOWDRAKE, FORM_PAPYRUS = 19, 31
-FORM_AARON, FORM_WOSHUA, FORM_WOSHUA_AARON, FORM_MOLDBYGG, FORM_MOLDBYGG_MOLDSMAL, FORM_MOLDBYGG_WOSHUA, FORM_SHYREN = \
-    range(32, 39)
-ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT = range(17, 22)
+(FORM_AARON, FORM_WOSHUA, FORM_WOSHUA_AARON, FORM_MOLDBYGG, FORM_MOLDBYGG_MOLDSMAL, FORM_MOLDBYGG_WOSHUA, FORM_SHYREN,
+ FORM_MAD_DUMMY, FORM_TEMMIE, FORM_TEMMIE_MOLDBYGG) = range(32, 42)
+ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT, ITEM_ASTRONAUT_FOOD = range(17, 23)
 
 
 def run(args, frames, saves=None, what=""):
@@ -102,19 +102,22 @@ s = run(["--battle", str(FORM_PAPYRUS), "--path", "spare"], 6000, what="Papyrus,
 check(s and s["mode"] == MODE_WORLD and s["hp"] == 1, f"Papyrus did not capture Frisk: {s}")
 
 # Waterfall's battles: fled from, fought, and each spared its own way (Aaron out-flexed, Woshua's green caught after
-# asking to be cleaned, Moldbygg hugged then let go, Shyren hummed along with)
-for form in range(FORM_AARON, FORM_SHYREN + 1):
+# asking to be cleaned, Moldbygg hugged then let go, Shyren hummed along with, Temmie talked to); Mad Dummy can't be
+# fled or hurt: its fight lasts until Napstablook comes
+for form in list(range(FORM_AARON, FORM_SHYREN + 1)) + [FORM_TEMMIE, FORM_TEMMIE_MOLDBYGG]:
     s = run(["--god", "--battle", str(form), "--path", "flee"], 1500, what=f"battle {form}, fleeing")
     check(s and s["mode"] == MODE_WORLD, f"battle {form}: fleeing did not end it: {s}")
-for form in (FORM_AARON, FORM_WOSHUA, FORM_MOLDBYGG, FORM_SHYREN):
+for form in (FORM_AARON, FORM_WOSHUA, FORM_MOLDBYGG, FORM_SHYREN, FORM_TEMMIE):
     s = run(["--god", "--battle", str(form), "--path", "fight"], 4000, what=f"battle {form}, fighting")
     check(s and s["mode"] == MODE_WORLD and s["kills"] >= 1, f"battle {form}: FIGHT did not win it: {s}")
 for form, seq, gold in ((FORM_AARON, "1,1,1", 30), (FORM_WOSHUA, "1,1,1", 25), (FORM_WOSHUA_AARON, "1,1@2,1@2,1@2", 55),
                         (FORM_MOLDBYGG, "1,3", 20), (FORM_MOLDBYGG_WOSHUA, "1,3,1@2,1@2,1@2", 45),
-                        (FORM_SHYREN, "2,2,2,2,2", 20)):
+                        (FORM_SHYREN, "2,2,2,2,2", 20), (FORM_TEMMIE, "2", 0), (FORM_TEMMIE_MOLDBYGG, "2,1@2,3@2", 20)):
     s = run(["--god", "--battle", str(form), "--path", "seq:" + seq], 9000, what=f"battle {form}, sparing")
     check(s and s["mode"] == MODE_WORLD and s["kills"] == 0 and s["gold"] == gold,
           f"battle {form}: the friendly way did not spare it: {s}")
+s = run(["--god", "--battle", str(FORM_MAD_DUMMY), "--path", "act:1"], 9000, what="Mad Dummy")
+check(s and s["mode"] == MODE_WORLD and s["kills"] == 0, f"Mad Dummy's fight did not end: {s}")
 
 # the shop in Snowdin: a Cinnamon Bunny for 25G; Papyrus's date: his phone number
 s = run(["--name", "Frisk", "--noenc", "--room", str(ROOMS["SNOWTOWN"]), "--at", "446,1092", "--gold", "100", "--keys",
@@ -167,21 +170,23 @@ if not QUICK:
             check(flag(s, name) == v, f"Snowdin: F_{name} is {flag(s, name)}, not {v}")
         check(s["kills"] == 0, f"Snowdin: {s['kills']} killed on the friendly way")
 
-# Waterfall's west half, the friendly way: Monster Kid, Grillby's with Sans, the tutu, Papyrus's report, the bridge
-# seeds (and the secret one to the quiche), the wishing room, Undyne's spears, the telescope, the punch card, the marsh
-# (the ballet shoes), Onionsan, the piano and the artifact, Shyren, the umbrellas, Monster Kid in the rain, the bridge cut
+# Waterfall, the friendly way: Monster Kid, Grillby's with Sans, the tutu, Papyrus's report, the bridge seeds (and
+# the secret one to the quiche), the wishing room, Undyne's spears, the telescope, the punch card, the marsh (the
+# ballet shoes), Onionsan, the piano and the artifact, Shyren, the umbrellas, Monster Kid in the rain, the bridge cut,
+# the garbage dump, Mad Dummy, Napstablook's house, the snail farm, Gerson, the mushroom maze and Temmie Village
 if not QUICK:
     s = run(["--name", "Frisk", "--noenc", "--god", "--room", str(ROOMS["WF1"]), "--at", "30,1480", "--path-file",
-             os.path.join(HERE, "waterfall.path")], 45000, what="Waterfall")
-    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["WF_BRIDGE"], f"Waterfall did not end at the bridge: {s}")
+             os.path.join(HERE, "waterfall.path")], 60000, what="Waterfall")
+    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["WF_MUSHROOM"], f"Waterfall did not end past the maze: {s}")
     if s:
         for name, v in (("WF_MK", 1), ("GRILLBYS", 1), ("WF_TUTU", 1), ("WF_UNDYNE1", 1), ("SEEDS1", 1), ("SEEDS2", 1),
                         ("SEEDS3", 1), ("WF_QUICHE", 1), ("CHASE1", 1), ("WF_TELESCOPE", 1), ("WF_PUNCH", 1), ("WF_BALLET", 1),
                         ("WF_ONION", 2), ("PIANO", 1), ("WF_ARTIFACT", 1), ("SHYREN", 1),
-                        ("UMBRELLA", 3), ("MK_RAIN", 2), ("WF_BRIDGE", 1)):
+                        ("UMBRELLA", 3), ("MK_RAIN", 2), ("WF_BRIDGE", 1), ("WF_DUMP", 1), ("WF_COOLER", 2),
+                        ("MAD_DUMMY", 1), ("NAPSTA_HOME", 2), ("TEM_VILLAGE", 1), ("WF_EAST1", 1)):
             check(flag(s, name) == v, f"Waterfall: F_{name} is {flag(s, name)}, not {v}")
         check(s["kills"] == 0, f"Waterfall: {s['kills']} killed on the friendly way")
-        for item in (ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT):
+        for item in (ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT, ITEM_ASTRONAUT_FOOD):
             check(item in s["items"], f"Waterfall: item {item} not picked up: {s['items']}")
 
 if failures:

@@ -5,6 +5,7 @@
 #include "battle.h"
 #include "game.h"
 #include "gfx.h"
+#include "items.h"
 #include "monsters.h"
 #include "res.h"
 #include "world.h"
@@ -113,6 +114,65 @@ static const char *talk_shyren(Battle *b, Monster *m) {
 }
 static int attack_shyren(Battle *b, Monster *m) { (void)b, (void)m; return ATK_SHYREN_NOTES; }
 
+/* ---------------------------------------------------------------- Mad Dummy: a ghost, so a hit passes through; its
+ * own missiles, led back up into it, do hurt it. Then its cousin Napstablook drifts in (the fight ends) */
+static void act_maddummy(Battle *b, Monster *m, int act, char *t, int cap) {
+  (void)b, (void)m, (void)act;
+  snprintf(t, (size_t)cap, "* You try to talk.\n* Mad Dummy is too busy yelling to hear a word.");
+}
+static const char *talk_maddummy(Battle *b, Monster *m) {
+  static const char *const lines[] = {"You! You\nhit my\ncousin!", "Dummies!\nGet them!", "Stand\nSTILL!",
+                                      "Why won't\nyou go\ndown?!", "Grr... GRRR!"};
+  if (m->state >= 2) return "That's it!\nNo more\nmagic!";
+  if (m->state) return "Ow! Who\nthrew that?!";
+  return lines[min_i(b->turn - 1, 4)];
+}
+static const char *flavor_maddummy(Battle *b, Monster *m) {
+  (void)b;
+  if (m->state) return "* Mad Dummy is hit by its own magic.";
+  return NULL;
+}
+static bool hit_maddummy(Battle *b, Monster *m, int dmg) {
+  (void)b, (void)dmg;
+  m->dmg_shown = 0;   /* (MISS: it's a ghost) */
+  return true;
+}
+static int attack_maddummy(Battle *b, Monster *m) {
+  (void)m;
+  return b->turn <= 2 || b->turn % 2 ? ATK_DUMMY_MINIONS : ATK_DUMMY_MISSILES;
+}
+/* hit three times by its missiles, or after a long while: Napstablook comes, and the fight is over */
+static bool ends_maddummy(Battle *b, Monster *m) { return m->state >= 3 || b->turn >= 8; }
+
+/* ---------------------------------------------------------------- Temmie: talk to her (or feed her Temmie Flakes) */
+static void act_temmie(Battle *b, Monster *m, int act, char *t, int cap) {
+  (void)b;
+  if (act == 0) {   /* Flex */
+    snprintf(t, (size_t)cap, "* You flex.\n* Temmie is so impressed she wanders off to tell her friends.");
+    m->gone = true, m->fade = 1;
+  } else if (act == 1) {   /* Talk */
+    snprintf(t, (size_t)cap, "* You say hi.\n* Temmie vibrates with joy.");
+    m->spare = true;
+  } else {   /* Feed Temmie Flakes */
+    int slot = -1;
+    for (int i = 0; i < NUM_ITEMS; i++)
+      if (sv.items[i] == ITEM_TEMMIE_FLAKES) slot = i;
+    if (slot < 0) snprintf(t, (size_t)cap, "* You don't have any Temmie Flakes.");
+    else {
+      item_remove_at(slot);
+      snprintf(t, (size_t)cap, "* You feed Temmie some Temmie Flakes.\n* She's so happy, she gives you money!");
+      m->spare = true, m->spare_gold = 30;
+    }
+  }
+}
+static const char *talk_temmie(Battle *b, Monster *m) {
+  (void)b;
+  static const char *const lines[] = {"hOI!!", "tem!!!", "awa\nawa!!", "u cute!!"};
+  if (m->spare) return "u r tem's\nfriend!!";
+  return lines[rnd_n(4)];
+}
+static int attack_temmie(Battle *b, Monster *m) { (void)b, (void)m; return ATK_TEMMIE_HOPS; }
+
 static const MonDef wf_defs[MON_COUNT - MON_SNOW_COUNT] = {
   [MON_AARON - MON_SNOW_COUNT] = {
     .name = "Aaron", .spare_gold = 30, .hp = 98, .at = 7, .df = 2, .exp = 52, .gold = 30, .spr_idle = SPR_AARON_B,
@@ -137,6 +197,19 @@ static const MonDef wf_defs[MON_COUNT - MON_SNOW_COUNT] = {
     .spr_hurt = SPR_SHYREN_TURNED, .check = "She'd love to sing, if nobody were watching.",
     .acts = {"Smile", "Hum", "Conduct"}, .nacts = 3, .neutral = {"* Shyren hides her face.", "* Shyren is humming to herself.", "* Shyren peeks at you."},
     .act = act_shyren, .talk = talk_shyren, .attack = attack_shyren},
+  [MON_MAD_DUMMY - MON_SNOW_COUNT] = {
+    .name = "Mad Dummy", .hp = 200, .at = 7, .df = 0, .exp = 0, .gold = 0, .spr_idle = SPR_MADDUMMY_B,
+    .spr_hurt = SPR_MADDUMMY_B, .idle_speed = 4, .check = "Lives inside a dummy. Hits go right through.", .acts = {"Talk"},
+    .nacts = 1, .neutral = {"* Mad Dummy is yelling at its dummies.", "* Mad Dummy glares at you.",
+                            "* Mad Dummy's dummies are getting nervous."},
+    .flags = MF_BOSS | MF_NOT_KILLABLE, .act = act_maddummy, .talk = talk_maddummy, .attack = attack_maddummy,
+    .flavor = flavor_maddummy, .on_hit = hit_maddummy, .ends = ends_maddummy},
+  [MON_TEMMIE - MON_SNOW_COUNT] = {
+    .name = "Temmie", .hp = 5, .at = 7, .df = 0, .exp = 40, .gold = 20, .spr_idle = SPR_TEMMIE_B,
+    .spr_hurt = SPR_TEMMIE_HURT, .idle_speed = 4, .check = "Wants to pet you. You're allergic, though.",
+    .acts = {"Flex", "Talk", "Feed Flakes"}, .nacts = 3,
+    .neutral = {"* Temmie is vibrating.", "* Temmie is trying to pet you.", "* Smells like Temmie Flakes."},
+    .act = act_temmie, .talk = talk_temmie, .attack = attack_temmie},
 };
 const MonDef *wf_mon_def(int id) { return &wf_defs[id - MON_SNOW_COUNT]; }
 
@@ -156,6 +229,9 @@ static const Form wf_forms[FORM_COUNT - FORM_SNOW_COUNT] = {
   [FORM_MOLDBYGG_MOLDSMAL - FORM_SNOW_COUNT] = {{MON_MOLDSMAL, MON_MOLDBYGG}, 2, "* Moldbygg and Moldsmal block the way."},
   [FORM_MOLDBYGG_WOSHUA - FORM_SNOW_COUNT] = {{MON_MOLDBYGG, MON_WOSHUA}, 2, "* Moldbygg and Woshua appear."},
   [FORM_SHYREN - FORM_SNOW_COUNT] = {{MON_SHYREN}, 1, "* Shyren hums, then hides."},
+  [FORM_MAD_DUMMY - FORM_SNOW_COUNT] = {{MON_MAD_DUMMY}, 1, "* Mad Dummy blocks the way!"},
+  [FORM_TEMMIE - FORM_SNOW_COUNT] = {{MON_TEMMIE}, 1, "* A Temmie bounces up!"},
+  [FORM_TEMMIE_MOLDBYGG - FORM_SNOW_COUNT] = {{MON_TEMMIE, MON_MOLDBYGG}, 2, "* Temmie and Moldbygg come along."},
 };
 const Form *wf_form(int form) { return &wf_forms[form - FORM_SNOW_COUNT]; }
 
@@ -166,6 +242,10 @@ int wf_encounter(int room) {
       return rnd_n(3) == 0 ? FORM_WOSHUA_AARON : rnd_n(2) ? FORM_AARON : FORM_WOSHUA;
     case ROOM_WF_MARSH: case ROOM_WF_MARSH_MID: {
       static const uint8_t pool[] = {FORM_WOSHUA, FORM_WOSHUA_AARON, FORM_MOLDBYGG, FORM_MOLDBYGG_MOLDSMAL, FORM_AARON};
+      return pool[rnd_n(5)];
+    }
+    case ROOM_WF_TWIN: case ROOM_WF_MUSHROOM: {
+      static const uint8_t pool[] = {FORM_TEMMIE, FORM_TEMMIE_MOLDBYGG, FORM_MOLDBYGG, FORM_WOSHUA, FORM_AARON};
       return pool[rnd_n(5)];
     }
   }
@@ -266,6 +346,59 @@ static void atk_shyren_notes(int t) {
 
 int wf_attack_length(int atk) { (void)atk; return 160; }
 
+/* Mad Dummy: its dummies fly in from the sides and fire; later its magic missiles home in on the SOUL, and one that
+ * flies into Mad Dummy (up at the board's top middle, where it shows) hurts it */
+static void atk_dummy_minions(int t) {
+  if (t < 130 && t % 22 == 0) {
+    bool left = (t / 22) % 2;
+    int y = by0() + 12 + rnd_n(by1() - by0() - 24);
+    Bullet *d = shot((t / 22) % 3 == 2 ? SPR_DUMMY_BOT : SPR_DUMMY_MINION, left ? bx0() - 12 : bx1() + 12, y,
+                     (left ? 1 : -1) * P(2), 0);
+    if (d) d->r = 7, d->flags |= BF_NOCLIP, d->life = 140;
+  }
+}
+#define DUMMY_X (board_cx())
+#define DUMMY_Y (by0() + 4)
+static void atk_dummy_missiles(int t) {
+  if (t < 100 && t % 25 == 0) {
+    Bullet *b = shot(SPR_ORB, (t / 25) % 2 ? bx0() + 6 : bx1() - 6, by1() - 6, 0, -P(1));
+    if (b) b->kind = BK_SCRIPT, b->r = 4, b->a = 0;
+  }
+  /* (the dummy's mark: what the missiles may fly into) */
+  if (t == 0) {
+    Bullet *m = shot(SPR_DUMMY_MINION, DUMMY_X, DUMMY_Y, 0, 0);
+    if (m) m->flags |= BF_HARMLESS, m->kind = BK_NONE, m->life = 180, m->a = 1;
+  }
+  for (int i = 0; i < MAX_BULLETS; i++) {
+    Bullet *b = &bullets[i];
+    if (b->kind != BK_SCRIPT || b->spr != SPR_ORB) continue;
+    /* steer toward the SOUL, a little at a time */
+    int dx = soul_x() * FX - b->x, dy = soul_y() * FX - b->y;
+    b->vx += dx > 0 ? 2 : -2, b->vy += dy > 0 ? 2 : -2;
+    b->vx = clamp_i(b->vx, -P(2), P(2)), b->vy = clamp_i(b->vy, -P(2), P(2));
+    b->x += b->vx, b->y += b->vy;
+    if (abs_i(b->x / FX - DUMMY_X) < 8 && abs_i(b->y / FX - DUMMY_Y) < 8 && b->t > 20) {
+      b->kind = BK_NONE;
+      for (int k = 0; k < bt.nmon; k++)
+        if (bt.mon[k].def == &wf_defs[MON_MAD_DUMMY - MON_SNOW_COUNT]) bt.mon[k].state++, bt.mon[k].hurt = 20, bt.mon[k].shake = 6;
+    }
+    if (b->t > 200) b->kind = BK_NONE;
+  }
+}
+/* Temmie: little Temmies hop across the board */
+static void atk_temmie_hops(int t) {
+  if (t < 130 && t % 26 == 0) {
+    bool left = (t / 26) % 2;
+    Bullet *b = shot(SPR_TEMMIE_OW, left ? bx0() - 10 : bx1() + 10, by1() - 8, (left ? 1 : -1) * P(2), -P(3));
+    if (b) b->kind = BK_GRAVITY, b->ay = 5, b->r = 7, b->flags |= BF_NOCLIP, b->life = 150, b->a = 4;
+  }
+  for (int i = 0; i < MAX_BULLETS; i++) {
+    Bullet *b = &bullets[i];
+    if (b->kind != BK_GRAVITY || b->spr != SPR_TEMMIE_OW || b->a <= 0) continue;
+    if (b->y > P(by1() - 8) && b->vy > 0) b->vy = -P(3), b->a--;
+  }
+}
+
 void wf_attack_run(Battle *b, int atk, int t) {
   (void)b;
   if (t < 0) {
@@ -280,5 +413,8 @@ void wf_attack_run(Battle *b, int atk, int t) {
     case ATK_MOLDBYGG_HOPS: atk_moldbygg_hops(t); break;
     case ATK_MOLDBYGG_RAIN: atk_moldbygg_rain(t); break;
     case ATK_SHYREN_NOTES: atk_shyren_notes(t); break;
+    case ATK_DUMMY_MINIONS: atk_dummy_minions(t); break;
+    case ATK_DUMMY_MISSILES: atk_dummy_missiles(t); break;
+    case ATK_TEMMIE_HOPS: atk_temmie_hops(t); break;
   }
 }
