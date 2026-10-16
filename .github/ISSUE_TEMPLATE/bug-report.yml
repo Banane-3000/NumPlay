@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in NumPlay or one of its games doesn't work
+labels: ["bug"]
+assignees: ["Mason363"]
+body:
+  - type: input
+    id: game
+    attributes:
+      label: Game or app
+      description: Which game, and which file you installed (NumPlay.nwa, NumPlay-Matrices.nwa, Celeste.nwa...).
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: NumPlay version
+      description: Shown at the bottom of NumPlay's Settings, or the release you downloaded.
+      placeholder: "1.10.0"
+  - type: dropdown
+    id: model
+    attributes:
+      label: Calculator
+      description: The model is on the back of the calculator.
+      options:
+        - N0120
+        - N0115
+        - N0110
+        - Simulator or emulator
+        - I don't know
+    validations:
+      required: true
+  - type: input
+    id: software
+    attributes:
+      label: Calculator software
+      description: Settings → About on the calculator. Say if it's Upsilon or another custom software.
+      placeholder: "Epsilon 25.2.0"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead. A photo of the screen helps.
+    validations:
+      required: true

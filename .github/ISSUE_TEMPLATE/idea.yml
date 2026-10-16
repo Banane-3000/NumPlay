@@ -1,0 +1,16 @@
+name: Idea for NumPlay
+description: A feature or a change to a game that's already here
+labels: ["enhancement"]
+assignees: ["Mason363"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a new game, use **Game request** instead. Check the [roadmap](https://github.com/Mason363/NumPlay#roadmap) too: your idea may be on the way.
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: What should change, and in which game or screen.
+    validations:
+      required: true

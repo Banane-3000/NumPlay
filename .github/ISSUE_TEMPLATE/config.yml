@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Read the roadmap before suggesting a game
+    url: https://github.com/Mason363/NumPlay#roadmap
+    about: Games that are done or on the way. If yours is there, there's no need to open an issue.
+  - name: How to install and play
+    url: https://github.com/Mason363/NumPlay#how-to-install
+    about: Install steps, what each app is for, and every game's keys.
+  - name: Questions, ideas and thanks
+    url: https://github.com/Mason363/NumPlay/discussions
+    about: Anything that isn't a bug or a game request.
