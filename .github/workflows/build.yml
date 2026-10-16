@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 jobs:
   build:
@@ -78,3 +79,5 @@ jobs:
           mapfile -t files < build/release-files.txt
           gh release create "$tag" "${files[@]}" --target "$GITHUB_SHA" \
             --title "NumPlay $tag" --notes-file build/release-notes.md
+          # the README's version and downloads badges come from the site (docs/badges): build it again
+          gh api -X POST "repos/$GITHUB_REPOSITORY/pages/builds" > /dev/null || echo "(the site was not built again)"

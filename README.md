@@ -10,9 +10,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Mason363/NumPlay/releases"><img src="https://img.shields.io/github/downloads/Mason363/NumPlay/total?style=for-the-badge&label=downloads&color=1E7F74" alt="Total downloads"></a>
-  <a href="https://github.com/Mason363/NumPlay/stargazers"><img src="https://img.shields.io/github/stars/Mason363/NumPlay?style=for-the-badge&color=E3B341" alt="GitHub stars"></a>
-  <a href="https://github.com/Mason363/NumPlay/releases/latest"><img src="https://img.shields.io/github/v/release/Mason363/NumPlay?style=for-the-badge&label=version&color=2D9F4F" alt="Latest version"></a>
+  <a href="https://github.com/Mason363/NumPlay/releases"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fmason363.github.io%2FNumPlay%2Fdocs%2Fbadges%2Fdownloads.json&style=for-the-badge" alt="Total downloads"></a>
+  <a href="https://github.com/Mason363/NumPlay/stargazers"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fmason363.github.io%2FNumPlay%2Fdocs%2Fbadges%2Fstars.json&style=for-the-badge" alt="GitHub stars"></a>
+  <a href="https://github.com/Mason363/NumPlay/releases/latest"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fmason363.github.io%2FNumPlay%2Fdocs%2Fbadges%2Fversion.json&style=for-the-badge" alt="Latest version"></a>
 </p>
 
 <p align="center">

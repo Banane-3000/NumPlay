@@ -1,0 +1,15 @@
+---
+layout: null
+---
+{%- comment -%}
+The README's downloads badge (a shields.io endpoint badge): every file of every release, counted when
+GitHub Pages builds the site, as shields.io writes big numbers (8.1k, 22k).
+{%- endcomment -%}
+{%- assign n = 0 -%}
+{%- for r in site.github.releases -%}{%- for a in r.assets -%}{%- assign n = n | plus: a.download_count -%}{%- endfor -%}{%- endfor -%}
+{%- if n >= 1000000 -%}{%- assign t = n | divided_by: 100000 -%}{%- assign tenth = t | modulo: 10 -%}{%- assign msg = t | divided_by: 10 | append: "." | append: tenth | append: "M" -%}
+{%- elsif n >= 10000 -%}{%- assign msg = n | divided_by: 1000 | append: "k" -%}
+{%- elsif n >= 1000 -%}{%- assign t = n | divided_by: 100 -%}{%- assign tenth = t | modulo: 10 -%}{%- assign msg = t | divided_by: 10 | append: "." | append: tenth | append: "k" -%}
+{%- else -%}{%- assign msg = n -%}
+{%- endif -%}
+{"schemaVersion": 1, "label": "downloads", "message": "{{ msg }}", "color": "1E7F74"}

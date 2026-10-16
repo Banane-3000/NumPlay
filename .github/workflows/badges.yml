@@ -1,0 +1,23 @@
+name: Badges
+
+# The README's downloads, stars and version badges read docs/badges/*.json, which GitHub Pages makes
+# from the repository's own data each time it builds the site (shields.io then never asks GitHub
+# itself). This asks for a build every six hours, so the numbers stay fresh between pushes; Build asks
+# for one after each release.
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  pages: write
+
+jobs:
+  pages:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Build the site again
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/$GITHUB_REPOSITORY/pages/builds"
