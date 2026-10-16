@@ -1,0 +1,114 @@
+# Hotland's second floor, out of the elevator (play it with --room 140 --at 6966,2380 --name Frisk --noenc --god
+# --gold 100): Heats Flamesman's name, a hot dog from Sans
+go:7030,2400
+r
+z
+talk
+go:6600,2364
+u
+z
+pick:0
+talk
+# the crossroads: the Stained Apron south, the invisible path north to the Art Club's room
+go:5900,2400
+go:5900,2548
+5900,2600
+go:5840,2628
+u
+z
+talk
+go:5900,2600
+5900,2560
+go:5900,2240
+5900,2180
+go:5900,2160
+u
+z
+talk
+go:5900,2190
+5900,2215
+w10
+# the conveyor belt puzzle: Alphys's call, then the top belt's switches pressed right to left as it carries Frisk by
+# (her call after the second, and the force field off)
+go:5760,2400
+5690,2400
+w10
+talk
+go:5460,2400
+5460,2330
+5421,2330
+l
+u
+w16
+z
+w26
+z
+talk
+w60
+go:5090,2400
+5040,2400
+w20
+# the vent puzzle: right to left in a U, a step back once (each panel landed on turns every vent; out by the top-left
+# platform's, turned)
+go:4750,2400
+go:4740,2300
+vent:4722,2264
+w20
+vent:4640,2250
+w20
+vent:4640,2382
+w20
+vent:4640,2450
+w20
+vent:4640,2350
+w20
+vent:4656,2466
+w20
+vent:4540,2482
+w20
+vent:4540,2350
+w20
+vent:4556,2266
+w20
+# the Bad Opinion Zone (Alphys's call), the Royal Guards at the bend: 02's armor cleaned, its green stars caught, a
+# whisper to 01, both spared
+go:4410,2255
+4380,2255
+w10
+go:4100,2275
+go:3760,2275
+3730,2275
+w10
+go:3540,2275
+seq:1@2,1@2,2@1
+talk
+go:3230,2275
+go:3230,2040
+go:3670,2030
+3695,2030
+w20
+# Mettaton's news report: the dog picked, every bomb revealed; the dog defused, then the clock runs out (Alphys
+# switches the big one off)
+go:3895,1748
+talk
+go:4008,1720
+u
+z
+talk
+4008,1714
+act:1
+talk
+w3700
+talk
+# up past the news to the CORE again (Alphys's call), and the elevator up to the third floor
+go:4590,1770
+go:4600,1560
+4600,1500
+w20
+go:4600,1440
+talk
+go:3770,1380
+go:3770,1348
+u
+z
+pick:0

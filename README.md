@@ -79,7 +79,10 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
   <tr>
     <td align="center"><a href="games/celeste/README.md"><img src="docs/media/thumb_celeste.png" width="200" alt="Celeste"><br><b>Celeste</b></a><br><sub>The whole climb, with every B-side and C-side</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/Celeste.nwa">Download</a></td>
     <td align="center"><a href="games/championisland/README.md"><img src="docs/media/thumb_championisland.png" width="200" alt="Champion Island"><br><b>Champion Island</b></a><br><sub>The whole island and its seven sports</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/ChampionIsland.nwa">Download</a></td>
-    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Undertale, The Binding of Isaac, Plants vs. Zombies, Doom and more: see the roadmap</sub></td>
+    <td align="center"><a href="games/undertale/README.md"><img src="docs/media/thumb_undertale.png" width="200" alt="Undertale"><br><b>Undertale</b></a><br><sub>The whole Underground, from the golden flowers to the barrier and the neutral ending</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/Undertale.nwa">Download</a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>The Binding of Isaac, Plants vs. Zombies, Doom and more: see the roadmap</sub></td>
   </tr>
 </table>
 
@@ -171,7 +174,7 @@ Filmed on my own calculator, no emulator.
 - [x] The Final Earth 2
 - [x] The Powder Toy (NumPowder)
 - [x] Block Blast
-- [ ] Undertale
+- [x] Undertale: the whole Underground, from the Ruins to New Home and the neutral ending
 - [ ] The Binding of Isaac
 - [ ] Plants vs. Zombies
 - [ ] Doom
@@ -199,6 +202,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 - **Minecraft** by Mojang inspired NumBlocks, which follows Minecraft 1.8.8 exactly: it makes its worlds the way Minecraft 1.8.8 does and uses its blocks, items, recipes, textures, font and screens.
 - **Celeste** inspired NumPlay's Celeste, which uses the game's own pictures, maps, texts and fonts. Not affiliated with Maddy Makes Games.
 - **Hollow Knight** inspired NumPlay's Hollow Knight, which uses the game's own pictures, animations, maps, texts and fonts. Not affiliated with Team Cherry.
+- **Undertale** by Toby Fox inspired NumPlay's Undertale, which uses the game's maps, pictures and texts from the [Undertale Wiki](https://undertale.fandom.com) and the game's free demo, and the **Pixel Operator** fonts by Jayvee Enaguas (public domain). Not affiliated with Toby Fox.
 - **[The Powder Toy](https://powdertoy.co.uk)** inspired NumPowder, which ports its materials' behaviour, its font and its icons from [its source code](https://github.com/The-Powder-Toy/The-Powder-Toy) (GNU GPL v3.0), by Stanislaw K Skowronek, Simon Robertshaw and its contributors. Not affiliated with them.
 - **[The Final Earth 2](https://store.steampowered.com/app/1180130/The_Final_Earth_2/)** by [Florian van Strien](https://florianvanstrien.nl) inspired NumPlay's The Final Earth 2, which uses the game's own pictures, fonts and texts, with additional sprites by LukXD99. Not affiliated with him.
 - **Buckshot Roulette** by Mike Klubnika inspired NumPlay's Buckshot Roulette, whose scenes are rendered from the game through the Open Buckshot Roulette project (1503Dev). Fonts: Fake Receipt by Ray Larabie and Dot Matrix by Dionaea.
@@ -215,7 +219,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 
 NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyright (c) 2026 Mason Chen. Code and fonts from others keep their own licenses: the `UNLICENSE` files in the games' folders and the [LICENSES](LICENSES) folder. The names, artwork and music of the games NumPlay is inspired by belong to their makers and are not covered by it.
 
-<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco and Connect Four of Hasbro.</sub>
+<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco and Connect Four of Hasbro.</sub>
 
 ## Gallery
 
@@ -262,5 +266,6 @@ NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyri
   </tr>
   <tr>
     <td align="center"><img src="docs/media/gallery/championisland.gif" width="100%" alt="Champion Island: climbing, artistic swimming and the marathon"><br><a href="games/championisland/README.md"><b>Champion Island</b></a></td>
+    <td align="center"><img src="docs/media/gallery/undertale.gif" width="100%" alt="Undertale: Flowey's friendliness pellets, Toriel's tile puzzle and her fire"><br><a href="games/undertale/README.md"><b>Undertale</b></a></td>
   </tr>
 </table>

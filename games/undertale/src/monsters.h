@@ -1,0 +1,107 @@
+/* Undertale: the monsters, their formations and their attacks. */
+#ifndef UT_MONSTERS_H
+#define UT_MONSTERS_H
+#include <stdint.h>
+
+enum {
+  MON_DUMMY, MON_FROGGIT_FIRST, MON_FROGGIT, MON_WHIMSUN, MON_MOLDSMAL, MON_LOOX, MON_VEGETOID, MON_MIGOSP,
+  MON_NAPSTABLOOK, MON_TORIEL, MON_FLOWEY, MON_RUINS_COUNT,
+  /* Snowdin (snowmon.c, papyrus.c) */
+  MON_SNOWDRAKE = MON_RUINS_COUNT, MON_ICECAP, MON_GYFTROT, MON_DOGGO, MON_LESSERDOG, MON_DOGAMY, MON_DOGARESSA,
+  MON_GREATERDOG, MON_JERRY, MON_CHILLDRAKE, MON_GLYDE, MON_PAPYRUS, MON_SNOW_COUNT,
+  /* Waterfall (wfmon.c) */
+  MON_AARON = MON_SNOW_COUNT, MON_WOSHUA, MON_MOLDBYGG, MON_SHYREN, MON_MAD_DUMMY, MON_TEMMIE, MON_UNDYNE, MON_WF_COUNT,
+  /* Hotland (htmon.c) */
+  MON_VULKIN = MON_WF_COUNT, MON_TSUNDERPLANE, MON_PYROPE, MON_METTATON, MON_RG01, MON_RG02, MON_BOMB, MON_MUFFET,
+  MON_MTT_TILES, MON_HT_COUNT,
+  /* the CORE */
+  MON_FFROGGIT = MON_HT_COUNT, MON_WHIMSALOT, MON_ASTIG, MON_MADJICK, MON_KNIGHT, MON_MTT_BOX, MON_MTT_EX, MON_CORE_COUNT,
+  /* New Home */
+  MON_ASGORE = MON_CORE_COUNT, MON_OMEGA, MON_COUNT
+};
+
+/* formations: who is fought */
+enum {
+  FORM_DUMMY, FORM_FROGGIT_FIRST, FORM_FROGGIT, FORM_WHIMSUN, FORM_FROGGIT_WHIMSUN, FORM_FROGGIT2, FORM_MOLDSMAL,
+  FORM_MOLDSMAL2, FORM_MOLDSMAL3, FORM_MOLDSMAL_MIGOSP, FORM_LOOX, FORM_LOOX2, FORM_VEGETOID, FORM_VEGETOID2,
+  FORM_VEGETOID_MIGOSP, FORM_LOOX_VEG_MIGOSP, FORM_NAPSTABLOOK, FORM_TORIEL, FORM_FLOWEY, FORM_RUINS_COUNT,
+  /* Snowdin */
+  FORM_SNOWDRAKE = FORM_RUINS_COUNT, FORM_ICECAP, FORM_LESSERDOG, FORM_CHILLDRAKE, FORM_ICECAP_JERRY,
+  FORM_ICECAP_JERRY_SNOWDRAKE, FORM_ICECAP_JERRY_CHILLDRAKE, FORM_GYFTROT, FORM_GLYDE, FORM_DOGGO, FORM_DOGI,
+  FORM_GREATERDOG, FORM_PAPYRUS, FORM_SNOW_COUNT,
+  /* Waterfall */
+  FORM_AARON = FORM_SNOW_COUNT, FORM_WOSHUA, FORM_WOSHUA_AARON, FORM_MOLDBYGG, FORM_MOLDBYGG_MOLDSMAL,
+  FORM_MOLDBYGG_WOSHUA, FORM_SHYREN, FORM_MAD_DUMMY, FORM_TEMMIE, FORM_TEMMIE_MOLDBYGG, FORM_UNDYNE, FORM_WF_COUNT,
+  /* Hotland (Mettaton's shows and a laser's alarm play their own way: htshows.c) */
+  FORM_VULKIN = FORM_WF_COUNT, FORM_TSUNDERPLANE, FORM_TSUNDER_VULKIN, FORM_PYROPE, FORM_PYROPE2, FORM_MTT_QUIZ,
+  FORM_MTT_COOK, FORM_LASERS, FORM_RGUARDS, FORM_BOMB, FORM_MUFFET, FORM_MTT_TILES, FORM_HT_COUNT,
+  /* the CORE */
+  FORM_ASTIG = FORM_HT_COUNT, FORM_WHIM_FROG, FORM_WHIM_ASTIG, FORM_FROG_ASTIG, FORM_KNIGHT_MADJICK, FORM_FROG_ASTIG_WHIM,
+  FORM_KNIGHT, FORM_MADJICK, FORM_MTT_BOX, FORM_MTT_EX, FORM_CORE_COUNT,
+  /* New Home */
+  FORM_ASGORE = FORM_CORE_COUNT, FORM_OMEGA, FORM_COUNT
+};
+
+enum {
+  ATK_NONE, ATK_FROG_FLIES, ATK_FROG_JUMP, ATK_FROG_RAIN, ATK_WHIM_RING, ATK_WHIM_COLS, ATK_MOLD_ZIG, ATK_MOLD_BURST,
+  ATK_LOOX_BOUNCE, ATK_LOOX_WORM, ATK_VEG_FALL, ATK_VEG_CARROT, ATK_MIGOSP_ROACH, ATK_MIGOSP_DANCE,
+  ATK_NAPSTA_TEARS, ATK_NAPSTA_WIGGLE, ATK_NAPSTA_TEXT, ATK_NAPSTA_HAT, ATK_NAPSTA_FLOOD,
+  ATK_TOR_HANDS, ATK_TOR_WAVES, ATK_TOR_HELIX, ATK_TOR_FALTER, ATK_IDLE, ATK_RUINS_COUNT,
+  /* Snowdin */
+  ATK_DRAKE_ARCS = ATK_RUINS_COUNT, ATK_DRAKE_LINES, ATK_ICECAP_HATS, ATK_ICECAP_WAVES, ATK_GYFT_PRESENTS,
+  ATK_GYFT_SNOW, ATK_DOGGO_SWORD, ATK_LDOG_JUMP, ATK_LDOG_SPEARS, ATK_DOGI_AXES, ATK_DOGI_HEARTS, ATK_GDOG_SPEAR,
+  ATK_GDOG_BARK, ATK_GLYDE_STARS, ATK_PAP_FIRST, ATK_PAP_LAST = ATK_PAP_FIRST + 24, ATK_SNOW_COUNT,
+  /* Waterfall */
+  ATK_AARON_ARMS = ATK_SNOW_COUNT, ATK_AARON_SWEAT, ATK_WOSHUA_DROPS, ATK_WOSHUA_BUBBLES, ATK_MOLDBYGG_HOPS,
+  ATK_MOLDBYGG_RAIN, ATK_SHYREN_NOTES, ATK_DUMMY_MINIONS, ATK_DUMMY_MISSILES, ATK_TEMMIE_HOPS,
+  ATK_UNDYNE_ARROWS, ATK_UNDYNE_SPEARS, ATK_WF_COUNT,
+  /* Hotland */
+  ATK_VULKIN_THUNDER = ATK_WF_COUNT, ATK_VULKIN_FIRE, ATK_TSUNDER_BOMBS, ATK_TSUNDER_DIVE, ATK_PYROPE_BOMBS,
+  ATK_PYROPE_ROPE, ATK_RG_TEAM, ATK_MUFFET_SPIDERS, ATK_MUFFET_CROISSANTS, ATK_MUFFET_DONUTS, ATK_MUFFET_PET,
+  ATK_MTT_BOXES, ATK_MTT_YELLOW, ATK_HT_COUNT,
+  /* the CORE */
+  ATK_MADJICK_CHASER = ATK_HT_COUNT, ATK_MADJICK_CORNER, ATK_KNIGHT_MOON, ATK_KNIGHT_SUN, ATK_KNIGHT_STAR,
+  /* (Mettaton EX's from here on) */
+  ATK_EX_LEGS, ATK_EX_BOMBS, ATK_EX_REWIND, ATK_EX_ARMS, ATK_EX_HEART, ATK_EX_LASER, ATK_EX_BOTS, ATK_EX_DISCO,
+  ATK_EX_PAIRS, ATK_EX_BREAK, ATK_CORE_COUNT,
+  /* New Home */
+  ATK_ASG_HELIX = ATK_CORE_COUNT, ATK_ASG_RAIN, ATK_ASG_RINGS, ATK_ASG_HANDS, ATK_ASG_TRIDENT, ATK_COUNT
+};
+
+/* a formation: up to three monsters, and what the first turn says */
+typedef struct {
+  uint8_t mon[3];
+  uint8_t n;
+  const char *text;
+} Form;
+struct Battle;
+const Form *snow_form(int form);              /* snowmon.c */
+const struct MonDef *snow_mon_def(int id);
+void snow_attack_run(struct Battle *b, int atk, int t);
+void snow_attack_draw(struct Battle *b, int atk, int t);
+int snow_attack_length(int atk);
+int snow_encounter(int room);                 /* a random encounter's formation there, -1 none */
+const Form *wf_form(int form);                /* wfmon.c */
+const struct MonDef *wf_mon_def(int id);
+void wf_attack_run(struct Battle *b, int atk, int t);
+int wf_attack_length(int atk);
+int wf_encounter(int room);
+const Form *ht_form(int form);                /* htmon.c */
+const struct MonDef *ht_mon_def(int id);
+void ht_attack_run(struct Battle *b, int atk, int t);
+int ht_attack_length(int atk);
+int ht_encounter(int room);
+const Form *core_form(int form);              /* coremon.c */
+const struct MonDef *core_mon_def(int id);
+void core_attack_run(struct Battle *b, int atk, int t);
+int core_attack_length(int atk);
+int core_encounter(int room);
+const Form *nh_form(int form);                /* nhmon.c */
+const struct MonDef *nh_mon_def(int id);
+void nh_attack_run(struct Battle *b, int atk, int t);
+int nh_attack_length(int atk);
+void mttex_reset(void);                       /* before Mettaton EX's battle: the show's ratings back to the start */
+int mttex_ratings(void);
+extern int g_bomb_kind;                       /* the bomb fought next (BOMB_*: htmon.c) */
+enum { BOMB_DOG, BOMB_WATER, BOMB_SCRIPT, BOMB_BALL, BOMB_PRESENT, BOMB_GAME, BOMB_COUNT };
+#endif

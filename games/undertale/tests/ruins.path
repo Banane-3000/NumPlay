@@ -1,0 +1,241 @@
+# The Ruins from the bed of golden flowers to the door out, the friendly way (tests/check.py plays it with
+# --name Frisk --noenc --god: no random encounters, the SOUL not hurt). One step a line: x,y walk there;
+# go:x,y find the way there; u d l r z x c a key; talk read on; pick:N an option; wN wait;
+# fight / spare / flee / act:N / bt how the next battle goes.
+
+# the flowers, then Flowey
+go:608,6036
+608,6020
+go:510,5800
+bt
+w40
+talk
+go:510,5590
+510,5560
+# the entrance: Toriel by the stairs
+go:600,5300
+talk
+go:520,5190
+520,5160
+w20
+# the middle road: Toriel's puzzle
+go:500,4960
+talk
+w30
+go:494,4900
+494,4840
+w20
+# the switches
+talk
+go:748,4666
+u
+z
+talk
+go:948,4666
+u
+z
+talk
+w40
+talk
+go:1100,4732
+# the Dummy: talk to it
+talk
+go:1278,4700
+r
+z
+act:1
+w30
+talk
+w40
+go:1252,4686
+1252,4650
+w20
+# the blueprint: Toriel goes ahead, a Froggit, then hand in hand over the spikes
+go:1520,4480
+w200
+talk
+go:1780,4480
+w20
+talk
+w60
+talk
+w40
+go:2320,4470
+# the long hall: alone, then the pillar
+talk
+w60
+go:4470,4470
+w20
+talk
+w60
+talk
+go:4790,4470
+# the leaf pile: Toriel calls; the Froggit's advice; the candy room above
+talk
+go:4901,4448
+u
+z
+talk
+go:4960,4446
+4960,4420
+w20
+go:4960,4226
+u
+z
+talk
+z
+talk
+go:4960,4352
+4960,4380
+w20
+# the cracked floor: down through it, out by the right chute
+go:5040,4600
+go:5300,4692
+w60
+go:5352,5090
+5352,5060
+w30
+# the first rock: Toriel calls about pie
+talk
+go:5590,4728
+5700,4728
+w20
+# the leaf puzzle: the second call, then the way through the cracks
+talk
+go:6250,4700
+6250,4868
+6310,4868
+6310,4790
+6370,4790
+6370,4868
+6430,4868
+6450,4868
+6450,4810
+6520,4810
+# the second rock: the third call, then ask the rock (four times), walking into it
+talk
+go:6704,4870
+r
+r
+talk
+go:6724,4870
+r
+r
+talk
+go:6724,4850
+r
+r
+talk
+go:6860,4840
+w30
+talk
+go:6724,4870
+r
+r
+talk
+go:7000,4840
+# the mouse hole: SAVE
+go:7172,4882
+u
+z
+w20
+z
+w30
+x
+w20
+# Napstablook: move it with force, then cheer them up
+go:7490,4830
+pick:0
+act:3
+w40
+talk
+# north to the Froggits' hall
+go:7597,4790
+7597,4730
+w30
+go:7900,4542
+u
+z
+pick:0
+talk
+go:8000,4590
+talk
+w30
+# the one switch: down the middle crack (between the others), the switch, back up the chute
+go:8100,4640
+8460,4640
+8460,4570
+w60
+u
+z
+talk
+go:8505,4960
+8505,4930
+w30
+# the rotating rooms: blue behind the pillar, red, green behind the pillar
+go:8970,4880
+8970,4900
+w30
+go:8962,4190
+l
+z
+talk
+go:8640,4340
+go:8400,4206
+u
+z
+talk
+go:8455,4130
+8455,4100
+w30
+go:8466,3765
+l
+z
+talk
+go:8720,3740
+# the crossroads, up to Toriel's tree; then her house
+go:9006,3546
+9006,3510
+w30
+go:9006,3380
+talk
+w30
+go:9012,3080
+9012,3060
+w30
+talk
+w60
+talk
+w30
+# the living room: ask her how to leave
+go:9190,2840
+go:8840,2860
+go:8664,2764
+u
+z
+pick:1
+talk
+w100
+# the basement: her three talks, then the door
+go:9090,2760
+go:9070,2736
+w30
+go:9990,2316
+talk
+go:10010,2150
+talk
+go:10010,2080
+spare
+w30
+talk
+w100
+go:10010,2040
+10010,2010
+w30
+# past the door: Flowey, then the way out
+go:10010,300
+go:10010,236
+talk
+w60
+go:10010,50
+w60

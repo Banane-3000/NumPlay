@@ -27,6 +27,9 @@ ALONE = {
                 "on its own"),
     "hollowknight": ("Hollow Knight", "from King's Pass to Hornet in Greenpath. Too big to share the calculator with "
                      "NumPlay: install it on its own"),
+    "undertale": ("Undertale", "the whole Underground, from the bed of golden flowers to the barrier and the neutral "
+                  "ending: the Ruins, Snowdin, Waterfall, Hotland, the CORE and New Home. Too big to share the calculator "
+                  "with NumPlay: install it on its own"),
     "championisland": ("Champion Island", "the Doodle Champion Island Games. Too big to share the calculator with "
                        "NumPlay: install it on its own"),
     "numpowder": ("NumPowder", "The Powder Toy on the calculator: sand, water, fire, acid, electricity and nearly 200 "

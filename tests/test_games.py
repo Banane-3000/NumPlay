@@ -121,6 +121,13 @@ GAMES = {
                      presses((2500, "ok"), (4500, "ok"), (5500, "ok"), (6500, "ok")) + every(18000, 22000, 600, "right", 400),
                      25000,
                      presses((2500, "ok"), (4500, "ok")) + every(9000, 11000, 600, "left", 400), 14000),
+    # past the intro and the title, the name "A", Done, Yes: Frisk falls on the golden flowers and walks; Home keeps
+    # the moment, and the next start is back there
+    "undertale": ("Undertale.nwa", "utresume.sav",
+                  presses((1500, "ok"), (2500, "ok"), (3500, "ok"), (4500, "ok"),
+                          *[(5000 + 200 * i, "down") for i in range(8)], (6800, "right"), (7000, "right"),
+                          (7300, "ok"), (8300, "right"), (8600, "ok"), (10500, "right", 1500)), 13000,
+                  presses((1500, "left", 1000)), 4000),
     # the intro, then OK draws for a while (the autosave on Home); next time it comes back and more is drawn
     "numpowder": ("NumPowder.nwa", "numpowder.sav", presses((2000, "ok"), (3000, "ok", 1500)), 6000,
                   presses((2000, "ok"), (2500, "right", 600), (3200, "ok", 800)), 5000),
@@ -155,7 +162,7 @@ SEEDS = {
 # the app again, only the scripts are left, and the save must come back
 COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.py", "celeste": "celeste_saves.py",
           "hollowknight": "hollowknight_saves.py", "finalearth2": "finalearth2_saves.py",
-          "numpowder": "numpowder_saves.py"}
+          "numpowder": "numpowder_saves.py", "undertale": "undertale_saves.py"}
 CHECKS = {
     # the island remembers where Lucky was; after the reinstall, from the copy
     "championisland": (lambda v: v[:3] == b"CI1" and b"PLAYER_LOC" in v,) * 2,
@@ -166,6 +173,9 @@ CHECKS = {
     "chess": (lambda v: v == SEEDS["chess"],) * 2,  # read back and kept
     # a city saved ("FE2S", version 1); after the reinstall, from the copy, it goes on and is saved again
     "finalearth2": (lambda v: v[:4] == b"FE2S" and v[4] == 1,) * 2,
+    # the moment kept ("UT01", the frames played at 52); after the reinstall, from the copy, it goes on
+    "undertale": (lambda v: v[:4] == b"UT01" and struct.unpack_from("<I", v, 52)[0] > 0,
+                  lambda v: v[:4] == b"UT01" and struct.unpack_from("<I", v, 52)[0] > 60),
     # a simulation saved ("NPWD"); after the reinstall, from the copy, it goes on and is saved again
     "numpowder": (lambda v: v[:4] == b"NPWD",) * 2,
     # a game saved ("HKSV", then the play time at 152); after the reinstall, from the copy, it goes on
