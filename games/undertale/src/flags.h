@@ -146,7 +146,16 @@ enum {
   F_HT_VENTPUZ,          /* the vent puzzle crossed */
   F_HT_GUARDS,           /* the Royal Guards: 1 spared, 2 killed */
   F_HT_NEWS,             /* Mettaton's news report: 1 every bomb defused, 2 out of time */
-  F_HT_FLOOR2,           /* the elevator up from the second floor reached (where the game now ends) */
+  F_HT_FLOOR2,           /* the elevator up from the second floor taken */
+  F_HT_CALL_HUB3,        /* Alphys's call by the third floor's vents */
+  F_HT3_PUZ_N,           /* the third floor's shooting puzzles: north, south */
+  F_HT3_PUZ_S,
+  F_HT_ANIME,            /* Alphys asked Frisk to watch anime with her: 1 yes, 2 no */
+  F_HT_MUFFET,           /* Muffet: 1 spared, 2 killed */
+  F_HT_MUSICAL,          /* Mettaton's musical seen (and the trapdoor) */
+  F_HT_TILES3,           /* the tile puzzle under the stage: 1 solved, 2 out of time; then Mettaton fought */
+  F_HT_HEATS3,           /* Heats Flamesman asked about his name */
+  F_HT_FLOOR3,           /* the way to the MTT Resort reached (where the game now ends) */
   FLAG_COUNT = 256
 };
 #endif

@@ -34,9 +34,10 @@ FORM_SNOWDRAKE, FORM_PAPYRUS = 19, 31
 (FORM_AARON, FORM_WOSHUA, FORM_WOSHUA_AARON, FORM_MOLDBYGG, FORM_MOLDBYGG_MOLDSMAL, FORM_MOLDBYGG_WOSHUA, FORM_SHYREN,
  FORM_MAD_DUMMY, FORM_TEMMIE, FORM_TEMMIE_MOLDBYGG, FORM_UNDYNE) = range(32, 43)
 (FORM_VULKIN, FORM_TSUNDERPLANE, FORM_TSUNDER_VULKIN, FORM_PYROPE, FORM_PYROPE2, FORM_MTT_QUIZ, FORM_MTT_COOK,
- FORM_LASERS, FORM_RGUARDS, FORM_BOMB) = range(43, 53)
+ FORM_LASERS, FORM_RGUARDS, FORM_BOMB, FORM_MUFFET, FORM_MTT_TILES) = range(43, 55)
 ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT, ITEM_ASTRONAUT_FOOD = range(17, 23)
 ITEM_BURNT_PAN, ITEM_INSTANT_NOODLES, ITEM_HOT_DOG, ITEM_STAINED_APRON = 28, 29, 30, 31
+ITEM_NICE_CREAM = 13
 
 
 def run(args, frames, saves=None, what=""):
@@ -148,6 +149,12 @@ check(s and s["mode"] == MODE_WORLD and s["kills"] == 0 and s["gold"] == 100,
 for how in ("act:1", "fight"):
     s = run(["--god", "--battle", str(FORM_BOMB), "--path", how], 9000, what=f"a bomb, {how}")
     check(s and s["mode"] == MODE_WORLD and s["kills"] == 0, f"a bomb: {how} did not defuse it: {s}")
+# Muffet (no running from her): spared once her spiders send word, her 100G; Mettaton after the tile puzzle: ACT
+# Yellow, and the yellow SOUL's shots drain his power
+s = run(["--god", "--battle", str(FORM_MUFFET), "--path", "spare"], 9000, what="Muffet, spared")
+check(s and s["mode"] == MODE_WORLD and s["kills"] == 0 and s["gold"] == 100, f"Muffet was not spared: {s}")
+s = run(["--god", "--battle", str(FORM_MTT_TILES), "--path", "act:2"], 4000, what="Mettaton's yellow button")
+check(s and s["mode"] == MODE_WORLD and s["kills"] == 0, f"Mettaton's fight did not end with the yellow button: {s}")
 
 # the shop in Snowdin: a Cinnamon Bunny for 25G; Papyrus's date: his phone number
 s = run(["--name", "Frisk", "--noenc", "--room", str(ROOMS["SNOWTOWN"]), "--at", "446,1092", "--gold", "100", "--keys",
@@ -237,12 +244,12 @@ if not QUICK:
         check(ITEM_INSTANT_NOODLES in s["items"], f"Hotland: the noodles not taken: {s['items']}")
 
 # Hotland's second floor: Heats Flamesman, Sans's hot dog, the apron, the Art Club's room, the belt and vent puzzles,
-# the Bad Opinion Zone, the Royal Guards spared, Mettaton's news report, up to the elevator
+# the Bad Opinion Zone, the Royal Guards spared, Mettaton's news report, up the elevator to the third floor
 if not QUICK:
     s = run(["--name", "Frisk", "--noenc", "--god", "--gold", "100", "--room", str(ROOMS["HT_HOTDOG"]), "--at", "6966,2380",
              "--path-file", os.path.join(HERE, "hotland2.path")], 13000, what="Hotland's second floor")
-    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["HT_COREVIEW2"],
-          f"Hotland's second floor did not end at the elevator: {s}")
+    check(s and s["mode"] == MODE_WORLD and s["room"] == ROOMS["HT_L3"],
+          f"Hotland's second floor did not end up the elevator, on the third floor: {s}")
     if s:
         for name, v in (("HT_HEATS", 1), ("HT_APRON", 1), ("HT_CALL_BELT", 1), ("HT_BELT", 1), ("HT_VENTPUZ", 1),
                         ("HT_CALL_BOZ", 1), ("HT_GUARDS", 1), ("HT_NEWS", 2), ("HT_CALL_CORE2", 1), ("HT_FLOOR2", 1)):
@@ -251,6 +258,22 @@ if not QUICK:
         check(s["gold"] == 170, f"Hotland's second floor: the hot dog or the guards' gold went wrong: {s['gold']}")
         for item in (ITEM_HOT_DOG, ITEM_STAINED_APRON):
             check(item in s["items"], f"Hotland's second floor: item {item} not picked up: {s['items']}")
+
+# Hotland's third floor: the bake sale, the vent islands, both shooting puzzles (the Diamond Boys, Alphys's anime),
+# the belts past the drones, Muffet spared, Mettaton's musical, the tile puzzle and his fight, the crossroads (a Nice
+# Cream, Heats Flamesman), up to the MTT Resort
+if not QUICK:
+    s = run(["--name", "Frisk", "--noenc", "--god", "--gold", "100", "--room", str(ROOMS["HT_L3"]), "--at", "3770,842",
+             "--path-file", os.path.join(HERE, "hotland3.path")], 14000, what="Hotland's third floor")
+    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["HT_CROSS3"],
+          f"Hotland's third floor did not end by the MTT Resort: {s}")
+    if s:
+        for name, v in (("HT_CALL_HUB3", 1), ("HT3_PUZ_N", 1), ("HT3_PUZ_S", 1), ("HT_ANIME", 1), ("HT_MUFFET", 1),
+                        ("HT_MUSICAL", 1), ("HT_TILES3", 1), ("HT_HEATS3", 1), ("HT_FLOOR3", 1)):
+            check(flag(s, name) == v, f"Hotland's third floor: F_{name} is {flag(s, name)}, not {v}")
+        check(s["kills"] == 0, f"Hotland's third floor: {s['kills']} killed on the friendly way")
+        check(s["gold"] == 188, f"Hotland's third floor: Muffet's gold or the Nice Cream went wrong: {s['gold']}")
+        check(ITEM_NICE_CREAM in s["items"], f"Hotland's third floor: no Nice Cream: {s['items']}")
 
 if failures:
     print("\n".join("FAIL " + f for f in failures))

@@ -198,6 +198,37 @@ def gen_debris():
     return [im]
 
 
+def gen_croissant():
+    # Muffet's croissants: a crescent, its horns to the left
+    im = _img(14, 11)
+    d = ImageDraw.Draw(im)
+    d.ellipse([0, 0, 13, 10], fill=(255, 255, 255, 255))
+    d.ellipse([-5, 2, 7, 8], fill=(0, 0, 0, 0))
+    return [im]
+
+
+def gen_donut():
+    im = _img(11, 11)
+    d = ImageDraw.Draw(im)
+    d.ellipse([0, 0, 10, 10], fill=(255, 255, 255, 255))
+    d.ellipse([3, 3, 7, 7], fill=(0, 0, 0, 0))
+    return [im]
+
+
+def gen_mttmini():
+    # a small Mettaton for the yellow SOUL to shoot at: his box, its screen's grid, his wheel
+    im = _img(16, 22)
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 15, 15], fill=(170, 170, 170, 255), outline=(255, 255, 255, 255))
+    d.rectangle([3, 3, 12, 10], fill=(255, 220, 40, 255))
+    for k in range(4, 12, 2):
+        d.line([(k, 3), (k, 10)], fill=(40, 40, 40, 255))
+    d.line([(3, 7), (12, 7)], fill=(40, 40, 40, 255))
+    d.rectangle([7, 16, 8, 18], fill=(200, 200, 200, 255))
+    d.ellipse([4, 17, 11, 21], fill=(200, 30, 30, 255))
+    return [im]
+
+
 def gen_star():
     # the Royal Guards' stars: four points
     im = _img(9, 9)
@@ -210,7 +241,8 @@ GEN = {"otile": gen_otile, "snowball": gen_snowball, "bone": gen_bone, "orb": ge
        "iceshard": gen_iceshard, "present": gen_present, "knife": gen_knife, "dogpaw": gen_dogpaw,
        "heartbullet": gen_heartbullet, "spear": gen_spear, "note": gen_note, "drop": gen_drop, "arm": gen_arm,
        "debris": gen_debris, "arrow": gen_arrow, "plane": gen_plane, "bomb": gen_bomb, "cloud": gen_cloud,
-       "bolt": gen_bolt, "star": gen_star}
+       "bolt": gen_bolt, "star": gen_star, "croissant": gen_croissant, "donut": gen_donut,
+       "mttmini": gen_mttmini}
 
 SNOW_CLEAR = [(133, 163, 216), (114, 129, 177), (139, 163, 186), (180, 192, 201), (195, 207, 216)]
 PAP_GIF = "move:Papyrus_screenshot_back_and_forth.gif:0,280,640,450:"
@@ -228,7 +260,8 @@ SPRITES = [
     ("savepoint", "demo:spr_savepoint", {"origin": (0, 0), "keep": True}),
     ("flowey", "demo:spr_flowey", {"origin": (0, 0), "keep": True}),
     # the SOUL, 8 x 8 as the game's 16 x 16 halved; frame 1: blue
-    ("heart", "demo2:spr_heart", {"center": True, "keep": True, "tints": [(0, 60, 255), (0, 192, 0)]}),   # red, blue, green
+    ("heart", "demo2:spr_heart", {"center": True, "keep": True,
+                                  "tints": [(0, 60, 255), (0, 192, 0), (213, 53, 217), (255, 255, 0)]}),   # red, blue, green, purple, yellow
 ] + [
     # the battle: its buttons (orange, then yellow when chosen), the FIGHT target and its bar, the slash, the HP label
     (n, "demo2:spr_" + n, {"keep": True}) for n in [
@@ -400,6 +433,14 @@ SPRITES = [
     # the news report's script before it's shown to be a bomb, and the Stained Apron (cut from the map)
     ("news_script", "map:Hotland_map.png:4322,1880,16,16", {"keep": True, "feet": True, "clear": [(112, 83, 71), (52, 50, 78), (107, 67, 78)]}),
     ("apron", "map:Hotland_map.png:5836,2618,22,18", {"keep": True, "clear": [(181, 85, 21)]}),
+    # the third floor: Muffet (in her lair, in battle, her pet cupcake), her spiders, the Diamond Boys
+    ("muffet_ow", "wiki:Muffet_overworld.png", {"feet": True}),
+    ("muffet_b", "wiki:Muffet_battle_idle.gif", {"feet": True, "dedupe": True, "every": 4}),
+    ("muffet_hurt", "wiki:Muffet_battle_hurt.png", {"feet": True}),
+    ("muffet_pet", "wiki:Muffet's_Pet_battle_chasing.gif", {"center": True, "dedupe": True}),
+    ("spider_b", "wiki:Bullet_Spider_battle.png", {"center": True}),
+    ("diamond1", "wiki:Diamond_Boy_overworld.png", {"feet": True}),
+    ("diamond2", "wiki:Tall_Diamond_Boy_overworld.png", {"feet": True}),
     # in battle, the bombs share one look (the dog and the glass of water keep their own)
     ("bomb_b", "wiki:Bomb_battle_idle.gif", {"feet": True, "dedupe": True}),
     ("dogbomb_b", "wiki:Annoying_Dog_battle_bomb.gif", {"feet": True, "dedupe": True}),
@@ -420,6 +461,9 @@ SPRITES = [
     ("arm", "gen:arm", {"center": True}),
     ("debris", "gen:debris", {"center": True}),
     ("star", "gen:star", {"center": True}),
+    ("croissant", "gen:croissant", {"center": True}),
+    ("donut", "gen:donut", {"center": True}),
+    ("mttmini", "gen:mttmini", {"center": True}),
     # Waterfall's monsters
     ("aaron_b", "wiki:Aaron_battle_static.png", {"feet": True, "clear_bg": True}),
     ("aaron_hurt", "wiki:Aaron_battle_hurt.png", {"feet": True, "clear_bg": True}),

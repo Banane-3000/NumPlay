@@ -52,6 +52,10 @@ static const Belt belts[] = {
   {ROOM_HT_VENTPUZ, 4420, 2310, 60, 290, 0, 3}, {ROOM_HT_VENTPUZ, 4420, 2560, 360, 40, 3, 0},
   {ROOM_HT_VENTPUZ, 4720, 2430, 60, 170, 0, -3},
   {ROOM_HT_NEWS, 4300, 1790, 100, 160, 0, -2},
+  /* the third floor's, on the way to the south puzzle: down the left side, along the bottom (past the drones), up the
+   * right; back along the top */
+  {ROOM_HT_BELTS3, 4800, 1400, 60, 130, 0, 3}, {ROOM_HT_BELTS3, 4800, 1520, 600, 60, 3, 0},
+  {ROOM_HT_BELTS3, 5380, 1430, 60, 150, 0, -3}, {ROOM_HT_BELTS3, 4850, 1320, 520, 60, -3, 0},
 };
 static void belts_update(void) {
   if (event_running()) return;
@@ -91,6 +95,46 @@ static const Vent vents[] = {
   /* the news room's: up to the top room's corner, and from there over to the rest of it */
   {ROOM_HT_NEWS, 4350, 1722, DIR_UP, {[DIR_UP] = {4350, 1600}}},
   {ROOM_HT_NEWS, 4320, 1600, DIR_LEFT, {[DIR_LEFT] = {4200, 1590}}},
+  /* the third floor's islands: each grate blows the way its arrow points, to the next island that way (off the
+   * edges: the corridor back west, the walkways north and south, the platform east to the door) */
+  {ROOM_HT_HUB3, 4740, 740, DIR_DOWN, {[DIR_DOWN] = {4740, 786}}},
+  {ROOM_HT_HUB3, 4820, 700, DIR_UP, {[DIR_UP] = {4820, 590}}},
+  {ROOM_HT_HUB3, 4820, 740, DIR_DOWN, {[DIR_DOWN] = {4820, 786}}},
+  {ROOM_HT_HUB3, 4880, 720, DIR_LEFT, {[DIR_LEFT] = {4820, 706}}},
+  {ROOM_HT_HUB3, 4680, 800, DIR_RIGHT, {[DIR_RIGHT] = {4740, 786}}},
+  {ROOM_HT_HUB3, 4740, 780, DIR_UP, {[DIR_UP] = {4740, 706}}},
+  {ROOM_HT_HUB3, 4740, 820, DIR_DOWN, {[DIR_DOWN] = {4740, 866}}},
+  {ROOM_HT_HUB3, 4820, 820, DIR_DOWN, {[DIR_DOWN] = {4820, 866}}},
+  {ROOM_HT_HUB3, 4800, 800, DIR_LEFT, {[DIR_LEFT] = {4740, 786}}},
+  {ROOM_HT_HUB3, 4900, 780, DIR_UP, {[DIR_UP] = {4900, 706}}},
+  {ROOM_HT_HUB3, 4880, 800, DIR_LEFT, {[DIR_LEFT] = {4820, 786}}},
+  {ROOM_HT_HUB3, 4960, 800, DIR_LEFT, {[DIR_LEFT] = {4900, 786}}},
+  {ROOM_HT_HUB3, 4660, 860, DIR_UP, {[DIR_UP] = {4660, 786}}},
+  {ROOM_HT_HUB3, 4640, 880, DIR_LEFT, {[DIR_LEFT] = {4572, 866}}},
+  {ROOM_HT_HUB3, 4740, 900, DIR_DOWN, {[DIR_DOWN] = {4740, 946}}},
+  {ROOM_HT_HUB3, 4840, 880, DIR_RIGHT, {[DIR_RIGHT] = {4900, 866}}},
+  {ROOM_HT_HUB3, 4900, 860, DIR_UP, {[DIR_UP] = {4900, 786}}},
+  {ROOM_HT_HUB3, 4980, 860, DIR_UP, {[DIR_UP] = {4980, 786}}},
+  {ROOM_HT_HUB3, 4980, 900, DIR_DOWN, {[DIR_DOWN] = {4980, 946}}},
+  {ROOM_HT_HUB3, 4960, 880, DIR_LEFT, {[DIR_LEFT] = {4900, 866}}},
+  {ROOM_HT_HUB3, 5000, 880, DIR_RIGHT, {[DIR_RIGHT] = {5070, 866}}},
+  {ROOM_HT_HUB3, 4660, 940, DIR_UP, {[DIR_UP] = {4660, 866}}},
+  {ROOM_HT_HUB3, 4720, 960, DIR_LEFT, {[DIR_LEFT] = {4660, 946}}},
+  {ROOM_HT_HUB3, 4760, 960, DIR_RIGHT, {[DIR_RIGHT] = {4820, 946}}},
+  {ROOM_HT_HUB3, 4820, 940, DIR_UP, {[DIR_UP] = {4820, 866}}},
+  {ROOM_HT_HUB3, 4840, 960, DIR_RIGHT, {[DIR_RIGHT] = {4900, 946}}},
+  {ROOM_HT_HUB3, 4900, 940, DIR_UP, {[DIR_UP] = {4900, 866}}},
+  {ROOM_HT_HUB3, 4900, 980, DIR_DOWN, {[DIR_DOWN] = {4900, 1026}}},
+  {ROOM_HT_HUB3, 4920, 960, DIR_RIGHT, {[DIR_RIGHT] = {4980, 946}}},
+  {ROOM_HT_HUB3, 4980, 940, DIR_UP, {[DIR_UP] = {4980, 866}}},
+  {ROOM_HT_HUB3, 4740, 1020, DIR_UP, {[DIR_UP] = {4740, 946}}},
+  {ROOM_HT_HUB3, 4820, 1060, DIR_DOWN, {[DIR_DOWN] = {4820, 1130}}},
+  {ROOM_HT_HUB3, 4800, 1040, DIR_LEFT, {[DIR_LEFT] = {4740, 1026}}},
+  {ROOM_HT_HUB3, 4880, 1040, DIR_LEFT, {[DIR_LEFT] = {4820, 1026}}},
+  {ROOM_HT_HUB3, 4600, 880, DIR_RIGHT, {[DIR_RIGHT] = {4660, 866}}},
+  {ROOM_HT_HUB3, 4820, 660, DIR_DOWN, {[DIR_DOWN] = {4820, 706}}},
+  {ROOM_HT_HUB3, 4820, 1100, DIR_UP, {[DIR_UP] = {4820, 1026}}},
+  {ROOM_HT_HUB3, 5040, 880, DIR_LEFT, {[DIR_LEFT] = {4980, 866}}},
 };
 #define NVENTS ((int)(sizeof vents / sizeof vents[0]))
 /* the way a vent blows now */
@@ -122,6 +166,8 @@ static const Laser lasers[] = {
   {ROOM_HT_LASERS, 3840, 3796, 62, 30, 0}, {ROOM_HT_LASERS, 3958, 3796, 62, 40, 1},
   /* the news room's bottom: blue, orange, blue */
   {ROOM_HT_NEWS, 3965, 1946, 56, 16, 1}, {ROOM_HT_NEWS, 4025, 1946, 56, 16, 0}, {ROOM_HT_NEWS, 4085, 1946, 56, 16, 1},
+  /* the third floor's drones over the bottom belt, blue: ride it without a step */
+  {ROOM_HT_BELTS3, 4967, 1496, 84, 0, 1}, {ROOM_HT_BELTS3, 5149, 1496, 84, 0, 1}, {ROOM_HT_BELTS3, 5249, 1496, 84, 0, 1},
 };
 static int laser_cool;
 static int laser_x(int i) {

@@ -33,15 +33,53 @@ int soul_y(void) { return bt.sy / FX; }
 static int32_t soul_vy;
 #define BLUE_JUMP (3 * FX)
 #define BLUE_GRAVITY 3          /* 1/16 px a frame, each frame */
+/* the purple SOUL: the string it's on; the strings, evenly down the board (pulled down, they come round again) */
+static int string_on;
+int32_t soul_strings_shift;
+int soul_string_y(int i) {
+  int h = bt.y1 - bt.y0 - 8, gap = h / NSTRINGS;
+  return bt.y0 + 4 + (gap / 2 + gap * i + (int)(soul_strings_shift / FX)) % h;
+}
+static uint32_t keys_before;
 void soul_set_mode(int mode) {
   bt.soul_mode = mode;
   soul_vy = 0;
+  string_on = NSTRINGS / 2, soul_strings_shift = 0;
+  if (mode == SOUL_PURPLE) bt.sy = soul_string_y(string_on) * FX;
 }
 void soul_update(uint32_t keys) {
   int sp = bt.speed;
   if (keys & K_X) sp /= 2;
   int dx = ((keys & K_RIGHT) != 0) - ((keys & K_LEFT) != 0), dy = ((keys & K_DOWN) != 0) - ((keys & K_UP) != 0);
   int x0 = (bt.x0 + 2 + 4) * FX, x1 = (bt.x1 - 2 - 4) * FX, y0 = (bt.y0 + 2 + 4) * FX, y1 = (bt.y1 - 2 - 4) * FX;
+  uint32_t pressed = keys & ~keys_before;
+  keys_before = keys;
+  if (bt.soul_mode == SOUL_PURPLE) {
+    /* up or down: the next string that way (the nearest above, or below); along it, the arrows */
+    int y = soul_string_y(string_on);
+    if (pressed & (K_UP | K_DOWN)) {
+      int best = -1;
+      for (int i = 0; i < NSTRINGS; i++) {
+        int yi = soul_string_y(i);
+        if ((pressed & K_UP) ? yi < y - 2 && (best < 0 || yi > soul_string_y(best))
+                             : yi > y + 2 && (best < 0 || yi < soul_string_y(best)))
+          best = i;
+      }
+      if (best >= 0) string_on = best, y = soul_string_y(best);
+    }
+    int ty = y * FX;
+    bt.sy += clamp_i(ty - bt.sy, -5 * FX, 5 * FX);
+    bt.sx = clamp_i(bt.sx + dx * sp, x0, x1);
+    return;
+  }
+  static int shot_cool;
+  if (shot_cool) shot_cool--;
+  if (bt.soul_mode == SOUL_YELLOW && (pressed & K_Z) && !shot_cool) {
+    /* a shot, straight up (a few frames apart) */
+    Bullet *b = bullet_new(SPR_ORB, bt.sx, bt.sy - 6 * FX, 0, -6 * FX);
+    if (b) b->flags |= BF_PLAYER | BF_HARMLESS, b->color = BC_YELLOW, b->r = 2, b->life = 50;
+    shot_cool = 6;
+  }
   if (bt.soul_mode == SOUL_GREEN) {
     /* it stays in the middle; the arrows turn its shield */
     static const uint32_t bit[4] = {K_DOWN, K_UP, K_LEFT, K_RIGHT};
@@ -135,7 +173,8 @@ void bullets_draw(void) {
   for (int i = 0; i < MAX_BULLETS; i++) {
     const Bullet *b = &bullets[i];
     if (b->kind == BK_NONE || (b->flags & BF_HIDDEN)) continue;
-    uint16_t color = b->color == BC_BLUE ? rgb565(0x14A9FF) : b->color == BC_ORANGE ? rgb565(0xFCA600) : b->color == BC_GREEN ? rgb565(0x00C000) : 0;
+    uint16_t color = b->color == BC_BLUE ? rgb565(0x14A9FF) : b->color == BC_ORANGE ? rgb565(0xFCA600) : b->color == BC_GREEN ? rgb565(0x00C000)
+                     : b->color == BC_YELLOW ? rgb565(0xFFFF00) : 0;
     if (b->spr == SPR_BONE) {
       gfx_bone(b->x / FX, b->y / FX, b->w, b->h, color ? color : C_WHITE, b->alpha);
       continue;

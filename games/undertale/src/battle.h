@@ -88,7 +88,7 @@ typedef struct Monster {
 
 /* the bullets: a pool, moved by kind each frame; the attack's code makes them and steers them */
 enum { BK_NONE, BK_LINEAR, BK_GRAVITY, BK_HOMING, BK_ORBIT, BK_SCRIPT };
-enum { BC_WHITE, BC_BLUE, BC_ORANGE, BC_GREEN };
+enum { BC_WHITE, BC_BLUE, BC_ORANGE, BC_GREEN, BC_YELLOW };
 typedef struct {
   uint8_t kind, color, frame, flags;
   uint16_t spr;
@@ -102,7 +102,8 @@ typedef struct {
   int16_t angle;                   /* drawn turned (1/256 turns) */
   uint8_t owner;                   /* the monster that made it */
 } Bullet;
-enum { BF_NOCLIP = 1, BF_ONCE = 2, BF_HIDDEN = 4, BF_BOX = 8, BF_FRONT = 16, BF_HARMLESS = 32, BF_SHIELD = 64 };   /* (shield: the green SOUL's blocks it) */
+enum { BF_NOCLIP = 1, BF_ONCE = 2, BF_HIDDEN = 4, BF_BOX = 8, BF_FRONT = 16, BF_HARMLESS = 32, BF_SHIELD = 64,
+       BF_PLAYER = 128 };   /* (shield: the green SOUL's blocks it; player: the yellow SOUL's own shot) */
 
 typedef struct Battle {
   int form;
@@ -159,7 +160,12 @@ void bullets_update(void);
 void bullets_draw(void);
 bool soul_hit_test(void);              /* bullets touching the SOUL hurt it */
 void soul_update(uint32_t keys);
-enum { SOUL_RED, SOUL_BLUE, SOUL_GREEN };   /* (the heart's frame too): green stays put, its shield turns */
+/* (the heart's frame too): green stays put, its shield turns; purple keeps to three strings across the board
+ * (up and down hop between them); yellow shoots up (Z) */
+enum { SOUL_RED, SOUL_BLUE, SOUL_GREEN, SOUL_PURPLE, SOUL_YELLOW };
+#define NSTRINGS 3
+int soul_string_y(int i);              /* the purple SOUL's strings: where string i is now (pixels) */
+extern int32_t soul_strings_shift;     /* how far they've been pulled down (1/16 px; they come round from the top) */
 void soul_set_mode(int mode);          /* blue: it falls, up jumps */
 void gfx_bone(int cx, int cy, int w, int h, uint16_t col, uint8_t a);
 void soul_hurt(int dmg, int color);

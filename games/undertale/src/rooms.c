@@ -23,6 +23,7 @@ void room_setup(int room, int from) {
   wf3_setup(room, from);
   ht1_setup(room, from);
   ht2_setup(room, from);
+  ht3_setup(room, from);
 }
 
 /* each frame Frisk can walk: what a room watches (a rock on its switch, a cracked floor) */
@@ -34,6 +35,7 @@ void room_update(void) {
   wf3_update();
   ht1_update();
   ht2_update();
+  ht3_update();
 }
 
 /* what a room draws on its floor, under everything (world.c) */
@@ -42,14 +44,20 @@ void room_draw_floor(void) {
   snow2_draw();
   ht1_draw();
   ht2_draw();
+  ht3_draw();
 }
 
 /* what a room draws over everything (a clock) */
-void room_draw_top(void) { ht2_draw_top(); }
+void room_draw_top(void) {
+  ht2_draw_top();
+  ht3_draw_top();
+}
 
 /* a pushed rock that may go where Frisk can't (a bridge seed into the water), and what happens once it has */
 bool room_rock_enters(Obj *o, int x, int y) { return wf_seed_enters(o, x, y); }
 void room_rock_moved(Obj *o) { wf_seed_moved(o); }
+
+int room_speed(int x, int y) { return ht3_speed(x, y); }
 
 bool room_ice(int x, int y) {
   const RoomInfo *ri = world_room_info();

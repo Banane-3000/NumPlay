@@ -100,7 +100,7 @@ act:1
 talk
 w3700
 talk
-# up past the news to the CORE again (Alphys's call), and the elevator up, where the game now ends
+# up past the news to the CORE again (Alphys's call), and the elevator up to the third floor
 go:4590,1770
 go:4600,1560
 4600,1500

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "battle.h"
 #include "game.h"
+#include "items.h"
 #include "gfx.h"
 #include "monsters.h"
 #include "res.h"
@@ -233,6 +234,98 @@ static void draw_bomb(Battle *b, Monster *m, int x0, int y0) {
   uint8_t alpha = m->fade ? (uint8_t)max_i(0, 128 - m->fade * 4) : 255;
   gfx_sprite(s, (int)(g_frame / 8), x, y + half, 0, alpha);
 }
+/* ---------------------------------------------------------------- Muffet: purple strings, spiders, pastries, her
+ * pet. She lets Frisk go once her spiders send word (at turn 17), or at once if Frisk eats one of their treats.
+ * Paying her makes her hits weaker (a hit less each time, and the price doubles); struggling three times halves it */
+enum { MF_PRICE, MF_STRUGGLE, MF_TREAT };   /* (b->state[]) */
+static void act_muffet(Battle *b, Monster *m, int act, char *t, int cap) {
+  if (!b->state[MF_PRICE]) b->state[MF_PRICE] = 100;
+  if (act == 0) {   /* Pay */
+    if (sv.gold >= b->state[MF_PRICE]) {
+      sv.gold = (uint16_t)(sv.gold - b->state[MF_PRICE]);
+      snprintf(t, (size_t)cap, "* You pay Muffet %dG.\n* Her attacks soften a little.", b->state[MF_PRICE]);
+      m->at = (int16_t)max_i(1, m->at - 1);
+      b->state[MF_PRICE] = (int16_t)min_i(b->state[MF_PRICE] * 2, 9000);
+    } else {
+      snprintf(t, (size_t)cap, "* You don't have %dG.\n* Muffet sighs, and lowers her price.", b->state[MF_PRICE]);
+      b->state[MF_PRICE] = (int16_t)max_i(10, b->state[MF_PRICE] / 2);
+    }
+  } else {   /* Struggle */
+    if (++b->state[MF_STRUGGLE] == 3) {
+      snprintf(t, (size_t)cap, "* You struggle with all your might.\n* Muffet halves her price, laughing.");
+      b->state[MF_PRICE] = (int16_t)max_i(10, b->state[MF_PRICE] / 2);
+    } else snprintf(t, (size_t)cap, "* You struggle against the web.\n* It's too sticky to get free.");
+  }
+}
+static const char *talk_muffet(Battle *b, Monster *m) {
+  if (b->state[MF_TREAT] == 1) {
+    b->state[MF_TREAT] = 2;
+    return "Oh? You\'ve had\none of our\ntreats~";
+  }
+  if (m->spare) return "My mistake,\ndeary~\nRun along\nnow~";
+  if (b->turn == 1) return "Purple\nsuits you\nmuch better,\ndeary~";
+  if (b->turn == 3 || b->turn == 7 || b->turn == 11) {
+    static const char *const meal[3] = {"Time for\nbreakfast,\nmy pet~", "Time for\nlunch,\nmy pet~", "Time for\ndinner,\nmy pet~"};
+    return meal[b->turn / 4];
+  }
+  static const char *const lines[] = {"Ahuhuhu~", "Someone paid\nme well for\nyour SOUL~", "The spiders\ntold me all\nabout you~",
+                                      "Too stingy\nto buy a\ndonut~?", "Pay up, and\nI might go\neasy~"};
+  return lines[rnd_n(5)];
+}
+static const char *flavor_muffet(Battle *b, Monster *m) {
+  if (!m->spare && b->turn >= 17) {
+    m->spare = true;
+    return "* A spider brings Muffet a note.\n* She reads it... and smiles.";
+  }
+  if (m->spare) return "* Muffet isn't going to fight anymore.";
+  return NULL;
+}
+static bool item_muffet(Battle *b, Monster *m, int item, char *t, int cap) {
+  (void)t, (void)cap;
+  /* a treat from the spiders' bake sale: it's eaten as ever, and she lets Frisk go */
+  if (item == ITEM_SPIDER_DONUT || item == ITEM_SPIDER_CIDER) m->spare = true, b->state[MF_TREAT] = 1;
+  return false;
+}
+static int attack_muffet(Battle *b, Monster *m) {
+  if (m->spare) return ATK_NONE;
+  if (b->turn == 3 || b->turn == 7 || b->turn == 11) return ATK_MUFFET_PET;
+  static const uint8_t seq[3] = {ATK_MUFFET_SPIDERS, ATK_MUFFET_CROISSANTS, ATK_MUFFET_DONUTS};
+  return seq[(b->turn - 1) % 3];
+}
+
+/* ---------------------------------------------------------------- Mettaton, after the tile puzzle: no hurting him;
+ * Alphys's yellow button (ACT) turns the SOUL yellow, and its shots wear him down */
+enum { MT_YELLOW, MT_HITS };   /* (b->state[]) */
+static void act_mtt_tiles(Battle *b, Monster *m, int act, char *t, int cap) {
+  (void)m;
+  if (act == 0) snprintf(t, (size_t)cap, "* You yell...\n* Nothing happens.");
+  else {
+    snprintf(t, (size_t)cap, "* You press the yellow button.\n* The phone hums near Mettaton...!");
+    b->state[MT_YELLOW] = 1;
+  }
+}
+static const char *talk_mtt_tiles(Battle *b, Monster *m) {
+  (void)m;
+  if (b->state[MT_HITS] >= 6) return "OH NO...\nI\'M OUT OF\nPOWER?!";
+  if (b->state[MT_YELLOW] && b->state[MT_HITS]) return "THAT\nBUTTON IS\nCHEATING!";
+  if (b->turn <= 1) return "NOW FOR\nTHE GRAND\nFINALE!";
+  static const char *const lines[] = {"NO MORE\nPUZZLES,\nDARLING!", "STAY\nTUNED!", "THE\nRATINGS\nARE GREAT!"};
+  return lines[rnd_n(3)];
+}
+static const char *flavor_mtt_tiles(Battle *b, Monster *m) {
+  (void)m;
+  if (b->turn == 2 && !b->state[MT_YELLOW]) return "* Alphys calls: \"The yellow button!\n  It's in your ACT menu!\"";
+  if (b->turn >= 2 && !b->state[MT_YELLOW]) return "* Your phone's ACT menu is glowing.";
+  return NULL;
+}
+static bool hit_mtt_tiles(Battle *b, Monster *m, int dmg) {
+  (void)b, (void)dmg;
+  m->dmg_shown = 0;   /* (MISS: metal) */
+  return true;
+}
+static int attack_mtt_tiles(Battle *b, Monster *m) { (void)m; return b->state[MT_YELLOW] ? ATK_MTT_YELLOW : ATK_MTT_BOXES; }
+static bool ends_mtt_tiles(Battle *b, Monster *m) { (void)m; return b->state[MT_HITS] >= 6; }
+
 #define BOMB(nm, chk) {.name = nm, .hp = 1, .idle_speed = 8, .check = chk, .acts = {"Defuse"}, .nacts = 1, \
                        .flags = MF_BOSS | MF_NOT_KILLABLE, .act = act_bomb, .talk = talk_bomb, .attack = attack_bomb, \
                        .flavor = flavor_bomb, .on_hit = hit_bomb, .draw = draw_bomb}
@@ -291,6 +384,20 @@ static const MonDef ht_defs[MON_COUNT - MON_WF_COUNT] = {
     .neutral = {"* Sweat drips from 02's armor.", "* 02 is clenching his fists.", "* Smells like a locker room."},
     .flags = MF_BOSS, .act = act_rg, .talk = talk_rg, .attack = attack_rg, .flavor = flavor_rg},
   [MON_BOMB - MON_WF_COUNT] = BOMB("Bomb", ""),
+  [MON_MUFFET - MON_WF_COUNT] = {
+    .name = "Muffet", .spare_gold = 100, .hp = 1250, .at = 8, .df = 0, .exp = 300, .gold = 100, .spr_idle = SPR_MUFFET_B,
+    .spr_hurt = SPR_MUFFET_HURT, .idle_speed = 5, .check = "If she asks you up to her parlor, say no thanks.",
+    .acts = {"Pay", "Struggle"}, .nacts = 2,
+    .neutral = {"* Muffet pours herself a cup of tea.", "* Muffet counts her money, twice.",
+                "* Smells like cobwebs and fresh pastry."},
+    .flags = MF_BOSS, .act = act_muffet, .talk = talk_muffet, .attack = attack_muffet, .flavor = flavor_muffet,
+    .on_item = item_muffet},
+  [MON_MTT_TILES - MON_WF_COUNT] = {
+    .name = "Mettaton", .hp = 9999, .at = 8, .df = 0, .spr_idle = SPR_MTT_B, .spr_hurt = SPR_MTT_B, .idle_speed = 6,
+    .check = "Still made of metal. Still can't be hurt.", .acts = {"Yell", "Yellow"}, .nacts = 2,
+    .neutral = {"* Mettaton.", "* Mettaton strikes a pose."},
+    .flags = MF_BOSS | MF_NOT_KILLABLE, .act = act_mtt_tiles, .talk = talk_mtt_tiles, .attack = attack_mtt_tiles,
+    .flavor = flavor_mtt_tiles, .on_hit = hit_mtt_tiles, .ends = ends_mtt_tiles},
 };
 const MonDef *ht_mon_def(int id) { return id == MON_BOMB ? &bomb_defs[g_bomb_kind] : &ht_defs[id - MON_WF_COUNT]; }
 
@@ -306,6 +413,8 @@ static const Form ht_forms[FORM_COUNT - FORM_WF_COUNT] = {
   [FORM_LASERS - FORM_WF_COUNT] = {{MON_METTATON}, 1, ""},
   [FORM_RGUARDS - FORM_WF_COUNT] = {{MON_RG01, MON_RG02}, 2, "* The Royal Guards attack!"},
   [FORM_BOMB - FORM_WF_COUNT] = {{MON_BOMB}, 1, ""},
+  [FORM_MUFFET - FORM_WF_COUNT] = {{MON_MUFFET}, 1, "* Muffet blocks the way!"},
+  [FORM_MTT_TILES - FORM_WF_COUNT] = {{MON_MTT_TILES}, 1, "* Mettaton attacks!"},
 };
 const Form *ht_form(int form) { return form == FORM_BOMB ? &bomb_forms[g_bomb_kind] : &ht_forms[form - FORM_WF_COUNT]; }
 
@@ -476,13 +585,108 @@ static void atk_rg_team(int t) {
   }
 }
 
-int ht_attack_length(int atk) { (void)atk; return 160; }
+/* Muffet's: spiders crawl along the strings (riding them when they're pulled); croissants thrown along one come
+ * back; donuts bounce about the board; and at mealtimes her pet waits at the bottom while the strings are pulled down
+ * to it */
+static void spider_on(int string, bool left, int speed) {
+  Bullet *b = shot(SPR_SPIDER_B, left ? bx0() - 6 : bx1() + 6, soul_string_y(string), (left ? 1 : -1) * speed, 0);
+  if (b) b->kind = BK_SCRIPT, b->a = (int16_t)string, b->flags |= BF_NOCLIP, b->r = 3, b->life = 260;
+}
+static void spiders_ride(void) {
+  for (int i = 0; i < MAX_BULLETS; i++) {
+    Bullet *b = &bullets[i];
+    if (b->kind != BK_SCRIPT || b->spr != SPR_SPIDER_B) continue;
+    b->x += b->vx, b->y = soul_string_y(b->a) * FX;
+    if (++b->t >= b->life) b->kind = BK_NONE;
+  }
+}
+static void atk_muffet_spiders(int t) {
+  if (t < 130 && t % 14 == 0) spider_on(rnd_n(NSTRINGS), rnd_n(2), P(2));
+  spiders_ride();
+}
+static void atk_muffet_croissants(int t) {
+  if (t < 110 && t % 26 == 0) {
+    bool left = rnd_n(2);
+    Bullet *b = shot(SPR_CROISSANT, left ? bx0() - 6 : bx1() + 6, soul_string_y(rnd_n(NSTRINGS)), (left ? 1 : -1) * P(4), 0);
+    if (b) b->ax = left ? -1 : 1, b->r = 4, b->flags |= BF_NOCLIP, b->life = 140, b->angle = left ? 128 : 0;
+  }
+}
+static void atk_muffet_donuts(int t) {
+  if (t < 110 && t % 20 == 0) {
+    bool left = (t / 20) % 2;
+    Bullet *b = shot(SPR_DONUT, left ? bx0() + 4 : bx1() - 4, by0() + 4, (left ? 1 : -1) * P(2), P(2));
+    if (b) b->kind = BK_SCRIPT, b->a = 3, b->r = 4, b->flags |= BF_NOCLIP;
+  }
+  for (int i = 0; i < MAX_BULLETS; i++) {
+    Bullet *b = &bullets[i];
+    if (b->kind != BK_SCRIPT || b->spr != SPR_DONUT) continue;
+    b->x += b->vx, b->y += b->vy, b->t++;
+    bool hx = b->x < P(bx0() + 2) || b->x > P(bx1() - 2), hy = b->y < P(by0() + 2) || b->y > P(by1() - 2);
+    if (b->t > 6 && (hx || hy)) {
+      if (--b->a <= 0) b->kind = BK_NONE;
+      if (hx) b->vx = -b->vx;
+      if (hy) b->vy = -b->vy;
+    }
+  }
+}
+static void atk_muffet_pet(int t) {
+  if (t == 0) {
+    Bullet *p = shot(SPR_MUFFET_PET, board_cx(), by1() + 8, 0, 0);
+    if (p) p->flags |= BF_BOX | BF_NOCLIP, p->w = 90, p->h = 26, p->anim = 6, p->life = 150, p->dmg = 4;
+  }
+  /* the strings, down towards it (round again from the top) */
+  soul_strings_shift += P(1) / 2;
+  if (t < 130 && t % 30 == 0) spider_on(rnd_n(NSTRINGS), rnd_n(2), P(1));
+  spiders_ride();
+}
+
+/* Mettaton's: rows of boxes falling, a gap in each; turned yellow, the SOUL shoots at him as he glides about over
+ * the board (six hits, and he's out of power), a few boxes still falling */
+static void atk_mtt_boxes(int t) {
+  if (t < 130 && t % 26 == 0) {
+    static const uint8_t gaps[6] = {1, 4, 2, 5, 0, 3};
+    int n = (bx1() - bx0()) / 16, gap = gaps[(t / 26) % 6] % n;
+    for (int k = 0; k < n; k++) {
+      if (k == gap || k == gap + 1) continue;
+      Bullet *b = shot(SPR_PRESENT, bx0() + 8 + k * 16, by0() - 8, 0, P(2));
+      if (b) b->r = 5, b->flags |= BF_NOCLIP, b->life = 90;
+    }
+  }
+}
+static Bullet *mtt_target;
+static void atk_mtt_yellow(int t) {
+  if (t == 0) {
+    mtt_target = shot(SPR_MTTMINI, board_cx(), by0() + 12, P(3) / 2, 0);
+    if (mtt_target) mtt_target->kind = BK_SCRIPT, mtt_target->flags |= BF_HARMLESS;
+  }
+  Bullet *m = mtt_target;
+  if (!m || m->kind != BK_SCRIPT || m->spr != SPR_MTTMINI) return;
+  m->x += m->vx;
+  if (m->x < P(bx0() + 10) || m->x > P(bx1() - 10)) m->vx = -m->vx;
+  if (m->c) m->c--, m->alpha = m->c % 2 ? 90 : 255;
+  for (int i = 0; i < MAX_BULLETS; i++) {
+    Bullet *s = &bullets[i];
+    if (s->kind == BK_NONE || !(s->flags & BF_PLAYER)) continue;
+    if (abs_i(s->x - m->x) < P(9) && abs_i(s->y - m->y) < P(11)) {
+      s->kind = BK_NONE;
+      bt.state[MT_HITS]++, m->c = 10;
+    }
+  }
+  if (t < 130 && t % 40 == 20) {
+    Bullet *b = shot(SPR_PRESENT, m->x / FX, m->y / FX + 10, 0, P(2));
+    if (b) b->r = 5, b->flags |= BF_NOCLIP, b->life = 80;
+  }
+}
+
+int ht_attack_length(int atk) { return atk == ATK_MUFFET_PET ? 150 : 160; }
 
 void ht_attack_run(Battle *b, int atk, int t) {
   (void)b;
   if (t < 0) {
-    board_set(atk == ATK_TSUNDER_BOMBS || atk == ATK_PYROPE_ROPE ? 150 : 120, 100);
-    soul_set_mode(SOUL_RED);
+    bool muffet = atk >= ATK_MUFFET_SPIDERS && atk <= ATK_MUFFET_PET;
+    board_set(muffet ? 190 : atk == ATK_TSUNDER_BOMBS || atk == ATK_PYROPE_ROPE ? 150 : atk == ATK_MTT_BOXES ? 140 : 120,
+              muffet ? 90 : 100);
+    soul_set_mode(muffet ? SOUL_PURPLE : atk == ATK_MTT_YELLOW ? SOUL_YELLOW : SOUL_RED);
     return;
   }
   switch (atk) {
@@ -493,5 +697,11 @@ void ht_attack_run(Battle *b, int atk, int t) {
     case ATK_PYROPE_BOMBS: atk_pyrope_bombs(t); break;
     case ATK_PYROPE_ROPE: atk_pyrope_rope(t); break;
     case ATK_RG_TEAM: atk_rg_team(t); break;
+    case ATK_MUFFET_SPIDERS: atk_muffet_spiders(t); break;
+    case ATK_MUFFET_CROISSANTS: atk_muffet_croissants(t); break;
+    case ATK_MUFFET_DONUTS: atk_muffet_donuts(t); break;
+    case ATK_MUFFET_PET: atk_muffet_pet(t); break;
+    case ATK_MTT_BOXES: atk_mtt_boxes(t); break;
+    case ATK_MTT_YELLOW: atk_mtt_yellow(t); break;
   }
 }

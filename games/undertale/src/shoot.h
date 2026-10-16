@@ -2,7 +2,7 @@
 #ifndef UT_SHOOT_H
 #define UT_SHOOT_H
 #include <stdint.h>
-enum { SHOOT_RIGHT, SHOOT_LEFT, SHOOT_COUNT };
+enum { SHOOT_RIGHT, SHOOT_LEFT, SHOOT_NORTH, SHOOT_SOUTH, SHOOT_COUNT };   /* (the first floor's, then the third's) */
 void shoot_open(int id);      /* MODE_SHOOT until solved or left */
 int shoot_result(void);       /* 1 solved, 0 left */
 void shoot_update(uint32_t keys, uint32_t pressed);

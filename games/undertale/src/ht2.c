@@ -1,7 +1,7 @@
 /* Hotland, its second floor: out of the elevator, Sans's hot dog stand and Heats Flamesman; the crossroads (the
  * invisible path up to the Art Club's room, the Stained Apron down south); the conveyor belt puzzle and the vent
  * puzzle; the Bad Opinion Zone; the Royal Guards at the bend; Mettaton's news report and its six bombs; the CORE
- * again, and the elevator up. (As the Undertale Wiki describes them; what they say is ours, in short.) */
+ * again, and the elevator up to the third floor. (As the Undertale Wiki describes them; what they say is ours, in short.) */
 #include <stddef.h>
 #include <stdio.h>
 #include "battle.h"
@@ -478,9 +478,7 @@ static int ev_elevator(Ev *c) {
   NARRATE("* (The elevator up.)\n* (Get in?)@Yes@No");
   if (CHOICE() == 1) return 1;
   set_flag(F_HT_FLOOR2, 1);
-  sv.room = (int16_t)g_room, sv.x = 3760, sv.y = 1340;
-  save_write_auto();
-  menu_end_open();
+  FADE_TO(ROOM_HT_L3, 3770, 842, DIR_DOWN);
   EV_END;
 }
 

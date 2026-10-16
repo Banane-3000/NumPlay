@@ -8,7 +8,7 @@
 
 <p align="center">
   <b>Fall into the Underground as a human child, on the NumWorks calculator.</b><br>
-  The Ruins, Snowdin, Waterfall and Hotland's first two floors, from the bed of golden flowers to the elevator past Mettaton's news report. The rest of the Underground is on the way.
+  The Ruins, Snowdin, Waterfall and all of Hotland, from the bed of golden flowers to the stairs up to the MTT Resort. The rest of the Underground is on the way.
 </p>
 
 <p align="center">
@@ -28,7 +28,8 @@
 * **Waterfall:** Monster Kid, Grillby's with Sans, the echo flowers, the bridge seeds (and the secret bridge to the quiche), the wishing room, Undyne chasing you with her spears, Sans's telescope, the marsh where the land is black and the water glows, Onionsan, the piano's secret song, the statue in the rain and Monster Kid under your umbrella. Then the fall into the garbage dump, Mad Dummy, Napstablook's house and snail farm, the small bird back over the gap, Gerson's shop, the mushroom maze and Temmie Village with its Tem Shop. And at the end of Waterfall: the lantern maze, Undyne at the dead end (and Monster Kid in her way), the echo flowers' path, Monster Kid on the chasm's bridge, Undyne on her crag, her fight and her chase, and Hotland's edge, where the heat gets her and the water cooler helps.
 * **Hotland's first floor:** Alphys's Lab, where Mettaton bursts in with his quiz show, the conveyor belts, the Magma Chamber's steam vents and the burnt pan, the laser walkway, the two shooting puzzles that open the door, the vents over the lava and Mettaton's cooking show, with your phone's jetpack, up to the elevator. Alphys calls you as you go.
 * **Hotland's second floor:** Sans's hot dog stand and Heats Flamesman, the invisible path to the Art Club's room, the Stained Apron, the conveyor belt puzzle and its three switches, the vent puzzle, the Bad Opinion Zone, the Royal Guards, and Mettaton's news report, where everything is a bomb and the clock is running.
-* **Battles like in the game:** FIGHT with the timing bar, ACT, ITEM and MERCY, and your SOUL dodging each monster's own attacks in the box: Froggit, Whimsun, Moldsmal, Loox, Vegetoid, Migosp, Napstablook and Toriel in the Ruins; Snowdrake, Ice Cap, Gyftrot, Jerry, Chilldrake, Glyde, Doggo, Lesser Dog, Dogamy and Dogaressa, Greater Dog and Papyrus, whose blue attack makes your SOUL fall, in Snowdin; Aaron, Woshua, Moldbygg, Shyren, Temmie, Mad Dummy, who can't be hurt, and Undyne, who turns your SOUL green, in Waterfall; Vulkin, Tsunderplane, Pyrope and the Royal Guards in Hotland, and the news report's bombs, defused in the DEFUSE ZONE.
+* **Hotland's third floor:** the spiders' bake sale, the vent islands and their two shooting puzzles (the Diamond Boys, and Alphys asking you to watch anime), the conveyor belts past the laser drones, the spider entrance and Muffet's sticky lair, Mettaton's musical and the trapdoor to his tile puzzle against the clock, and the crossroads with the Nice Cream guy and Heats Flamesman, by the stairs up to the MTT Resort.
+* **Battles like in the game:** FIGHT with the timing bar, ACT, ITEM and MERCY, and your SOUL dodging each monster's own attacks in the box: Froggit, Whimsun, Moldsmal, Loox, Vegetoid, Migosp, Napstablook and Toriel in the Ruins; Snowdrake, Ice Cap, Gyftrot, Jerry, Chilldrake, Glyde, Doggo, Lesser Dog, Dogamy and Dogaressa, Greater Dog and Papyrus, whose blue attack makes your SOUL fall, in Snowdin; Aaron, Woshua, Moldbygg, Shyren, Temmie, Mad Dummy, who can't be hurt, and Undyne, who turns your SOUL green, in Waterfall; Vulkin, Tsunderplane, Pyrope and the Royal Guards in Hotland, the news report's bombs, defused in the DEFUSE ZONE, Muffet, whose purple SOUL keeps to her strings, and Mettaton, worn down by the yellow SOUL's shots.
 * **Spare or fight:** every monster can be spared, and Flowey at the door remembers what you did. Lose to Papyrus and he only locks you in his shed.
 * **Saved like in the game:** SAVE at the stars, with the room and the time played. The C menu has your ITEM, STAT and CELL. Home keeps the moment you were at, and your save is also copied into `undertale_saves.py`, so installing the app again doesn't erase it.
 
@@ -125,6 +126,18 @@
     <td align="center"><img src="docs/news.png" width="390" alt="Mettaton's news report"><br><sub>MTT News: two minutes to go</sub></td>
     <td align="center"><img src="docs/defuse.png" width="390" alt="Defusing a bomb"><br><sub>Defuse it in the DEFUSE ZONE</sub></td>
   </tr>
+  <tr>
+    <td align="center"><img src="docs/shoot3.png" width="390" alt="The third floor's shooting puzzle"><br><sub>One shot to clear the way</sub></td>
+    <td align="center"><img src="docs/muffet.png" width="390" alt="Muffet's battle"><br><sub>Muffet's strings, the purple SOUL</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/musical.png" width="390" alt="Mettaton's musical"><br><sub>Mettaton's musical</sub></td>
+    <td align="center"><img src="docs/tiles.png" width="390" alt="The tile puzzle"><br><sub>The tile puzzle, against the clock</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/yellow.png" width="390" alt="The yellow SOUL"><br><sub>The yellow button</sub></td>
+    <td align="center"><img src="docs/crossroads.png" width="390" alt="The crossroads"><br><sub>Nice Cream, by the MTT Resort</sub></td>
+  </tr>
 </table>
 
 ## How to play
@@ -137,7 +150,7 @@ Snowdin brings new things: when Papyrus turns your SOUL blue, it falls to the bo
 
 In Waterfall, walk into a bridge seed to push it: in the water it blooms into a flower you can walk on, and the bell calls the seeds back. A green bullet heals you instead of hurting. Talk to the piano to play it, and keep an umbrella for the rain. The Tem Shop is the one shop that buys what you carry. When Undyne turns your SOUL green, it can't move: turn its shield with the arrows to block her spears. She can't be spared: run, and she'll chase you.
 
-In Hotland, conveyor belts carry you and steam vents throw you over the lava (the one in the middle of the puzzle hub turns each time). Keep moving through orange lasers and stand still for blue ones. In a shooting puzzle, the arrows push every dark block one cell and Z shoots: break your way to the target in two shots. In Mettaton's quiz, move your SOUL onto an answer and press OK; Alphys signals the right one. Alphys's upgrade puts the Dimensional Box in your phone's CELL. On the second floor, the top conveyor belt carries you past three switches: press them one after another as you go by. In the vent puzzle, every panel you land on turns all the vents around, and the one at the top turns them back. To spare the Royal Guards, clean 02's armor, catch its green stars, then whisper to 01. In the news report, touch a bomb to face it, and Defuse it (or FIGHT it) while it's in the DEFUSE ZONE.
+In Hotland, conveyor belts carry you and steam vents throw you over the lava (the one in the middle of the puzzle hub turns each time). Keep moving through orange lasers and stand still for blue ones. In a shooting puzzle, the arrows push every dark block one cell and Z shoots: break your way to the target in two shots. In Mettaton's quiz, move your SOUL onto an answer and press OK; Alphys signals the right one. Alphys's upgrade puts the Dimensional Box in your phone's CELL. On the second floor, the top conveyor belt carries you past three switches: press them one after another as you go by. In the vent puzzle, every panel you land on turns all the vents around, and the one at the top turns them back. To spare the Royal Guards, clean 02's armor, catch its green stars, then whisper to 01. In the news report, touch a bomb to face it, and Defuse it (or FIGHT it) while it's in the DEFUSE ZONE. On the third floor, ride the belt past the blue drones without a step. When Muffet turns your SOUL purple, it keeps to three strings: Up and Down hop between them, Left and Right move along. In the tile puzzle, red tiles are walls, yellow ones shock you back, orange ones make you smell of oranges (and the blue water's piranhas bite then), purple soap slides you on and makes you smell of lemons, and blue next to yellow is electrified. After it, ACT and press the yellow button: your SOUL turns yellow, and OK shoots.
 
 Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) shows your items, your STAT and the phone numbers you have.
 
@@ -154,7 +167,7 @@ Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) sh
 ## Good to know
 
 * **One app at a time:** Undertale is too big to sit next to NumPlay or the other big games. Installing it from the NumWorks website swaps them out, and installing them again swaps it out. Your saves in each one are kept.
-* **The Ruins, Snowdin, Waterfall and Hotland's first two floors, for now:** the elevator past Mettaton's news report ends the game, on a screen that says the rest of the Underground is still to come. The rest of Hotland, the CORE and New Home come next, one at a time.
+* **The Ruins, Snowdin, Waterfall and Hotland, for now:** the stairs up to the MTT Resort end the game, on a screen that says the rest of the Underground is still to come. The MTT Resort, the CORE and New Home come next, one at a time.
 * **No music or sound:** the calculator has no speaker.
 * **The same Underground:** the rooms and pictures are the game's, everyone says what they say in the game (the longer speeches in shorter words of our own), and the puzzles and battles follow how the game plays them, at its 30 frames a second.
 

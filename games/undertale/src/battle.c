@@ -768,6 +768,8 @@ void battle_draw(void) {
   gfx_clip(bt.x0 + 2, bt.y0 + 2, bt.x1 - bt.x0 - 4, bt.y1 - bt.y0 - 4);
   draw_box_contents();
   if (bt.phase == P_ATTACK) {
+    if (bt.soul_mode == SOUL_PURPLE)
+      for (int i = 0; i < NSTRINGS; i++) gfx_rect(bt.x0 + 2, soul_string_y(i), bt.x1 - bt.x0 - 4, 1, rgb565(0xD535D9), 255);
     attack_draw(&bt, bt.atk, bt.atk_t);
     bullets_draw();
     if (!bt.inv || (bt.inv / 2) % 2) gfx_sprite(SPR_HEART, bt.soul_mode, soul_x(), soul_y(), 0, 255);

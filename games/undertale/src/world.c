@@ -286,7 +286,8 @@ static void player_move(uint32_t keys, uint32_t pressed) {
     slide_dx = slide_dy = 0;
   }
   bool moved = false;
-  for (int i = 0; i < SPEED; i++) {
+  int sp = room_speed(pl.x + PBX + PBW / 2, pl.y + PBY + PBH / 2);
+  for (int i = 0; i < sp; i++) {
     if (dx) moved |= step(dx, 0, !dy);
     if (dy) moved |= step(0, dy, !dx);
   }

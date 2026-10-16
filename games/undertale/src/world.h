@@ -86,6 +86,7 @@ Obj *obj_rock(int x, int y, int name, int event);   /* pushed by walking into it
 void obj_set_box(Obj *o, int bx, int by, int bw, int bh);
 bool near_frisk(const Obj *o, int d);      /* within d pixels (their feet) */
 bool room_ice(int x, int y);               /* rooms.c: ice there (Frisk slides) */
+int room_speed(int x, int y);              /* rooms.c: Frisk's steps a frame there (3; webs slow him) */
 /* rooms.c: a pushed rock that the floor stops (it may go into water, a bridge seed), then where it went */
 bool room_rock_enters(Obj *o, int x, int y);
 void room_rock_moved(Obj *o);

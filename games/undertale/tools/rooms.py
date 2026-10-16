@@ -152,6 +152,15 @@ HT_KITCHEN = []
 HT_VENTS_MAGMA = [(3120, 4000), (3362, 4000), (3503, 4060), (3420, 4180), (3225, 4240), (3325, 4240), (3525, 4240)]
 HT_VENTS_HUB = [(4820, 3620), (4820, 3560), (4740, 3620), (4900, 3620)]
 HT_VENTS_ISLE = [(4940, 3120), (5060, 3120), (5180, 3120)]
+# the third floor: the vent islands (their top-left; the grates' arrows point the way each blows), the grates off
+# them (the corridor's end, the walkways north and south, the platform east), the stage's purples, the tiles' colours
+# (red left out: its tiles are walls)
+HT3_ISLES = [(4720, 700), (4800, 700), (4880, 700), (4640, 780), (4720, 780), (4800, 780), (4880, 780), (4960, 780),
+             (4640, 860), (4720, 860), (4800, 860), (4880, 860), (4960, 860), (4640, 940), (4720, 940), (4800, 940),
+             (4880, 940), (4960, 940), (4720, 1020), (4800, 1020), (4880, 1020)]
+HT3_GRATES = [(4600, 880), (4820, 660), (4820, 1100), (5040, 880)]
+HT_STAGE = [(163, 73, 164), (132, 53, 125), (55, 44, 103)]
+HT_TILES = [(64, 64, 255), (255, 255, 128), (255, 192, 192), (156, 255, 121), (255, 193, 74), (192, 0, 192)]
 # the vent puzzle's platforms (their top-left)
 HT_VENTPUZ = [(4620, 2160), (4520, 2260), (4620, 2260), (4720, 2260), (4520, 2360), (4620, 2360), (4520, 2460),
               (4620, 2460)]
@@ -171,6 +180,10 @@ AREAS.append(dict(name="hotland", map="Hotland_map.png", floor=HT_FLOOR, margin=
     # the news report's bombs that move: the script on the belt (the belt repeats every 5 pixels), the basketball, the
     # glass of water (in front of a rock: the same rock, a row up)
     ("copy", 4318, 1850, 24, 26, 4318, 1875), ("erase", 3999, 1565, 21, 20, "ring"), ("copy", 4118, 1576, 26, 24, 4118, 1616),
+    # the third floor: the Diamond Boys (there once the north puzzle's done), Muffet in her web (the web repeats every
+    # 60 pixels), Mettaton over the tiles, the Royal Guards by the Nice Cream (there if they were spared)
+    ("erase", 4736, 414, 30, 40, "ring"), ("erase", 4890, 412, 30, 50, "ring"), ("copy", 6332, 452, 32, 50, 6272, 452),
+    ("erase", 6400, 540, 50, 64, [(0, 0, 0)]), ("erase", 7578, 352, 84, 58, "ring"),
     # Undyne, fallen on the bridge in the heat (an object here, there only if she chased Frisk): the planks repeat
     # every 40 pixels
     ("copy", 454, 6219, 50, 21, 534, 6219),
@@ -554,6 +567,30 @@ ROOMS = [
     dict(name="ht_news", area="hotland", rect=(3760, 1540, 880, 500), title="Hotland", floor_colors=HT_STRIPE + HT_BELT,
          doors=[((3760, 1760, 6, 40), "ht_guards", (3670, 2030), "left")]),
     dict(name="ht_coreview2", area="hotland", rect=(3680, 1200, 960, 340), title="Hotland", floor_colors=HT_STRIPE),
+    # the third floor: out of the elevator, the spider bake sale; the vent islands (both puzzles open the door east);
+    # north to the Diamond Boys and a shooting puzzle; south over the belts, past the laser drones, to the other;
+    # through the door, the spider entrance and Muffet's lair; Mettaton's musical, the tile puzzle below its stage;
+    # the crossroads by the elevator R3, the MTT Resort north
+    dict(name="ht_l3", area="hotland", rect=(3660, 740, 900, 240), title="Hotland", floor_colors=HT_HUB,
+         fix=[("walk", 4556, 876, 28, 28)]),
+    dict(name="ht_hub3", area="hotland", rect=(4560, 620, 740, 500), title="Hotland", floor_colors=HT_HUB,
+         fix=[("walk", x, y, 60, 60) for x, y in HT3_ISLES] + [("walk", x - 4, y - 4, 28, 28) for x, y in HT3_GRATES],
+         doors=[((5205, 700, 50, 6), "ht_spiderent", (5220, 525), "up")]),
+    dict(name="ht_north3", area="hotland", rect=(4700, 140, 300, 480), title="Hotland", floor_colors=HT_HUB,
+         fix=[("walk", 4808, 236, 44, 108)]),
+    dict(name="ht_belts3", area="hotland", rect=(4780, 1120, 680, 500), title="Hotland", floor_colors=HT_HUB + HT_BELT),
+    dict(name="ht_south3", area="hotland", rect=(5460, 940, 200, 680), title="Hotland", floor_colors=HT_HUB + HT_BELT,
+         fix=[("walk", 5518, 1216, 44, 104)]),
+    dict(name="ht_spiderent", area="hotland", rect=(5180, 400, 240, 170), title="Hotland", floor_colors=HT_HUB,
+         doors=[((5205, 560, 50, 6), "ht_hub3", (5220, 704), "down")]),
+    dict(name="ht_lair", area="hotland", rect=(5420, 300, 1220, 240), title="Hotland", open=True,
+         floor_rects=[(5420, 461, 1220, 38)]),
+    dict(name="ht_stage", area="hotland", rect=(6640, 180, 680, 360), title="Hotland", floor_colors=HT_STAGE,
+         fix=[("walk", 6640, 461, 140, 38)]),
+    dict(name="ht_tiles", area="hotland", rect=(6340, 540, 1280, 260), title="Hotland",
+         floor_colors=HT_FLOOR + HT_BELT + HT_HUB + HT_TILES, fix=[("walk", 7522, 540, 56, 84)]),
+    dict(name="ht_cross3", area="hotland", rect=(7320, 280, 820, 260), title="Hotland",
+         fix=[("walk", 7522, 290, 56, 124), ("walk", 7522, 470, 56, 70)]),
 ]
 
 # rooms one above the other through a dark doorway (tools/pack.py: apply_links); ("h", left, right, y, h): side
