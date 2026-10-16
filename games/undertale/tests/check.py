@@ -169,8 +169,7 @@ if not QUICK:
 
 # Waterfall's west half, the friendly way: Monster Kid, Grillby's with Sans, the tutu, Papyrus's report, the bridge
 # seeds (and the secret one to the quiche), the wishing room, Undyne's spears, the telescope, the punch card, the marsh
-# (the ballet shoes), the bird,
-# Onionsan, the piano and the artifact, Shyren, the umbrellas, Monster Kid in the rain, the bridge cut
+# (the ballet shoes), Onionsan, the piano and the artifact, Shyren, the umbrellas, Monster Kid in the rain, the bridge cut
 if not QUICK:
     s = run(["--name", "Frisk", "--noenc", "--god", "--room", str(ROOMS["WF1"]), "--at", "30,1480", "--path-file",
              os.path.join(HERE, "waterfall.path")], 45000, what="Waterfall")
@@ -178,7 +177,7 @@ if not QUICK:
     if s:
         for name, v in (("WF_MK", 1), ("GRILLBYS", 1), ("WF_TUTU", 1), ("WF_UNDYNE1", 1), ("SEEDS1", 1), ("SEEDS2", 1),
                         ("SEEDS3", 1), ("WF_QUICHE", 1), ("CHASE1", 1), ("WF_TELESCOPE", 1), ("WF_PUNCH", 1), ("WF_BALLET", 1),
-                        ("WF_BIRD", 1), ("WF_ONION", 2), ("PIANO", 1), ("WF_ARTIFACT", 1), ("SHYREN", 1),
+                        ("WF_ONION", 2), ("PIANO", 1), ("WF_ARTIFACT", 1), ("SHYREN", 1),
                         ("UMBRELLA", 3), ("MK_RAIN", 2), ("WF_BRIDGE", 1)):
             check(flag(s, name) == v, f"Waterfall: F_{name} is {flag(s, name)}, not {v}")
         check(s["kills"] == 0, f"Waterfall: {s['kills']} killed on the friendly way")

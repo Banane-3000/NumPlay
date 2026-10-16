@@ -484,21 +484,6 @@ def collision(area, r):
     big = np.zeros((Y1 - Y0, X1 - X0), bool)
     xs0, ys0, xs1, ys1 = max(X0, 0), max(Y0, 0), min(X1, W), min(Y1, H)
     big[ys0 - Y0:ys1 - Y0, xs0 - X0:xs1 - X0] = np.isin(area.idx[ys0:ys1, xs0:xs1], list(walk_idx))
-    if r.get("tufts"):
-        # black ground with grass tufts on it, black nothing without: black is floor only within `tufts` pixels of a
-        # tuft (a little blot of another colour with black all around it)
-        win = np.zeros(big.shape, area.idx.dtype)
-        win[ys0 - Y0:ys1 - Y0, xs0 - X0:xs1 - X0] = area.idx[ys0:ys1, xs0:xs1]
-        black = np.isin(win, [i for i, k in enumerate(area.rgb) if k == (0, 0, 0) and i != area.transparent])
-        lab, n = ndimage.label(~black, np.ones((3, 3)))
-        tuft = np.zeros_like(black)
-        for i, sl in enumerate(ndimage.find_objects(lab)):
-            hh, ww = sl[0].stop - sl[0].start, sl[1].stop - sl[1].start
-            if hh <= 12 and ww <= 12:
-                ring = ndimage.binary_dilation(lab[sl] == i + 1, iterations=1) & (lab[sl] != i + 1)
-                if black[sl][ring].all():
-                    tuft[sl] |= lab[sl] == i + 1
-        big &= ~black | (ndimage.distance_transform_edt(~tuft) <= r["tufts"])
     sub = big[margin:margin + ch * 4, margin:margin + cw * 4]
     if r.get("open"):   # floors of many colours (a carpet, planks): its floor_rects alone say
         sub = np.ones_like(sub)

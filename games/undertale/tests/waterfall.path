@@ -119,7 +119,7 @@ go:6700,560
 talk
 w30
 talk
-# the crystals' SAVE, Sans's telescope, the Nice Cream cart and the punch card upstairs, the bird
+# the crystals' SAVE, Sans's telescope, the Nice Cream cart and the punch card upstairs
 go:7248,562
 u
 z
@@ -137,7 +137,8 @@ go:8050,130
 u
 z
 talk
-# down the ladder into the marsh: the ballet shoes in the tall grass, an echo flower, the history sign
+# south past Loren, down the ladder into the marsh: the ballet shoes in the tall grass, an echo flower, the history
+# sign, then up to Onionsan's path; the piano's song (the artifact), Shyren (hummed along with)
 go:8140,560
 go:8140,700
 go:7590,1250
@@ -152,23 +153,14 @@ go:8850,840
 u
 z
 talk
-go:8140,700
-go:8140,560
-go:8000,560
-go:8300,560
-go:8440,560
-r
-z
+go:8770,760
+go:8800,664
+go:8900,664
 talk
-w60
-# Onionsan, the piano's song (the artifact), Shyren (hummed along with)
-go:8700,600
-go:8900,600
+go:9300,664
+go:9600,664
 talk
-go:9300,600
-go:9600,600
-talk
-go:9850,620
+go:9850,664
 go:10070,640
 go:10066,412
 u

@@ -297,8 +297,9 @@ SPRITES = [
     ("woshua_ow", "wiki:Woshua_overworld.gif", {"feet": True}),
     ("seed", "wiki:Bridge_Seed_overworld.png", {"keep": True}),
     ("bloom", "wiki:Bridge_Seed_overworld_flower.png", {"keep": True}),
-    # what lies about Waterfall to be picked up (cut from the map, its floor made see-through): the tutu, the
-    # artifact on its pedestal
+    # what's about Waterfall (cut from the map, its floor made see-through): the small bird, and to be picked up,
+    # the tutu, the artifact on its pedestal
+    ("bird", "map:Waterfall_map.png:8466,578,15,19", {"keep": True, "clear": [(27, 33, 90), (27, 21, 72), (23, 13, 43)]}),
     ("tutu", "map:Waterfall_map.png:1240,1240,22,10", {"keep": True, "clear": [(23, 13, 43), (27, 21, 72), (27, 33, 90)]}),
     ("artifact", "map:Waterfall_map.png:10156,150,12,11",
      {"keep": True, "clear": [(27, 21, 72), (27, 33, 90), (54, 47, 121), (99, 102, 135)]}),

@@ -120,7 +120,8 @@ AREAS.append(dict(name="waterfall", map="Waterfall_map.png", floor=WF_FLOOR, mar
     # the bridge seeds (the game's objects too) and the bridges they make, drawn solved
     *[("erase", x, y, 20, 20, WF_FLOOR) for x, y in [(2300, 1420), (2280, 1440), (2320, 1440), (2300, 1460),
                                                      (2960, 1340), (3000, 1340), (2960, 1380), (3000, 1380)]],
-    # the tutu and the artifact (objects, gone once taken)
+    # the bird (it waits across the gap), the tutu and the artifact (objects, gone once taken)
+    ("erase", 8466, 578, 15, 19, [(27, 33, 90), (27, 21, 72), (23, 13, 43)]),
     ("erase", 1240, 1240, 22, 10, [(23, 13, 43), (27, 21, 72), (27, 33, 90)]),
     ("erase", 10156, 150, 12, 7, [(27, 21, 72), (27, 33, 90), (54, 47, 121)]),
     ("fill", 10156, 157, 12, 1, (0, 0, 0)), ("fill", 10156, 158, 12, 3, (99, 102, 135)),
@@ -364,19 +365,23 @@ ROOMS = [
     dict(name="wf_sans2", area="waterfall", rect=(7840, 0, 360, 600), title="Waterfall", floor_colors=WF_WATER,
          floor_rects=[(7860, 92, 300, 118), (7956, 206, 38, 360), (7840, 556, 360, 50)],
          fix=[("walk", 7956, 420, 38, 140)]),
-    # the marsh: its shallow glowing water and its grassy black ground are walked on (plain black is nothing, the
-    # planks cross it); the boardwalk ends at a gap the bird carries Frisk over, a ladder goes down into the marsh
+    # the marsh, where the colours turn: its land is black, its water bright blue (the planks cross it), and around
+    # it plain black is nothing (its rectangles); the boardwalk ends at a gap the bird carries Frisk over, a ladder
+    # goes down into the marsh
     dict(name="wf_marsh_top", area="waterfall", rect=(8200, 400, 450, 200), title="Waterfall",
-         floor_colors=WF_WATER + [(23, 13, 43), (0, 0, 0)], tufts=44, floor_rects=[(8200, 556, 284, 64), (8536, 556, 114, 64)]),
+         floor_colors=WF_WATER + [(23, 13, 43), (0, 0, 0)], floor_rects=[(8200, 556, 284, 64), (8536, 556, 114, 64)]),
     dict(name="wf_marsh_mid", area="waterfall", rect=(7400, 600, 1250, 200), title="Waterfall",
-         floor_colors=[(0, 0, 0)] + WF_CYAN, tufts=44,
+         floor_colors=[(0, 0, 0)], floor_rects=[(8060, 600, 590, 100), (8060, 700, 110, 100), (7760, 780, 300, 20)],
          fix=[("walk", 8140, 600, 20, 84)]),
     dict(name="wf_marsh", area="waterfall", rect=(7400, 800, 1650, 660), title="Waterfall",
-         floor_colors=[(0, 0, 0)] + WF_CYAN, tufts=44,
+         floor_colors=[(0, 0, 0)], floor_rects=[(7660, 800, 510, 660), (8170, 940, 190, 520), (8360, 1000, 380, 460),
+                                               (8740, 800, 55, 660), (8795, 800, 85, 120), (8795, 1000, 265, 460),
+                                               (7460, 1150, 200, 190)],
          fix=[("walk", x, y - 2, w, h + 4) for x, y, w, h in [(7821, 825, 58, 55), (7921, 945, 58, 55), (8301, 1005, 58, 55),
               (8741, 1005, 58, 55), (8561, 1145, 58, 55), (7941, 1220, 59, 60), (8501, 1360, 59, 57), (8741, 1440, 56, 17)]]),
-    dict(name="wf_onion", area="waterfall", rect=(8650, 500, 1250, 300), title="Waterfall", floor_colors=WF_WATER,
-         fix=[("walk", 8648, 560, 16, 40), ("walk", 9800, 600, 20, 58), ("walk", 9860, 640, 40, 58)]),
+    # (up from the marsh, a narrow black path by Onionsan's water)
+    dict(name="wf_onion", area="waterfall", rect=(8650, 500, 1250, 300), title="Waterfall", floor_colors=[(0, 0, 0)],
+         floor_rects=[(8740, 656, 1160, 48), (8740, 656, 60, 144)], fix=[("walk", 9860, 660, 40, 40)]),
     dict(name="wf_piano", area="waterfall", rect=(9900, 20, 600, 780), title="Waterfall", floor_colors=WF_WATER,
          floor_rects=[(10060, 140, 200, 64), (10136, 200, 48, 104), (10118, 300, 64, 100), (10040, 398, 220, 64),
                       (10118, 460, 64, 140), (10040, 598, 220, 124), (9900, 638, 142, 46), (10258, 638, 242, 46)]),

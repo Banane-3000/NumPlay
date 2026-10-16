@@ -370,11 +370,10 @@ void wf1_setup(int room, int from) {
       break;
     }
     case ROOM_WF_MARSH_TOP: {
-      /* the bird at the boardwalk's end, and (unseen) on the far side for the way back */
-      Obj *b = obj_trigger(8462, 574, 22, 26, EV_WF_BIRD, ACTOR_ANY);
+      /* the small bird waits across the gap of bright water: from its side, it carries Frisk back over */
+      obj_deco(SPR_BIRD, 8544, 578, false);
+      Obj *b = obj_trigger(8540, 574, 22, 26, EV_WF_BIRD, ACTOR_ANY);
       if (b) b->flags = OF_TALK | OF_SOLID;
-      Obj *r = obj_trigger(8536, 556, 8, 44, EV_WF_BIRD, ACTOR_ANY);
-      if (r) r->flags = OF_TALK, r->arg = 1;
       break;
     }
     case ROOM_WF_MARSH:
@@ -392,7 +391,7 @@ void wf1_setup(int room, int from) {
         static const uint16_t o[4] = {SPR_ONIONSAN, SPR_ONIONSAN, SPR_ONIONSAN, SPR_ONIONSAN};
         Obj *on = obj_npc(ACTOR_ONION, o, 8900, 650, DIR_DOWN, 0);
         if (on) on->flags = OF_BACK, on->alpha = flag(F_WF_ONION) ? 255 : 0;
-        if (!flag(F_WF_ONION)) obj_trigger(8780, 560, 20, 100, EV_WF_ONION, ACTOR_TRIGGER);
+        if (!flag(F_WF_ONION)) obj_trigger(8840, 656, 20, 48, EV_WF_ONION, ACTOR_TRIGGER);
       }
       break;
     case ROOM_WF_PIANO: {
@@ -586,12 +585,9 @@ static int ev_wf_telescope(Ev *c) {
 
 static int ev_wf_bird(Ev *c) {
   EV_BEGIN;
-  c->v[1] = c->self ? c->self->arg : 0;
-  NARRATE(c->v[1] ? "* (The little bird offers to carry you back.)@Yes@No"
-                  : "* (A little bird offers to carry you over the gap.)@Yes@No");
+  NARRATE("* (The little bird offers to carry you over the gap.)@Yes@No");
   if (CHOICE() == 0) {
-    if (c->v[1]) FADE_TO(ROOM_WF_MARSH_TOP, 8440, 562, DIR_LEFT);
-    else FADE_TO(ROOM_WF_MARSH_TOP, 8552, 562, DIR_RIGHT);
+    FADE_TO(ROOM_WF_MARSH_TOP, 8440, 562, DIR_LEFT);
     set_flag(F_WF_BIRD, 1);
   }
   EV_END;
