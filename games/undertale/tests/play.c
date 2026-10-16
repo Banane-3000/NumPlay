@@ -230,6 +230,23 @@ static uint32_t path_keys(int f) {
     }
     return (f & 1) ? K_Z : 0;
   }
+  /* "vent:x,y": toward (x, y), straight, until something starts on the way (a steam vent blows Frisk off) */
+  if (!strncmp(tok, "vent:", 5)) {
+    if (event_running()) {
+      path_at = next;
+      return 0;
+    }
+    if (g_mode != MODE_WORLD || text_active() || world_fading()) return 0;
+    int vx, vy;
+    sscanf(tok + 5, "%d,%d", &vx, &vy);
+    int dx = vx - pl.x, dy = vy - pl.y;
+    if (abs(dx) <= 1 && abs(dy) <= 1) {
+      path_at = next;
+      return 0;
+    }
+    if (abs(dx) > 1) return dx > 0 ? K_RIGHT : K_LEFT;
+    return dy > 0 ? K_DOWN : K_UP;
+  }
   if (!strncmp(tok, "go:", 3)) {
     static char *planned;
     if (g_mode != MODE_WORLD || text_active() || event_blocking() || world_fading()) return 0;
@@ -286,6 +303,12 @@ static uint32_t path_keys(int f) {
     return 0;
   }
   path_room = g_room;
+  /* or a door inside the room did (he's far from where he just was) */
+  if (abs(pl.x - path_last_x) > 40 || abs(pl.y - path_last_y) > 40) {
+    path_last_x = pl.x, path_last_y = pl.y;
+    path_at = next;
+    return 0;
+  }
   int dx = x - pl.x, dy = y - pl.y;
   if (abs(dx) <= 1 && abs(dy) <= 1) {
     path_at = next;

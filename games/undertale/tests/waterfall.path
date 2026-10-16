@@ -321,7 +321,7 @@ go:22190,2110
 22190,2030
 # the chasm: Monster Kid on the bridge, then hanging off it, helped up; Undyne on her crag, her fight (fled), her
 # chase by the river and the neon sign (Papyrus calls); Hotland: she falls in the heat, the cooler's water for her,
-# and on, where the game now ends
+# and on to the crossroads before the Lab (hotland.path goes on from there)
 go:22390,2030
 talk
 go:22626,2022
@@ -355,4 +355,4 @@ z
 pick:0
 talk
 w20
-go:1010,6220
+go:1000,6230

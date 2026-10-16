@@ -11,6 +11,7 @@
 #include "menu.h"
 #include "res.h"
 #include "save.h"
+#include "shop.h"
 #include "text.h"
 #include "world.h"
 
@@ -146,6 +147,15 @@ static void name_input(uint32_t pressed) {
 
 /* ---------------------------------------------------------------- the C menu */
 enum { M_MAIN, M_ITEMS, M_ITEM_ACT, M_STAT, M_CELL };
+/* the CELL's list: Toriel's phone (0); Papyrus's (1) once he gave his number; the Dimensional Box (2) once Alphys
+ * upgraded the phone */
+static int cell_entries(int *calls) {
+  int n = 0;
+  calls[n++] = 0;
+  if (flag(F_PAP_DATE) == 2) calls[n++] = 1;
+  if (flag(F_HT_LAB) >= 2) calls[n++] = 2;
+  return n;
+}
 
 void menu_open(void) {
   g_mode = MODE_MENU;
@@ -219,14 +229,18 @@ static void c_menu_input(uint32_t pressed) {
       if (pressed & (K_X | K_Z)) st = M_MAIN;
       break;
     case M_CELL: {
-      int n = flag(F_PAP_DATE) == 2 ? 2 : 1;   /* Toriel's phone; Papyrus's once he gave it */
+      int calls[3], n = cell_entries(calls);
       if (pressed & K_UP) sub = (sub + n - 1) % n;
       if (pressed & K_DOWN) sub = (sub + 1) % n;
       if (pressed & K_X) st = M_MAIN;
       if (pressed & K_Z) {
         menu_close();
-        event_start(EV_PHONE_MENU, NULL);
-        event_cur_arg(sub);
+        if (calls[sub] == 2) {
+          box_open();
+        } else {
+          event_start(EV_PHONE_MENU, NULL);
+          event_cur_arg(calls[sub]);
+        }
       }
       break;
     }
@@ -301,9 +315,10 @@ static void draw_c_menu(void) {
     }
   }
   if (st == M_CELL) {
-    panel(94, 26, 173, 60);
-    gfx_text(FONT_MENU, 116, 38, "Toriel's Phone", C_WHITE, 255);
-    if (flag(F_PAP_DATE) == 2) gfx_text(FONT_MENU, 116, 56, "Papyrus's Phone", C_WHITE, 255);
+    static const char *const names[3] = {"Toriel's Phone", "Papyrus's Phone", "Dimensional Box"};
+    int calls[3], n = cell_entries(calls);
+    panel(94, 26, 173, 24 + 18 * n);
+    for (int i = 0; i < n; i++) gfx_text(FONT_MENU, 116, 38 + 18 * i, names[calls[i]], C_WHITE, 255);
     gfx_sprite(SPR_HEART, 0, 107, 44 + sub * 18, 0, 255);
   }
 }
@@ -368,7 +383,7 @@ void menu_gameover_open(void) {
 void menu_end_open(void) {
   g_mode = MODE_END;
   t = 0;
-  writer_start(&w, "Out of Waterfall at last,\ninto the heat of Hotland...|The rest of the underground\nis still to come...", 40, 90, FONT_MAIN);
+  writer_start(&w, "Up the elevator, on through\nthe heat of Hotland...|The rest of the underground\nis still to come...", 40, 90, FONT_MAIN);
   w.speed = 2;
 }
 

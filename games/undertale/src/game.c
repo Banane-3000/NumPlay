@@ -4,6 +4,7 @@
 #include "battle.h"
 #include "event.h"
 #include "game.h"
+#include "shoot.h"
 #include "shop.h"
 #include "gfx.h"
 #include "items.h"
@@ -97,11 +98,13 @@ void game_frame(uint32_t keys) {
   prev_keys = keys;
   g_frame++;
   if (keys & K_HOME) {
-    if (g_mode == MODE_WORLD || g_mode == MODE_MENU || g_mode == MODE_BATTLE || g_mode == MODE_SHOP) game_quit_save();
+    if (g_mode == MODE_WORLD || g_mode == MODE_MENU || g_mode == MODE_BATTLE || g_mode == MODE_SHOP || g_mode == MODE_SHOOT)
+      game_quit_save();
     g_running = false;
     return;
   }
-  if (g_mode == MODE_WORLD || g_mode == MODE_BATTLE || g_mode == MODE_MENU || g_mode == MODE_SHOP) sv.time++;
+  if (g_mode == MODE_WORLD || g_mode == MODE_BATTLE || g_mode == MODE_MENU || g_mode == MODE_SHOP || g_mode == MODE_SHOOT)
+    sv.time++;
   switch (g_mode) {
     case MODE_WORLD:
       world_update(keys, pressed);
@@ -114,6 +117,10 @@ void game_frame(uint32_t keys) {
       break;
     case MODE_SHOP:
       shop_update(keys, pressed);
+      if (g_mode == MODE_WORLD) event_update();
+      break;
+    case MODE_SHOOT:
+      shoot_update(keys, pressed);
       if (g_mode == MODE_WORLD) event_update();
       break;
     default:
@@ -139,6 +146,9 @@ void game_draw(void) {
       break;
     case MODE_SHOP:
       shop_draw();
+      break;
+    case MODE_SHOOT:
+      shoot_draw();
       break;
     default:
       menu_draw();

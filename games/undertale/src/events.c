@@ -5,6 +5,7 @@
 #include "events.h"
 #include "battle.h"
 #include "game.h"
+#include "hotland.h"
 #include "menu.h"
 #include "ruins.h"
 #include "snowdin.h"
@@ -116,6 +117,8 @@ int event_run(Ev *c) {
   r = wf2_event(c);
   if (r >= 0) return r;
   r = wf3_event(c);
+  if (r >= 0) return r;
+  r = ht1_event(c);
   if (r >= 0) return r;
   return 1;
 }

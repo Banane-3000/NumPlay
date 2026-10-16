@@ -4,6 +4,7 @@
 #include "event.h"
 #include "events.h"
 #include "game.h"
+#include "hotland.h"
 #include "monsters.h"
 #include "ruins.h"
 #include "snowdin.h"
@@ -20,6 +21,7 @@ void room_setup(int room, int from) {
   wf1_setup(room, from);
   wf2_setup(room, from);
   wf3_setup(room, from);
+  ht1_setup(room, from);
 }
 
 /* each frame Frisk can walk: what a room watches (a rock on its switch, a cracked floor) */
@@ -29,12 +31,14 @@ void room_update(void) {
   snow2_update();
   wf1_update();
   wf3_update();
+  ht1_update();
 }
 
 /* what a room draws on its floor, under everything (world.c) */
 void room_draw_floor(void) {
   snow1_draw();
   snow2_draw();
+  ht1_draw();
 }
 
 /* a pushed rock that may go where Frisk can't (a bridge seed into the water), and what happens once it has */

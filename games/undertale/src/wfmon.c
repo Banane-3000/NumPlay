@@ -197,7 +197,7 @@ static const char *flavor_undyne(Battle *b, Monster *m) {
 }
 static int attack_undyne(Battle *b, Monster *m) { (void)m; return b->turn % 2 ? ATK_UNDYNE_ARROWS : ATK_UNDYNE_SPEARS; }
 
-static const MonDef wf_defs[MON_COUNT - MON_SNOW_COUNT] = {
+static const MonDef wf_defs[MON_WF_COUNT - MON_SNOW_COUNT] = {
   [MON_AARON - MON_SNOW_COUNT] = {
     .name = "Aaron", .spare_gold = 30, .hp = 98, .at = 7, .df = 2, .exp = 52, .gold = 30, .spr_idle = SPR_AARON_B,
     .spr_hurt = SPR_AARON_HURT, .check = "All muscle, and he knows it.", .acts = {"Flex", "Shoo"}, .nacts = 2,
@@ -240,7 +240,7 @@ static const MonDef wf_defs[MON_COUNT - MON_SNOW_COUNT] = {
     .acts = {"Plead", "Challenge"}, .nacts = 2, .act = act_undyne, .talk = talk_undyne, .attack = attack_undyne,
     .flavor = flavor_undyne},
 };
-const MonDef *wf_mon_def(int id) { return &wf_defs[id - MON_SNOW_COUNT]; }
+const MonDef *wf_mon_def(int id) { return id >= MON_WF_COUNT ? ht_mon_def(id) : &wf_defs[id - MON_SNOW_COUNT]; }
 
 /* Woshua's clean green caught: then it can be spared (battle.c asks each turn, through its flavour) */
 static void woshua_check(Battle *b) {
@@ -250,7 +250,7 @@ static void woshua_check(Battle *b) {
   }
 }
 
-static const Form wf_forms[FORM_COUNT - FORM_SNOW_COUNT] = {
+static const Form wf_forms[FORM_WF_COUNT - FORM_SNOW_COUNT] = {
   [FORM_AARON - FORM_SNOW_COUNT] = {{MON_AARON}, 1, "* Aaron flexes in."},
   [FORM_WOSHUA - FORM_SNOW_COUNT] = {{MON_WOSHUA}, 1, "* Woshua sloshes up."},
   [FORM_WOSHUA_AARON - FORM_SNOW_COUNT] = {{MON_WOSHUA, MON_AARON}, 2, "* Woshua and Aaron show up."},
@@ -263,7 +263,7 @@ static const Form wf_forms[FORM_COUNT - FORM_SNOW_COUNT] = {
   [FORM_TEMMIE_MOLDBYGG - FORM_SNOW_COUNT] = {{MON_TEMMIE, MON_MOLDBYGG}, 2, "* Temmie and Moldbygg come along."},
   [FORM_UNDYNE - FORM_SNOW_COUNT] = {{MON_UNDYNE}, 1, "* Undyne attacks!"},
 };
-const Form *wf_form(int form) { return &wf_forms[form - FORM_SNOW_COUNT]; }
+const Form *wf_form(int form) { return form >= FORM_WF_COUNT ? ht_form(form) : &wf_forms[form - FORM_SNOW_COUNT]; }
 
 /* random encounters: the wiki's pools, room by room */
 int wf_encounter(int room) {
@@ -279,7 +279,7 @@ int wf_encounter(int room) {
       return pool[rnd_n(5)];
     }
   }
-  return -1;
+  return ht_encounter(room);
 }
 
 /* ---------------------------------------------------------------- the attacks */
@@ -374,7 +374,7 @@ static void atk_shyren_notes(int t) {
   }
 }
 
-int wf_attack_length(int atk) { (void)atk; return 160; }
+int wf_attack_length(int atk) { return atk >= ATK_WF_COUNT ? ht_attack_length(atk) : 160; }
 
 /* Mad Dummy: its dummies fly in from the sides and fire; later its magic missiles home in on the SOUL, and one that
  * flies into Mad Dummy (up at the board's top middle, where it shows) hurts it */
@@ -458,7 +458,10 @@ static void atk_undyne_spears(int t) {
 }
 
 void wf_attack_run(Battle *b, int atk, int t) {
-  (void)b;
+  if (atk >= ATK_WF_COUNT) {
+    ht_attack_run(b, atk, t);
+    return;
+  }
   if (t < 0) {
     if (atk == ATK_UNDYNE_ARROWS) {
       board_set(80, 80);

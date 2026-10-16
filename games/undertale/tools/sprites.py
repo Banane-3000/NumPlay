@@ -7,7 +7,8 @@ A sprite: (name, source or [sources], options). Sources (tools/pack.py load_fram
                  halved here (wiki1: as it is)
 Options: origin (x, y) in the source's pixels, center (its middle), feet (the middle of its bottom),
 frames (which of them), keep (no crop to the opaque pixels), every (one frame in n), clear (colours made
-see-through), mirror (flipped left to right), box (x, y, w, h: a part of the source, after halving).
+see-through), only (all colours but these made see-through), mirror (flipped left to right), box (x, y, w, h: a
+part of the source, after halving).
 More sources: move:File.gif:x0,y0,x1,y1:frames (what moves in a wiki screenshot GIF), map:Map.png:x,y,w,h (a piece
 of an area's map), gen:name (drawn here, GEN)."""
 from PIL import Image, ImageDraw
@@ -122,6 +123,45 @@ def gen_arrow():
     return [im]
 
 
+def gen_plane():
+    # Tsunderplane's little planes, pointing right
+    im = _img(16, 9)
+    d = ImageDraw.Draw(im)
+    w = (255, 255, 255, 255)
+    d.polygon([(15, 4), (12, 2), (1, 2), (0, 4), (1, 6), (12, 6)], fill=w)
+    d.polygon([(6, 2), (9, 2), (5, 0), (3, 0)], fill=w)
+    d.polygon([(6, 6), (9, 6), (5, 8), (3, 8)], fill=w)
+    d.polygon([(1, 2), (3, 2), (1, 0), (0, 0)], fill=w)
+    return [im]
+
+
+def gen_bomb():
+    # a round bomb with its fuse (Tsunderplane's, Pyrope's)
+    im = _img(9, 10)
+    d = ImageDraw.Draw(im)
+    d.ellipse([0, 1, 8, 9], fill=(255, 255, 255, 255))
+    d.line([(6, 1), (8, 0)], fill=(255, 255, 255, 255))
+    return [im]
+
+
+def gen_cloud():
+    # Vulkin's thundercloud
+    im = _img(26, 13)
+    d = ImageDraw.Draw(im)
+    w = (255, 255, 255, 255)
+    for box in ([0, 4, 10, 12], [6, 0, 17, 10], [14, 3, 25, 12], [4, 6, 22, 12]):
+        d.ellipse(box, fill=w)
+    return [im]
+
+
+def gen_bolt():
+    # a bolt of Vulkin's thunder, falling
+    im = _img(5, 9)
+    d = ImageDraw.Draw(im)
+    d.line([(3, 0), (1, 4), (3, 4), (1, 8)], fill=(255, 255, 255, 255), width=1)
+    return [im]
+
+
 def gen_note():
     im = _img(9, 11)
     d = ImageDraw.Draw(im)
@@ -161,7 +201,8 @@ def gen_debris():
 GEN = {"otile": gen_otile, "snowball": gen_snowball, "bone": gen_bone, "orb": gen_orb, "snowflake": gen_snowflake,
        "iceshard": gen_iceshard, "present": gen_present, "knife": gen_knife, "dogpaw": gen_dogpaw,
        "heartbullet": gen_heartbullet, "spear": gen_spear, "note": gen_note, "drop": gen_drop, "arm": gen_arm,
-       "debris": gen_debris, "arrow": gen_arrow}
+       "debris": gen_debris, "arrow": gen_arrow, "plane": gen_plane, "bomb": gen_bomb, "cloud": gen_cloud,
+       "bolt": gen_bolt}
 
 SNOW_CLEAR = [(133, 163, 216), (114, 129, 177), (139, 163, 186), (180, 192, 201), (195, 207, 216)]
 PAP_GIF = "move:Papyrus_screenshot_back_and_forth.gif:0,280,640,450:"
@@ -322,12 +363,33 @@ SPRITES = [
     ("artifact", "map:Waterfall_map.png:10156,150,12,11",
      {"keep": True, "clear": [(27, 21, 72), (27, 33, 90), (54, 47, 121), (99, 102, 135)]}),
     ("echo_ow", "wiki:Echo_Flower_overworld.png", {"feet": True}),
+    # Hotland: Alphys, Mettaton (his box), the Royal Guards at the elevator (cut from the map), the steam vents'
+    # grates each way (cut from the map: the turning ones are drawn over theirs), the burnt pan; its monsters
+    ("alphys_ow", "wiki:Alphys_overworld.png", {"feet": True}),
+    ("mtt_ow", "wiki:Mettaton_overworld_talking.gif", {"feet": True, "dedupe": True, "every": 4}),
+    ("mtt_b", "wiki:Mettaton_battle_box.gif", {"feet": True, "dedupe": True, "every": 10}),
+    ("rguards_ow", "map:Hotland_map.png:1012,6146,74,54",
+     {"keep": True, "only": [(0, 0, 0), (14, 31, 36), (22, 40, 50), (23, 40, 51), (74, 79, 108), (128, 129, 170)]}),
+    ("vent_d", "map:Hotland_map.png:3120,4000,20,20", {"keep": True}),
+    ("vent_u", "map:Hotland_map.png:3420,4180,20,20", {"keep": True}),
+    ("vent_l", "map:Hotland_map.png:3362,4000,20,20", {"keep": True}),
+    ("vent_r", "map:Hotland_map.png:3225,4240,20,20", {"keep": True}),
+    ("burntpan", "map:Hotland_map.png:3476,4468,18,18", {"keep": True, "clear": [(181, 85, 21), (178, 83, 19)]}),
+    ("vulkin_b", "wiki:Vulkin_battle_idle.gif", {"feet": True, "dedupe": True, "every": 10}),
+    ("vulkin_hurt", "wiki:Vulkin_battle_hurt.png", {"feet": True}),
+    ("tsunder_b", "wiki:Tsunderplane_battle_idle.gif", {"feet": True, "dedupe": True, "every": 14}),
+    ("pyrope_b", "wiki:Pyrope_battle_idle.gif", {"feet": True, "dedupe": True, "every": 6}),
+    ("pyrope_hurt", "wiki:Pyrope_battle_hurt.png", {"feet": True}),
     # Undyne fallen in Hotland's heat, on its bridge (cut from the map, the bridge and the rock behind see-through)
     ("undyne_fallen", "map:Hotland_map.png:534,6213,50,27",
      {"keep": True, "clear": [(169, 124, 41), (91, 65, 0), (62, 35, 0), (19, 35, 45), (18, 34, 44), (19, 35, 44),
                               (23, 37, 53), (20, 37, 47), (20, 36, 46), (12, 29, 33), (19, 36, 46), (23, 36, 52)]}),
     ("spear", "gen:spear", {"center": True}),
     ("arrow", "gen:arrow", {"center": True}),
+    ("plane", "gen:plane", {"center": True}),
+    ("bomb", "gen:bomb", {"center": True}),
+    ("cloud", "gen:cloud", {"center": True}),
+    ("bolt", "gen:bolt", {"center": True}),
     ("undyne_b", "wiki:Undyne_battle_armor.gif", {"feet": True, "every": 6}),
     ("note", "gen:note", {"center": True}),
     ("drop", "gen:drop", {"center": True}),
@@ -354,6 +416,9 @@ SPRITES = [
         "torielsurprised", "torielembarrassed", "torielglasses", "torielrevengetalk", "torielscared", "torielblink",
         "torielhappyblink", "torielbody", "sans", "sanschuckle", "sanswink", "papyrus", "papyrusevil",
         "papyruslaugh", "papyrusmad", "papyrusside"]
+] + [
+    # Alphys's face (the wiki's), for her calls and talks
+    ("face_alphys", "wiki:Alphys_face.png", {"keep": True}),
 ] + [
     # Flowey's faces (his talks and his battle)
     (n, "demo:spr_" + n, {"keep": True}) for n in [

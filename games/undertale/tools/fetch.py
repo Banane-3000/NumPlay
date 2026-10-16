@@ -56,7 +56,14 @@ PAGES = ["Ruins", "Ruins/Puzzles", "Toriel", "Toriel/In_battle", "Toriel's_Home"
          "Nice_Cream_(item)", "Snowman_Piece", "Snowman_Piece", "Punch_Card", "Dog_Residue", "Abandoned_Quiche",
          "Astronaut_Food", "Hot_Dog...?", "Hot_Cat", "Spaghetti", "Glamburger", "Sea_Tea", "Temmie_Flakes",
          "Junk_Food", "Annoying_Dog/In_battle", "Lesser_Dog/In_battle", "Greater_Dog/In_battle", "Doggo/In_battle",
-         "Dogamy_and_Dogaressa/In_battle"]
+         "Dogamy_and_Dogaressa/In_battle",
+         # Hotland and the CORE
+         "Hotland", "Hotland/Puzzles", "Alphys", "Alphys's_Lab", "Mettaton", "Mettaton/In_battle", "Mettaton_EX",
+         "Muffet", "Muffet/In_battle", "Royal_Guard/In_battle", "Vulkin", "Tsunderplane", "Pyrope", "So_Sorry",
+         "Madjick", "Knight_Knight", "Final_Froggit", "Whimsalot", "Astigmatism", "CORE", "MTT_Resort", "Burgerpants",
+         "Heats_Flamesman", "Bratty_and_Catty", "Spider_Bake_Sale", "Elevator", "Sans/Hotland", "Hot_Dog...?",
+         "Cell_Phone/Alphys", "Steam_Vent", "Conveyor_belt", "Mettaton_quiz_show", "Laser", "Royal_Guards", "Bomb",
+         "Stained_Apron", "Hot_Dog_Harpy", "Art_Club_room", "Spider_Entrance", "Multicolor_Tile_Puzzle", "Lab"]
 # files the categories leave out, as their wiki names
 FILES = ["QC sprite.png", "QC screenshot shop.png", "Gerson screenshot shop.png", "Tem Shop screenshot Temmie Armor.png"]
 DEMO = {

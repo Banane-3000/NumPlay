@@ -33,7 +33,10 @@ ROOMS = {m.group(1): int(m.group(2)) for m in
 FORM_SNOWDRAKE, FORM_PAPYRUS = 19, 31
 (FORM_AARON, FORM_WOSHUA, FORM_WOSHUA_AARON, FORM_MOLDBYGG, FORM_MOLDBYGG_MOLDSMAL, FORM_MOLDBYGG_WOSHUA, FORM_SHYREN,
  FORM_MAD_DUMMY, FORM_TEMMIE, FORM_TEMMIE_MOLDBYGG, FORM_UNDYNE) = range(32, 43)
+(FORM_VULKIN, FORM_TSUNDERPLANE, FORM_TSUNDER_VULKIN, FORM_PYROPE, FORM_PYROPE2, FORM_MTT_QUIZ, FORM_MTT_COOK,
+ FORM_LASERS) = range(43, 51)
 ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT, ITEM_ASTRONAUT_FOOD = range(17, 23)
+ITEM_BURNT_PAN, ITEM_INSTANT_NOODLES = 28, 29
 
 
 def run(args, frames, saves=None, what=""):
@@ -120,6 +123,22 @@ for form, seq, gold in ((FORM_AARON, "1,1,1", 30), (FORM_WOSHUA, "1,1,1", 25), (
 s = run(["--god", "--battle", str(FORM_MAD_DUMMY), "--path", "act:1"], 9000, what="Mad Dummy")
 check(s and s["mode"] == MODE_WORLD and s["kills"] == 0, f"Mad Dummy's fight did not end: {s}")
 
+# Hotland's battles: fled from, fought, spared (Vulkin encouraged, Pyrope heated up twice); Mettaton's quiz, his
+# cooking show's jetpack and a laser's alarm play their own way to their end
+for form in range(FORM_VULKIN, FORM_PYROPE2 + 1):
+    s = run(["--god", "--battle", str(form), "--path", "flee"], 1500, what=f"battle {form}, fleeing")
+    check(s and s["mode"] == MODE_WORLD, f"battle {form}: fleeing did not end it: {s}")
+for form in (FORM_VULKIN, FORM_TSUNDERPLANE, FORM_PYROPE):
+    s = run(["--god", "--battle", str(form), "--path", "fight"], 4000, what=f"battle {form}, fighting")
+    check(s and s["mode"] == MODE_WORLD and s["kills"] >= 1, f"battle {form}: FIGHT did not win it: {s}")
+for form, seq, gold in ((FORM_VULKIN, "2", 40), (FORM_PYROPE, "1,1", 45), (FORM_PYROPE2, "1,1,1@2,1@2", 90)):
+    s = run(["--god", "--battle", str(form), "--path", "seq:" + seq], 9000, what=f"battle {form}, sparing")
+    check(s and s["mode"] == MODE_WORLD and s["kills"] == 0 and s["gold"] == gold,
+          f"battle {form}: the friendly way did not spare it: {s}")
+for form in (FORM_MTT_QUIZ, FORM_MTT_COOK, FORM_LASERS):
+    s = run(["--god", "--battle", str(form), "--path", "talk"], 3000, what=f"show {form}")
+    check(s and s["mode"] == MODE_WORLD, f"show {form} did not end: {s}")
+
 # the shop in Snowdin: a Cinnamon Bunny for 25G; Papyrus's date: his phone number
 s = run(["--name", "Frisk", "--noenc", "--room", str(ROOMS["SNOWTOWN"]), "--at", "446,1092", "--gold", "100", "--keys",
          "2-24:up,60:z,90:down,100:down,110:down,120:z,140:z,170:x,190:down,200:down,210:down,220:z"], 400, what="the shop")
@@ -180,18 +199,31 @@ if not QUICK:
 if not QUICK:
     s = run(["--name", "Frisk", "--noenc", "--god", "--room", str(ROOMS["WF1"]), "--at", "30,1480", "--path-file",
              os.path.join(HERE, "waterfall.path")], 60000, what="Waterfall")
-    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["HT_ENTRANCE"], f"Waterfall did not end in Hotland: {s}")
+    check(s and s["mode"] == MODE_WORLD and s["room"] == ROOMS["HT_LABFRONT"], f"Waterfall did not end in Hotland: {s}")
     if s:
         for name, v in (("WF_MK", 1), ("GRILLBYS", 1), ("WF_TUTU", 1), ("WF_UNDYNE1", 1), ("SEEDS1", 1), ("SEEDS2", 1),
                         ("SEEDS3", 1), ("WF_QUICHE", 1), ("CHASE1", 1), ("WF_TELESCOPE", 1), ("WF_PUNCH", 1), ("WF_BALLET", 1),
                         ("WF_ONION", 2), ("PIANO", 1), ("WF_ARTIFACT", 1), ("SHYREN", 1),
                         ("UMBRELLA", 3), ("MK_RAIN", 2), ("WF_BRIDGE", 1), ("WF_DUMP", 1), ("WF_COOLER", 2),
                         ("MAD_DUMMY", 1), ("NAPSTA_HOME", 2), ("TEM_VILLAGE", 1), ("DEADEND", 1), ("MK_CHASM", 2),
-                        ("UNDYNE", 4), ("WATER_CUP", 2), ("PAP_NEON", 1), ("HOTLAND", 1)):
+                        ("UNDYNE", 4), ("WATER_CUP", 2), ("PAP_NEON", 1)):
             check(flag(s, name) == v, f"Waterfall: F_{name} is {flag(s, name)}, not {v}")
         check(s["kills"] == 0, f"Waterfall: {s['kills']} killed on the friendly way")
         for item in (ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT, ITEM_ASTRONAUT_FOOD):
             check(item in s["items"], f"Waterfall: item {item} not picked up: {s['items']}")
+
+# Hotland's first floor: Alphys and the quiz, the noodles, the belts, the vents, the lasers, both shooting puzzles, the
+# cooking show, up to the elevator
+if not QUICK:
+    s = run(["--name", "Frisk", "--noenc", "--god", "--room", str(ROOMS["HT_LABFRONT"]), "--at", "1000,6230",
+             "--path-file", os.path.join(HERE, "hotland.path")], 16000, what="Hotland")
+    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["HT_COREVIEW"], f"Hotland did not end at the elevator: {s}")
+    if s:
+        for name, v in (("HT_LAB", 2), ("HT_NOODLES", 1), ("HT_CALL_LASER", 1), ("HT_CALL_HUB", 1), ("HT_CALL_ISLE", 1),
+                        ("HT_CALL_CORE", 1), ("HT_PUZ_R", 1), ("HT_PUZ_L", 1), ("HT_BLUE_OFF", 1), ("HT_COOK", 1),
+                        ("HT_FLOOR1", 1)):
+            check(flag(s, name) == v, f"Hotland: F_{name} is {flag(s, name)}, not {v}")
+        check(ITEM_INSTANT_NOODLES in s["items"], f"Hotland: the noodles not taken: {s['items']}")
 
 if failures:
     print("\n".join("FAIL " + f for f in failures))

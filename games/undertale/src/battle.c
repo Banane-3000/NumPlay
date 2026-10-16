@@ -12,9 +12,20 @@
 #include "monsters.h"
 #include "world.h"
 
-void flowey_battle_start(void);   /* flowey.c */
-void flowey_battle_update(uint32_t keys, uint32_t pressed);
-void flowey_battle_draw(void);
+/* the battles that play their own way: Flowey's first (flowey.c), Mettaton's shows and a laser's alarm (htshows.c) */
+typedef struct {
+  int form;
+  void (*start)(void);
+  void (*update)(uint32_t keys, uint32_t pressed);
+  void (*draw)(void);
+} Script;
+static const Script scripts[] = {
+  {FORM_FLOWEY, flowey_battle_start, flowey_battle_update, flowey_battle_draw},
+  {FORM_MTT_QUIZ, quiz_start, quiz_update, quiz_draw},
+  {FORM_MTT_COOK, cook_start, cook_update, cook_draw},
+  {FORM_LASERS, lasers_start, lasers_update, lasers_draw},
+};
+static const Script *script;
 
 Battle bt;
 static bool over = true;
@@ -113,7 +124,9 @@ void battle_start(int form) {
   bt.t = 0;
   say(form_text(form));
   bt.w.finished = true;   /* (typed once the intro is over) */
-  if (form == FORM_FLOWEY) flowey_battle_start();
+  script = NULL;
+  for (unsigned i = 0; i < sizeof scripts / sizeof scripts[0]; i++)
+    if (scripts[i].form == form) script = &scripts[i], script->start();
   over = false;
   bullets_clear();
 }
@@ -425,7 +438,7 @@ void battle_update(uint32_t keys, uint32_t pressed) {
   bt.t++;
   box_step();
   if (bt.scripted && bt.phase != P_INTRO) {
-    flowey_battle_update(keys, pressed);
+    script->update(keys, pressed);
     if (bt.result == BR_SCRIPTED) battle_end(BR_SCRIPTED);
     return;
   }
@@ -582,7 +595,7 @@ static void draw_monster(Monster *m, int i) {
   (void)i;
 }
 
-static void draw_hud(void) {
+void battle_draw_hud(void) {
   char s[40];
   gfx_text(FONT_SMALL, 15, 201, sv.name, C_WHITE, 255);
   snprintf(s, sizeof s, "LV %d", sv.lv);
@@ -596,7 +609,7 @@ static void draw_hud(void) {
   gfx_text(FONT_SMALL, 137 + w + 8, 201, s, C_WHITE, 255);
 }
 
-static void draw_buttons(void) {
+void battle_draw_buttons(void) {
   static const uint16_t spr[4] = {SPR_FIGHTBT, SPR_TALKBT, SPR_ITEMBT, SPR_SPAREBT};
   bool menu = bt.phase >= P_MENU && bt.phase <= P_MERCY;
   for (int i = 0; i < 4; i++) {
@@ -740,7 +753,7 @@ void battle_draw(void) {
     return;
   }
   if (bt.scripted) {
-    flowey_battle_draw();
+    script->draw();
     return;
   }
   gfx_sprite(SPR_BATTLEBG, 0, 0, 0, 0, 255);
@@ -775,6 +788,6 @@ void battle_draw(void) {
   }
   draw_damage();
   draw_bubble();
-  draw_hud();
-  draw_buttons();
+  battle_draw_hud();
+  battle_draw_buttons();
 }

@@ -14,7 +14,7 @@ static inline int min_i(int a, int b) { return a < b ? a : b; }
 static inline int max_i(int a, int b) { return a > b ? a : b; }
 
 enum { MODE_TITLE, MODE_NAME, MODE_WORLD, MODE_BATTLE, MODE_MENU, MODE_SAVE, MODE_GAMEOVER, MODE_INTRO, MODE_END,
-       MODE_SHOP };
+       MODE_SHOP, MODE_SHOOT };
 
 #define NUM_ITEMS 8
 typedef struct {

@@ -665,6 +665,16 @@ def main():
                     a[(a[:, :, 0] == c[0]) & (a[:, :, 1] == c[1]) & (a[:, :, 2] == c[2])] = 0
                 out.append(Image.fromarray(a, "RGBA"))
             imgs = out
+        if "only" in opts:   # only these colours kept (a thing cut from a map that shares the map's colours)
+            out = []
+            for im in imgs:
+                a = np.array(im)
+                keep = np.zeros(a.shape[:2], bool)
+                for c in opts["only"]:
+                    keep |= (a[:, :, 0] == c[0]) & (a[:, :, 1] == c[1]) & (a[:, :, 2] == c[2])
+                a[~keep] = 0
+                out.append(Image.fromarray(a, "RGBA"))
+            imgs = out
         if opts.get("mirror"):
             imgs = [im.transpose(Image.FLIP_LEFT_RIGHT) for im in imgs]
         if "tints" in opts:   # the first frame, then it again in each colour (the SOUL's modes)

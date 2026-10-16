@@ -132,7 +132,6 @@ void wf3_setup(int room, int from) {
         Obj *f = obj_deco(SPR_UNDYNE_FALLEN, 534, 6213, false);
         if (f) f->name = ACTOR_UNDYNE, f->event = EV_HOT_UNDYNE, f->flags |= OF_TALK, obj_set_box(f, 0, 6, 50, 20);
       }
-      if (!flag(F_HOTLAND)) obj_trigger(1000, 6100, 16, 300, EV_HOT_END, ACTOR_TRIGGER2);
       break;
   }
 }
@@ -356,15 +355,6 @@ static int ev_hot_cooler(Ev *c) {
   EV_END;
 }
 
-static int ev_hot_end(Ev *c) {
-  EV_BEGIN;
-  set_flag(F_HOTLAND, 1);
-  sv.room = (int16_t)g_room, sv.x = (int16_t)(pl.x - 30), sv.y = pl.y;
-  save_write_auto();
-  menu_end_open();
-  EV_END;
-}
-
 int wf3_event(Ev *c) {
   switch (c->id) {
     case EV_DEADEND: return ev_deadend(c);
@@ -374,7 +364,6 @@ int wf3_event(Ev *c) {
     case EV_PAP_NEON: return ev_pap_neon(c);
     case EV_HOT_UNDYNE: return ev_hot_undyne(c);
     case EV_HOT_COOLER: return ev_hot_cooler(c);
-    case EV_HOT_END: return ev_hot_end(c);
   }
   return -1;
 }

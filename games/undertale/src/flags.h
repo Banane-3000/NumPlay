@@ -123,7 +123,20 @@ enum {
   F_UNDYNE,              /* her fight: 1 fled (she chases), 2 killed, 3 fallen in the heat, 4 given water */
   F_WATER_CUP,           /* a cup of the cooler's water: 1 carried, 2 poured */
   F_PAP_NEON,            /* Papyrus's call by the neon sign */
-  F_HOTLAND,             /* Hotland reached (where the game now ends) */
+  F_HOTLAND,             /* (unused: Hotland's first room once ended the game) */
+  /* Hotland */
+  F_HT_LAB,              /* the Lab: 1 Alphys met (Mettaton's quiz), 2 the phone upgraded */
+  F_HT_NOODLES,          /* the Instant Noodles from Alphys's fridge */
+  F_HT_PAN,              /* the Burnt Pan taken */
+  F_HT_CALL_LASER,       /* Alphys's calls: the lasers, the puzzle hub, the vents past the door, the CORE */
+  F_HT_CALL_HUB,
+  F_HT_CALL_ISLE,
+  F_HT_CALL_CORE,
+  F_HT_PUZ_R,            /* the shooting puzzles solved: the right one, the left one */
+  F_HT_PUZ_L,
+  F_HT_BLUE_OFF,         /* the blue laser before the left puzzle switched off */
+  F_HT_COOK,             /* the cooking show: 1 the substitute reached, 2 out of time */
+  F_HT_FLOOR1,           /* the elevator up from Hotland's first floor reached (where the game now ends) */
   FLAG_COUNT = 256
 };
 #endif

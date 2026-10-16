@@ -153,7 +153,7 @@ int damage_to_player(int at) {
   int dmg = at;
   for (int i = 0; i < 8; i++)
     if (sv.maxhp >= steps[i]) dmg++;
-  int df = sv.df - 10 + armor_df();
+  int df = sv.df - 10 + armor_df() - bt.df_loss;
   dmg -= (df + 2) / 5;
   return dmg < 1 ? 1 : dmg;
 }

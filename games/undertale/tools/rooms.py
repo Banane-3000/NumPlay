@@ -140,9 +140,25 @@ AREAS.append(dict(name="waterfall", map="Waterfall_map.png", floor=WF_FLOOR, mar
     ("erase", 2380, 1500, 80, 20, "ring"), ("erase", 2850, 1240, 30, 80, "ring"), ("erase", 3040, 1540, 80, 20, "ring"),
 ]))
 
-# Hotland: its orange rock floors (its black is nothing)
+# Hotland: its orange rock floors (its black is nothing); the striped bridges, the conveyor belts, the Lab's tiles
 HT_FLOOR = [(181, 85, 21), (169, 124, 41), (178, 83, 19), (91, 65, 0)]
+HT_STRIPE = [(239, 153, 104), (81, 34, 33), (198, 104, 80), (156, 62, 61), (114, 39, 38)]
+HT_BELT = [(112, 83, 71), (52, 50, 78), (107, 67, 78)]
+LAB_FLOOR = [(186, 233, 233), (220, 255, 186), (198, 232, 234), (52, 50, 78), (128, 169, 202)]
+HT_DOCK = [(54, 47, 121), (27, 33, 90), (27, 21, 72), (23, 13, 43), (45, 49, 96)]
+HT_HUB = [(131, 44, 66), (70, 32, 58)]
+HT_KITCHEN = []
+# the steam vents' grates (their platforms 60 pixels square around them)
+HT_VENTS_MAGMA = [(3120, 4000), (3362, 4000), (3503, 4060), (3420, 4180), (3225, 4240), (3325, 4240), (3525, 4240)]
+HT_VENTS_HUB = [(4820, 3620), (4820, 3560), (4740, 3620), (4900, 3620)]
+HT_VENTS_ISLE = [(4940, 3120), (5060, 3120), (5180, 3120)]
 AREAS.append(dict(name="hotland", map="Hotland_map.png", floor=HT_FLOOR, margin=0, close=True, patches=[
+    # who the game moves about: the Royal Guards at the elevator (and by the vents, later), the clam by the cooler,
+    # Alphys and Mettaton (through the wall) in the Lab, the Vulkin on the belts, the Pyrope by the pan, the pan
+    *[("copy", 1006, 6120, 88, 20, 1006, y) for y in (6140, 6160, 6180)], ("erase", 726, 6216, 52, 56, "ring"),
+    ("copy", 2100, 6152, 82, 82, 2181, 6152), ("erase", 2198, 6241, 30, 36, "ring"),
+    ("erase", 2993, 5170, 30, 32, "ring"), ("erase", 3762, 4424, 34, 42, "ring"), ("erase", 3476, 4468, 18, 18, "ring"),
+    ("erase", 4805, 3098, 70, 56, "ring"),
     # Undyne, fallen on the bridge in the heat (an object here, there only if she chased Frisk): the planks repeat
     # every 40 pixels
     ("copy", 454, 6219, 50, 21, 534, 6219),
@@ -471,8 +487,44 @@ ROOMS = [
          doors=[((23498, 775, 8, 47), "wf_north", (23449, 910), "down"),
                 ((24210, 775, 10, 47), "ht_entrance", (24, 6206), "right")]),
     # Hotland's first room: Sans's station, the bridge over the lava, the water cooler
-    dict(name="ht_entrance", area="hotland", rect=(0, 6080, 1460, 320), title="Hotland",
+    dict(name="ht_entrance", area="hotland", rect=(0, 6080, 800, 320), title="Hotland",
          doors=[((0, 6215, 6, 45), "wf_hotgate", (24180, 776), "left")]),
+    # the crossroads before the Lab: the elevator up north (the Royal Guards in the way), the River Person's dock
+    # south, the Lab east
+    dict(name="ht_labfront", area="hotland", rect=(800, 5880, 640, 480), title="Hotland",
+         doors=[((1322, 6240, 40, 44), "ht_lab", (1462, 6250), "right")]),
+    dict(name="ht_river", area="hotland", rect=(900, 6360, 320, 240), title="Hotland", floor_colors=HT_DOCK),
+    # Alphys's Lab, both its floors (the escalators between them)
+    dict(name="ht_lab", area="hotland", rect=(1440, 5860, 1100, 460), title="Lab", floor_colors=LAB_FLOOR,
+         doors=[((1440, 6200, 6, 100), "ht_labfront", (1300, 6262), "left"),
+                ((2534, 6220, 6, 80), "ht_labexit", (2615, 6250), "right")]),
+    # out of the Lab: the conveyor belts north, two rooms of them, then the striped bridge up
+    dict(name="ht_labexit", area="hotland", rect=(2540, 5990, 440, 350), title="Hotland",
+         doors=[((2580, 6236, 34, 44), "ht_lab", (2500, 6255), "left")]),
+    dict(name="ht_belt1", area="hotland", rect=(2800, 5240, 320, 800), title="Hotland", floor_colors=HT_STRIPE + HT_BELT),
+    dict(name="ht_belt2", area="hotland", rect=(2800, 4380, 320, 860), title="Hotland", floor_colors=HT_STRIPE + HT_BELT,
+         fix=[("walk", 2944, 4674, 52, 14)]),
+    # the Magma Chamber's islands and steam vents; the burnt pan's room below it; the laser walkway north
+    dict(name="ht_magma", area="hotland", rect=(2860, 3940, 860, 440), title="Hotland", floor_colors=HT_STRIPE,
+         fix=[("walk", x - 24, y - 24, 68, 68) for x, y in HT_VENTS_MAGMA]),
+    dict(name="ht_pan", area="hotland", rect=(3340, 4380, 640, 260), title="Hotland", floor_colors=HT_STRIPE + HT_BELT,
+         fix=[("walk", 3600, 4460, 60, 60)]),
+    dict(name="ht_lasers", area="hotland", rect=(3040, 3700, 1180, 240), title="Hotland", floor_colors=HT_STRIPE,
+         doors=[((4206, 3800, 14, 54), "ht_hub", (4600, 3792), "right")]),
+    # the puzzle hub: its turning vent, the shooting puzzles left and right, the door north they open
+    dict(name="ht_hub", area="hotland", rect=(4220, 3250, 1220, 690), title="Hotland", floor_colors=HT_STRIPE + HT_HUB,
+         fix=[("walk", x - 2, y - 2, 24, 24) for x, y in HT_VENTS_HUB] + [("walk", 4798, 3616, 72, 48), ("walk", 4804, 3396, 52, 86)],
+         doors=[((4583, 3795, 8, 50), "ht_lasers", (4176, 3800), "left"),
+                ((4800, 3400, 60, 8), "ht_ventisle", (4818, 3236), "up"),
+                # (the puzzles' doorways, and back out of them)
+                ((5257, 3596, 25, 12), "ht_hub", (5258, 3462), "up"), ((5250, 3500, 40, 4), "ht_hub", (5259, 3608), "down"),
+                ((4387, 3596, 25, 12), "ht_hub", (4389, 3462), "up"), ((4380, 3500, 40, 4), "ht_hub", (4389, 3608), "down")]),
+    # past the door: the vents over the lava, Mettaton's cooking show, the CORE far off and the elevator
+    dict(name="ht_ventisle", area="hotland", rect=(4660, 3000, 640, 300), title="Hotland", floor_colors=HT_STRIPE,
+         fix=[("walk", x - 24, y - 24, 68, 68) for x, y in HT_VENTS_ISLE],
+         doors=[((4800, 3292, 60, 8), "ht_hub", (4818, 3488), "down")]),
+    dict(name="ht_cooking", area="hotland", rect=(5300, 3000, 680, 260), title="Hotland", floor_colors=LAB_FLOOR + HT_KITCHEN),
+    dict(name="ht_coreview", area="hotland", rect=(5980, 2900, 1080, 340), title="Hotland", floor_colors=LAB_FLOOR),
 ]
 
 # rooms one above the other through a dark doorway (tools/pack.py: apply_links); ("h", left, right, y, h): side

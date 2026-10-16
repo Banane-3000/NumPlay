@@ -132,6 +132,7 @@ typedef struct Battle {
   int result;
   int exp_won, gold_won;
   int kr;                      /* (for later) */
+  int df_loss;                 /* DEFENSE lost this battle (Vulkin's hugs) */
   int16_t state[8];            /* the formation's own */
   int32_t as[16];              /* the attack's own */
   int talk_i;                  /* whose bubble shows */
@@ -168,6 +169,23 @@ int board_cx(void), board_cy(void);    /* its middle (pixels) */
 int soul_x(void), soul_y(void);        /* (pixels) */
 int damage_to_player(int at);
 int count_alive(void);
+/* for the battles that play their own way (their draw) */
+void battle_draw_hud(void);
+void battle_draw_buttons(void);
+/* those battles (flowey.c, htshows.c): set up, each frame (bt.result = BR_SCRIPTED ends it), drawn */
+void flowey_battle_start(void);
+void flowey_battle_update(uint32_t keys, uint32_t pressed);
+void flowey_battle_draw(void);
+void quiz_start(void);
+void quiz_update(uint32_t keys, uint32_t pressed);
+void quiz_draw(void);
+void cook_start(void);
+void cook_update(uint32_t keys, uint32_t pressed);
+void cook_draw(void);
+int cook_won(void);          /* the substitute reached in time */
+void lasers_start(void);
+void lasers_update(uint32_t keys, uint32_t pressed);
+void lasers_draw(void);
 
 /* the monsters and formations (monsters.c) */
 const MonDef *mon_def(int id);

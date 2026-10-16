@@ -52,6 +52,10 @@ static const ItemInfo items[ITEM_COUNT] = {
   [ITEM_TORN_NOTEBOOK] = {"Torn Notebook", "TornNotbo", IT_WEAPON, 0, 2, 0, "An old notebook, torn up.\n* It doesn't hit very hard.", "", 50},
   [ITEM_TEMMIE_FLAKES] = {"Temmie Flakes", "TemFlakes", IT_FOOD, 2, 0, 0, "Bits of paper, sold as\n  food.",
                           "* You eat the Temmie Flakes.", 2},
+  [ITEM_BURNT_PAN] = {"Burnt Pan", "BurntPan", IT_WEAPON, 0, 10, 0,
+                      "A pan, burnt black. Hits\n  hard, every time.\n* Food heals 4 HP more with it.", "", 50},
+  [ITEM_INSTANT_NOODLES] = {"Instant Noodles", "InstaNood", IT_FOOD, 15, 0, 0, "A cup of noodles, quick to\n  make.",
+                            "* You eat the Instant Noodles.\n* They're a little crunchy.", 2},
 };
 
 const ItemInfo *item_info(int id) { return &items[id >= 0 && id < ITEM_COUNT ? id : 0]; }
@@ -130,7 +134,7 @@ void item_use(int slot, char *out, int cap, int in_battle) {
       } else if (it->heal == 998) {
         if (sv.hp < sv.maxhp - 1) sv.hp = (int16_t)(sv.maxhp - 1);
       } else {
-        heal(it->heal, out + n, cap - n);
+        heal(it->heal + (sv.weapon == ITEM_BURNT_PAN ? 4 : 0), out + n, cap - n);
       }
       (void)in_battle;
       return;
