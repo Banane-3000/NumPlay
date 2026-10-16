@@ -196,7 +196,7 @@ Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) sh
 * **One app at a time:** Undertale is too big to sit next to NumPlay or the other big games. Installing it from the NumWorks website swaps them out, and installing them again swaps it out. Your saves in each one are kept.
 * **The neutral ending:** the game plays from the start to the barrier and the neutral ending, with Sans's call after. The true pacifist ending (the True Lab, Asriel) and the genocide route aren't in it.
 * **No music or sound:** the calculator has no speaker.
-* **The same Underground:** the rooms and pictures are the game's, everyone says what they say in the game (the longer speeches in shorter words of our own), and the puzzles and battles follow how the game plays them, at its 30 frames a second.
+* **The same Underground:** the rooms and pictures are the game's, everyone says what they say in the game, in shorter words of our own, and the puzzles and battles follow how the game plays them, at its 30 frames a second.
 
 ## Credits
 
