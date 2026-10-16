@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Checks of Undertale on a computer (make test): the host build, with
 AddressSanitizer and UBSan, through the menus, every battle, the saves, the
-whole Ruins and the whole of Snowdin.
+whole Ruins, the whole of Snowdin and Waterfall's west half.
 
     python3 tests/check.py build/play [--quick]
 
---quick skips playing the whole Ruins and Snowdin (the longest parts)."""
+--quick skips playing the whole Ruins, Snowdin and Waterfall (the longest parts)."""
 import os
 import re
 import shutil
@@ -31,6 +31,9 @@ MODE_WORLD, MODE_BATTLE, MODE_END, MODE_SHOP = 2, 3, 8, 9
 ROOMS = {m.group(1): int(m.group(2)) for m in
          re.finditer(r"#define ROOM_(\w+) (\d+)", open(os.path.join(HERE, "..", "src", "data.h")).read())}
 FORM_SNOWDRAKE, FORM_PAPYRUS = 19, 31
+FORM_AARON, FORM_WOSHUA, FORM_WOSHUA_AARON, FORM_MOLDBYGG, FORM_MOLDBYGG_MOLDSMAL, FORM_MOLDBYGG_WOSHUA, FORM_SHYREN = \
+    range(32, 39)
+ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT = range(17, 22)
 
 
 def run(args, frames, saves=None, what=""):
@@ -98,6 +101,21 @@ check(s and s["mode"] == MODE_WORLD and s["kills"] == 0, f"Papyrus was not spare
 s = run(["--battle", str(FORM_PAPYRUS), "--path", "spare"], 6000, what="Papyrus, captured")
 check(s and s["mode"] == MODE_WORLD and s["hp"] == 1, f"Papyrus did not capture Frisk: {s}")
 
+# Waterfall's battles: fled from, fought, and each spared its own way (Aaron out-flexed, Woshua's green caught after
+# asking to be cleaned, Moldbygg hugged then let go, Shyren hummed along with)
+for form in range(FORM_AARON, FORM_SHYREN + 1):
+    s = run(["--god", "--battle", str(form), "--path", "flee"], 1500, what=f"battle {form}, fleeing")
+    check(s and s["mode"] == MODE_WORLD, f"battle {form}: fleeing did not end it: {s}")
+for form in (FORM_AARON, FORM_WOSHUA, FORM_MOLDBYGG, FORM_SHYREN):
+    s = run(["--god", "--battle", str(form), "--path", "fight"], 4000, what=f"battle {form}, fighting")
+    check(s and s["mode"] == MODE_WORLD and s["kills"] >= 1, f"battle {form}: FIGHT did not win it: {s}")
+for form, seq, gold in ((FORM_AARON, "1,1,1", 30), (FORM_WOSHUA, "1,1,1", 25), (FORM_WOSHUA_AARON, "1,1@2,1@2,1@2", 55),
+                        (FORM_MOLDBYGG, "1,3", 20), (FORM_MOLDBYGG_WOSHUA, "1,3,1@2,1@2,1@2", 45),
+                        (FORM_SHYREN, "2,2,2,2,2", 20)):
+    s = run(["--god", "--battle", str(form), "--path", "seq:" + seq], 9000, what=f"battle {form}, sparing")
+    check(s and s["mode"] == MODE_WORLD and s["kills"] == 0 and s["gold"] == gold,
+          f"battle {form}: the friendly way did not spare it: {s}")
+
 # the shop in Snowdin: a Cinnamon Bunny for 25G; Papyrus's date: his phone number
 s = run(["--name", "Frisk", "--noenc", "--room", str(ROOMS["SNOWTOWN"]), "--at", "446,1092", "--gold", "100", "--keys",
          "2-24:up,60:z,90:down,100:down,110:down,120:z,140:z,170:x,190:down,200:down,210:down,220:z"], 400, what="the shop")
@@ -140,7 +158,7 @@ if not QUICK:
 if not QUICK:
     s = run(["--name", "Frisk", "--noenc", "--god", "--room", str(ROOMS["SNOWDIN1"]), "--at", "34,392", "--path-file",
              os.path.join(HERE, "snowdin.path")], 30000, what="Snowdin")
-    check(s and s["mode"] == MODE_END, f"Snowdin did not end on the way to Waterfall: {s}")
+    check(s and s["mode"] == MODE_WORLD and s["room"] == ROOMS["WF1"], f"Snowdin did not lead on to Waterfall: {s}")
     if s:
         for name, v in (("BRANCH", 1), ("SANS_MET", 1), ("PAP_SENTRY", 1), ("DOGGO", 1), ("ELECMAZE", 2),
                         ("WORDSEARCH", 1), ("SNOWPUZZLE", 1), ("DOGI", 1), ("XOXO1", 1), ("XOXO2", 1), ("XOXO3", 1),
@@ -148,6 +166,24 @@ if not QUICK:
                         ("PAP_DATE", 1), ("TOWN_HOUSE", 1), ("SNOW_EXIT", 1)):
             check(flag(s, name) == v, f"Snowdin: F_{name} is {flag(s, name)}, not {v}")
         check(s["kills"] == 0, f"Snowdin: {s['kills']} killed on the friendly way")
+
+# Waterfall's west half, the friendly way: Monster Kid, Grillby's with Sans, the tutu, Papyrus's report, the bridge
+# seeds (and the secret one to the quiche), the wishing room, Undyne's spears, the telescope, the punch card, the marsh
+# (the ballet shoes), the bird,
+# Onionsan, the piano and the artifact, Shyren, the umbrellas, Monster Kid in the rain, the bridge cut
+if not QUICK:
+    s = run(["--name", "Frisk", "--noenc", "--god", "--room", str(ROOMS["WF1"]), "--at", "30,1480", "--path-file",
+             os.path.join(HERE, "waterfall.path")], 45000, what="Waterfall")
+    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["WF_BRIDGE"], f"Waterfall did not end at the bridge: {s}")
+    if s:
+        for name, v in (("WF_MK", 1), ("GRILLBYS", 1), ("WF_TUTU", 1), ("WF_UNDYNE1", 1), ("SEEDS1", 1), ("SEEDS2", 1),
+                        ("SEEDS3", 1), ("WF_QUICHE", 1), ("CHASE1", 1), ("WF_TELESCOPE", 1), ("WF_PUNCH", 1), ("WF_BALLET", 1),
+                        ("WF_BIRD", 1), ("WF_ONION", 2), ("PIANO", 1), ("WF_ARTIFACT", 1), ("SHYREN", 1),
+                        ("UMBRELLA", 3), ("MK_RAIN", 2), ("WF_BRIDGE", 1)):
+            check(flag(s, name) == v, f"Waterfall: F_{name} is {flag(s, name)}, not {v}")
+        check(s["kills"] == 0, f"Waterfall: {s['kills']} killed on the friendly way")
+        for item in (ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT):
+            check(item in s["items"], f"Waterfall: item {item} not picked up: {s['items']}")
 
 if failures:
     print("\n".join("FAIL " + f for f in failures))

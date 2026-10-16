@@ -177,6 +177,7 @@ bool soul_hit_test(void) {
     if (b->color == BC_GREEN) {
       sv.hp = (int16_t)min_i(sv.maxhp, sv.hp + (b->dmg ? b->dmg : 1));
       b->kind = BK_NONE;
+      bt.greens++;
       continue;
     }
     if (bt.inv) continue;

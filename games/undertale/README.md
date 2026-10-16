@@ -8,7 +8,7 @@
 
 <p align="center">
   <b>Fall into the Underground as a human child, on the NumWorks calculator.</b><br>
-  The Ruins and Snowdin, from the bed of golden flowers to the edge of Waterfall. The rest of the Underground is on the way.
+  The Ruins, Snowdin and the first half of Waterfall, from the bed of golden flowers to the bridge Undyne cuts. The rest of the Underground is on the way.
 </p>
 
 <p align="center">
@@ -24,8 +24,9 @@
 
 * **The whole Ruins:** every room, from the golden flowers through Toriel's puzzles, the falling leaves, the spikes, the rocks, the cracked floors and the switches, to Toriel's home and the long corridor under it.
 * **Its people, with all they have to say:** Flowey, Toriel and her phone calls, Napstablook, the talking rock, the Froggits who give advice, the spider bake sale, the snail facts, and every sign, bookshelf and mirror.
-* **Snowdin:** Sans and Papyrus, and every one of Papyrus's puzzles: the invisible electricity maze, the X and O tiles, the one on ice, the multicolor tiles and the Gauntlet. Then Snowdin Town, with its shop, inn, Grillby's, library and Papyrus's house.
-* **Battles like in the game:** FIGHT with the timing bar, ACT, ITEM and MERCY, and your SOUL dodging each monster's own attacks in the box: Froggit, Whimsun, Moldsmal, Loox, Vegetoid, Migosp, Napstablook and Toriel in the Ruins; Snowdrake, Ice Cap, Gyftrot, Jerry, Chilldrake, Glyde, Doggo, Lesser Dog, Dogamy and Dogaressa, Greater Dog and Papyrus, whose blue attack makes your SOUL fall, in Snowdin.
+* **Snowdin:** Sans and Papyrus, and every one of Papyrus's puzzles: the invisible electricity maze, the X and O tiles, the one on ice, the multicolor tiles and the Gauntlet. Then Snowdin Town, with its shop, inn, library and Papyrus's house.
+* **Waterfall's first half:** Monster Kid, Grillby's with Sans, the echo flowers, the bridge seeds (and the secret bridge to the quiche), the wishing room, Undyne chasing you with her spears, Sans's telescope, the bird over the gap, Onionsan, the piano's secret song, the statue in the rain and Monster Kid under your umbrella.
+* **Battles like in the game:** FIGHT with the timing bar, ACT, ITEM and MERCY, and your SOUL dodging each monster's own attacks in the box: Froggit, Whimsun, Moldsmal, Loox, Vegetoid, Migosp, Napstablook and Toriel in the Ruins; Snowdrake, Ice Cap, Gyftrot, Jerry, Chilldrake, Glyde, Doggo, Lesser Dog, Dogamy and Dogaressa, Greater Dog and Papyrus, whose blue attack makes your SOUL fall, in Snowdin; Aaron, Woshua, Moldbygg and Shyren in Waterfall.
 * **Spare or fight:** every monster can be spared, and Flowey at the door remembers what you did. Lose to Papyrus and he only locks you in his shed.
 * **Saved like in the game:** SAVE at the stars, with the room and the time played. The C menu has your ITEM, STAT and CELL. Home keeps the moment you were at, and your save is also copied into `undertale_saves.py`, so installing the app again doesn't erase it.
 
@@ -62,6 +63,22 @@
     <td align="center"><img src="docs/papyrus.png" width="390" alt="Papyrus's blue attack"><br><sub>Papyrus's blue attack</sub></td>
     <td align="center"><img src="docs/date.png" width="390" alt="Papyrus's room"><br><sub>Hanging out with Papyrus</sub></td>
   </tr>
+  <tr>
+    <td align="center"><img src="docs/echo.png" width="390" alt="Monster Kid by an echo flower"><br><sub>Monster Kid, by the first echo flower</sub></td>
+    <td align="center"><img src="docs/seeds.png" width="390" alt="The bridge seeds"><br><sub>Bridge seeds bloom in the water</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/spears.png" width="390" alt="Undyne's spears"><br><sub>Undyne's spears on the boardwalk</sub></td>
+    <td align="center"><img src="docs/onionsan.png" width="390" alt="Onionsan"><br><sub>Onionsan says hi</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/statue.png" width="390" alt="The statue in the rain"><br><sub>The statue in the rain</sub></td>
+    <td align="center"><img src="docs/castle.png" width="390" alt="The castle far away"><br><sub>Monster Kid and the castle, far away</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/woshua.png" width="390" alt="Woshua's green drop"><br><sub>Woshua's green drop heals</sub></td>
+    <td align="center"><img src="docs/shyren.png" width="390" alt="Shyren's notes"><br><sub>Shyren sings when you hum along</sub></td>
+  </tr>
 </table>
 
 ## How to play
@@ -71,6 +88,8 @@ A new game starts with the story of the war between humans and monsters, then th
 Monsters jump out as you walk. In a battle, choose FIGHT to attack (press OK when the bar crosses the middle), ACT to check them, talk or do something else, ITEM to eat, and MERCY to spare them once they no longer want to fight, or to flee. Then move your SOUL, the red heart, to dodge what they throw at you. Each monster has its own way to be spared: try what ACT offers.
 
 Snowdin brings new things: when Papyrus turns your SOUL blue, it falls to the bottom of the box, and Up jumps over his bones. On ice you slide until something stops you. Snowdin Town's shop sells food and gear, and its inn gives you a night's rest.
+
+In Waterfall, walk into a bridge seed to push it: in the water it blooms into a flower you can walk on, and the bell calls the seeds back. A green bullet heals you instead of hurting. Talk to the piano to play it, and keep an umbrella for the rain.
 
 Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) shows your items, your STAT and the phone numbers you have.
 
@@ -87,15 +106,15 @@ Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) sh
 ## Good to know
 
 * **One app at a time:** Undertale is too big to sit next to NumPlay or the other big games. Installing it from the NumWorks website swaps them out, and installing them again swaps it out. Your saves in each one are kept.
-* **The Ruins and Snowdin, for now:** the way out of Snowdin ends the game, on a screen that says the rest of the Underground is still to come. Waterfall, Hotland and New Home come next, one at a time.
+* **The Ruins, Snowdin and half of Waterfall, for now:** the bridge Undyne cuts ends the game, on a screen that says the rest of the Underground is still to come. The rest of Waterfall, Hotland and New Home come next, one at a time.
 * **No music or sound:** the calculator has no speaker.
-* **The same Underground:** the rooms, pictures and words are the game's, and the puzzles and battles follow how the game plays them, at its 30 frames a second.
+* **The same Underground:** the rooms and pictures are the game's, everyone says what they say in the game (the longer speeches in shorter words of our own), and the puzzles and battles follow how the game plays them, at its 30 frames a second.
 
 ## Credits
 
 Inspired by Undertale by Toby Fox, not affiliated with him.
 
-* The maps, pictures and texts come from the [Undertale Wiki](https://undertale.fandom.com) and the game's free demo.
+* The maps and pictures come from the [Undertale Wiki](https://undertale.fandom.com) and the game's free demo, and what's said follows them.
 * The **Pixel Operator** fonts are by Jayvee Enaguas, released into the public domain (CC0).
 * The LZMA decoder in `src/lzma` is by Igor Pavlov, in the public domain.
 

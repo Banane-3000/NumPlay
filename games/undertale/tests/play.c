@@ -125,6 +125,10 @@ static uint32_t path_keys(int f) {
       path_at = e ? e + 1 : path_at + strlen(path_at);
       return K_Z;
     }
+    if (text_menu_sel() < 100 && text_menu_cols() == 2) {   /* (two columns: the row, then the column) */
+      if (sel / 2 != n / 2) return sel / 2 < n / 2 ? K_DOWN : K_UP;
+      return sel < n ? K_RIGHT : K_LEFT;
+    }
     return sel < n ? (text_menu_sel() >= 100 ? K_RIGHT : K_DOWN) : (text_menu_sel() >= 100 ? K_LEFT : K_UP);
   }
   /* a text in the way: read on (Z every other frame) */
@@ -167,7 +171,13 @@ static uint32_t path_keys(int f) {
     switch (battle_ui()) {
       case BUI_MENU: return bt.button < want ? K_RIGHT : bt.button > want ? K_LEFT : K_Z;
       case BUI_TARGET:
-        if (seq && bt.button == 1) return bt.target < seq_target ? K_DOWN : bt.target > seq_target ? K_UP : K_Z;
+        if (seq && bt.button == 1) {
+          /* (the list holds those still there: "the second" is the last when one has gone) */
+          int here = 0;
+          for (int i = 0; i < bt.nmon; i++) here += bt.mon[i].alive && !bt.mon[i].gone;
+          int want_t = seq_target < here ? seq_target : here - 1;
+          return bt.target < want_t ? K_DOWN : bt.target > want_t ? K_UP : K_Z;
+        }
         return K_Z;
       case BUI_ACTS: {
         int n = seq ? seq_act : atoi(path_at + 4);
@@ -435,6 +445,11 @@ int main(int argc, char **argv) {
   }
   if (gfx_dropped) printf("dropped %d draw commands\n", gfx_dropped);
   if (getenv("BLK_STATS")) fprintf(stderr, "blocks unpacked %u, at most %u in a frame\n", blk_unpacked, blk_most_in_frame);
+  if (getenv("OBJS"))   /* (the room's objects at the end: kind, name, where, its box) */
+    for (int i = 0; i < MAX_OBJS; i++)
+      if (objs[i].kind != OBJ_NONE)
+        fprintf(stderr, "obj %d kind %d name %d at %d,%d box %d,%d %dx%d spr %d\n", i, objs[i].kind, objs[i].name, objs[i].x,
+                objs[i].y, objs[i].bx, objs[i].by, objs[i].bw, objs[i].bh, objs[i].spr[0]);
   printf("END mode %d room %d at %d,%d hp %d lv %d gold %d kills %d path %s\nFLAGS", g_mode, g_room, pl.x, pl.y, sv.hp,
          sv.lv, sv.gold, sv.kills, path_at && *path_at ? "left" : "done");
   for (int i = 0; i < FLAG_COUNT; i++)

@@ -26,7 +26,8 @@ enum {
   OF_FRONT = 64,      /* drawn over everything else */
   OF_BACK = 128,      /* drawn under everything else */
   OF_DARK = 256,      /* a silhouette */
-  OF_FLIP = 512       /* drawn mirrored */
+  OF_FLIP = 512,      /* drawn mirrored */
+  OF_FLOOR = 1024     /* its box is floor to walk on (a bloomed bridge seed over water) */
 };
 #define MAX_OBJS 48
 typedef struct {
@@ -65,6 +66,7 @@ const RoomInfo *world_room_info(void);
 void world_enter(int room, int x, int y, int dir);   /* (x, y) Frisk's top-left; no fade */
 void world_update(uint32_t keys, uint32_t pressed);
 void world_draw(void);
+#define WALK_FLOOR_ONLY (-2)   /* (world_walkable's ignore: the floor alone, nothing solid standing on it) */
 bool world_walkable(int x, int y, int w, int h, int ignore);   /* a box on the map, objects too (not `ignore`) */
 void world_camera(void);       /* follows Frisk, inside the room */
 Obj *obj_new(int kind, int x, int y);
@@ -84,6 +86,9 @@ Obj *obj_rock(int x, int y, int name, int event);   /* pushed by walking into it
 void obj_set_box(Obj *o, int bx, int by, int bw, int bh);
 bool near_frisk(const Obj *o, int d);      /* within d pixels (their feet) */
 bool room_ice(int x, int y);               /* rooms.c: ice there (Frisk slides) */
+/* rooms.c: a pushed rock that the floor stops (it may go into water, a bridge seed), then where it went */
+bool room_rock_enters(Obj *o, int x, int y);
+void room_rock_moved(Obj *o);
 bool pl_sliding(void);
 /* the room fades out, then in: room changes in the middle */
 void world_fade_to(int room, int x, int y, int dir);

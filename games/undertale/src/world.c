@@ -60,17 +60,29 @@ static bool boxes_meet(int ax, int ay, int aw, int ah, int bx, int by, int bw, i
   return ax < bx + bw && bx < ax + aw && ay < by + bh && by < ay + ah;
 }
 
+/* a floor object (a bloomed bridge seed) under the point */
+static bool on_floor_obj(int x, int y) {
+  for (int i = 0; i < MAX_OBJS; i++) {
+    const Obj *o = &objs[i];
+    if (o->kind != OBJ_NONE && (o->flags & OF_FLOOR) && x >= o->x + o->bx && x < o->x + o->bx + o->bw &&
+        y >= o->y + o->by && y < o->y + o->by + o->bh)
+      return true;
+  }
+  return false;
+}
+
 bool world_walkable(int x, int y, int w, int h, int ignore) {
   /* every cell the box covers (its corners and every 4 pixels between) */
   for (int yy = y;; yy += 4) {
     if (yy > y + h - 1) yy = y + h - 1;
     for (int xx = x;; xx += 4) {
       if (xx > x + w - 1) xx = x + w - 1;
-      if (!cell_walkable(xx, yy)) return false;
+      if (!cell_walkable(xx, yy) && !on_floor_obj(xx, yy)) return false;
       if (xx == x + w - 1) break;
     }
     if (yy == y + h - 1) break;
   }
+  if (ignore == WALK_FLOOR_ONLY) return true;
   for (int i = 0; i < MAX_OBJS; i++) {
     const Obj *o = &objs[i];
     if (i == ignore || o->kind == OBJ_NONE || !(o->flags & OF_SOLID)) continue;
@@ -126,18 +138,19 @@ void world_enter(int r, int x, int y, int dir) {
   obj_clear_all();
   ndoors = room_doors(r, doors, 16);
   cam_locked = false;
-  /* a door's spot a little off the floor: the nearest that isn't */
-  if (!player_free(pl.x, pl.y))
+  room_setup(r, from);
+  /* a door's spot a little off the floor: the nearest that isn't (the floor the room's things make counts: a
+   * bridge of flowers; what stands about doesn't) */
+  if (!world_walkable(pl.x + PBX, pl.y + PBY, PBW, PBH, WALK_FLOOR_ONLY))
     for (int d = 1; d <= 24; d++) {
       static const int8_t dx[4] = {0, 0, -1, 1}, dy[4] = {1, -1, 0, 0};
       int k;
-      for (k = 0; k < 4 && !player_free(pl.x + dx[k] * d, pl.y + dy[k] * d); k++) {}
+      for (k = 0; k < 4 && !world_walkable(pl.x + dx[k] * d + PBX, pl.y + dy[k] * d + PBY, PBW, PBH, WALK_FLOOR_ONLY); k++) {}
       if (k < 4) {
         pl.x = (int16_t)(pl.x + dx[k] * d), pl.y = (int16_t)(pl.y + dy[k] * d);
         break;
       }
     }
-  room_setup(r, from);
   world_camera();
 }
 
@@ -216,9 +229,12 @@ static bool push_rock(int sx, int sy) {
       return false;
     }
     if (pushed_at == g_frame || o->walking) return false;
-    if (!world_walkable(o->x + o->bx + sx, o->y + o->by + sy, o->bw, o->bh, i)) return false;
+    if (!world_walkable(o->x + o->bx + sx, o->y + o->by + sy, o->bw, o->bh, i) &&
+        !room_rock_enters(o, o->x + sx, o->y + sy))
+      return false;
     pushed_at = g_frame;
     o->x = (int16_t)(o->x + sx), o->y = (int16_t)(o->y + sy);
+    room_rock_moved(o);
     return player_free(pl.x + sx, pl.y + sy);
   }
   return false;

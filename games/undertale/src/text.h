@@ -52,8 +52,9 @@ void text_update(uint32_t pressed);
 void text_draw(void);
 int text_choice(void);     /* 0 or 1: the last choice made (a list's: its index, -1 Back) */
 void text_open_menu(const char *const *opts, int n);   /* a list of options in the box */
-void text_set_top(int top);
+void text_set_top(int top);   /* -1: by where Frisk is (the game's way), 0 bottom, 1 top */
 void text_wrap_width(int w);   /* where the next writer's lines wrap (pixels from its left) */
-int text_menu_sel(void);   /* (the tests) a list's selection, 100 + a page's choice, -1 neither open */   /* -1: by where Frisk is (the game's way), 0 bottom, 1 top */
+int text_menu_sel(void);   /* (the tests) a list's selection, 100 + a page's choice, -1 neither open */
+int text_menu_cols(void);   /* (the list open: its columns) */
 extern char g_name[8];     /* the fallen human's name */
 #endif

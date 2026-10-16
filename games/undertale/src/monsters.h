@@ -8,7 +8,9 @@ enum {
   MON_NAPSTABLOOK, MON_TORIEL, MON_FLOWEY, MON_RUINS_COUNT,
   /* Snowdin (snowmon.c, papyrus.c) */
   MON_SNOWDRAKE = MON_RUINS_COUNT, MON_ICECAP, MON_GYFTROT, MON_DOGGO, MON_LESSERDOG, MON_DOGAMY, MON_DOGARESSA,
-  MON_GREATERDOG, MON_JERRY, MON_CHILLDRAKE, MON_GLYDE, MON_PAPYRUS, MON_COUNT
+  MON_GREATERDOG, MON_JERRY, MON_CHILLDRAKE, MON_GLYDE, MON_PAPYRUS, MON_SNOW_COUNT,
+  /* Waterfall (wfmon.c) */
+  MON_AARON = MON_SNOW_COUNT, MON_WOSHUA, MON_MOLDBYGG, MON_SHYREN, MON_COUNT
 };
 
 /* formations: who is fought */
@@ -19,7 +21,10 @@ enum {
   /* Snowdin */
   FORM_SNOWDRAKE = FORM_RUINS_COUNT, FORM_ICECAP, FORM_LESSERDOG, FORM_CHILLDRAKE, FORM_ICECAP_JERRY,
   FORM_ICECAP_JERRY_SNOWDRAKE, FORM_ICECAP_JERRY_CHILLDRAKE, FORM_GYFTROT, FORM_GLYDE, FORM_DOGGO, FORM_DOGI,
-  FORM_GREATERDOG, FORM_PAPYRUS, FORM_COUNT
+  FORM_GREATERDOG, FORM_PAPYRUS, FORM_SNOW_COUNT,
+  /* Waterfall */
+  FORM_AARON = FORM_SNOW_COUNT, FORM_WOSHUA, FORM_WOSHUA_AARON, FORM_MOLDBYGG, FORM_MOLDBYGG_MOLDSMAL,
+  FORM_MOLDBYGG_WOSHUA, FORM_SHYREN, FORM_COUNT
 };
 
 enum {
@@ -30,7 +35,10 @@ enum {
   /* Snowdin */
   ATK_DRAKE_ARCS = ATK_RUINS_COUNT, ATK_DRAKE_LINES, ATK_ICECAP_HATS, ATK_ICECAP_WAVES, ATK_GYFT_PRESENTS,
   ATK_GYFT_SNOW, ATK_DOGGO_SWORD, ATK_LDOG_JUMP, ATK_LDOG_SPEARS, ATK_DOGI_AXES, ATK_DOGI_HEARTS, ATK_GDOG_SPEAR,
-  ATK_GDOG_BARK, ATK_GLYDE_STARS, ATK_PAP_FIRST, ATK_PAP_LAST = ATK_PAP_FIRST + 24, ATK_COUNT
+  ATK_GDOG_BARK, ATK_GLYDE_STARS, ATK_PAP_FIRST, ATK_PAP_LAST = ATK_PAP_FIRST + 24, ATK_SNOW_COUNT,
+  /* Waterfall */
+  ATK_AARON_ARMS = ATK_SNOW_COUNT, ATK_AARON_SWEAT, ATK_WOSHUA_DROPS, ATK_WOSHUA_BUBBLES, ATK_MOLDBYGG_HOPS,
+  ATK_MOLDBYGG_RAIN, ATK_SHYREN_NOTES, ATK_COUNT
 };
 
 /* a formation: up to three monsters, and what the first turn says */
@@ -46,4 +54,9 @@ void snow_attack_run(struct Battle *b, int atk, int t);
 void snow_attack_draw(struct Battle *b, int atk, int t);
 int snow_attack_length(int atk);
 int snow_encounter(int room);                 /* a random encounter's formation there, -1 none */
+const Form *wf_form(int form);                /* wfmon.c */
+const struct MonDef *wf_mon_def(int id);
+void wf_attack_run(struct Battle *b, int atk, int t);
+int wf_attack_length(int atk);
+int wf_encounter(int room);
 #endif

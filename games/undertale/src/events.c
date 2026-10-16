@@ -8,6 +8,7 @@
 #include "menu.h"
 #include "ruins.h"
 #include "snowdin.h"
+#include "waterfall.h"
 
 static int ev_sign(Ev *c) {
   EV_BEGIN;
@@ -87,6 +88,7 @@ static int ev_encounter(Ev *c) {
   g_exclaim = 0;
   BATTLE(c->v[0]);
   snow_battle_done(c->v[0]);
+  wf_battle_done(c->v[0]);
   EV_END;
 }
 
@@ -108,6 +110,8 @@ int event_run(Ev *c) {
   r = snow2_event(c);
   if (r >= 0) return r;
   r = town_event(c);
+  if (r >= 0) return r;
+  r = wf1_event(c);
   if (r >= 0) return r;
   return 1;
 }

@@ -287,6 +287,7 @@ void text_open_menu(const char *const *opts, int n) {
 
 bool text_active(void) { return box_open; }
 int text_choice(void) { return last_choice; }
+int text_menu_cols(void) { return menu_cols; }
 int text_menu_sel(void) { return box_open && menu_opts ? menu_sel : box_open && box.choices && box.done ? 100 + box.choice : -1; }
 
 void text_update(uint32_t pressed) {

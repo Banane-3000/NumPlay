@@ -50,10 +50,6 @@ void town_setup(int room, int from) {
       if (flag(F_PAPYRUS) == 1) {
         Obj *p = obj_papyrus(2190, 1100, DIR_DOWN);
         if (p) p->event = EV_PAP_HOUSE, p->flags |= OF_TALK;
-        if (!flag(F_GRILLBYS)) {
-          Obj *s = obj_sans(1290, 1104, DIR_DOWN);
-          if (s) s->event = EV_GRILLBYS, s->flags |= OF_TALK;
-        }
       }
       folk(1099, 1093, "* Hey, another kid!|* Someday I'll watch Undyne\n  fight. She's the best!");
       break;
@@ -125,7 +121,6 @@ void town_setup(int room, int from) {
       break;
     case ROOM_FOGROOM:
       if (!flag(F_PAPYRUS)) obj_trigger(3290, 1030, 30, 150, EV_PAP_FIGHT, ACTOR_TRIGGER);
-      obj_trigger(3596, 1040, 24, 140, EV_SNOW_END, ACTOR_TRIGGER2);
       break;
   }
 }
@@ -261,7 +256,12 @@ static int ev_pap_date(Ev *c) {
 
 static int ev_grillbys(Ev *c) {
   EV_BEGIN;
-  SAY(FACE_SANS, "* hey.\n* thanks for keeping my brother entertained.|* want to grab some lunch?@Sure@Not now");
+  /* (from his station in Waterfall) */
+  if (flag(F_GRILLBYS)) {
+    SAY(FACE_SANS, "* i'm on another break.\n* from my other break.");
+    return 1;
+  }
+  SAY(FACE_SANS, "* hey. i'm on break.\n* want to grab some food at grillby's?@Sure@Not now");
   if (CHOICE() == 1) {
     SAY(FACE_SANS, "* ok. maybe later.");
     return 1;
@@ -271,17 +271,7 @@ static int ev_grillbys(Ev *c) {
   SAY(FACE_SANS, "* here's a good seat.|* so, what'll it be?\n`2* fries or burger?@Fries@Burger");
   SAY(FACE_SANS, "* nice.|* say... papyrus says a #Yflower#X talks to him sometimes.\n* gives him advice. weird, right?|* if you see a talking flower, tell me, ok?|`1* oh, and thanks for paying.");
   set_flag(F_GRILLBYS, 1);
-  FADE_TO(ROOM_SNOWTOWN, 1310, 1096, DIR_DOWN);
-  EV_END;
-}
-
-static int ev_snow_end(Ev *c) {
-  EV_BEGIN;
-  /* on to Waterfall: not made yet */
-  set_flag(F_SNOW_EXIT, 1);
-  sv.room = (int16_t)g_room, sv.x = (int16_t)(pl.x - 20), sv.y = pl.y;
-  save_write_auto();
-  menu_end_open();
+  FADE_TO(ROOM_WF1, 880, 1458, DIR_DOWN);
   EV_END;
 }
 
@@ -306,7 +296,6 @@ int town_event(Ev *c) {
     case EV_PAP_HOUSE: return ev_pap_house(c);
     case EV_PAP_DATE: return ev_pap_date(c);
     case EV_GRILLBYS: return ev_grillbys(c);
-    case EV_SNOW_END: return ev_snow_end(c);
     case EV_COUCH: return ev_couch(c);
   }
   return -1;

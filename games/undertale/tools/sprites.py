@@ -106,9 +106,54 @@ def gen_heartbullet():
     return [im]
 
 
+def gen_spear():
+    # Undyne's spear: a shaft, a head on top
+    im = _img(7, 40)
+    d = ImageDraw.Draw(im)
+    d.polygon([(3, 0), (6, 8), (4, 8), (4, 39), (2, 39), (2, 8), (0, 8)], fill=(255, 255, 255, 255))
+    return [im]
+
+
+def gen_note():
+    im = _img(9, 11)
+    d = ImageDraw.Draw(im)
+    d.ellipse([0, 6, 5, 10], fill=(255, 255, 255, 255))
+    d.rectangle([4, 0, 5, 8], fill=(255, 255, 255, 255))
+    d.line([(5, 0), (8, 3)], fill=(255, 255, 255, 255))
+    return [im]
+
+
+def gen_drop():
+    im = _img(7, 10)
+    d = ImageDraw.Draw(im)
+    d.polygon([(3, 0), (6, 6), (5, 9), (1, 9), (0, 6)], fill=(255, 255, 255, 255))
+    return [im]
+
+
+def gen_arm():
+    # a flexing arm: the upper arm along, the forearm up, a fist
+    im = _img(16, 14)
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 9, 9, 13], fill=(255, 255, 255, 255))
+    d.ellipse([3, 6, 9, 12], fill=(255, 255, 255, 255))
+    d.rectangle([9, 3, 13, 13], fill=(255, 255, 255, 255))
+    d.ellipse([9, 0, 15, 5], fill=(255, 255, 255, 255))
+    return [im]
+
+
+def gen_debris():
+    # a rock riding the stream
+    im = _img(16, 12)
+    d = ImageDraw.Draw(im)
+    d.ellipse([0, 1, 15, 11], fill=(90, 84, 128, 255), outline=(20, 16, 40, 255))
+    d.line([(4, 4), (8, 3)], fill=(150, 140, 190, 255))
+    return [im]
+
+
 GEN = {"otile": gen_otile, "snowball": gen_snowball, "bone": gen_bone, "orb": gen_orb, "snowflake": gen_snowflake,
        "iceshard": gen_iceshard, "present": gen_present, "knife": gen_knife, "dogpaw": gen_dogpaw,
-       "heartbullet": gen_heartbullet}
+       "heartbullet": gen_heartbullet, "spear": gen_spear, "note": gen_note, "drop": gen_drop, "arm": gen_arm,
+       "debris": gen_debris}
 
 SNOW_CLEAR = [(133, 163, 216), (114, 129, 177), (139, 163, 186), (180, 192, 201), (195, 207, 216)]
 PAP_GIF = "move:Papyrus_screenshot_back_and_forth.gif:0,280,640,450:"
@@ -240,6 +285,36 @@ SPRITES = [
     ("papyrus_b", "wiki:Papyrus_battle.png", {"feet": True, "clear_bg": True}),
     ("papyrus_hurt", "wiki:Papyrus_battle_hurt.png", {"feet": True, "clear_bg": True}),
     ("papyrus_confused", "wiki:Papyrus_battle_confused.gif", {"feet": True, "clear_bg": True, "dedupe": True}),
+    # Waterfall: who walks about, the bridge seeds, the bullets
+    ("mk_ow", "wiki:Monster_Kid_overworld.png", {"feet": True}),
+    ("mk_ow_l", "wiki:Monster_Kid_overworld.png", {"feet": True, "mirror": True}),
+    ("undyne_ow", "wiki:Undyne_overworld_armor.png", {"feet": True}),
+    ("undyne_throw", "wiki:Undyne_overworld_spear.gif", {"feet": True, "dedupe": True}),
+    ("onionsan", "wiki:Onionsan_overworld.png", {"feet": True}),
+    ("onionsan_up", "wiki:Onionsan_overworld_surface.png", {"feet": True}),
+    ("shyren_ow", "wiki:Shyren_overworld.png", {"feet": True}),
+    ("aaron_ow", "wiki:Aaron_overworld.png", {"feet": True}),
+    ("woshua_ow", "wiki:Woshua_overworld.gif", {"feet": True}),
+    ("seed", "wiki:Bridge_Seed_overworld.png", {"keep": True}),
+    ("bloom", "wiki:Bridge_Seed_overworld_flower.png", {"keep": True}),
+    # what lies about Waterfall to be picked up (cut from the map, its floor made see-through): the tutu, the
+    # artifact on its pedestal
+    ("tutu", "map:Waterfall_map.png:1240,1240,22,10", {"keep": True, "clear": [(23, 13, 43), (27, 21, 72), (27, 33, 90)]}),
+    ("artifact", "map:Waterfall_map.png:10156,150,12,11",
+     {"keep": True, "clear": [(27, 21, 72), (27, 33, 90), (54, 47, 121), (99, 102, 135)]}),
+    ("spear", "gen:spear", {"center": True}),
+    ("note", "gen:note", {"center": True}),
+    ("drop", "gen:drop", {"center": True}),
+    ("arm", "gen:arm", {"center": True}),
+    ("debris", "gen:debris", {"center": True}),
+    # Waterfall's monsters
+    ("aaron_b", "wiki:Aaron_battle_static.png", {"feet": True, "clear_bg": True}),
+    ("aaron_hurt", "wiki:Aaron_battle_hurt.png", {"feet": True, "clear_bg": True}),
+    ("woshua_b", "wiki:Woshua_battle_idle.gif", {"feet": True, "clear_bg": True, "dedupe": True, "every": 30}),
+    ("woshua_hurt", "wiki:Woshua_battle_hurt.png", {"feet": True, "clear_bg": True}),
+    ("moldbygg_b", "wiki:Moldbygg_battle_idle.gif", {"feet": True, "clear_bg": True, "every": 6}),
+    ("shyren_b", "wiki:Shyren_battle.png", {"feet": True, "clear_bg": True}),
+    ("shyren_turned", "wiki:Shyren_battle_turned.png", {"feet": True, "clear_bg": True}),
 ] + [
     # the intro's pictures, the title, GAME OVER
     ("introimage", "demo:spr_introimage", {"keep": True, "clear_black": True}),

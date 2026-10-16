@@ -7,6 +7,7 @@
 #include "monsters.h"
 #include "ruins.h"
 #include "snowdin.h"
+#include "waterfall.h"
 #include "world.h"
 
 void room_setup(int room, int from) {
@@ -16,6 +17,7 @@ void room_setup(int room, int from) {
   snow1_setup(room, from);
   snow2_setup(room, from);
   town_setup(room, from);
+  wf1_setup(room, from);
 }
 
 /* each frame Frisk can walk: what a room watches (a rock on its switch, a cracked floor) */
@@ -23,6 +25,7 @@ void room_update(void) {
   ruins2_update();
   snow1_update();
   snow2_update();
+  wf1_update();
 }
 
 /* what a room draws on its floor, under everything (world.c) */
@@ -30,6 +33,10 @@ void room_draw_floor(void) {
   snow1_draw();
   snow2_draw();
 }
+
+/* a pushed rock that may go where Frisk can't (a bridge seed into the water), and what happens once it has */
+bool room_rock_enters(Obj *o, int x, int y) { return wf_seed_enters(o, x, y); }
+void room_rock_moved(Obj *o) { wf_seed_moved(o); }
 
 bool room_ice(int x, int y) {
   const RoomInfo *ri = world_room_info();
@@ -67,8 +74,9 @@ void encounter_step(void) {
   const Encounters *e = NULL;
   for (unsigned i = 0; i < sizeof enc / sizeof enc[0]; i++)
     if (enc[i].room == g_room) e = &enc[i];
-  /* Snowdin's are snowmon.c's (who comes depends on what's happened) */
+  /* Snowdin's and Waterfall's are snowmon.c's and wfmon.c's (who comes depends on what's happened) */
   int snow = e ? -1 : snow_encounter(g_room);
+  if (!e && snow < 0) snow = wf_encounter(g_room);
   if (!e && snow < 0) return;
   if (--steps_left > 0) return;
   steps_left = 100 + rnd_n(200);

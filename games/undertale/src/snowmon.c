@@ -510,7 +510,7 @@ static int attack_glyde(Battle *b, Monster *m) { (void)b, (void)m; return ATK_GL
 
 /* ---------------------------------------------------------------- the table */
 extern const MonDef papyrus_def;   /* papyrus.c */
-static const MonDef snow_defs[MON_COUNT - MON_RUINS_COUNT] = {
+static const MonDef snow_defs[MON_SNOW_COUNT - MON_RUINS_COUNT] = {
   [MON_SNOWDRAKE - MON_RUINS_COUNT] = {
     .name = "Snowdrake", .spare_gold = 12, .hp = 74, .at = 6, .df = 2, .exp = 22, .gold = 18, .spr_idle = SPR_SNOWDRAKE_B,
     .spr_hurt = SPR_SNOWDRAKE_HURT, .idle_speed = 8, .check = "This teen comedian fights to keep a captive audience.",
@@ -595,11 +595,12 @@ static const MonDef snow_defs[MON_COUNT - MON_RUINS_COUNT] = {
     .act = act_glyde, .talk = talk_glyde, .attack = attack_glyde},
 };
 const MonDef *snow_mon_def(int id) {
+  if (id >= MON_SNOW_COUNT) return wf_mon_def(id);
   if (id == MON_PAPYRUS) return &papyrus_def;
   return &snow_defs[id - MON_RUINS_COUNT];
 }
 
-static const Form snow_forms[FORM_COUNT - FORM_RUINS_COUNT] = {
+static const Form snow_forms[FORM_SNOW_COUNT - FORM_RUINS_COUNT] = {
   [FORM_SNOWDRAKE - FORM_RUINS_COUNT] = {{MON_SNOWDRAKE}, 1, "* Snowdrake flutters forth!"},
   [FORM_ICECAP - FORM_RUINS_COUNT] = {{MON_ICECAP}, 1, "* Icecap struts into view."},
   [FORM_LESSERDOG - FORM_RUINS_COUNT] = {{MON_LESSERDOG}, 1, "* Lesser Dog appears."},
@@ -616,7 +617,7 @@ static const Form snow_forms[FORM_COUNT - FORM_RUINS_COUNT] = {
   [FORM_GREATERDOG - FORM_RUINS_COUNT] = {{MON_GREATERDOG}, 1, "* It's the Greater Dog."},
   [FORM_PAPYRUS - FORM_RUINS_COUNT] = {{MON_PAPYRUS}, 1, "* Papyrus blocks the way!"},
 };
-const Form *snow_form(int form) { return &snow_forms[form - FORM_RUINS_COUNT]; }
+const Form *snow_form(int form) { return form >= FORM_SNOW_COUNT ? wf_form(form) : &snow_forms[form - FORM_RUINS_COUNT]; }
 
 /* random encounters: the wiki's pools (no more of them once Papyrus is spared with no one killed here) */
 int snow_encounter(int room) {
@@ -835,7 +836,7 @@ static void atk_glyde_stars(int t) {
   }
 }
 
-static const int16_t snow_lengths[ATK_COUNT - ATK_RUINS_COUNT] = {
+static const int16_t snow_lengths[ATK_SNOW_COUNT - ATK_RUINS_COUNT] = {
   [ATK_DRAKE_ARCS - ATK_RUINS_COUNT] = 150, [ATK_DRAKE_LINES - ATK_RUINS_COUNT] = 150,
   [ATK_ICECAP_HATS - ATK_RUINS_COUNT] = 150, [ATK_ICECAP_WAVES - ATK_RUINS_COUNT] = 180,
   [ATK_GYFT_PRESENTS - ATK_RUINS_COUNT] = 170, [ATK_GYFT_SNOW - ATK_RUINS_COUNT] = 160,
@@ -849,6 +850,7 @@ void papyrus_attack(int atk, int t);
 void papyrus_attack_draw(int atk, int t);
 
 int snow_attack_length(int atk) {
+  if (atk >= ATK_SNOW_COUNT) return wf_attack_length(atk);
   if (atk >= ATK_PAP_FIRST && atk <= ATK_PAP_LAST) return papyrus_attack_length(atk);
   int n = snow_lengths[atk - ATK_RUINS_COUNT] ? snow_lengths[atk - ATK_RUINS_COUNT] : 150;
   /* Jerry makes attacks 2 seconds longer */
@@ -858,6 +860,10 @@ int snow_attack_length(int atk) {
 }
 
 void snow_attack_run(Battle *b, int atk, int t) {
+  if (atk >= ATK_SNOW_COUNT) {
+    wf_attack_run(b, atk, t);
+    return;
+  }
   (void)b;
   if (t < 0) return;
   switch (atk) {

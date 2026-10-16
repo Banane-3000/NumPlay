@@ -109,6 +109,7 @@ typedef struct Battle {
   int phase, t;
   Monster mon[MAX_MON];
   int nmon;
+  int greens;                  /* green (healing) bullets the SOUL caught this battle */
   int button, target, act, item, mercy, page;
   Writer w;                    /* the box's text */
   char text[600];

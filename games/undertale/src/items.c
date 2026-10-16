@@ -34,6 +34,14 @@ static const ItemInfo items[ITEM_COUNT] = {
                      "* You ate the Unisicle.", 2},
   [ITEM_CINNAMON_BUNNY] = {"Cinnamon Bunny", "CinnaBun", IT_FOOD, 22, 0, 0, "A cinnamon roll in the\n  shape of a bunny.",
                            "* You eat the Cinnamon Bunny.", 8},
+  [ITEM_OLD_TUTU] = {"Old Tutu", "Old Tutu", IT_ARMOR, 0, 0, 10, "A dusty frilly skirt.\n* Still holds up well.", "", 80},
+  [ITEM_BALLET_SHOES] = {"Ballet Shoes", "BallShoes", IT_WEAPON, 0, 7, 0, "Worn dancing shoes.\n* Too big for you.", "", 80},
+  [ITEM_QUICHE] = {"Abandoned Quiche", "Quiche", IT_FOOD, 34, 0, 0, "A quiche someone left\n  under a bench.",
+                   "* You eat the quiche.", 76},
+  [ITEM_PUNCH_CARD] = {"Punch Card", "PunchCard", IT_SPECIAL, 0, 0, 0, "A card for a game nobody\n  plays anymore.",
+                       "* You look at the punch card.\n* It makes you want to punch\n  something.", 15},
+  [ITEM_ARTIFACT] = {"Legendary Artifact", "Artifact", IT_SPECIAL, 0, 0, 0, "A mysterious orb.\n* It's a little heavy.",
+                     "* You hold the orb up.\n* Nothing happens.", 0},
 };
 
 const ItemInfo *item_info(int id) { return &items[id >= 0 && id < ITEM_COUNT ? id : 0]; }
@@ -46,6 +54,7 @@ void item_info_text(int id, char *out, int cap) {
       if (id == ITEM_BANDAGE) snprintf(out, (size_t)cap, "* \"%s\" - Heals %d HP\n* %s", it->name, it->heal, it->info);
       else snprintf(out, (size_t)cap, "* \"%s\" - Armor DF %d\n* %s", it->name, it->df, it->info);
       break;
+    case IT_SPECIAL: snprintf(out, (size_t)cap, "* \"%s\"\n* %s", it->name, it->info); break;
     default:
       if (it->heal >= 998) snprintf(out, (size_t)cap, "* \"%s\" - Heals ALL HP\n* %s", it->name, it->info);
       else snprintf(out, (size_t)cap, "* \"%s\" - Heals %d HP\n* %s", it->name, it->heal, it->info);
@@ -92,6 +101,9 @@ void item_use(int slot, char *out, int cap, int in_battle) {
         snprintf(out, (size_t)cap, "* You equipped the %s.", it->name);
         return;
       }
+    case IT_SPECIAL:   /* looked at, kept */
+      snprintf(out, (size_t)cap, "%s", it->use);
+      return;
     default: {
       int n = snprintf(out, (size_t)cap, "%s", it->use);
       if (id == ITEM_NICE_CREAM) {   /* its wrapper's kind words */

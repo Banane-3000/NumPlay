@@ -46,6 +46,12 @@ PAGES = ["Ruins", "Ruins/Puzzles", "Toriel", "Toriel/In_battle", "Toriel's_Home"
          "Rabbit_Lady_and_Cinnamon", "Red_Bird", "Red_Demon", "Scarf_Lady", "Slime_family", "Ugly_Fish",
          "Library_Lizard", "Library_Loox", "Knock_lover", "Lady_Garf", "Wrap_Mouse", "Innkeeper's_child",
          "Snoring_guests", "Mad_Mew_Mew", "Snowdrake's_mother", "Snowdrake's_father", "Bonetrousle",
+         # Waterfall
+         "Waterfall", "Waterfall/Puzzles", "Aaron", "Woshua", "Moldbygg", "Shyren", "Temmie", "Temmie_Village",
+         "Mad_Dummy", "Undyne", "Undyne/In_battle", "Onionsan", "Gerson", "Echo_Flower", "Bridge_seed",
+         "Undyne's_House", "Napstablook's_house", "Garbage_Dump", "Shyren/In_battle", "Riverman", "Piano_puzzle",
+         "Legendary_Artifact", "Astronaut_Food", "Glamburger", "Hot_Dog...?", "Cloudy_Glasses", "Torn_Notebook",
+         "Stained_Apron", "Burnt_Pan", "Toy_Knife", "Temmie_Flakes", "Tem_Shop", "Small_bird", "Lemon_Bread",
          "Tough_Glove", "Manly_Bandanna", "Old_Tutu", "Ballet_Shoes", "Cinnamon_Bunny", "Bisicle", "Unisicle",
          "Nice_Cream_(item)", "Snowman_Piece", "Snowman_Piece", "Punch_Card", "Dog_Residue", "Abandoned_Quiche",
          "Astronaut_Food", "Hot_Dog...?", "Hot_Cat", "Spaghetti", "Glamburger", "Sea_Tea", "Temmie_Flakes",

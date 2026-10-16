@@ -95,6 +95,22 @@ enum {
   F_FISH,                /* the fishing rod's note read */
   F_SHOP_TALK,
   F_SNOWDRAKE_DEAD,      /* (then Chilldrake comes instead) */
+  /* Waterfall */
+  F_WF_MK,               /* Monster Kid met by the first echo flower */
+  F_WF_GRILLBYS,         /* Sans took Frisk to Grillby's from his station */
+  F_WF_TUTU, F_WF_QUICHE, F_WF_BALLET, F_WF_PUNCH, F_WF_ARTIFACT,   /* found */
+  F_WF_UNDYNE1,          /* Undyne seen from the tall grass */
+  F_SEEDS1, F_SEEDS2, F_SEEDS3,   /* the bridges of bridge seeds, made */
+  F_CHASE1,              /* Undyne's first chase, over */
+  F_WF_TELESCOPE,
+  F_WF_ONION,            /* 1 met, 2 parted */
+  F_PIANO,               /* its song played: the door is open */
+  F_UMBRELLA,            /* 1 carried, 2 left with the statue */
+  F_MK_RAIN,             /* Monster Kid walked with Frisk in the rain */
+  F_SHYREN,              /* 1 spared, 2 killed */
+  F_WF_BRIDGE,           /* the bridge cut: Frisk fell */
+  F_KILLS_WATERFALL,
+  F_WF_BIRD,
   FLAG_COUNT = 256
 };
 #endif
