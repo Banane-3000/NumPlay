@@ -48,7 +48,7 @@ bool gain_exp(int exp) {
   }
   return up;
 }
-int weapon_at(void) { return item_info(sv.weapon)->at; }
+int weapon_at(void) { return item_info(sv.weapon)->at + item_info(sv.armor)->at; } /* (the Cowboy Hat's too) */
 int armor_df(void) { return item_info(sv.armor)->df; }
 
 bool item_add(int item) {

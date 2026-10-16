@@ -38,6 +38,7 @@ FORM_SNOWDRAKE, FORM_PAPYRUS = 19, 31
 ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT, ITEM_ASTRONAUT_FOOD = range(17, 23)
 ITEM_BURNT_PAN, ITEM_INSTANT_NOODLES, ITEM_HOT_DOG, ITEM_STAINED_APRON = 28, 29, 30, 31
 ITEM_NICE_CREAM = 13
+ITEM_STARFAIT = 32
 
 
 def run(args, frames, saves=None, what=""):
@@ -261,12 +262,12 @@ if not QUICK:
 
 # Hotland's third floor: the bake sale, the vent islands, both shooting puzzles (the Diamond Boys, Alphys's anime),
 # the belts past the drones, Muffet spared, Mettaton's musical, the tile puzzle and his fight, the crossroads (a Nice
-# Cream, Heats Flamesman), up to the MTT Resort
+# Cream, Heats Flamesman), up the stairs to the MTT Resort
 if not QUICK:
     s = run(["--name", "Frisk", "--noenc", "--god", "--gold", "100", "--room", str(ROOMS["HT_L3"]), "--at", "3770,842",
              "--path-file", os.path.join(HERE, "hotland3.path")], 14000, what="Hotland's third floor")
-    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["HT_CROSS3"],
-          f"Hotland's third floor did not end by the MTT Resort: {s}")
+    check(s and s["mode"] == MODE_WORLD and s["room"] == ROOMS["RES_OUTSIDE"],
+          f"Hotland's third floor did not end at the MTT Resort: {s}")
     if s:
         for name, v in (("HT_CALL_HUB3", 1), ("HT3_PUZ_N", 1), ("HT3_PUZ_S", 1), ("HT_ANIME", 1), ("HT_MUFFET", 1),
                         ("HT_MUSICAL", 1), ("HT_TILES3", 1), ("HT_HEATS3", 1), ("HT_FLOOR3", 1)):
@@ -274,6 +275,18 @@ if not QUICK:
         check(s["kills"] == 0, f"Hotland's third floor: {s['kills']} killed on the friendly way")
         check(s["gold"] == 188, f"Hotland's third floor: Muffet's gold or the Nice Cream went wrong: {s['gold']}")
         check(ITEM_NICE_CREAM in s["items"], f"Hotland's third floor: no Nice Cream: {s['items']}")
+
+# the MTT Resort: dinner with Sans, a Starfait from Burgerpants, a night in the hotel (200G), room service and the
+# dog's door (nothing to give), up to the CORE's door
+if not QUICK:
+    s = run(["--name", "Frisk", "--noenc", "--god", "--gold", "400", "--room", str(ROOMS["HT_CROSS3"]), "--at", "7550,420",
+             "--path-file", os.path.join(HERE, "resort.path")], 5000, what="the MTT Resort")
+    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["RES_LOBBY"], f"the MTT Resort did not end at the CORE: {s}")
+    if s:
+        for name, v in (("HT_FLOOR3", 1), ("RES_SANS", 1), ("RES_ROOM", 2), ("RES_CORE", 1), ("RES_TEA", 0), ("RES_DOG", 0)):
+            check(flag(s, name) == v, f"the MTT Resort: F_{name} is {flag(s, name)}, not {v}")
+        check(s["gold"] == 140, f"the MTT Resort: the Starfait or the room went wrong: {s['gold']}")
+        check(ITEM_STARFAIT in s["items"], f"the MTT Resort: no Starfait: {s['items']}")
 
 if failures:
     print("\n".join("FAIL " + f for f in failures))

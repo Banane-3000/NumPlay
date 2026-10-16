@@ -124,5 +124,7 @@ int event_run(Ev *c) {
   if (r >= 0) return r;
   r = ht3_event(c);
   if (r >= 0) return r;
+  r = res_event(c);
+  if (r >= 0) return r;
   return 1;
 }

@@ -155,7 +155,13 @@ enum {
   F_HT_MUSICAL,          /* Mettaton's musical seen (and the trapdoor) */
   F_HT_TILES3,           /* the tile puzzle under the stage: 1 solved, 2 out of time; then Mettaton fought */
   F_HT_HEATS3,           /* Heats Flamesman asked about his name */
-  F_HT_FLOOR3,           /* the way to the MTT Resort reached (where the game now ends) */
+  F_HT_FLOOR3,           /* the MTT Resort reached */
+  F_RES_SANS,            /* dinner with Sans at the Resort */
+  F_RES_TEA,             /* room service brought: the Sea Tea (door 1), the Cinnamon Bunny (door 3) */
+  F_RES_BUN,
+  F_RES_ROOM,            /* the hotel's room: 1 paid for, 2 slept in */
+  F_RES_DOG,             /* the Hot Dog slid under door 4 (for a Hush Puppy) */
+  F_RES_CORE,            /* the CORE's door reached (where the game now ends) */
   FLAG_COUNT = 256
 };
 #endif

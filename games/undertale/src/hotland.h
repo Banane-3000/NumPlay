@@ -1,5 +1,5 @@
-/* Undertale: Hotland (ht1.c, ht2.c, ht3.c: its three floors), its monsters (htmon.c), Mettaton's shows
- * (htshows.c). */
+/* Undertale: Hotland (ht1.c, ht2.c, ht3.c: its three floors; resort.c: the MTT Resort), its monsters
+ * (htmon.c), Mettaton's shows (htshows.c). */
 #ifndef UT_HOTLAND_H
 #define UT_HOTLAND_H
 #include "event.h"
@@ -18,4 +18,6 @@ void ht3_update(void);    /* the webs' hold, the tile puzzle, its flames and clo
 void ht3_draw(void);      /* under everything: the flames, the turned-off force fields */
 void ht3_draw_top(void);  /* over everything: the tile puzzle's clock */
 int ht3_speed(int x, int y);
+void res_setup(int room, int from);
+int res_event(Ev *c);
 #endif

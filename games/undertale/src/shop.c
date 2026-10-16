@@ -12,10 +12,12 @@
 
 typedef struct {
   uint8_t item;
-  uint8_t price;
+  uint16_t price;
 } Ware;
 typedef struct {
   uint16_t pic;
+  uint16_t keeper;             /* drawn over the picture (its feet at keeper_x, 120), 0 if the picture has them */
+  int16_t keeper_x;
   const char *hello, *again, *buying, *bought, *poor, *full, *nobuy, *sell;
   Ware wares[4];
   int nwares;
@@ -58,6 +60,32 @@ static const Shop shops[SHOP_COUNT] = {
     .topics = {"Say hello", "About Temmies", "Tem history", "About shop"},
     .answers = {"* hOI!!! i'm temmie!!", "* temmies r the best!!!\n* we love humans... but some temmies r allergic...",
                 "* temmie village is very old...\n* tem forget the rest.", "* tem wants to go to colleg someday!!"},
+    .ntopics = 4},
+  [SHOP_BURGER] = {
+    .pic = SPR_SHOP_BURGER, .keeper = SPR_BURGERPANTS, .keeper_x = 246,
+    .hello = "* Hi, welcome to MTT-Brand\n  Burger Emporium...|* ...where the food is, uh...\n  food.", .again = "* Anything else?",
+    .buying = "Take your\ntime. Please.", .bought = "Thanks...\nI guess.", .poor = "You don't\nhave the\nmoney.",
+    .full = "Your hands\nare full.", .nobuy = "Fine by me.",
+    .sell = "* Sell stuff? Here?\n* I can barely sell the burgers.",
+    .wares = {{ITEM_STARFAIT, 60}, {ITEM_GLAMBURGER, 120}, {ITEM_LEGENDARY_HERO, 300}, {ITEM_STEAK, 500}}, .nwares = 4,
+    .topics = {"Say hello", "About Mettaton", "About the food", "Your life"},
+    .answers = {"* Hi. I'm Burgerpants.\n* Not my real name. Long story.",
+                "* Mettaton's my boss.\n* He's... a lot.|* Everything here has to have\n  his face on it.",
+                "* The Glamburger has glitter\n  in it.|* Mettaton says that's how\n  humans eat. Sure.",
+                "* I came here to be a star.\n* Now I make burgers.|* ...at least I've got my youth.\n* Right?"},
+    .ntopics = 4},
+  [SHOP_BRATTY] = {
+    .pic = SPR_SHOP_BRATTY, .keeper = SPR_BRATTY_CATTY, .keeper_x = 160,
+    .hello = "* Hey! Check it out!\n* Yeah! Check it out!", .again = "* Like, anything else?",
+    .buying = "Buy ALL\nour stuff!", .bought = "Thanks!\nLike, so\nmuch!", .poor = "You need\nWAY more\nmoney.",
+    .full = "You have\nTOO many\nitems!", .nobuy = "Whatever!",
+    .sell = "* We don't, like, need\n  anything. Really.",
+    .wares = {{ITEM_JUNK_FOOD, 25}, {ITEM_EMPTY_GUN, 350}, {ITEM_COWBOY_HAT, 350}, {ITEM_MYSTERY_KEY, 600}}, .nwares = 4,
+    .topics = {"About you two", "Burgerpants", "Your stuff", "Mettaton"},
+    .answers = {"* I'm Bratty. She's Catty.\n* We're, like, best friends.",
+                "* The guy at the burger place?\n* Ugh, a creep.|* ...a kind of cute creep,\n  though. -Catty",
+                "* We find it all in the dump.\n* It's GOOD garbage.|* And, like, TOTALLY expensive.",
+                "* Mettaton is SO cute.\n* We're, like, his biggest fans."},
     .ntopics = 4},
 };
 
@@ -245,6 +273,7 @@ void shop_draw(void) {
   const Shop *s = &shops[shop_id];
   gfx_rect(0, 0, SCREEN_W, SCREEN_H, C_BLACK, 255);
   gfx_sprite(s->pic, 0, 0, 0, 0, 255);
+  if (s->keeper) gfx_sprite(s->keeper, 0, s->keeper_x, 120, 0, 255);
   panel(2, 121, 210, 117);
   panel(212, 121, 106, 117);
   char g[24];

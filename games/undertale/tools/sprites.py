@@ -399,6 +399,12 @@ SPRITES = [
     ("temmie_hurt", "wiki:Temmie_battle_hurt.png", {"feet": True}),
     ("shop_gerson", "wiki:Gerson_screenshot_shop.png", {"keep": True, "box": (0, 0, 320, 120)}),
     ("shop_tem", "wiki:Tem_Shop_screenshot_Temmie_Armor.png", {"keep": True, "box": (0, 0, 320, 120)}),
+    # the MTT-Brand Burger Emporium: its counter, Burgerpants behind it
+    ("shop_burger", "wiki:Burgerpants_sprite_shop.png", {"keep": True, "box": (0, 0, 320, 120)}),
+    ("burgerpants", "wiki:Burgerpants_face_1.png", {"feet": True}),
+    # Bratty and Catty's alley: its trash cans and door, the two of them in front
+    ("shop_bratty", "wiki:Bratty_and_Catty_sprite_shop.png", {"keep": True, "box": (0, 0, 320, 120)}),
+    ("bratty_catty", "wiki:Bratty_and_Catty_sprite.png", {"feet": True}),
     ("bird", "map:Waterfall_map.png:8466,578,15,19", {"keep": True, "clear": [(27, 33, 90), (27, 21, 72), (23, 13, 43)]}),
     ("tutu", "map:Waterfall_map.png:1240,1240,22,10", {"keep": True, "clear": [(23, 13, 43), (27, 21, 72), (27, 33, 90)]}),
     ("artifact", "map:Waterfall_map.png:10156,150,12,11",

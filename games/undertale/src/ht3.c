@@ -1,7 +1,7 @@
 /* Hotland, its third floor: out of the elevator, the spiders' bake sale; the vent islands, the shooting puzzles north
  * (the Diamond Boys) and south (over the belts, past the drones); the spider entrance and Muffet's lair, its webs;
- * Mettaton's musical, the trapdoor down to the tile puzzle and his fight; the crossroads, where the way north leads to
- * the MTT Resort. (As the Undertale Wiki describes them; what they say is ours, in short.) */
+ * Mettaton's musical, the trapdoor down to the tile puzzle and his fight; the crossroads, where the stairs north lead
+ * to the MTT Resort (resort.c). (As the Undertale Wiki describes them; what they say is ours, in short.) */
 #include <stddef.h>
 #include <stdio.h>
 #include "battle.h"
@@ -205,7 +205,6 @@ void ht3_setup(int room, int from) {
       }
       thing(8054, 430, 24, 30, EV_HEATS3, ACTOR_ITEM, 0);
       thing(7934, 340, 80, 80, EV_HT3_ELEVATOR, ACTOR_DOOR, 0);
-      obj_trigger(7522, 296, 56, 10, EV_HT3_END, ACTOR_TRIGGER);
       break;
   }
 }
@@ -417,16 +416,6 @@ static int ev_elevator(Ev *c) {
   EV_END;
 }
 
-static int ev_end(Ev *c) {
-  EV_BEGIN;
-  NARRATE("* (The MTT Resort is just up\n  these stairs.)");
-  set_flag(F_HT_FLOOR3, 1);
-  sv.room = (int16_t)g_room, sv.x = 7530, sv.y = 420;
-  save_write_auto();
-  menu_end_open();
-  EV_END;
-}
-
 int ht3_event(Ev *c) {
   switch (c->id) {
     case EV_BAKESALE3: return ev_bakesale(c);
@@ -439,7 +428,6 @@ int ht3_event(Ev *c) {
     case EV_HEATS3: return ev_heats(c);
     case EV_NICECREAM3: return ev_nicecream(c);
     case EV_HT3_ELEVATOR: return ev_elevator(c);
-    case EV_HT3_END: return ev_end(c);
   }
   return -1;
 }

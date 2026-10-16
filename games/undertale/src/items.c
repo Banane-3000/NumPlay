@@ -60,6 +60,21 @@ static const ItemInfo items[ITEM_COUNT] = {
                     "* You eat the Hot Dog.\n* (Bark!)", 10},
   [ITEM_STAINED_APRON] = {"Stained Apron", "StainApro", IT_ARMOR, 0, 0, 11, "An apron with old stains.\n* Heals 1 HP every other turn.",
                           "", 50},
+  [ITEM_STARFAIT] = {"Starfait", "Starfait", IT_FOOD, 14, 0, 0, "A tall, sparkly dessert.\n* Very popular.",
+                     "* You eat the Starfait.\n* It's sweet and fizzy.", 5},
+  [ITEM_GLAMBURGER] = {"Glamburger", "GlamBurg", IT_FOOD, 27, 0, 0, "A burger that glitters all\n  over. Very popular.",
+                       "* You eat the Glamburger.\n* It crunches. It's the glitter.", 15},
+  [ITEM_LEGENDARY_HERO] = {"Legendary Hero", "L. Hero", IT_FOOD, 40, 0, 0, "A sandwich shaped like a\n  sword.",
+                           "* You eat the Legendary Hero.\n* You feel brave!", 40},
+  [ITEM_STEAK] = {"Face Steak", "FaceSteak", IT_FOOD, 60, 0, 0, "A steak in the shape of\n  Mettaton's face. Don't ask.",
+                  "* You eat the steak.\n* ...It looks back at you.", 20},
+  [ITEM_JUNK_FOOD] = {"Junk Food", "JunkFood", IT_FOOD, 17, 0, 0, "Food someone threw away,\n  probably.",
+                      "* You eat the Junk Food.\n* Someone took a bite first.", 1},
+  [ITEM_EMPTY_GUN] = {"Empty Gun", "EmptyGun", IT_WEAPON, 0, 12, 0, "An old revolver with no\n  bullets in it.", "", 100},
+  [ITEM_COWBOY_HAT] = {"Cowboy Hat", "CowboyHat", IT_ARMOR, 0, 5, 12, "A worn hat. Makes you want\n  a beard. (+5 AT)", "", 50},
+  [ITEM_MYSTERY_KEY] = {"Mystery Key", "MystryKey", IT_SPECIAL, 0, 0, 0, "A key, too bent to go on\n  your keychain.", "", 500},
+  [ITEM_HUSH_PUPPY] = {"Hush Puppy", "HushPupy", IT_FOOD, 65, 0, 0, "A spell that keeps a dog\n  from casting magic.",
+                       "* You eat the Hush Puppy.\n* Dog-magic is neutralized.", 150},
 };
 
 const ItemInfo *item_info(int id) { return &items[id >= 0 && id < ITEM_COUNT ? id : 0]; }

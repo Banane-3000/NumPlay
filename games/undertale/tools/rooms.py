@@ -161,6 +161,10 @@ HT3_ISLES = [(4720, 700), (4800, 700), (4880, 700), (4640, 780), (4720, 780), (4
 HT3_GRATES = [(4600, 880), (4820, 660), (4820, 1100), (5040, 880)]
 HT_STAGE = [(163, 73, 164), (132, 53, 125), (55, 44, 103)]
 HT_TILES = [(64, 64, 255), (255, 255, 128), (255, 192, 192), (156, 255, 121), (255, 193, 74), (192, 0, 192)]
+# the MTT Resort: its lobby's checkered floor and red carpet; the street's paving and carpet; the restaurant's floor
+RES_FLOOR = [(251, 205, 121), (251, 225, 121), (235, 105, 99), (203, 67, 33), (253, 241, 193)]
+RES_STREET = [(36, 43, 57), (71, 68, 130), (44, 41, 80), (207, 52, 52), (138, 55, 86), (235, 105, 99)]
+RES_DINER = [(114, 73, 95), (90, 83, 119), (90, 74, 132)]
 # the vent puzzle's platforms (their top-left)
 HT_VENTPUZ = [(4620, 2160), (4520, 2260), (4620, 2260), (4720, 2260), (4520, 2360), (4620, 2360), (4520, 2460),
               (4620, 2460)]
@@ -189,6 +193,9 @@ AREAS.append(dict(name="hotland", map="Hotland_map.png", floor=HT_FLOOR, margin=
     ("copy", 454, 6219, 50, 21, 534, 6219),
     ("erase", 536, 6208, 42, 11, [(19, 35, 45), (18, 34, 44), (19, 35, 44), (23, 37, 53), (20, 37, 47), (20, 36, 46)]),
 ]))
+
+AREAS.append(dict(name="resort", map="MTT_Resort_map.png", floor=RES_FLOOR, margin=0, close=True,
+                  patches=[("copy", 1289, 818, 26, 36, 1131, 818)]))   # Sans out front (a sprite here)
 
 ROOMS = [
     # the landing: the bed of golden flowers, a hallway, the Delta Rune arch
@@ -590,7 +597,29 @@ ROOMS = [
     dict(name="ht_tiles", area="hotland", rect=(6340, 540, 1280, 260), title="Hotland",
          floor_colors=HT_FLOOR + HT_BELT + HT_HUB + HT_TILES, fix=[("walk", 7522, 540, 56, 84)]),
     dict(name="ht_cross3", area="hotland", rect=(7320, 280, 820, 260), title="Hotland",
-         fix=[("walk", 7522, 290, 56, 124), ("walk", 7522, 470, 56, 70)]),
+         fix=[("walk", 7522, 290, 56, 124), ("walk", 7522, 470, 56, 70)],
+         doors=[((7522, 292, 56, 10), "res_outside", (1210, 976), "up")]),
+    # the MTT Resort (its own map): the street outside (Sans by the door), the lobby (the fountain, the Burger
+    # Emporium, the elevator, the CORE's door north), the restaurant west, the hotel's hallway east
+    dict(name="res_outside", area="resort", rect=(960, 610, 520, 410), title="MTT Resort", floor_colors=RES_STREET,
+         # (the building is drawn in the street's colours: the plaza, the door's carpet, the alley up the right)
+         floor_rects=[(990, 842, 470, 158), (1190, 1000, 70, 20), (1188, 826, 64, 20), (1384, 648, 34, 200)],
+         fix=[("wall", 1084, 932, 112, 22), ("wall", 1244, 932, 112, 22)],   # the velvet ropes
+         doors=[((1190, 832, 60, 6), "res_lobby", (1205, 568), "up"), ((1197, 1012, 56, 8), "ht_cross3", (7536, 300), "down")]),
+    dict(name="res_lobby", area="resort", rect=(1060, 60, 420, 550), title="MTT Resort",
+         floor_rects=[(1080, 278, 380, 162), (1080, 440, 280, 98), (1060, 380, 20, 60), (1460, 380, 20, 60),
+                      (1200, 136, 40, 142), (1200, 538, 40, 72)],
+         doors=[((1195, 600, 50, 6), "res_outside", (1205, 840), "down"), ((1060, 380, 6, 60), "res_diner", (1030, 396), "left"),
+                ((1474, 380, 6, 60), "res_hall", (1488, 396), "right")]),
+    dict(name="res_diner", area="resort", rect=(60, 220, 1000, 300), title="MTT Resort", floor_colors=RES_DINER + RES_FLOOR,
+         floor_rects=[(82, 342, 698, 156), (780, 382, 280, 56)],
+         doors=[((1054, 380, 6, 60), "res_lobby", (1068, 396), "right")]),
+    dict(name="res_hall", area="resort", rect=(1480, 300, 540, 160), title="MTT Resort", floor_rects=[(1480, 380, 520, 60)],
+         doors=[((1480, 380, 6, 60), "res_lobby", (1450, 396), "left")]),
+    # the hotel's room (door 2), reached from the hall by its door
+    dict(name="res_room", area="resort", rect=(1640, 0, 200, 250), title="MTT Resort",
+         floor_rects=[(1644, 84, 192, 116), (1720, 200, 40, 50)],
+         doors=[((1720, 232, 40, 8), "res_hall", (1735, 364), "down")]),
 ]
 
 # rooms one above the other through a dark doorway (tools/pack.py: apply_links); ("h", left, right, y, h): side
