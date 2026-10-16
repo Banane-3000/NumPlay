@@ -12,7 +12,7 @@ enum {
   /* Waterfall (wfmon.c) */
   MON_AARON = MON_SNOW_COUNT, MON_WOSHUA, MON_MOLDBYGG, MON_SHYREN, MON_MAD_DUMMY, MON_TEMMIE, MON_UNDYNE, MON_WF_COUNT,
   /* Hotland (htmon.c) */
-  MON_VULKIN = MON_WF_COUNT, MON_TSUNDERPLANE, MON_PYROPE, MON_METTATON, MON_COUNT
+  MON_VULKIN = MON_WF_COUNT, MON_TSUNDERPLANE, MON_PYROPE, MON_METTATON, MON_RG01, MON_RG02, MON_BOMB, MON_COUNT
 };
 
 /* formations: who is fought */
@@ -29,7 +29,7 @@ enum {
   FORM_MOLDBYGG_WOSHUA, FORM_SHYREN, FORM_MAD_DUMMY, FORM_TEMMIE, FORM_TEMMIE_MOLDBYGG, FORM_UNDYNE, FORM_WF_COUNT,
   /* Hotland (Mettaton's shows and a laser's alarm play their own way: htshows.c) */
   FORM_VULKIN = FORM_WF_COUNT, FORM_TSUNDERPLANE, FORM_TSUNDER_VULKIN, FORM_PYROPE, FORM_PYROPE2, FORM_MTT_QUIZ,
-  FORM_MTT_COOK, FORM_LASERS, FORM_COUNT
+  FORM_MTT_COOK, FORM_LASERS, FORM_RGUARDS, FORM_BOMB, FORM_COUNT
 };
 
 enum {
@@ -47,7 +47,7 @@ enum {
   ATK_UNDYNE_ARROWS, ATK_UNDYNE_SPEARS, ATK_WF_COUNT,
   /* Hotland */
   ATK_VULKIN_THUNDER = ATK_WF_COUNT, ATK_VULKIN_FIRE, ATK_TSUNDER_BOMBS, ATK_TSUNDER_DIVE, ATK_PYROPE_BOMBS,
-  ATK_PYROPE_ROPE, ATK_COUNT
+  ATK_PYROPE_ROPE, ATK_RG_TEAM, ATK_COUNT
 };
 
 /* a formation: up to three monsters, and what the first turn says */
@@ -73,4 +73,6 @@ const struct MonDef *ht_mon_def(int id);
 void ht_attack_run(struct Battle *b, int atk, int t);
 int ht_attack_length(int atk);
 int ht_encounter(int room);
+extern int g_bomb_kind;                       /* the bomb fought next (BOMB_*: htmon.c) */
+enum { BOMB_DOG, BOMB_WATER, BOMB_SCRIPT, BOMB_BALL, BOMB_PRESENT, BOMB_GAME, BOMB_COUNT };
 #endif

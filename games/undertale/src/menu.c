@@ -383,7 +383,7 @@ void menu_gameover_open(void) {
 void menu_end_open(void) {
   g_mode = MODE_END;
   t = 0;
-  writer_start(&w, "Up the elevator, on through\nthe heat of Hotland...|The rest of the underground\nis still to come...", 40, 90, FONT_MAIN);
+  writer_start(&w, "Up the elevator, past the news\nand all its bombs...|The rest of the underground\nis still to come...", 40, 90, FONT_MAIN);
   w.speed = 2;
 }
 

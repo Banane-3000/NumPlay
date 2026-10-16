@@ -45,6 +45,13 @@ static const Belt belts[] = {
   {ROOM_HT_BELT1, 2904, 5450, 36, 440, 0, -2}, {ROOM_HT_BELT1, 2980, 5450, 36, 440, 0, 2},
   /* the second: up the left side, down the right */
   {ROOM_HT_BELT2, 2840, 4730, 120, 450, 0, -1}, {ROOM_HT_BELT2, 2980, 4730, 120, 450, 0, 1},
+  /* the second floor: the belt puzzle's (the top one runs left, the bottom right: as fast as Frisk walks, so
+   * walking against one stands still); round the vent puzzle (down, along, up: back to its start); the news
+   * room's, up to its vent */
+  {ROOM_HT_BELTPUZ, 5130, 2340, 300, 50, -3, 0}, {ROOM_HT_BELTPUZ, 5130, 2440, 300, 50, 3, 0},
+  {ROOM_HT_VENTPUZ, 4420, 2310, 60, 290, 0, 3}, {ROOM_HT_VENTPUZ, 4420, 2560, 360, 40, 3, 0},
+  {ROOM_HT_VENTPUZ, 4720, 2430, 60, 170, 0, -3},
+  {ROOM_HT_NEWS, 4300, 1790, 100, 160, 0, -2},
 };
 static void belts_update(void) {
   if (event_running()) return;
@@ -81,6 +88,9 @@ static const Vent vents[] = {
   {ROOM_HT_VENTISLE, 4940, 3120, DIR_RIGHT, {[DIR_RIGHT] = {5051, 3106}}},
   {ROOM_HT_VENTISLE, 5060, 3120, DIR_RIGHT, {[DIR_RIGHT] = {5171, 3106}}},
   {ROOM_HT_VENTISLE, 5180, 3120, DIR_RIGHT, {[DIR_RIGHT] = {5312, 3106}}},
+  /* the news room's: up to the top room's corner, and from there over to the rest of it */
+  {ROOM_HT_NEWS, 4350, 1722, DIR_UP, {[DIR_UP] = {4350, 1600}}},
+  {ROOM_HT_NEWS, 4320, 1600, DIR_LEFT, {[DIR_LEFT] = {4200, 1590}}},
 };
 #define NVENTS ((int)(sizeof vents / sizeof vents[0]))
 /* the way a vent blows now */
@@ -110,6 +120,8 @@ static const Laser lasers[] = {
   {ROOM_HT_LASERS, 3258, 3796, 62, 30, 0}, {ROOM_HT_LASERS, 3425, 3796, 62, 40, 1},
   {ROOM_HT_LASERS, 3567, 3796, 62, 30, 0}, {ROOM_HT_LASERS, 3717, 3796, 62, 40, 1},
   {ROOM_HT_LASERS, 3840, 3796, 62, 30, 0}, {ROOM_HT_LASERS, 3958, 3796, 62, 40, 1},
+  /* the news room's bottom: blue, orange, blue */
+  {ROOM_HT_NEWS, 3965, 1946, 56, 16, 1}, {ROOM_HT_NEWS, 4025, 1946, 56, 16, 0}, {ROOM_HT_NEWS, 4085, 1946, 56, 16, 1},
 };
 static int laser_cool;
 static int laser_x(int i) {
@@ -163,8 +175,8 @@ void ht1_update(void) {
 /* ---------------------------------------------------------------- the rooms */
 void ht1_setup(int room, int from) {
   (void)from;
-  if (room < ROOM_HT_LABFRONT || room > ROOM_HT_COREVIEW) return;
   vents_setup();
+  if (room < ROOM_HT_LABFRONT || room > ROOM_HT_COREVIEW) return;
   switch (room) {
     case ROOM_HT_LABFRONT: {
       obj_save(1045, 6243, "* (The heat of Hotland fills you with determination.)");
@@ -415,12 +427,10 @@ static int ev_cook(Ev *c) {
 
 static int ev_elevator(Ev *c) {
   EV_BEGIN;
-  NARRATE("* (An elevator up to the next floor.)\n* (Get in?)@Yes@No");
+  NARRATE("* (The elevator up.)\n* (Get in?)@Yes@No");
   if (CHOICE() == 1) return 1;
   set_flag(F_HT_FLOOR1, 1);
-  sv.room = (int16_t)g_room, sv.x = 6910, sv.y = 3110;
-  save_write_auto();
-  menu_end_open();
+  FADE_TO(ROOM_HT_HOTDOG, 6966, 2380, DIR_DOWN);
   EV_END;
 }
 

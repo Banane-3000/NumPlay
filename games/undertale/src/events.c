@@ -120,5 +120,7 @@ int event_run(Ev *c) {
   if (r >= 0) return r;
   r = ht1_event(c);
   if (r >= 0) return r;
+  r = ht2_event(c);
+  if (r >= 0) return r;
   return 1;
 }

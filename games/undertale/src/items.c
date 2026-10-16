@@ -56,6 +56,10 @@ static const ItemInfo items[ITEM_COUNT] = {
                       "A pan, burnt black. Hits\n  hard, every time.\n* Food heals 4 HP more with it.", "", 50},
   [ITEM_INSTANT_NOODLES] = {"Instant Noodles", "InstaNood", IT_FOOD, 15, 0, 0, "A cup of noodles, quick to\n  make.",
                             "* You eat the Instant Noodles.\n* They're a little crunchy.", 2},
+  [ITEM_HOT_DOG] = {"Hot Dog...?", "HotDog", IT_FOOD, 20, 0, 0, "A hot dog from Sans's stand.\n* Better not ask what's in it.",
+                    "* You eat the Hot Dog.\n* (Bark!)", 10},
+  [ITEM_STAINED_APRON] = {"Stained Apron", "StainApro", IT_ARMOR, 0, 0, 11, "An apron with old stains.\n* Heals 1 HP every other turn.",
+                          "", 50},
 };
 
 const ItemInfo *item_info(int id) { return &items[id >= 0 && id < ITEM_COUNT ? id : 0]; }

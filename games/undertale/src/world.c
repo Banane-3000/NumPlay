@@ -496,6 +496,7 @@ bool cam_pan(int x, int y, int sp) {
 void cam_free(void) { cam_locked = false; }
 
 void room_draw_floor(void);   /* rooms.c */
+void room_draw_top(void);
 
 int g_shake;   /* frames the view shakes */
 
@@ -537,5 +538,6 @@ void world_draw(void) {
       else gfx_sprite(obj_sprite(o), o->frame, o->x - cam_x, o->y - cam_y, (o->flags & OF_FLIP) ? GFX_FLIPX : 0, o->alpha);
     }
   }
+  room_draw_top();
   cam_x = keep_x, cam_y = keep_y;
 }

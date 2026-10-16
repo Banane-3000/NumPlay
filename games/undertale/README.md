@@ -8,7 +8,7 @@
 
 <p align="center">
   <b>Fall into the Underground as a human child, on the NumWorks calculator.</b><br>
-  The Ruins, Snowdin, Waterfall and Hotland's first floor, from the bed of golden flowers to the elevator by the CORE. The rest of the Underground is on the way.
+  The Ruins, Snowdin, Waterfall and Hotland's first two floors, from the bed of golden flowers to the elevator past Mettaton's news report. The rest of the Underground is on the way.
 </p>
 
 <p align="center">
@@ -27,7 +27,8 @@
 * **Snowdin:** Sans and Papyrus, and every one of Papyrus's puzzles: the invisible electricity maze, the X and O tiles, the one on ice, the multicolor tiles and the Gauntlet. Then Snowdin Town, with its shop, inn, library and Papyrus's house.
 * **Waterfall:** Monster Kid, Grillby's with Sans, the echo flowers, the bridge seeds (and the secret bridge to the quiche), the wishing room, Undyne chasing you with her spears, Sans's telescope, the marsh where the land is black and the water glows, Onionsan, the piano's secret song, the statue in the rain and Monster Kid under your umbrella. Then the fall into the garbage dump, Mad Dummy, Napstablook's house and snail farm, the small bird back over the gap, Gerson's shop, the mushroom maze and Temmie Village with its Tem Shop. And at the end of Waterfall: the lantern maze, Undyne at the dead end (and Monster Kid in her way), the echo flowers' path, Monster Kid on the chasm's bridge, Undyne on her crag, her fight and her chase, and Hotland's edge, where the heat gets her and the water cooler helps.
 * **Hotland's first floor:** Alphys's Lab, where Mettaton bursts in with his quiz show, the conveyor belts, the Magma Chamber's steam vents and the burnt pan, the laser walkway, the two shooting puzzles that open the door, the vents over the lava and Mettaton's cooking show, with your phone's jetpack, up to the elevator. Alphys calls you as you go.
-* **Battles like in the game:** FIGHT with the timing bar, ACT, ITEM and MERCY, and your SOUL dodging each monster's own attacks in the box: Froggit, Whimsun, Moldsmal, Loox, Vegetoid, Migosp, Napstablook and Toriel in the Ruins; Snowdrake, Ice Cap, Gyftrot, Jerry, Chilldrake, Glyde, Doggo, Lesser Dog, Dogamy and Dogaressa, Greater Dog and Papyrus, whose blue attack makes your SOUL fall, in Snowdin; Aaron, Woshua, Moldbygg, Shyren, Temmie, Mad Dummy, who can't be hurt, and Undyne, who turns your SOUL green, in Waterfall; Vulkin, Tsunderplane and Pyrope in Hotland.
+* **Hotland's second floor:** Sans's hot dog stand and Heats Flamesman, the invisible path to the Art Club's room, the Stained Apron, the conveyor belt puzzle and its three switches, the vent puzzle, the Bad Opinion Zone, the Royal Guards, and Mettaton's news report, where everything is a bomb and the clock is running.
+* **Battles like in the game:** FIGHT with the timing bar, ACT, ITEM and MERCY, and your SOUL dodging each monster's own attacks in the box: Froggit, Whimsun, Moldsmal, Loox, Vegetoid, Migosp, Napstablook and Toriel in the Ruins; Snowdrake, Ice Cap, Gyftrot, Jerry, Chilldrake, Glyde, Doggo, Lesser Dog, Dogamy and Dogaressa, Greater Dog and Papyrus, whose blue attack makes your SOUL fall, in Snowdin; Aaron, Woshua, Moldbygg, Shyren, Temmie, Mad Dummy, who can't be hurt, and Undyne, who turns your SOUL green, in Waterfall; Vulkin, Tsunderplane, Pyrope and the Royal Guards in Hotland, and the news report's bombs, defused in the DEFUSE ZONE.
 * **Spare or fight:** every monster can be spared, and Flowey at the door remembers what you did. Lose to Papyrus and he only locks you in his shed.
 * **Saved like in the game:** SAVE at the stars, with the room and the time played. The C menu has your ITEM, STAT and CELL. Home keeps the moment you were at, and your save is also copied into `undertale_saves.py`, so installing the app again doesn't erase it.
 
@@ -112,6 +113,18 @@
     <td align="center"><img src="docs/cooking.png" width="390" alt="Mettaton's cooking show"><br><sub>Cooking with a killer robot</sub></td>
     <td align="center"><img src="docs/jetpack.png" width="390" alt="The jetpack"><br><sub>Up the counter with the jetpack</sub></td>
   </tr>
+  <tr>
+    <td align="center"><img src="docs/hotdog.png" width="390" alt="Sans's hot dog stand"><br><sub>A hot dog from Sans</sub></td>
+    <td align="center"><img src="docs/ventpuzzle.png" width="390" alt="The vent puzzle"><br><sub>The vent puzzle</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/guards.png" width="390" alt="The Royal Guards"><br><sub>The Royal Guards got a tip</sub></td>
+    <td align="center"><img src="docs/rguards.png" width="390" alt="The Royal Guards' team attack"><br><sub>Their team attack</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/news.png" width="390" alt="Mettaton's news report"><br><sub>MTT News: two minutes to go</sub></td>
+    <td align="center"><img src="docs/defuse.png" width="390" alt="Defusing a bomb"><br><sub>Defuse it in the DEFUSE ZONE</sub></td>
+  </tr>
 </table>
 
 ## How to play
@@ -124,7 +137,7 @@ Snowdin brings new things: when Papyrus turns your SOUL blue, it falls to the bo
 
 In Waterfall, walk into a bridge seed to push it: in the water it blooms into a flower you can walk on, and the bell calls the seeds back. A green bullet heals you instead of hurting. Talk to the piano to play it, and keep an umbrella for the rain. The Tem Shop is the one shop that buys what you carry. When Undyne turns your SOUL green, it can't move: turn its shield with the arrows to block her spears. She can't be spared: run, and she'll chase you.
 
-In Hotland, conveyor belts carry you and steam vents throw you over the lava (the one in the middle of the puzzle hub turns each time). Keep moving through orange lasers and stand still for blue ones. In a shooting puzzle, the arrows push every dark block one cell and Z shoots: break your way to the target in two shots. In Mettaton's quiz, move your SOUL onto an answer and press OK; Alphys signals the right one. Alphys's upgrade puts the Dimensional Box in your phone's CELL.
+In Hotland, conveyor belts carry you and steam vents throw you over the lava (the one in the middle of the puzzle hub turns each time). Keep moving through orange lasers and stand still for blue ones. In a shooting puzzle, the arrows push every dark block one cell and Z shoots: break your way to the target in two shots. In Mettaton's quiz, move your SOUL onto an answer and press OK; Alphys signals the right one. Alphys's upgrade puts the Dimensional Box in your phone's CELL. On the second floor, the top conveyor belt carries you past three switches: press them one after another as you go by. In the vent puzzle, every panel you land on turns all the vents around, and the one at the top turns them back. To spare the Royal Guards, clean 02's armor, catch its green stars, then whisper to 01. In the news report, touch a bomb to face it, and Defuse it (or FIGHT it) while it's in the DEFUSE ZONE.
 
 Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) shows your items, your STAT and the phone numbers you have.
 
@@ -141,7 +154,7 @@ Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) sh
 ## Good to know
 
 * **One app at a time:** Undertale is too big to sit next to NumPlay or the other big games. Installing it from the NumWorks website swaps them out, and installing them again swaps it out. Your saves in each one are kept.
-* **The Ruins, Snowdin, Waterfall and Hotland's first floor, for now:** the elevator by the CORE's view ends the game, on a screen that says the rest of the Underground is still to come. The rest of Hotland, the CORE and New Home come next, one at a time.
+* **The Ruins, Snowdin, Waterfall and Hotland's first two floors, for now:** the elevator past Mettaton's news report ends the game, on a screen that says the rest of the Underground is still to come. The rest of Hotland, the CORE and New Home come next, one at a time.
 * **No music or sound:** the calculator has no speaker.
 * **The same Underground:** the rooms and pictures are the game's, everyone says what they say in the game (the longer speeches in shorter words of our own), and the puzzles and battles follow how the game plays them, at its 30 frames a second.
 

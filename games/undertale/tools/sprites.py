@@ -198,11 +198,19 @@ def gen_debris():
     return [im]
 
 
+def gen_star():
+    # the Royal Guards' stars: four points
+    im = _img(9, 9)
+    d = ImageDraw.Draw(im)
+    d.polygon([(4, 0), (5, 3), (8, 4), (5, 5), (4, 8), (3, 5), (0, 4), (3, 3)], fill=(255, 255, 255, 255))
+    return [im]
+
+
 GEN = {"otile": gen_otile, "snowball": gen_snowball, "bone": gen_bone, "orb": gen_orb, "snowflake": gen_snowflake,
        "iceshard": gen_iceshard, "present": gen_present, "knife": gen_knife, "dogpaw": gen_dogpaw,
        "heartbullet": gen_heartbullet, "spear": gen_spear, "note": gen_note, "drop": gen_drop, "arm": gen_arm,
        "debris": gen_debris, "arrow": gen_arrow, "plane": gen_plane, "bomb": gen_bomb, "cloud": gen_cloud,
-       "bolt": gen_bolt}
+       "bolt": gen_bolt, "star": gen_star}
 
 SNOW_CLEAR = [(133, 163, 216), (114, 129, 177), (139, 163, 186), (180, 192, 201), (195, 207, 216)]
 PAP_GIF = "move:Papyrus_screenshot_back_and_forth.gif:0,280,640,450:"
@@ -380,6 +388,22 @@ SPRITES = [
     ("tsunder_b", "wiki:Tsunderplane_battle_idle.gif", {"feet": True, "dedupe": True, "every": 14}),
     ("pyrope_b", "wiki:Pyrope_battle_idle.gif", {"feet": True, "dedupe": True, "every": 6}),
     ("pyrope_hurt", "wiki:Pyrope_battle_hurt.png", {"feet": True}),
+    # the second floor: the Royal Guards, Mettaton reporting, the bombs (each a part of the wiki's sheet of them)
+    ("rg01_ow", "wiki:RG_01_overworld.png", {"feet": True}),
+    ("rg02_ow", "wiki:RG_02_overworld.png", {"feet": True}),
+    ("rg01_b", "wiki:RG_01_battle_idle.gif", {"feet": True, "dedupe": True, "every": 6}),
+    ("rg02_b", "wiki:RG_02_battle_idle.gif", {"feet": True, "dedupe": True, "every": 6}),
+    ("mtt_news", "wiki:Mettaton_overworld_news_reporter.gif", {"feet": True}),
+    *[("bomb_" + n, "wiki:Bombs_overworld.gif", {"feet": True, "box": b}) for n, b in (
+        ("ball", (0, 0, 33, 32)), ("dog", (33, 0, 33, 32)), ("present", (66, 0, 33, 32)), ("water", (0, 32, 33, 32)),
+        ("script", (33, 32, 33, 32)), ("game", (66, 32, 33, 32)))],
+    # the news report's script before it's shown to be a bomb, and the Stained Apron (cut from the map)
+    ("news_script", "map:Hotland_map.png:4322,1880,16,16", {"keep": True, "feet": True, "clear": [(112, 83, 71), (52, 50, 78), (107, 67, 78)]}),
+    ("apron", "map:Hotland_map.png:5836,2618,22,18", {"keep": True, "clear": [(181, 85, 21)]}),
+    # in battle, the bombs share one look (the dog and the glass of water keep their own)
+    ("bomb_b", "wiki:Bomb_battle_idle.gif", {"feet": True, "dedupe": True}),
+    ("dogbomb_b", "wiki:Annoying_Dog_battle_bomb.gif", {"feet": True, "dedupe": True}),
+    ("water_b", "wiki:Extremely_Agile_Glass_Of_Water_battle_idle.png", {"feet": True}),
     # Undyne fallen in Hotland's heat, on its bridge (cut from the map, the bridge and the rock behind see-through)
     ("undyne_fallen", "map:Hotland_map.png:534,6213,50,27",
      {"keep": True, "clear": [(169, 124, 41), (91, 65, 0), (62, 35, 0), (19, 35, 45), (18, 34, 44), (19, 35, 44),
@@ -395,6 +419,7 @@ SPRITES = [
     ("drop", "gen:drop", {"center": True}),
     ("arm", "gen:arm", {"center": True}),
     ("debris", "gen:debris", {"center": True}),
+    ("star", "gen:star", {"center": True}),
     # Waterfall's monsters
     ("aaron_b", "wiki:Aaron_battle_static.png", {"feet": True, "clear_bg": True}),
     ("aaron_hurt", "wiki:Aaron_battle_hurt.png", {"feet": True, "clear_bg": True}),

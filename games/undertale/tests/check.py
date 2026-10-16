@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Checks of Undertale on a computer (make test): the host build, with
 AddressSanitizer and UBSan, through the menus, every battle, the saves, the
-whole Ruins, the whole of Snowdin and Waterfall as far as it goes.
+whole Ruins, the whole of Snowdin and Waterfall, and Hotland as far as it goes.
 
     python3 tests/check.py build/play [--quick]
 
---quick skips playing the whole Ruins, Snowdin and Waterfall (the longest parts)."""
+--quick skips playing the whole Ruins, Snowdin, Waterfall and Hotland (the longest parts)."""
 import os
 import re
 import shutil
@@ -34,9 +34,9 @@ FORM_SNOWDRAKE, FORM_PAPYRUS = 19, 31
 (FORM_AARON, FORM_WOSHUA, FORM_WOSHUA_AARON, FORM_MOLDBYGG, FORM_MOLDBYGG_MOLDSMAL, FORM_MOLDBYGG_WOSHUA, FORM_SHYREN,
  FORM_MAD_DUMMY, FORM_TEMMIE, FORM_TEMMIE_MOLDBYGG, FORM_UNDYNE) = range(32, 43)
 (FORM_VULKIN, FORM_TSUNDERPLANE, FORM_TSUNDER_VULKIN, FORM_PYROPE, FORM_PYROPE2, FORM_MTT_QUIZ, FORM_MTT_COOK,
- FORM_LASERS) = range(43, 51)
+ FORM_LASERS, FORM_RGUARDS, FORM_BOMB) = range(43, 53)
 ITEM_OLD_TUTU, ITEM_BALLET_SHOES, ITEM_QUICHE, ITEM_PUNCH_CARD, ITEM_ARTIFACT, ITEM_ASTRONAUT_FOOD = range(17, 23)
-ITEM_BURNT_PAN, ITEM_INSTANT_NOODLES = 28, 29
+ITEM_BURNT_PAN, ITEM_INSTANT_NOODLES, ITEM_HOT_DOG, ITEM_STAINED_APRON = 28, 29, 30, 31
 
 
 def run(args, frames, saves=None, what=""):
@@ -138,6 +138,16 @@ for form, seq, gold in ((FORM_VULKIN, "2", 40), (FORM_PYROPE, "1,1", 45), (FORM_
 for form in (FORM_MTT_QUIZ, FORM_MTT_COOK, FORM_LASERS):
     s = run(["--god", "--battle", str(form), "--path", "talk"], 3000, what=f"show {form}")
     check(s and s["mode"] == MODE_WORLD, f"show {form} did not end: {s}")
+# the Royal Guards (no running from them): fought, or spared (02's armor cleaned twice, its green stars caught, a
+# whisper to 01); a bomb of the news report (the dog), defused by Defuse or by FIGHT, in the DEFUSE ZONE
+s = run(["--god", "--battle", str(FORM_RGUARDS), "--path", "fight"], 9000, what="the Royal Guards, fought")
+check(s and s["mode"] == MODE_WORLD and s["kills"] == 2, f"the Royal Guards: FIGHT did not win it: {s}")
+s = run(["--god", "--battle", str(FORM_RGUARDS), "--path", "seq:1@2,1@2,2@1"], 9000, what="the Royal Guards, spared")
+check(s and s["mode"] == MODE_WORLD and s["kills"] == 0 and s["gold"] == 100,
+      f"the Royal Guards: the friendly way did not spare them: {s}")
+for how in ("act:1", "fight"):
+    s = run(["--god", "--battle", str(FORM_BOMB), "--path", how], 9000, what=f"a bomb, {how}")
+    check(s and s["mode"] == MODE_WORLD and s["kills"] == 0, f"a bomb: {how} did not defuse it: {s}")
 
 # the shop in Snowdin: a Cinnamon Bunny for 25G; Papyrus's date: his phone number
 s = run(["--name", "Frisk", "--noenc", "--room", str(ROOMS["SNOWTOWN"]), "--at", "446,1092", "--gold", "100", "--keys",
@@ -213,17 +223,34 @@ if not QUICK:
             check(item in s["items"], f"Waterfall: item {item} not picked up: {s['items']}")
 
 # Hotland's first floor: Alphys and the quiz, the noodles, the belts, the vents, the lasers, both shooting puzzles, the
-# cooking show, up to the elevator
+# cooking show, up the elevator to the second floor
 if not QUICK:
     s = run(["--name", "Frisk", "--noenc", "--god", "--room", str(ROOMS["HT_LABFRONT"]), "--at", "1000,6230",
              "--path-file", os.path.join(HERE, "hotland.path")], 16000, what="Hotland")
-    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["HT_COREVIEW"], f"Hotland did not end at the elevator: {s}")
+    check(s and s["mode"] == MODE_WORLD and s["room"] == ROOMS["HT_HOTDOG"],
+          f"Hotland did not end up the elevator, on the second floor: {s}")
     if s:
         for name, v in (("HT_LAB", 2), ("HT_NOODLES", 1), ("HT_CALL_LASER", 1), ("HT_CALL_HUB", 1), ("HT_CALL_ISLE", 1),
                         ("HT_CALL_CORE", 1), ("HT_PUZ_R", 1), ("HT_PUZ_L", 1), ("HT_BLUE_OFF", 1), ("HT_COOK", 1),
                         ("HT_FLOOR1", 1)):
             check(flag(s, name) == v, f"Hotland: F_{name} is {flag(s, name)}, not {v}")
         check(ITEM_INSTANT_NOODLES in s["items"], f"Hotland: the noodles not taken: {s['items']}")
+
+# Hotland's second floor: Heats Flamesman, Sans's hot dog, the apron, the Art Club's room, the belt and vent puzzles,
+# the Bad Opinion Zone, the Royal Guards spared, Mettaton's news report, up to the elevator
+if not QUICK:
+    s = run(["--name", "Frisk", "--noenc", "--god", "--gold", "100", "--room", str(ROOMS["HT_HOTDOG"]), "--at", "6966,2380",
+             "--path-file", os.path.join(HERE, "hotland2.path")], 13000, what="Hotland's second floor")
+    check(s and s["mode"] == MODE_END and s["room"] == ROOMS["HT_COREVIEW2"],
+          f"Hotland's second floor did not end at the elevator: {s}")
+    if s:
+        for name, v in (("HT_HEATS", 1), ("HT_APRON", 1), ("HT_CALL_BELT", 1), ("HT_BELT", 1), ("HT_VENTPUZ", 1),
+                        ("HT_CALL_BOZ", 1), ("HT_GUARDS", 1), ("HT_NEWS", 2), ("HT_CALL_CORE2", 1), ("HT_FLOOR2", 1)):
+            check(flag(s, name) == v, f"Hotland's second floor: F_{name} is {flag(s, name)}, not {v}")
+        check(s["kills"] == 0, f"Hotland's second floor: {s['kills']} killed on the friendly way")
+        check(s["gold"] == 170, f"Hotland's second floor: the hot dog or the guards' gold went wrong: {s['gold']}")
+        for item in (ITEM_HOT_DOG, ITEM_STAINED_APRON):
+            check(item in s["items"], f"Hotland's second floor: item {item} not picked up: {s['items']}")
 
 if failures:
     print("\n".join("FAIL " + f for f in failures))

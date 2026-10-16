@@ -136,7 +136,17 @@ enum {
   F_HT_PUZ_L,
   F_HT_BLUE_OFF,         /* the blue laser before the left puzzle switched off */
   F_HT_COOK,             /* the cooking show: 1 the substitute reached, 2 out of time */
-  F_HT_FLOOR1,           /* the elevator up from Hotland's first floor reached (where the game now ends) */
+  F_HT_FLOOR1,           /* the elevator up from Hotland's first floor taken */
+  F_HT_HEATS,            /* Heats Flamesman's name heard */
+  F_HT_APRON,            /* the Stained Apron taken */
+  F_HT_CALL_BELT,        /* Alphys's calls: the belt puzzle, by the CORE again */
+  F_HT_CALL_CORE2,
+  F_HT_CALL_BOZ,
+  F_HT_BELT,             /* the belt puzzle's force field off */
+  F_HT_VENTPUZ,          /* the vent puzzle crossed */
+  F_HT_GUARDS,           /* the Royal Guards: 1 spared, 2 killed */
+  F_HT_NEWS,             /* Mettaton's news report: 1 every bomb defused, 2 out of time */
+  F_HT_FLOOR2,           /* the elevator up from the second floor reached (where the game now ends) */
   FLAG_COUNT = 256
 };
 #endif

@@ -212,6 +212,8 @@ static void begin_menu(void) {
   box_menu();
   say(flavor_text());
   bt.turn++;
+  /* the Stained Apron heals a little, every other turn */
+  if (sv.armor == ITEM_STAINED_APRON && bt.turn % 2 == 0 && sv.hp < sv.maxhp) sv.hp++;
 }
 
 static void begin_talk(void) {
