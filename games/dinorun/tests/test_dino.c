@@ -54,12 +54,35 @@ int main(int argc,char **argv) {
   update(false,false);
   assert(obstacles[0].x==270 && obstacles[1].x==265);
 
-  /* Sprites are exact geometry mirrored only along X for birds. */
+  /* Regression: the original sprite's beak faces LEFT. Mirroring it is wrong. */
   bg=RGB(0xFFFFFF);ink=RGB(0x535353);band_y=0;
   for(int i=0;i<W*BAND;i++) pixels[i]=bg;
-  bird_sprite(BIRD_WING_DOWN,COUNT_OF(BIRD_WING_DOWN),80,4,ink);
-  assert(pixels[(4-0)*W+95]==ink); /* Source first rect x=4..6 => mirrored x=15..17. */
-  assert(pixels[(4-0)*W+84]==bg);
+  SPRITE(BIRD_WING_DOWN,80,4,ink);
+  assert(pixels[4*W+84]==ink); /* Source first rect x=4..6: left-facing beak. */
+  assert(pixels[4*W+95]==bg); /* Old mirrored version wrongly filled this spot. */
+
+  /* Three smooth visual positions per unchanged Python-scale physics step. */
+  start_game();cactus_meter=bird_meter=-100000;
+  obstacles[0]=(obstacle){270,DY,14,23,CACTUS};
+  obstacles[1]=(obstacle){200,165,21,18,BIRD};count=2;
+  update(false,false);
+  assert(obstacles[0].x==260 && obstacles[1].x==195);
+  render_phase=0;
+  assert(interpolated(old_obstacle_x[0],obstacles[0].x)==270);
+  assert(interpolated(old_obstacle_x[1],obstacles[1].x)==200);
+  render_phase=1;
+  assert(interpolated(old_obstacle_x[0],obstacles[0].x)==267);
+  render_phase=2;
+  assert(interpolated(old_obstacle_x[0],obstacles[0].x)==264);
+  render_phase=3;
+  assert(interpolated(old_obstacle_x[0],obstacles[0].x)==260);
+  /* Input is polled on visual frames, but physics runs only on its 100ms tick. */
+  start_game();
+  uint32_t no_tick=ticks;
+  simulation_tick=false;
+  assert(!handle_input(0,0) && ticks==no_tick);
+  simulation_tick=true;
+  assert(!handle_input(0,0) && ticks==no_tick+1);
 
   /* Python ducking changes gravitational acceleration, even in the air. */
   start_game();cactus_meter=bird_meter=-100000;
@@ -111,6 +134,6 @@ int main(int argc,char **argv) {
   clouds[0]=(decoration){170,70};cloud_count=1;
   frame();
   if(argc>=3)screenshot(argv[2]);
-  printf("Host tests passed: Python jump & speed, bird direction, mirrored sprites, sky, collisions, Back exit, Clear pause.\n");
+  printf("Host tests passed: Python jump and speed, original left-facing bird, 30fps interpolation, sky, collisions, Back exit, Clear pause.\n");
   return 0;
 }
