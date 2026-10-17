@@ -10,13 +10,13 @@ This C game uses the original *rectangle-defined pixel art* decoded from [Lily's
 
 | Key | Action |
 |---|---|
-| **OK**, EXE, Up / 8 | Jump / start / restart |
+| **OK** | Jump / start / restart (holding OK can jump again on landing) |
 | **Down** / 2 (hold) | Duck (and fall faster mid-air) |
-| **Back** or Backspace | Pause / resume |
+| **Clear / Backspace** | Pause / resume |
+| **Back** (undo arrow) or **Home** | Exit to NumPlay / calculator |
 | **SHIFT** at title | Help screen |
-| **HOME** | Exit back to calculator |
 
-Physics now follows the Python original: **49-pixel jump apex**, 10–14 px/frame cactus speed, 5–14 px/frame bird speed, score advancing by one each frame, and night/day switching every 300 points. Actual real-time speed can still vary with the calculator and rendering cost.
+Physics and object sprites follow the Python original: **49-pixel jump apex**, a 10–14 px/frame cactus speed, a 5–14 px/frame bird/cloud speed, the original random spawn thresholds, and day/night every 300 points. The right-facing Python bird sprites are **horizontally mirrored** here so they face the same direction they move (left). The original art shapes are otherwise unchanged. The frame is paced to **100 ms minimum** rather than C's previous 33 ms; it approximates MicroPython's much slower drawing cost, which varies between calculator models and must be checked on actual hardware.
 
 The game features the original pixel cacti, flying bird frames, scrolling clouds, moon/stars, gradually increasing speed, day/night changes, high-score storage (`dinorun.sav`) and instant restart.
 

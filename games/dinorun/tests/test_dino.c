@@ -27,42 +27,90 @@ static void screenshot(const char *f) {
   fclose(fp);
 }
 int main(int argc,char **argv) {
-  scene=TITLE;dino_y=DY*256;score=0;
+  scene=TITLE; dino_y=DY*256;score=0;
   frame();
-  if(argc>=2)screenshot(argv[1]);
+  if(argc>=2) screenshot(argv[1]);
+
+  /* Reference: original Python H=-13, gravity=+2, 49 px at frame 7. */
   start_game();assert(scene==PLAY && score==0 && count==0);
-  /* Python H=-13, ad=2: first frame -13, apex -49 at frame 7. */
   int y=dino_y;
+  cactus_meter=bird_meter=-100000;
   update(true,false);assert(dino_y==y-13*256);
-  for(int t=0;t<6;t++)update(false,false);
+  for(int t=0;t<6;t++) update(false,false);
   assert(dino_y==y-49*256);
-  for(int t=0;t<7;t++)update(false,false);
-  assert(dino_y==DY*256);
-  assert(score==14 && speed==10);
-  /* The old C game was -2600/+155 (over 80 px) and scrolled at 4 px.
-   * In Python speed is 10 at start, 11 after ~180 frames and 14 max. */
-  start_game();
-  ticks=179; cactus_meter=-9999; bird_meter=-9999;
+  for(int t=0;t<7;t++) update(false,false);
+  assert(dino_y==DY*256 && score==14 && speed==10);
+
+  /* Python: speed changes AFTER the 180th frame, not before it. */
+  start_game();ticks=179;cactus_meter=bird_meter=-100000;
+  update(false,false);assert(speed==10 && bird_speed==5 && score==1);
+  update(false,false);assert(speed==11 && bird_speed==6 && score==2);
+  /* At difficulty >= 12, cacti have 14-pixel steps; birds have 9. */
+  ticks=720;update(false,false);assert(speed==14 && bird_speed==9);
+  /* Every frame advances birds left (5 to 14px) and not right. */
+  start_game();cactus_meter=bird_meter=-100000;
+  obstacles[0]=(obstacle){280,DY,14,23,CACTUS};
+  obstacles[1]=(obstacle){270,165,21,18,BIRD};count=2;
   update(false,false);
-  assert(speed==11 && score==180);
-  update(false,true);assert(duck && gravity_units==9);
+  assert(obstacles[0].x==270 && obstacles[1].x==265);
+
+  /* Sprites are exact geometry mirrored only along X for birds. */
+  bg=RGB(0xFFFFFF);ink=RGB(0x535353);band_y=0;
+  for(int i=0;i<W*BAND;i++) pixels[i]=bg;
+  bird_sprite(BIRD_WING_DOWN,COUNT_OF(BIRD_WING_DOWN),80,4,ink);
+  assert(pixels[(4-0)*W+95]==ink); /* Source first rect x=4..6 => mirrored x=15..17. */
+  assert(pixels[(4-0)*W+84]==bg);
+
+  /* Python ducking changes gravitational acceleration, even in the air. */
+  start_game();cactus_meter=bird_meter=-100000;
+  update(true,false);update(false,true);
+  assert(duck && gravity_units==9 && dino_y<DY*256);
   update(false,false);assert(!duck && gravity_units==2);
-  /* Force a collision, test the game-over state and restart. */
-  high_score=0;count=1;obstacles[0]=(obstacle){DX+12,DY-14,14,23,CACTUS};
+  /* Cloud motion follows bird/cloud speed, not cactus speed. */
+  start_game();cactus_meter=bird_meter=-100000;
+  clouds[0]=(decoration){200,80};cloud_count=1;cloud_clock=-99999;
+  update(false,false);assert(clouds[0].x==195);
+
+  /* Controls: Clear pauses and resumes; Back exits immediately. */
+  start_game();
+  assert(!handle_input(PAUSE,PAUSE) && scene==PAUSED);
+  uint32_t before=ticks;
+  assert(!handle_input(0,0) && ticks==before);
+  assert(!handle_input(PAUSE,PAUSE) && scene==PLAY && ticks==before);
+  assert(handle_input(KEY(eadk_key_back),KEY(eadk_key_back)) && scene==PLAY);
+  scene=TITLE;
+  assert(handle_input(KEY(eadk_key_back),KEY(eadk_key_back)));
+  scene=PAUSED;
+  assert(handle_input(KEY(eadk_key_home),KEY(eadk_key_home)));
+
+  /* Original Python cactus collision: d[] x anchor and y position. */
+  start_game();high_score=0;
+  count=1; obstacles[0]=(obstacle){DX+22,DY,14,23,CACTUS};
+  assert(collision());
   update(false,false);assert(scene==DEAD && high_score==score);
   start_game();assert(scene==PLAY && score==0 && count==0);
-  for(int i=0;i<160;i++){
-    if(scene==DEAD)start_game();
-    update((i%31)==1,false);
-  }
+
+  /* Simulate a long random run and verify all bounded game arrays stay safe.
+   * This also checks that scores, difficulty and every spawn type co-exist. */
   start_game();
-  score=328; ticks=1312;distance_px=2100;
+  for(int i=0;i<2500;i++) {
+    if(scene==DEAD) start_game();
+    update((i%17)<4, (i%29)>24);
+    assert(count>=0 && count<=12);
+    assert(cloud_count>=0 && cloud_count<=3);
+    assert(dust_count>=0 && dust_count<=5);
+    assert(pebble_count>=0 && pebble_count<=2);
+  }
+
+  /* Both sprite variants and the sky can render safely in all 240 rows. */
+  start_game();score=328;ticks=1312;
   count=3;
-  obstacles[0]=(obstacle){244,DY-14,14,23,CACTUS};
-  obstacles[1]=(obstacle){289,DY-14,30,23,LARGE_CACTUS};
+  obstacles[0]=(obstacle){244,DY,14,23,CACTUS};
+  obstacles[1]=(obstacle){289,DY,30,23,LARGE_CACTUS};
   obstacles[2]=(obstacle){152,GROUND-28,21,18,BIRD};
+  clouds[0]=(decoration){170,70};cloud_count=1;
   frame();
   if(argc>=3)screenshot(argv[2]);
-  printf("Host test passed: Python jump (49px), speed, crouch, collision, restart, rendering.\n");
+  printf("Host tests passed: Python jump & speed, bird direction, mirrored sprites, sky, collisions, Back exit, Clear pause.\n");
   return 0;
 }
