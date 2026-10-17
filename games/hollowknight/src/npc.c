@@ -75,6 +75,7 @@ static void start_rest(Bench *b, const Ent *e) {
 /* Rest Burst: health back, the bench the place to come back to, then the game saved */
 static void rest_burst(Bench *b, const Ent *e) {
   hero_max_health();
+  pd_set_flag(PDF_AT_BENCH, true);   /* (atBench: the inventory opens, charms can be changed) */
   b->sleeping = false, b->get_off_wake = false;
   save_set_respawn(str_at(e->s0), b->face_right = g_hero.cs.facing_right);
   persist_reset_semi();
@@ -84,6 +85,7 @@ static void rest_burst(Bench *b, const Ent *e) {
 static void get_off(Bench *b, const Ent *e) {
   /* Get Off: the Knight back down from the bench */
   Hero *h = &g_hero;
+  pd_set_flag(PDF_AT_BENCH, false);
   hero_gravity(true);
   anim_play_from_frame(&h->anim, b->get_off_wake ? CLIP_KNIGHT_WAKE : CLIP_KNIGHT_GET_OFF, 0);
   hud_slide(false);
@@ -272,6 +274,7 @@ bool bench_respawn(const char *name) {
     hero_stop_anim_control();
     hero_gravity(false);
     hero_max_health();
+    pd_set_flag(PDF_AT_BENCH, true);
     anim_play(&h->anim, CLIP_KNIGHT_SIT_FALL_ASLEEP);
     h->body.vx = h->body.vy = 0;
     b->sleeping = false, b->get_off_wake = false;   /* (sleeping: here, once moved up) */

@@ -7,6 +7,7 @@
   a load
 - a long walk of made up keys from every room: the Knight never out of the room, without control, wedged, undrawn or
   out of the view
+- a bench: sat on, the inventory opened, a charm equipped, then up again (atBench off)
 - every room played with its enemies hit, in a new game and after the bosses, drawn whole and fast (as a slow
   calculator draws it): the sanitizers stop on any fault
 """
@@ -19,7 +20,9 @@ from concurrent.futures import ThreadPoolExecutor
 PLAY, DATA = sys.argv[1], sys.argv[2]
 WALKS = [(seed, 4000) for seed in range(1, 5)]   # (seed, ticks of 20 ms)
 SWEEP_KEYS = "_*30,R*120,A*3,J*25,L*200,A*4,_*60,R*60,J*30,A*3,_*900"
-WORLDS = ("", "7,11")   # PlayerData bools on, by number: none, then the False Knight and Hornet beaten
+WORLDS = ("", "7,11")
+# Crossroads_47's bench: sit, the inventory, right to the charms, equip the first, close, get up
+BENCH_KEYS = "*60,U*3,*150,I*2,*60,R*2,*15,R*2,*15,R*2,*15,R*2,*30,O*2,*30,I*2,*60,R*2,*80"   # PlayerData bools on, by number: none, then the False Knight and Hornet beaten
 JOBS = os.cpu_count() or 2
 
 
@@ -50,6 +53,12 @@ def main():
     with tempfile.TemporaryDirectory() as saves:
         rc, out = play("--gates", "arenas", env={"HKSAVES": saves})
     results.append(report("arenas", rc, out, ("FAIL",)))
+    # (HKFLAGS: a charm had, Gathering Swarm; HKPD: the bools on at the end, 77 its equipped one, 0 atBench)
+    rc, out = play("--room", "Crossroads_47", "--at", "29.3,6.5", "--play", BENCH_KEYS, env={"HKFLAGS": "3,37", "HKPD": "1"})
+    pd = next((l.split()[1:] for l in out.splitlines() if l.startswith("pd:")), [])
+    pd = pd[:next((i for i, t in enumerate(pd) if not t.isdigit()), len(pd))]
+    bench = "77" in pd and "0" not in pd
+    results.append(report("bench: a charm equipped", rc, out if bench else out + "\nFAIL bools on: " + " ".join(pd), ("FAIL",)))
     with ThreadPoolExecutor(JOBS) as pool:
         walks = list(pool.map(lambda w: play("--gates", "wander:all:%d:%d" % w, env={"HKFAST": "1"} if w[0] % 2 else None), WALKS))
     for (seed, ticks), (rc, out) in zip(WALKS, walks):
