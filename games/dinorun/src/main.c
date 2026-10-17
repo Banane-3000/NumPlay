@@ -481,7 +481,6 @@ static void frame(void) {
       /* The original title character is the separately encoded 3x sprite. */
       SPRITE(DINO_MENU_LARGE,120,150,ink);
       centered(40,"CHROME DINO",3,ink);
-      /* Visible R5 marker makes it impossible to mistake an old .nwa build. */
       centered(202,scene==HELP?"OK TO JUMP":"PRESS OK TO PLAY",2,ink);
       centered(225,scene==HELP?"DOWN DUCK  CLEAR PAUSE":"SHIFT FOR HELP",1,faint);
       if(scene!=HELP) {text_at(9,230,"BEST",1,faint);number(46,230,high_score,5,1,ink);}

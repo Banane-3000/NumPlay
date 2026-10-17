@@ -1,9 +1,5 @@
 /* Exact rectangle geometry decoded from the compressed sprite lists in
  * https://github.com/LilyTheCuteCatgirl/lilys-small-numworks-games/blob/main/games/chrome_dino.py
- * Original Python program credits Diego KHELLADI (2026, all rights reserved).
- * This experimental derivative needs permission from the relevant rights holder
- * before distributing the imported artwork in an upstream/public release.
- * Coordinates are unscaled, preserving the original pixel-art geometry.
  */
 #ifndef DINO_PYTHON_SPRITES_H
 #define DINO_PYTHON_SPRITES_H
@@ -39,24 +35,6 @@ static const dino_sprite_rect DINO_RUN_2[] = {
   {0,-1,3,1}, {0,0,14,1}, {1,1,12,1}, {2,2,11,1}, {3,3,9,1},
   {4,4,7,1}, {5,5,2,1}, {9,5,2,1}, {6,6,2,1}, {9,6,1,1},
   {9,7,1,1}, {9,8,2,1},
-};
-
-/* Python aU: 22 rectangles; bounds x=[0, 20), y=[-12, 11) */
-static const dino_sprite_rect DINO_MENU_MINI[] = {
-  {11,-12,8,1}, {10,-11,10,1}, {13,-10,7,1}, {10,-10,2,1}, {10,-9,10,3},
-  {10,-6,5,1}, {10,-5,8,1}, {9,-4,5,1}, {0,-4,1,1}, {7,-3,7,1},
-  {0,-3,1,1}, {6,-2,10,1}, {0,-2,2,1}, {15,-1,1,1}, {5,-1,9,1},
-  {0,-1,3,1}, {0,0,14,1}, {1,1,12,1}, {2,2,11,1}, {3,3,9,1},
-  {4,4,7,1}, {3,5,11,6},
-};
-
-/* Python aj: 21 rectangles; bounds x=[0, 27), y=[-3, 10) */
-static const dino_sprite_rect DINO_DUCK_BASE[] = {
-  {0,-3,1,1}, {18,-3,8,1}, {0,-2,3,1}, {7,-2,8,1}, {17,-2,10,1},
-  {0,-1,19,1}, {20,-1,7,1}, {1,0,26,1}, {2,1,25,1}, {3,2,24,1},
-  {4,3,18,1}, {5,4,11,1}, {18,4,7,1}, {6,5,5,1}, {14,5,1,1},
-  {5,6,3,1}, {10,6,2,1}, {14,6,2,1}, {5,7,2,1}, {5,8,1,1},
-  {5,9,2,1},
 };
 
 /* Python V: 28 rectangles; bounds x=[0, 27), y=[-3, 10) */
@@ -111,13 +89,6 @@ static const dino_sprite_rect GROUND_DETAIL_1[] = {
   {20,5,2,1},
 };
 
-/* Python W: 12 rectangles; bounds x=[0, 22), y=[3, 7) */
-static const dino_sprite_rect GROUND_DETAIL_2[] = {
-  {1,5,7,1}, {0,5,1,1}, {1,5,5,1}, {1,4,2,1}, {3,3,3,1},
-  {6,4,1,1}, {7,5,5,1}, {12,6,2,1}, {12,5,5,1}, {14,6,3,1},
-  {17,5,2,1}, {20,5,2,1},
-};
-
 /* Python aB: 15 rectangles; bounds x=[0, 21), y=[0, 15) */
 static const dino_sprite_rect BIRD_WING_DOWN[] = {
   {4,0,2,1}, {3,1,3,1}, {2,2,5,1}, {1,3,6,1}, {0,4,14,1},
@@ -131,15 +102,6 @@ static const dino_sprite_rect BIRD_WING_UP[] = {
   {8,2,5,1}, {8,3,6,1}, {4,0,2,1}, {3,1,3,1}, {2,2,5,1},
   {1,3,6,1}, {0,4,14,1}, {6,5,9,1}, {7,6,14,1}, {8,7,10,1},
   {9,8,11,1}, {10,9,7,1},
-};
-
-/* Python X: 23 rectangles; bounds x=[0, 21), y=[-3, 15) */
-static const dino_sprite_rect BIRD_ALT[] = {
-  {4,0,2,1}, {3,1,3,1}, {2,2,5,1}, {1,3,6,1}, {0,4,14,1},
-  {6,5,9,1}, {7,6,14,1}, {8,7,10,1}, {8,8,12,1}, {8,9,9,1},
-  {8,10,4,1}, {8,11,3,1}, {8,12,2,1}, {8,13,2,1}, {8,14,1,1},
-  {7,-3,1,1}, {7,-2,2,1}, {7,-1,3,1}, {8,0,3,1}, {8,1,4,1},
-  {8,2,5,1}, {8,3,6,1}, {10,9,7,1},
 };
 
 /* Python aC: 12 rectangles; bounds x=[0, 20), y=[0, 36) */
