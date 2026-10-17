@@ -1,51 +1,69 @@
-# Chrome Dino — LilyTheCatgirl's NumWorks C port
+# Chrome Dino
 
-This C game uses the original *rectangle-defined pixel art* decoded from [Lily's Python Chrome Dino version](https://github.com/LilyTheCuteCatgirl/lilys-small-numworks-games/blob/main/games/chrome_dino.py). The jump/duck/flying frames, cacti, outline clouds, stars, moon and ground details are now copied precisely as rectangles rather than hand-redrawn placeholders. The existing C gameplay/NumWorks integration remains independent. Unofficial, not affiliated with Google.
+**Google Chrome Dino for NumWorks**, adapted in C by **LilyTheCatgirl** and integrated into [NumPlay](https://github.com/Mason363/NumPlay).
 
-**Art rights warning:** The source Python script credits **Diego KHELLADI** (2026) and displays an **all-rights-reserved** statement; Lily's collection also describes third-party contributions. These sprites are included for a private prototype only. **Confirm permission from the original rightsholder before pushing the sprite-based port as an upstream/public PR or distributing it.** Attribution alone does not establish permission.
+An unofficial adaptation of the classic dinosaur runner, featuring pixel-art graphics, smooth scrolling, increasingly challenging obstacles, and high-score saving.
 
-![Gameplay screenshot](docs/shot.png)
+![Chrome Dino gameplay](docs/shot.png)
 
-**Launcher credit:** Google Chrome Dino - LilyTheCatgirl. This acknowledges the NumWorks C adaptation; the separate sprite-art attribution and permission warning above remain in force.
+## Gameplay
+
+Jump over cacti, duck under flying birds, and survive for as long as possible!
+
+Features:
+
+- Classic dinosaur running, jumping, and ducking animations
+- Single and grouped cacti
+- Flying birds with animated wings
+- Increasing obstacle speed and difficulty
+- Safe spacing between birds and cacti to prevent impossible obstacle combinations
+- Scrolling clouds and ground details
+- Day and night cycles
+- Persistent high scores
+
+The game uses a 50 ms physics update interval, with a jump lasting approximately 0.7 seconds and reaching a height of 49 pixels. Birds and cacti move left at the same speed, starting at approximately 180 pixels per second.
+
+Rendering targets approximately 30 FPS using partial-screen updates to improve performance on the calculator. Actual frame rates depend on the hardware.
 
 ## Controls
 
 | Key | Action |
 |---|---|
-| **OK** | Jump / start / restart (holding OK can jump again on landing) |
-| **Down** / 2 (hold) | Duck (and fall faster mid-air) |
-| **Clear / Backspace** | Pause / resume |
-| **Back** (undo arrow) or **Home** | Exit to NumPlay / calculator |
-| **SHIFT** at title | Help screen |
+| **OK** | Start, jump, or restart |
+| **Down** / **2** | Duck; fall faster while airborne |
+| **Clear / Backspace** | Pause or resume |
+| **Back / Undo** | Exit the game |
+| **Home** | Exit the game |
+| **Shift** (title screen) | Show controls |
 
-Physics and object sprites follow the Python original: **49-pixel jump apex**, a 10–14 px/frame cactus speed, a 5–14 px/frame bird/cloud speed, the original random spawn thresholds, and day/night every 300 points. The original left-facing Python birds now draw **unmirrored**, matching their leftward movement. To avoid the previous 10 FPS choppiness, the app attempts **30 FPS rendering** while keeping the previous **10 gameplay updates per second**. Visual positions advance **leftward toward the next update**, never snap backward to a prior position. A wall-clock catch-up loop prevents slow screen redraws from making the game logic crawl. This preserves the tested per-step Python jump/speed math; on-calculator rendering FPS will still depend on hardware. The original Python's exact real-world FPS is hardware-dependent, so compare pacing on the calculator and adjust `GAME_FRAME_MS` if needed.
+Holding OK can automatically trigger another jump after landing.
 
-The game features the original pixel cacti, flying bird frames, scrolling clouds, moon/stars, gradually increasing speed, day/night changes, high-score storage (`dinorun.sav`) and instant restart.
+## Building
 
-## Build as an individual NumWorks app
+Chrome Dino is integrated into NumPlay and is also available as a standalone NumWorks application.
 
-Requires the same EADK GCC + `nwlink` environment as the rest of NumPlay.
+To build the standalone application from the repository root, using the NumPlay ARM toolchain and `nwlink`:
 
-```sh
-make -C games/dinorun check
-```
+`make -C games/dinorun build`
 
-Result: `games/dinorun/output/dinorun.nwa`.
+The resulting file is:
 
-You can also use `.github/workflows/dinorun-quick.yml` without installing build tools on Windows. It triggers on a push to a branch with changes in `games/dinorun/**`, runs a simple host test, builds the app and uploads **DinoRun-nwa**.
+`games/dinorun/output/dinorun.nwa`
 
-Install the `.nwa` using https://my.numworks.com/apps (Chrome/Edge). **NumPlay is already close to the calculator's entire app-space budget, so installing Dino Run separately may replace your existing NumPlay installation. Back up scripts and saves and reinstall NumPlay afterward.**
+To check the installable build:
 
-## Integration into the combined NumPlay launcher
+`make -C games/dinorun check`
 
-`module` and `sim-module` targets are already included to support future integration. For a full English NumPlay hardware test, run `python3 tools/integrate_dinorun.py` at repo root and then push; the `Dino inside NumPlay (full launcher build)` workflow triggers automatically on `add-chrome-dino`. The integration reclaims flash by lowering the color depth of five carousel previews while preserving all games. See `FULL_NUMPLAY_README.md`.
+To run the host gameplay tests:
 
-## Development checks
+`make -C games/dinorun host-test`
 
-```sh
-make -C games/dinorun host-test
-```
+The host tests cover movement, collision detection, jumping, bird direction, obstacle spacing, rendering, and controls.
 
-Host tests cover jump motion, ducking, collision, game over, restart, and rendering. They do **not** replace on-calculator testing or NumPlay's ARM emulator suite.
+The game is already registered in `games/games.json` and is included automatically when building the full NumPlay launcher.
 
-The game is made as an independently coded fan-style runner, with a deliberately small screen buffer (16 RGB565 rows) to avoid allocating a full 320x240 framebuffer.
+## Credits
+
+- **Original Chrome Dino game:** Google
+- **NumWorks C adaptation and NumPlay integration:** LilyTheCatgirl
+- **Python sprite reference:** [Chrome Dino in Lily's Small NumWorks Games](https://github.com/LilyTheCuteCatgirl/lilys-small-numworks-games/blob/main/games/chrome_dino.py)
