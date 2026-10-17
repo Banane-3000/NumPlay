@@ -14,6 +14,14 @@ void eadk_display_push_rect(eadk_rect_t r,const uint16_t *px) {
   for(int y=0;y<r.height;y++) for(int x=0;x<r.width;x++)
     screen[(y+r.y)*W+x+r.x]=px[y*r.width+x];
 }
+/* Validate what ACTUALLY appears on screen, not just object coordinates.
+ * Below the HUD and above the floor, with no other objects spawned, only
+ * the bird can supply dark pixels in x=100..300. */
+static int bird_screen_left(void) {
+  for(int x=100;x<300;x++)for(int y=145;y<180;y++)
+    if(screen[y*W+x]==RGB(0x535353))return x;
+  return -1;
+}
 static void screenshot(const char *f) {
   FILE *fp=fopen(f,"wb"); assert(fp);
   fprintf(fp,"P6\n%d %d\n255\n",W,H);
@@ -61,28 +69,43 @@ int main(int argc,char **argv) {
   assert(pixels[4*W+84]==ink); /* Source first rect x=4..6: left-facing beak. */
   assert(pixels[4*W+95]==bg); /* Old mirrored version wrongly filled this spot. */
 
-  /* Three smooth visual positions per unchanged Python-scale physics step. */
+  /* Regression: past code visibly moved the bird RIGHT at each physics tick.
+   * Test the ACTUAL rendered pixels across multiple logical tick boundaries.
+   * The bird must never appear to move back to the right. */
   start_game();cactus_meter=bird_meter=-100000;
-  obstacles[0]=(obstacle){270,DY,14,23,CACTUS};
-  obstacles[1]=(obstacle){200,165,21,18,BIRD};count=2;
-  update(false,false);
-  assert(obstacles[0].x==260 && obstacles[1].x==195);
-  render_phase=0;
-  assert(interpolated(old_obstacle_x[0],obstacles[0].x)==270);
-  assert(interpolated(old_obstacle_x[1],obstacles[1].x)==200);
-  render_phase=1;
-  assert(interpolated(old_obstacle_x[0],obstacles[0].x)==267);
-  render_phase=2;
-  assert(interpolated(old_obstacle_x[0],obstacles[0].x)==264);
-  render_phase=3;
-  assert(interpolated(old_obstacle_x[0],obstacles[0].x)==260);
-  /* Input is polled on visual frames, but physics runs only on its 100ms tick. */
-  start_game();
-  uint32_t no_tick=ticks;
-  simulation_tick=false;
-  assert(!handle_input(0,0) && ticks==no_tick);
-  simulation_tick=true;
-  assert(!handle_input(0,0) && ticks==no_tick+1);
+  obstacles[0]=(obstacle){220,165,21,18,BIRD};count=1;
+  last_step_ms=0;
+  const uint32_t times[]={0,33,66,99,100,133,166,199,200,233,266,299,300};
+  int previous_x=999;
+  for(unsigned i=0;i<sizeof(times)/sizeof(times[0]);i++) {
+    assert(!timed_input(times[i],0,0));
+    frame();
+    int visual_x=bird_screen_left();
+    assert(visual_x>=0);
+    assert(visual_x<=previous_x);  /* No move right, even at tick reset. */
+    previous_x=visual_x;
+  }
+  assert(score==3 && ticks==3);
+  assert(obstacles[0].x==205);   /* Exactly 5px LEFT each physics tick. */
+
+  /* When full-screen drawing takes a long time, logical updates must catch
+   * up with wall-clock time rather than making the game run super slowly. */
+  start_game();cactus_meter=bird_meter=-100000;
+  obstacles[0]=(obstacle){250,165,21,18,BIRD};count=1;
+  last_step_ms=0;
+  assert(!timed_input(340,0,0));
+  assert(score==3 && ticks==3 && obstacles[0].x==235);
+  assert(render_ms==40);
+  assert(!timed_input(875,0,0));
+  assert(score==8 && ticks==8 && obstacles[0].x==210);
+  assert(render_ms==75);
+  /* Input is still checked on draw-only frames. */
+  assert(!timed_input(885,PAUSE,PAUSE) && scene==PAUSED);
+  uint32_t frozen=ticks;
+  assert(!timed_input(1200,0,0) && ticks==frozen);
+  assert(!timed_input(1201,PAUSE,PAUSE) && scene==PLAY);
+  assert(!timed_input(1230,0,0) && ticks==frozen);
+  assert(!timed_input(1301,0,0) && ticks==frozen+1);
 
   /* Python ducking changes gravitational acceleration, even in the air. */
   start_game();cactus_meter=bird_meter=-100000;
@@ -134,6 +157,6 @@ int main(int argc,char **argv) {
   clouds[0]=(decoration){170,70};cloud_count=1;
   frame();
   if(argc>=3)screenshot(argv[2]);
-  printf("Host tests passed: Python jump and speed, original left-facing bird, 30fps interpolation, sky, collisions, Back exit, Clear pause.\n");
+  printf("Host tests passed: original physics, birds moving left EVERY drawn frame, 30fps forward motion, slow-frame catch-up, controls.\n");
   return 0;
 }

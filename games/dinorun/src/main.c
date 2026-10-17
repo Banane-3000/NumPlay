@@ -31,15 +31,14 @@ const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level")))
 #define DUCK (KEY(eadk_key_down) | KEY(eadk_key_two))
 #define PAUSE KEY(eadk_key_backspace)
 #define EXIT (KEY(eadk_key_back) | KEY(eadk_key_home) | KEY(eadk_key_on_off))
-/* MicroPython's 30 ms sleep excludes its slow drawing, so the observed game
- * ran below 30 logical frames per second. Preserve its exact per-step physics
- * and 10px cactus / 5px bird movement at the previously tested tempo, but
- * interpolate three visual frames between logical updates. This removes the
- * forced 10-fps animation without tripling the game speed.
- * Exact wall-clock parity with MicroPython depends on calculator model. */
+/* Restore the previous, hardware-tested Python-scale GAMEPLAY timing: one
+ * logical update per 100 ms (10 cactus pixels or 5 bird pixels per tick at
+ * the start). Redraw more often without reversing the objects or slowing
+ * down gameplay. The scheduler catches up if rendering takes longer than a
+ * logical step, instead of losing simulation frames. */
 #define GAME_FRAME_MS 100
 #define DRAW_FRAME_MS 33
-#define DRAW_SUBFRAMES 3
+#define MAX_CATCHUP_STEPS 12
 #define SAVE_NAME "dinorun.sav"
 
 typedef uint16_t color;
@@ -63,15 +62,17 @@ static int gravity_units, cactus_meter, bird_meter;
 static int bird_speed;
 static uint32_t rng=0xA319F4B5u, ticks, distance_px;
 static bool new_record;
-/* Positions before the most recent Python-equivalent simulation step.
- * Render at 0/3, 1/3, 2/3, 3/3 between previous and current positions.
- * The same game-step collision / score / difficulty behavior is retained. */
-static int prev_dino_y;
-static int16_t old_obstacle_x[12], old_cloud_x[3], old_dust_x[5], old_pebble_x[2];
-static unsigned render_phase=3;
+/* Render *ahead* from the last settled physics position toward the next
+ * one. The old approach drew backwards to the PREVIOUS position whenever a
+ * game tick arrived, making the birds visibly travel right then snap left.
+ * Position(now) = settled_position + motion_per_tick * elapsed/100.
+ * Both immediately before and after a logical tick, the image is continuous.
+ */
+static unsigned render_ms;
 static bool simulation_tick=true;
-static int interpolated(int from,int to) {
-  return from+(to-from)*(int)render_phase / DRAW_SUBFRAMES;
+static uint32_t last_step_ms;
+static int projected(int position,int motion_per_tick) {
+  return position + motion_per_tick*(int)render_ms/GAME_FRAME_MS;
 }
 
 static uint32_t random32(void) {
@@ -196,11 +197,11 @@ static void scenery(void) {
   }
   /* Clouds at 5 px/frame, like Python's j[] list, visible in both palettes. */
   for(int i=0;i<cloud_count;i++)
-    SPRITE(CLOUD_ORIGINAL,interpolated(old_cloud_x[i],clouds[i].x),clouds[i].y,faint);
+    SPRITE(CLOUD_ORIGINAL,projected(clouds[i].x,-bird_speed),clouds[i].y,faint);
   /* Moving ground specks and tufts use the original W/av sprite lists. */
-  for(int i=0;i<dust_count;i++) rect(interpolated(old_dust_x[i],dust[i].x),dust[i].y,2,1,ink);
+  for(int i=0;i<dust_count;i++) rect(projected(dust[i].x,-speed),dust[i].y,2,1,ink);
   for(int i=0;i<pebble_count;i++)
-    SPRITE(GROUND_DETAIL_1,interpolated(old_pebble_x[i],pebbles[i].x),DY,ink);
+    SPRITE(GROUND_DETAIL_1,projected(pebbles[i].x,-speed),DY,ink);
 }
 /* Match the original Python aM, ay and ap collision predicates, which operate
  * on sprite anchor positions (not on the old approximated C bounding boxes). */
@@ -229,8 +230,8 @@ static void start_game(void) {
   cloud_clock=dust_clock=pebble_clock=0;
   cloud_delay=randrange(30,70);dust_delay=randrange(1,2);
   pebble_delay=randrange(30,50);
-  duck=0;dino_y=DY*256;prev_dino_y=dino_y;dino_vy=0;ticks=0;new_record=false;
-  render_phase=DRAW_SUBFRAMES;
+  duck=0;dino_y=DY*256;dino_vy=0;ticks=0;new_record=false;
+  render_ms=0;
 }
 /* The original Python's E/q counters and inclusive random thresholds. */
 static void spawn(void) {
@@ -281,7 +282,7 @@ static void advance_decorations(void) {
     clouds[i].x-=bird_speed;
     if(clouds[i].x<=-50) {
       for(int j=i+1;j<cloud_count;j++) {
-        clouds[j-1]=clouds[j];old_cloud_x[j-1]=old_cloud_x[j];
+        clouds[j-1]=clouds[j];
       }
       cloud_count--;
     } else i++;
@@ -290,7 +291,7 @@ static void advance_decorations(void) {
     dust[i].x-=speed;
     if(dust[i].x<=-10) {
       for(int j=i+1;j<dust_count;j++) {
-        dust[j-1]=dust[j];old_dust_x[j-1]=old_dust_x[j];
+        dust[j-1]=dust[j];
       }
       dust_count--;
     } else i++;
@@ -299,7 +300,7 @@ static void advance_decorations(void) {
     pebbles[i].x-=speed;
     if(pebbles[i].x<=-20) {
       for(int j=i+1;j<pebble_count;j++) {
-        pebbles[j-1]=pebbles[j];old_pebble_x[j-1]=old_pebble_x[j];
+        pebbles[j-1]=pebbles[j];
       }
       pebble_count--;
     } else i++;
@@ -324,28 +325,23 @@ static void update(bool jump,bool down) {
    * The C value is scaled by 256 only for consistency with the old tests. */
   if(jump && dino_y>=DY*256 && !down) dino_vy=-13*256;
   duck=down; /* The Python also renders its duck pose while airborne. */
-  prev_dino_y=dino_y;
   dino_y+=dino_vy;
   if(dino_y<DY*256) dino_vy+=gravity_units*256;
   else {dino_y=DY*256;dino_vy=0;}
   if(down)gravity_units+=7;
   else gravity_units=2;
 
-  for(int i=0;i<count;i++)old_obstacle_x[i]=obstacles[i].x;
   for(int i=0;i<count;) {
     int move=obstacles[i].kind==BIRD ? bird_speed : speed;
     obstacles[i].x-=(int16_t)move;
     bool gone=(obstacles[i].kind==BIRD?obstacles[i].x<=-30:obstacles[i].x<=-10);
     if(gone) {
       for(int j=i+1;j<count;j++) {
-        obstacles[j-1]=obstacles[j];old_obstacle_x[j-1]=old_obstacle_x[j];
+        obstacles[j-1]=obstacles[j];
       }
       count--;
     } else i++;
   }
-  for(int i=0;i<cloud_count;i++)old_cloud_x[i]=clouds[i].x;
-  for(int i=0;i<dust_count;i++)old_dust_x[i]=dust[i].x;
-  for(int i=0;i<pebble_count;i++)old_pebble_x[i]=pebbles[i].x;
   advance_decorations();
   if(collision())lose();
   distance_px+=(uint32_t)speed;
@@ -366,10 +362,15 @@ static void frame(void) {
     if(scene==PLAY || scene==PAUSED || scene==DEAD) {
       for(int i=0;i<count;i++) {
         obstacle drawn=obstacles[i];
-        drawn.x=(int16_t)interpolated(old_obstacle_x[i],drawn.x);
+        /* Predict motion in the same LEFTWARD direction as the next tick. */
+        drawn.x=(int16_t)projected(drawn.x,-(drawn.kind==BIRD?bird_speed:speed));
         if(drawn.kind==BIRD)bird(&drawn);else cactus(&drawn);
       }
-      dino(DX,interpolated(prev_dino_y,dino_y)/256,duck,(int)(ticks? ticks-1:0));
+      /* Draw intermediate jump/fall positions without altering the original
+       * -13/+2 Python jump physics stored in dino_y and dino_vy. */
+      int visual_y=dino_y + dino_vy*(int)render_ms/GAME_FRAME_MS;
+      if(visual_y>DY*256) visual_y=DY*256;
+      dino(DX,visual_y/256,duck,(int)(ticks? ticks-1:0));
       text_at(11,11,"HI",2,faint);number(47,11,high_score,5,2,ink);
       number(245,11,(unsigned)score,5,2,ink);
     } else {
@@ -412,6 +413,40 @@ static bool handle_input(uint64_t keys,uint64_t hit) {
   }
   return false;
 }
+/* Advance the logic based on elapsed WALL-CLOCK time, not how many full
+ * frames the display was able to draw. This is essential on real hardware:
+ * 30 attempted full-screen redraws/s must NOT make the game slower than the
+ * prior tested 10 logic steps/s. Preserve all the original update() math. */
+static bool timed_input(uint32_t now,uint64_t keys,uint64_t hit) {
+  if(scene!=PLAY || (hit&PAUSE)) {
+    simulation_tick=false;
+    bool exit_game=handle_input(keys,hit);
+    last_step_ms=now; /* No accumulated physics during menus or pause. */
+    render_ms=0;
+    return exit_game;
+  }
+  uint32_t elapsed=now-last_step_ms;
+  unsigned steps=elapsed/GAME_FRAME_MS;
+  if(steps>MAX_CATCHUP_STEPS) {
+    /* Bound work after a very long redraw or suspension. */
+    steps=MAX_CATCHUP_STEPS;
+    last_step_ms=now-steps*GAME_FRAME_MS;
+  }
+  if(!steps) {
+    simulation_tick=false;
+    if(handle_input(keys,hit)) return true;
+  } else {
+    simulation_tick=true;
+    for(unsigned i=0;i<steps && scene==PLAY;i++) {
+      if(handle_input(keys,i?0:hit)) return true;
+      last_step_ms+=GAME_FRAME_MS;
+    }
+  }
+  render_ms=scene==PLAY?now-last_step_ms:0;
+  if(render_ms>=GAME_FRAME_MS) render_ms=GAME_FRAME_MS-1;
+  return false;
+}
+
 int main(void) {
   np_app_begin();
   uint32_t len=0;
@@ -421,29 +456,14 @@ int main(void) {
     if(value<100000000u)high_score=(int)value;
   }
   rng^=(uint32_t)eadk_timing_millis()*2654435761u;
-  scene=TITLE; dino_y=DY*256;prev_dino_y=dino_y;
+  scene=TITLE; dino_y=DY*256;
   uint64_t held=eadk_keyboard_scan();
-  uint32_t last_step=(uint32_t)eadk_timing_millis();
+  last_step_ms=(uint32_t)eadk_timing_millis();
   for(;;) {
     uint32_t now=(uint32_t)eadk_timing_millis();
-    uint32_t since=now-last_step;
-    simulation_tick=since>=GAME_FRAME_MS;
-    if(simulation_tick) {
-      /* Never catch up with a burst of physics updates after a slow redraw.
-       * A lag spike should not suddenly accelerate the player. */
-      /* Step a fixed 100 ms to avoid 33 ms render quantization slowing
-       * gameplay to 7.5 fps (four 33 ms redraws per logical update). */
-      last_step+=GAME_FRAME_MS;
-      if(now-last_step>=GAME_FRAME_MS) last_step=now; /* long lag: resync */
-      since=now-last_step;
-    }
-    /* Smoothly tween between two original-Python physics positions, while
-     * input is scanned and UI responds on every visual frame. */
-    render_phase=(unsigned)((since*DRAW_SUBFRAMES+GAME_FRAME_MS/2)/GAME_FRAME_MS);
-    if(render_phase>DRAW_SUBFRAMES)render_phase=DRAW_SUBFRAMES;
     uint64_t keys=eadk_keyboard_scan(),hit=keys&~held;
     held=keys;
-    if(handle_input(keys,hit)) break;
+    if(timed_input(now,keys,hit)) break;
     frame();
     uint32_t elapsed=(uint32_t)eadk_timing_millis()-now;
     if(elapsed<DRAW_FRAME_MS) eadk_timing_msleep(DRAW_FRAME_MS-elapsed);
