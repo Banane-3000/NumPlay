@@ -39,6 +39,12 @@ const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level")))
 #define GAME_FRAME_MS 100
 #define DRAW_FRAME_MS 33
 #define MAX_CATCHUP_STEPS 12
+/* Transferring an entire screen 30 times/second saturated the NumWorks
+ * display link. Compose bands as before, but upload only changed 32x16 tiles.
+ * This is presentation-only: it does not modify any gameplay/physics timing. */
+#define DIRTY_TILE_W 32
+#define DIRTY_COLS (W/DIRTY_TILE_W)
+#define DIRTY_ROWS (H/BAND)
 #define SAVE_NAME "dinorun.sav"
 
 typedef uint16_t color;
@@ -48,6 +54,11 @@ enum { TITLE, HELP, PLAY, PAUSED, DEAD };
 enum { CACTUS, LARGE_CACTUS, BIRD };
 
 static color pixels[W * BAND];
+/* Just 600 B of hashes instead of a second 150 KB screen buffer.
+ * Staging one band lets us merge adjacent changed tiles into one transfer. */
+static uint32_t previous_hashes[DIRTY_ROWS][DIRTY_COLS];
+static color upload_pixels[W * BAND];
+static bool display_cache_valid;
 static int band_y, scene;
 static color bg, ink, faint;
 static obstacle obstacles[12];
@@ -350,6 +361,51 @@ static void update(bool jump,bool down) {
   bird_meter++;cloud_clock++;dust_clock++;pebble_clock++;
   ticks++;
 }
+/* Hash each 32x16 tile of the freshly rendered RGB565 band. Only pixels
+ * that differ from the last displayed frame need to cross the EADK bus.
+ * The hash is over actual pixels, so it handles spawned/removed objects,
+ * night/day changes, pause overlays and HUD changes without special cases. */
+static uint32_t tile_hash(int x) {
+  uint32_t h=2166136261u;
+  for(int y=0;y<BAND;y++) {
+    const color *p=pixels+y*W+x;
+    for(int dx=0;dx<DIRTY_TILE_W;dx++) {
+      h^=p[dx];
+      h*=16777619u;
+    }
+  }
+  return h;
+}
+static void upload_changed_band(int y) {
+  int run_start=-1;
+  const int row=y/BAND;
+  for(int col=0;col<=DIRTY_COLS;col++) {
+    bool changed=false;
+    if(col<DIRTY_COLS) {
+      uint32_t hash=tile_hash(col*DIRTY_TILE_W);
+      changed=!display_cache_valid || previous_hashes[row][col]!=hash;
+      previous_hashes[row][col]=hash;
+    }
+    if(changed && run_start<0)run_start=col;
+    if(!changed && run_start>=0) {
+      int x=run_start*DIRTY_TILE_W;
+      int width=(col-run_start)*DIRTY_TILE_W;
+      if(width==W) {
+        eadk_display_push_rect((eadk_rect_t){0,(uint16_t)y,W,BAND},pixels);
+      } else {
+        /* EADK expects tightly packed rows, unlike the W-stride band. */
+        for(int yy=0;yy<BAND;yy++) {
+          const color *src=pixels+yy*W+x;
+          color *dst=upload_pixels+yy*width;
+          for(int xx=0;xx<width;xx++)dst[xx]=src[xx];
+        }
+        eadk_display_push_rect((eadk_rect_t){(uint16_t)x,(uint16_t)y,
+                                   (uint16_t)width,BAND},upload_pixels);
+      }
+      run_start=-1;
+    }
+  }
+}
 static void frame(void) {
   bool night=((score/300)&1)!=0;
   /* Exact daytime/nighttime palette from the Python version. */
@@ -377,6 +433,8 @@ static void frame(void) {
       /* The original title character is the separately encoded 3x sprite. */
       SPRITE(DINO_MENU_LARGE,120,150,ink);
       centered(40,"CHROME DINO",3,ink);
+      /* Small build marker: confirms the newly compiled app is installed. */
+      text_at(302,230,"R2",1,faint);
       centered(202,scene==HELP?"OK TO JUMP":"PRESS OK TO PLAY",2,ink);
       centered(225,scene==HELP?"DOWN DUCK  CLEAR PAUSE":"SHIFT FOR HELP",1,faint);
       if(scene!=HELP) {text_at(9,230,"BEST",1,faint);number(46,230,high_score,5,1,ink);}
@@ -392,8 +450,9 @@ static void frame(void) {
       centered(115,"CLEAR TO RESUME",1,ink);
       centered(129,"BACK TO EXIT",1,ink);
     }
-    eadk_display_push_rect((eadk_rect_t){0,(uint16_t)band_y,W,BAND},pixels);
+    upload_changed_band(band_y);
   }
+  display_cache_valid=true;
 }
 
 /* Separated out so native host tests can verify controls as well as physics.

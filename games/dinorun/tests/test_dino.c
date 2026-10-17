@@ -2,15 +2,20 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #define main dino_app_main
 #include "../src/main.c"
 #undef main
 static uint16_t screen[W*H];
+static uint64_t pixels_uploaded, pushes;
+
 uint64_t eadk_keyboard_scan(void) {return 0;}
 uint32_t eadk_timing_millis(void) {return 0;}
 void eadk_timing_msleep(uint32_t ms) {(void)ms;}
 void eadk_display_push_rect(eadk_rect_t r,const uint16_t *px) {
-  assert(r.x+r.width<=W && r.y+r.height<=H);
+  assert(r.width>0 && r.height>0 && r.x+r.width<=W && r.y+r.height<=H);
+  pixels_uploaded+=(uint64_t)r.width*r.height;
+  pushes++;
   for(int y=0;y<r.height;y++) for(int x=0;x<r.width;x++)
     screen[(y+r.y)*W+x+r.x]=px[y*r.width+x];
 }
@@ -21,6 +26,15 @@ static int bird_screen_left(void) {
   for(int x=100;x<300;x++)for(int y=145;y<180;y++)
     if(screen[y*W+x]==RGB(0x535353))return x;
   return -1;
+}
+/* A dirty-only frame MUST leave exactly the same framebuffer as full
+ * repaint. This catches leftover pixels when sprites move or disappear. */
+static uint16_t screen_copy[W*H];
+static void verify_dirty_matches_full(void) {
+  memcpy(screen_copy,screen,sizeof screen);
+  display_cache_valid=false; /* Force the following draw to upload all tiles. */
+  frame();
+  assert(memcmp(screen_copy,screen,sizeof screen)==0);
 }
 static void screenshot(const char *f) {
   FILE *fp=fopen(f,"wb"); assert(fp);
@@ -37,7 +51,46 @@ static void screenshot(const char *f) {
 int main(int argc,char **argv) {
   scene=TITLE; dino_y=DY*256;score=0;
   frame();
+  assert(pixels_uploaded==(uint64_t)W*H); /* First frame covers entire screen. */
   if(argc>=2) screenshot(argv[1]);
+  pixels_uploaded=pushes=0;
+  frame();
+  assert(pixels_uploaded==0 && pushes==0); /* Do NOT resend the same pixels. */
+
+  /* A single moving bird changes just a few tiles, not 320x240 pixels.
+   * This is the hardware-performance regression the old tests missed. */
+  start_game();
+  frame(); /* Draw the otherwise empty game screen. */
+  pixels_uploaded=pushes=0;
+  frame();
+  assert(pixels_uploaded==0 && pushes==0);
+  obstacles[0]=(obstacle){220,165,21,18,BIRD};count=1;
+  pixels_uploaded=pushes=0;
+  frame();
+  assert(pixels_uploaded>0 && pixels_uploaded<(uint64_t)W*H/4);
+  assert(pushes>0);
+  uint64_t first_bird_pixels=pixels_uploaded;
+  verify_dirty_matches_full();
+  render_ms=70;
+  pixels_uploaded=pushes=0;
+  frame();
+  assert(pixels_uploaded>0 && pixels_uploaded<(uint64_t)W*H/4);
+  uint64_t next_bird_pixels=pixels_uploaded;
+  verify_dirty_matches_full();
+  printf("Screen upload check: %llu pixels for bird appearance, %llu for bird movement, vs %d previously every frame.\n",
+         (unsigned long long)first_bird_pixels,(unsigned long long)next_bird_pixels,W*H);
+  obstacles[0].x=100;render_ms=24;
+  frame();verify_dirty_matches_full();
+  count=0;frame();verify_dirty_matches_full(); /* Object removal clears pixels. */
+  /* Dark-to-light transition legitimately repaints the full background. */
+  score=300;
+  pixels_uploaded=pushes=0;
+  frame();
+  assert(pixels_uploaded>=(uint64_t)W*H*3/4);
+  verify_dirty_matches_full();
+  score=0;
+  frame();
+
 
   /* Reference: original Python H=-13, gravity=+2, 49 px at frame 7. */
   start_game();assert(scene==PLAY && score==0 && count==0);
@@ -157,6 +210,6 @@ int main(int argc,char **argv) {
   clouds[0]=(decoration){170,70};cloud_count=1;
   frame();
   if(argc>=3)screenshot(argv[2]);
-  printf("Host tests passed: original physics, birds moving left EVERY drawn frame, 30fps forward motion, slow-frame catch-up, controls.\n");
+  printf("Host tests passed: dirty tile transfers, physics, birds left every frame, 30fps forward motion, slow-frame catch-up, controls.\n");
   return 0;
 }
