@@ -38,7 +38,6 @@ const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level")))
  * This makes double cacti cross during a good 700ms jump and means the
  * two hazard kinds literally share the same LEFT-moving position code. */
 #define GAME_FRAME_MS 50
-#define WORLD_FRAME_MS 100
 #define DRAW_FRAME_MS 33
 #define MAX_CATCHUP_STEPS 12
 /* Transferring an entire screen 30 times/second saturated the NumWorks
@@ -73,7 +72,7 @@ static int count, dino_y, dino_vy, duck, score, high_score, speed;
  * The simulation uses one step per frame, just like the source. */
 static int gravity_units, cactus_meter, bird_meter;
 static int cloud_speed;  /* Clouds use Python T; bird obstacles use scroll_step(). */
-static uint32_t rng=0xA319F4B5u, ticks, distance_px;
+static uint32_t rng=0xA319F4B5u, ticks;
 static bool new_record;
 /* Always predict objects to the LEFT of their settled x coordinates.
  * The next movement is already known from the next half-step parity;
@@ -243,7 +242,7 @@ static bool collision(void) {
   return false;
 }
 static void start_game(void) {
-  scene=PLAY;count=0;score=0;speed=10;cloud_speed=5;distance_px=0;
+  scene=PLAY;count=0;score=0;speed=10;cloud_speed=5;
   cactus_meter=0;bird_meter=0;gravity_units=2;
   cloud_count=dust_count=pebble_count=0;
   cloud_clock=dust_clock=pebble_clock=0;
@@ -403,7 +402,6 @@ static void update(bool jump,bool down) {
   }
   advance_decorations();
   if(collision())lose();
-  distance_px+=(uint32_t)scroll_step();
   if(world_tick) {
     int difficulty=(int)((ticks/2)/60);
     cactus_meter+=randrange(1,4+difficulty/3);
@@ -479,20 +477,11 @@ static void frame(void) {
       dino(DX,visual_y/256,duck,score);
       text_at(11,11,"HI",2,faint);number(47,11,high_score,5,2,ink);
       number(245,11,(unsigned)score,5,2,ink);
-      text_at(302,230,"R5",1,faint);
-      /* Hardware diagnostic: the number under B decreases as the bird
-       * travels LEFT. Temporary for confirming movement on a real NumWorks. */
-      for(int i=0;i<count;i++) if(obstacles[i].kind==BIRD) {
-        text_at(220,228,"B",1,faint);
-        number(230,228,(unsigned)(obstacles[i].x<0?0:obstacles[i].x),3,1,faint);
-        break;
-      }
     } else {
       /* The original title character is the separately encoded 3x sprite. */
       SPRITE(DINO_MENU_LARGE,120,150,ink);
       centered(40,"CHROME DINO",3,ink);
       /* Visible R5 marker makes it impossible to mistake an old .nwa build. */
-      text_at(302,230,"R5",1,faint);
       centered(202,scene==HELP?"OK TO JUMP":"PRESS OK TO PLAY",2,ink);
       centered(225,scene==HELP?"DOWN DUCK  CLEAR PAUSE":"SHIFT FOR HELP",1,faint);
       if(scene!=HELP) {text_at(9,230,"BEST",1,faint);number(46,230,high_score,5,1,ink);}
