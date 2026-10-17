@@ -100,18 +100,20 @@ int main(int argc,char **argv) {
   for(int t=0;t<6;t++) update(false,false);
   assert(dino_y==y-49*256);
   for(int t=0;t<7;t++) update(false,false);
-  assert(dino_y==DY*256 && score==14 && speed==10);
+  assert(dino_y==DY*256 && score==7 && speed==10);
+  assert(GAME_FRAME_MS==50 && DRAW_FRAME_MS==33); /* 14 x 50ms = 700ms in the air. */
 
-  /* Python: speed changes AFTER the 180th frame, not before it. */
-  start_game();ticks=179;cactus_meter=bird_meter=-100000;
-  update(false,false);assert(speed==10 && bird_speed==5 && score==1);
-  update(false,false);assert(speed==11 && bird_speed==6 && score==2);
-  /* At difficulty >= 12, cacti have 14-pixel steps; birds have 9. */
-  ticks=720;update(false,false);assert(speed==14 && bird_speed==9);
-  /* Every frame advances birds left (5 to 14px) and not right. */
+  /* The world's previous 100ms scroll pace is unchanged. */
+  start_game();ticks=359;cactus_meter=bird_meter=-100000;
+  update(false,false);assert(speed==10 && bird_speed==5 && score==0);
+  update(false,false);assert(speed==11 && bird_speed==6 && score==1);
+  ticks=1440;update(false,false);assert(speed==14 && bird_speed==9);
+  /* Exactly 10px left / 100ms for cactus, 5px left / 100ms for bird. */
   start_game();cactus_meter=bird_meter=-100000;
   obstacles[0]=(obstacle){280,DY,14,23,CACTUS};
   obstacles[1]=(obstacle){270,165,21,18,BIRD};count=2;
+  update(false,false);
+  assert(obstacles[0].x==275 && obstacles[1].x==268);
   update(false,false);
   assert(obstacles[0].x==270 && obstacles[1].x==265);
 
@@ -128,37 +130,36 @@ int main(int argc,char **argv) {
   start_game();cactus_meter=bird_meter=-100000;
   obstacles[0]=(obstacle){220,165,21,18,BIRD};count=1;
   last_step_ms=0;
-  const uint32_t times[]={0,33,66,99,100,133,166,199,200,233,266,299,300};
+  const uint32_t times[]={0,25,49,50,75,99,100,125,149,150,175,199,200,225,250,275,300};
   int previous_x=999;
   for(unsigned i=0;i<sizeof(times)/sizeof(times[0]);i++) {
     assert(!timed_input(times[i],0,0));
     frame();
     int visual_x=bird_screen_left();
     assert(visual_x>=0);
-    assert(visual_x<=previous_x);  /* No move right, even at tick reset. */
+    assert(visual_x<=previous_x); /* Bird never moves to the right. */
     previous_x=visual_x;
   }
-  assert(score==3 && ticks==3);
-  assert(obstacles[0].x==205);   /* Exactly 5px LEFT each physics tick. */
+  assert(score==3 && ticks==6);
+  assert(obstacles[0].x==205); /* 15px left after 300ms. */
 
-  /* When full-screen drawing takes a long time, logical updates must catch
-   * up with wall-clock time rather than making the game run super slowly. */
+  /* Even if hardware frame pushes are slow, simulation catches up. */
   start_game();cactus_meter=bird_meter=-100000;
   obstacles[0]=(obstacle){250,165,21,18,BIRD};count=1;
   last_step_ms=0;
   assert(!timed_input(340,0,0));
-  assert(score==3 && ticks==3 && obstacles[0].x==235);
+  assert(score==3 && ticks==6 && obstacles[0].x==235);
   assert(render_ms==40);
   assert(!timed_input(875,0,0));
-  assert(score==8 && ticks==8 && obstacles[0].x==210);
-  assert(render_ms==75);
+  assert(score==9 && ticks==17 && obstacles[0].x==208);
+  assert(render_ms==25);
   /* Input is still checked on draw-only frames. */
   assert(!timed_input(885,PAUSE,PAUSE) && scene==PAUSED);
   uint32_t frozen=ticks;
   assert(!timed_input(1200,0,0) && ticks==frozen);
   assert(!timed_input(1201,PAUSE,PAUSE) && scene==PLAY);
   assert(!timed_input(1230,0,0) && ticks==frozen);
-  assert(!timed_input(1301,0,0) && ticks==frozen+1);
+  assert(!timed_input(1251,0,0) && ticks==frozen+1);
 
   /* Python ducking changes gravitational acceleration, even in the air. */
   start_game();cactus_meter=bird_meter=-100000;
@@ -168,6 +169,7 @@ int main(int argc,char **argv) {
   /* Cloud motion follows bird/cloud speed, not cactus speed. */
   start_game();cactus_meter=bird_meter=-100000;
   clouds[0]=(decoration){200,80};cloud_count=1;cloud_clock=-99999;
+  update(false,false);assert(clouds[0].x==198);
   update(false,false);assert(clouds[0].x==195);
 
   /* Controls: Clear pauses and resumes; Back exits immediately. */
@@ -210,6 +212,6 @@ int main(int argc,char **argv) {
   clouds[0]=(decoration){170,70};cloud_count=1;
   frame();
   if(argc>=3)screenshot(argv[2]);
-  printf("Host tests passed: dirty tile transfers, physics, birds left every frame, 30fps forward motion, slow-frame catch-up, controls.\n");
+  printf("R3 PASSED: jump 700ms, cacti 10px/100ms, birds LEFT 5px/100ms, real pixels monotonic, dirty tiles, controls.\n");
   return 0;
 }

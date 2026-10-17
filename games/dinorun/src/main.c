@@ -2,7 +2,8 @@
  * the Python Chrome Dino sprites. See dino_sprites.h for source/rights note.
  * 320x240, RGB565, 16-row bands; physics follows the Python frame steps.
  * Keyboard: OK jump, Down duck, Clear/Backspace pause, Back exits.
- * Python-scale gameplay steps are animated between updates at ~30 fps.
+ * Faster jump physics (50ms) / original horizontal scroll pacing (100ms);
+ * smooth 30 FPS presentation with dirty-tile screen uploads.
  */
 #include <eadk.h>
 #include <stdbool.h>
@@ -31,12 +32,12 @@ const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level")))
 #define DUCK (KEY(eadk_key_down) | KEY(eadk_key_two))
 #define PAUSE KEY(eadk_key_backspace)
 #define EXIT (KEY(eadk_key_back) | KEY(eadk_key_home) | KEY(eadk_key_on_off))
-/* Restore the previous, hardware-tested Python-scale GAMEPLAY timing: one
- * logical update per 100 ms (10 cactus pixels or 5 bird pixels per tick at
- * the start). Redraw more often without reversing the objects or slowing
- * down gameplay. The scheduler catches up if rendering takes longer than a
- * logical step, instead of losing simulation frames. */
-#define GAME_FRAME_MS 100
+/* R3: The previous 100ms physics tick made the 14-frame jump last 1.4s.
+ * At 50ms per physics step the SAME -13/+2 jump arc lasts 0.7s.
+ * World/spawn timing stays at 100ms using two half-distance scroll steps,
+ * so birds/cacti don't become twice as fast. */
+#define GAME_FRAME_MS 50
+#define WORLD_FRAME_MS 100
 #define DRAW_FRAME_MS 33
 #define MAX_CATCHUP_STEPS 12
 /* Transferring an entire screen 30 times/second saturated the NumWorks
@@ -73,17 +74,19 @@ static int gravity_units, cactus_meter, bird_meter;
 static int bird_speed;
 static uint32_t rng=0xA319F4B5u, ticks, distance_px;
 static bool new_record;
-/* Render *ahead* from the last settled physics position toward the next
- * one. The old approach drew backwards to the PREVIOUS position whenever a
- * game tick arrived, making the birds visibly travel right then snap left.
- * Position(now) = settled_position + motion_per_tick * elapsed/100.
- * Both immediately before and after a logical tick, the image is continuous.
- */
+/* Always predict objects to the LEFT of their settled x coordinates.
+ * The next movement is already known from the next half-step parity;
+ * stepping across a tick boundary is continuous. */
 static unsigned render_ms;
 static bool simulation_tick=true;
 static uint32_t last_step_ms;
 static int projected(int position,int motion_per_tick) {
   return position + motion_per_tick*(int)render_ms/GAME_FRAME_MS;
+}
+/* Preserve the old world speed using two deterministic half-steps. For
+ * example cactus=10 becomes 5+5 px per 100ms, bird=5 becomes 2+3. */
+static int half_move(int full_speed,uint32_t step) {
+  return full_speed/2 + ((full_speed&1) && (step&1));
 }
 
 static uint32_t random32(void) {
@@ -208,11 +211,11 @@ static void scenery(void) {
   }
   /* Clouds at 5 px/frame, like Python's j[] list, visible in both palettes. */
   for(int i=0;i<cloud_count;i++)
-    SPRITE(CLOUD_ORIGINAL,projected(clouds[i].x,-bird_speed),clouds[i].y,faint);
+    SPRITE(CLOUD_ORIGINAL,projected(clouds[i].x,-half_move(bird_speed,ticks)),clouds[i].y,faint);
   /* Moving ground specks and tufts use the original W/av sprite lists. */
-  for(int i=0;i<dust_count;i++) rect(projected(dust[i].x,-speed),dust[i].y,2,1,ink);
+  for(int i=0;i<dust_count;i++) rect(projected(dust[i].x,-half_move(speed,ticks)),dust[i].y,2,1,ink);
   for(int i=0;i<pebble_count;i++)
-    SPRITE(GROUND_DETAIL_1,projected(pebbles[i].x,-speed),DY,ink);
+    SPRITE(GROUND_DETAIL_1,projected(pebbles[i].x,-half_move(speed,ticks)),DY,ink);
 }
 /* Match the original Python aM, ay and ap collision predicates, which operate
  * on sprite anchor positions (not on the old approximated C bounding boxes). */
@@ -246,7 +249,7 @@ static void start_game(void) {
 }
 /* The original Python's E/q counters and inclusive random thresholds. */
 static void spawn(void) {
-  int difficulty=(int)(ticks/60); /* B has not advanced yet this frame */
+  int difficulty=(int)((ticks/2)/60); /* one world frame = two physics ticks */
   int cactus_count=0, bird_count=0, last_cactus=-10000;
   for(int i=0;i<count;i++) {
     if(obstacles[i].kind==BIRD) bird_count++;
@@ -290,7 +293,7 @@ static void spawn(void) {
 }
 static void advance_decorations(void) {
   for(int i=0;i<cloud_count;) {
-    clouds[i].x-=bird_speed;
+    clouds[i].x-=half_move(bird_speed,ticks);
     if(clouds[i].x<=-50) {
       for(int j=i+1;j<cloud_count;j++) {
         clouds[j-1]=clouds[j];
@@ -299,7 +302,7 @@ static void advance_decorations(void) {
     } else i++;
   }
   for(int i=0;i<dust_count;) {
-    dust[i].x-=speed;
+    dust[i].x-=half_move(speed,ticks);
     if(dust[i].x<=-10) {
       for(int j=i+1;j<dust_count;j++) {
         dust[j-1]=dust[j];
@@ -308,7 +311,7 @@ static void advance_decorations(void) {
     } else i++;
   }
   for(int i=0;i<pebble_count;) {
-    pebbles[i].x-=speed;
+    pebbles[i].x-=half_move(speed,ticks);
     if(pebbles[i].x<=-20) {
       for(int j=i+1;j<pebble_count;j++) {
         pebbles[j-1]=pebbles[j];
@@ -326,39 +329,40 @@ static void lose(void) {
   }
 }
 static void update(bool jump,bool down) {
-  /* Python increments score at the start, then advances difficulty after
-   * processing movement on every 60th frame. */
-  score++;
-  speed=10+(int)(ticks/180); if(speed>14)speed=14;
-  bird_speed=5+(int)(ticks/180); if(bird_speed>14)bird_speed=14;
-  spawn();
-  /* The original Python uses H=-13, then applies H+=ad (ad starts at 2).
-   * The C value is scaled by 256 only for consistency with the old tests. */
+  /* Half-height step interval affects JUMP ONLY. Cacti, birds, sky and score
+   * retain exactly the previous pixels/second and spawns/second. */
+  bool world_tick=(ticks%2)==0;
+  speed=10+(int)((ticks/2)/180); if(speed>14)speed=14;
+  bird_speed=5+(int)((ticks/2)/180); if(bird_speed>14)bird_speed=14;
+  if(world_tick) { score++; spawn(); }
+
+  /* Same original 49-pixel jump: -13, -11, -9, ... +13. */
   if(jump && dino_y>=DY*256 && !down) dino_vy=-13*256;
-  duck=down; /* The Python also renders its duck pose while airborne. */
+  duck=down;
   dino_y+=dino_vy;
   if(dino_y<DY*256) dino_vy+=gravity_units*256;
   else {dino_y=DY*256;dino_vy=0;}
   if(down)gravity_units+=7;
   else gravity_units=2;
 
+  /* Every actual obstacle movement is nonpositive, for every tick. */
   for(int i=0;i<count;) {
-    int move=obstacles[i].kind==BIRD ? bird_speed : speed;
+    int move=half_move(obstacles[i].kind==BIRD?bird_speed:speed,ticks);
     obstacles[i].x-=(int16_t)move;
     bool gone=(obstacles[i].kind==BIRD?obstacles[i].x<=-30:obstacles[i].x<=-10);
     if(gone) {
-      for(int j=i+1;j<count;j++) {
-        obstacles[j-1]=obstacles[j];
-      }
+      for(int j=i+1;j<count;j++) obstacles[j-1]=obstacles[j];
       count--;
     } else i++;
   }
   advance_decorations();
   if(collision())lose();
-  distance_px+=(uint32_t)speed;
-  int difficulty=(int)(ticks/60);
-  cactus_meter+=randrange(1,4+difficulty/3);
-  bird_meter++;cloud_clock++;dust_clock++;pebble_clock++;
+  distance_px+=(uint32_t)half_move(speed,ticks);
+  if(world_tick) {
+    int difficulty=(int)((ticks/2)/60);
+    cactus_meter+=randrange(1,4+difficulty/3);
+    bird_meter++;cloud_clock++;dust_clock++;pebble_clock++;
+  }
   ticks++;
 }
 /* Hash each 32x16 tile of the freshly rendered RGB565 band. Only pixels
@@ -419,22 +423,30 @@ static void frame(void) {
       for(int i=0;i<count;i++) {
         obstacle drawn=obstacles[i];
         /* Predict motion in the same LEFTWARD direction as the next tick. */
-        drawn.x=(int16_t)projected(drawn.x,-(drawn.kind==BIRD?bird_speed:speed));
+        drawn.x=(int16_t)projected(drawn.x,-half_move(drawn.kind==BIRD?bird_speed:speed,ticks));
         if(drawn.kind==BIRD)bird(&drawn);else cactus(&drawn);
       }
       /* Draw intermediate jump/fall positions without altering the original
        * -13/+2 Python jump physics stored in dino_y and dino_vy. */
       int visual_y=dino_y + dino_vy*(int)render_ms/GAME_FRAME_MS;
       if(visual_y>DY*256) visual_y=DY*256;
-      dino(DX,visual_y/256,duck,(int)(ticks? ticks-1:0));
+      dino(DX,visual_y/256,duck,score);
       text_at(11,11,"HI",2,faint);number(47,11,high_score,5,2,ink);
       number(245,11,(unsigned)score,5,2,ink);
+      text_at(302,230,"R3",1,faint);
+      /* Hardware diagnostic: the number under B decreases as the bird
+       * travels LEFT. Temporary for confirming movement on a real NumWorks. */
+      for(int i=0;i<count;i++) if(obstacles[i].kind==BIRD) {
+        text_at(220,228,"B",1,faint);
+        number(230,228,(unsigned)(obstacles[i].x<0?0:obstacles[i].x),3,1,faint);
+        break;
+      }
     } else {
       /* The original title character is the separately encoded 3x sprite. */
       SPRITE(DINO_MENU_LARGE,120,150,ink);
       centered(40,"CHROME DINO",3,ink);
-      /* Small build marker: confirms the newly compiled app is installed. */
-      text_at(302,230,"R2",1,faint);
+      /* Visible R3 marker makes it impossible to mistake an old .nwa build. */
+      text_at(302,230,"R3",1,faint);
       centered(202,scene==HELP?"OK TO JUMP":"PRESS OK TO PLAY",2,ink);
       centered(225,scene==HELP?"DOWN DUCK  CLEAR PAUSE":"SHIFT FOR HELP",1,faint);
       if(scene!=HELP) {text_at(9,230,"BEST",1,faint);number(46,230,high_score,5,1,ink);}
