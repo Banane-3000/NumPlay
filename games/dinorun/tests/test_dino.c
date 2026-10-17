@@ -43,6 +43,16 @@ static int cactus_screen_left(void) {
     if(screen[y*W+x]==RGB(0x535353))return x;
   return -1;
 }
+/* Every bird/cactus pair must stay at least one second apart, even while
+ * multi-cactus groups are allowed to sit 20px apart. */
+static void assert_safe_mixed_pairs(void) {
+  for(int i=0;i<count;i++)for(int j=i+1;j<count;j++) {
+    if((obstacles[i].kind==BIRD)==(obstacles[j].kind==BIRD))continue;
+    int d=obstacles[i].x-obstacles[j].x;
+    if(d<0)d=-d;
+    assert(d>=MIN_MIXED_GAP);
+  }
+}
 static void screenshot(const char *f) {
   FILE *fp=fopen(f,"wb"); assert(fp);
   fprintf(fp,"P6\n%d %d\n255\n",W,H);
@@ -131,6 +141,41 @@ int main(int argc,char **argv) {
     update(false,false);
     assert(obstacles[0].x-obstacles[1].x==10);
   }
+
+  /* R5: reject birds beside a cactus AND reject cacti beside a bird.
+   * Check boundaries and BOTH real spawn paths, not just the helper. */
+  assert(MIN_MIXED_GAP==300);
+  start_game();count=1;
+  obstacles[0]=(obstacle){400,DY,14,23,CACTUS};
+  assert(!safe_mixed_spawn(400,BIRD));
+  assert(!safe_mixed_spawn(699,BIRD));
+  assert(safe_mixed_spawn(700,BIRD));
+  assert(safe_mixed_spawn(100,BIRD));
+  /* Force repeated bird attempts with a cactus dangerously close. */
+  score=450;bird_meter=100000;cactus_meter=-100000;
+  for(int i=0;i<500;i++) {spawn();assert(count==1);}
+  obstacles[0].x=100; /* now the queued bird at 400 is safe */
+  for(int i=0;i<500 && count==1;i++)spawn();
+  assert(count>1);assert_safe_mixed_pairs();
+
+  start_game();count=1;
+  obstacles[0]=(obstacle){350,165,21,18,BIRD};
+  assert(!safe_mixed_spawn(350,CACTUS));
+  assert(!safe_mixed_spawn(649,CACTUS));
+  assert(safe_mixed_spawn(650,CACTUS));
+  bird_meter=-100000;cactus_meter=100000;
+  for(int i=0;i<500;i++) {spawn();assert(count==1);}
+  obstacles[0].x=20; /* a new group at 350+ is now safe */
+  for(int i=0;i<500 && count==1;i++)spawn();
+  assert(count>1);assert_safe_mixed_pairs();
+
+  /* Check a real bird + its separately queued follower cactus. */
+  start_game();score=450;bird_meter=100000;cactus_meter=-100000;
+  for(int i=0;i<500 && count==0;i++)spawn();
+  assert(count>=1);assert_safe_mixed_pairs();
+  for(int i=0;i<count;i++)if(obstacles[i].kind==CACTUS)
+    assert(obstacles[i].x>=700);
+
   /* A pair of adjacent original cacti is actually jumpable with normal
    * timing. Before R4 they moved too slowly for the 700ms jump window. */
   start_game();cactus_meter=bird_meter=-100000;
@@ -245,6 +290,7 @@ int main(int argc,char **argv) {
     assert(cloud_count>=0 && cloud_count<=3);
     assert(dust_count>=0 && dust_count<=5);
     assert(pebble_count>=0 && pebble_count<=2);
+    assert_safe_mixed_pairs();
   }
 
   /* Both sprite variants and the sky can render safely in all 240 rows. */
@@ -256,6 +302,6 @@ int main(int argc,char **argv) {
   clouds[0]=(decoration){170,70};cloud_count=1;
   frame();
   if(argc>=3)screenshot(argv[2]);
-  printf("R4 PASSED: jump 700ms, cacti/birds LEFT together at 180px/s, double cactus feasible, dirty tiles, controls.\n");
+  printf("R5 PASSED: R4 speed/jump/bird motion unchanged, safe bird-cactus spawn order, no mixed overlaps, double cactus feasible.\n");
   return 0;
 }

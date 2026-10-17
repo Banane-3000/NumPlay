@@ -2,7 +2,7 @@
  * the Python Chrome Dino sprites. See dino_sprites.h for source/rights note.
  * 320x240, RGB565, 16-row bands; physics follows the Python frame steps.
  * Keyboard: OK jump, Down duck, Clear/Backspace pause, Back exits.
- * Same 50ms jump physics; faster synced cacti + bird travel;
+ * R5: unchanged R4 motion/physics; birds and cacti spawn safely apart;
  * smooth 30 FPS presentation with dirty-tile screen uploads.
  */
 #include <eadk.h>
@@ -252,6 +252,35 @@ static void start_game(void) {
   duck=0;dino_y=DY*256;dino_vy=0;ticks=0;new_record=false;
   render_ms=0;
 }
+/* R5: 300 px between the anchors of birds and cacti (at the fastest
+ * R4 scroll speed, at least 1.15 seconds between different hazard types).
+ * The jump is 0.7 s, so this leaves room to land and react. Deliberate
+ * two-/three-cactus groups do NOT use this inter-type restriction.
+ * The shared R4 scroll_step() preserves this distance while both are moving.
+ */
+#define MIN_MIXED_GAP 300
+static bool safe_mixed_spawn(int new_x,int new_kind) {
+  for(int i=0;i<count;i++) {
+    bool new_bird=new_kind==BIRD, old_bird=obstacles[i].kind==BIRD;
+    if(new_bird==old_bird) continue; /* only bird-versus-cactus pairs */
+    int distance=new_x-(int)obstacles[i].x;
+    if(distance<0)distance=-distance;
+    if(distance<MIN_MIXED_GAP)return false;
+  }
+  return true;
+}
+/* An independently generated cactus must also not overlap the follow-up
+ * cactus queued by an earlier bird. The intentional 20px clusters are only
+ * created inside the group-spawn path, not here. */
+static bool safe_follow_cactus(int x) {
+  if(!safe_mixed_spawn(x,CACTUS))return false;
+  for(int i=0;i<count;i++)if(obstacles[i].kind!=BIRD) {
+    int distance=x-(int)obstacles[i].x;
+    if(distance<0)distance=-distance;
+    if(distance<48)return false;
+  }
+  return true;
+}
 /* The original Python's E/q counters and inclusive random thresholds. */
 static void spawn(void) {
   int difficulty=(int)((ticks/2)/60); /* one world frame = two physics ticks */
@@ -266,19 +295,31 @@ static void spawn(void) {
   if(cactus_count<3 && cactus_meter>=randrange(min_threshold,max_threshold)
      && randrange(1,4)==1 && (cactus_count==0 || last_cactus<350-gap)) {
     int amount=randrange(1,6)==6 ? randrange(2,3) : 1;
-    for(int i=0;i<amount && count<12;i++) {
+    /* Test EVERY member of a cactus group against existing birds before
+     * adding any of them. Rejected spawns leave the meter ready to retry. */
+    bool clear=true;
+    for(int i=0;i<amount && count+i<12;i++) {
       int x=amount>1 ? 350+20*(i+1) : 350;
-      obstacles[count++]=(obstacle){(int16_t)x,DY,14,23,CACTUS};
+      if(!safe_mixed_spawn(x,CACTUS))clear=false;
     }
-    if(amount==1) cactus_meter=0; /* original does not reset E for cactus groups */
+    if(clear) {
+      for(int i=0;i<amount && count<12;i++) {
+        int x=amount>1 ? 350+20*(i+1) : 350;
+        obstacles[count++]=(obstacle){(int16_t)x,DY,14,23,CACTUS};
+      }
+      if(amount==1) cactus_meter=0; /* Python's single-cactus meter reset */
+    }
   }
   int p=imax(40,bird_meter/2);
   if(bird_count<1 && count<12 && bird_meter>=randrange(p,p+40)
-     && score>300 && randrange(1,7)==2) {
-    /* The Python also appends a cactus far behind the flying bird. */
-    if(count<11) obstacles[count++]=(obstacle){650,DY,14,23,CACTUS};
+     && score>300 && randrange(1,7)==2 && safe_mixed_spawn(400,BIRD)) {
     obstacles[count++]=(obstacle){400,(int16_t)randrange(150,180),21,18,BIRD};
     bird_meter=0;
+    /* The source game queues a cactus after some bird appearances. R5
+     * places it farther away than the unsafe 650px anchor, and only when
+     * it cannot overlap an existing cactus or the newly spawned bird. */
+    if(count<12 && safe_follow_cactus(750))
+      obstacles[count++]=(obstacle){700,DY,14,23,CACTUS};
   }
   if(cloud_count<3 && cloud_clock>=cloud_delay) {
     clouds[cloud_count++]=(decoration){320,(int16_t)randrange(50,120)};
@@ -438,7 +479,7 @@ static void frame(void) {
       dino(DX,visual_y/256,duck,score);
       text_at(11,11,"HI",2,faint);number(47,11,high_score,5,2,ink);
       number(245,11,(unsigned)score,5,2,ink);
-      text_at(302,230,"R4",1,faint);
+      text_at(302,230,"R5",1,faint);
       /* Hardware diagnostic: the number under B decreases as the bird
        * travels LEFT. Temporary for confirming movement on a real NumWorks. */
       for(int i=0;i<count;i++) if(obstacles[i].kind==BIRD) {
@@ -450,8 +491,8 @@ static void frame(void) {
       /* The original title character is the separately encoded 3x sprite. */
       SPRITE(DINO_MENU_LARGE,120,150,ink);
       centered(40,"CHROME DINO",3,ink);
-      /* Visible R4 marker makes it impossible to mistake an old .nwa build. */
-      text_at(302,230,"R4",1,faint);
+      /* Visible R5 marker makes it impossible to mistake an old .nwa build. */
+      text_at(302,230,"R5",1,faint);
       centered(202,scene==HELP?"OK TO JUMP":"PRESS OK TO PLAY",2,ink);
       centered(225,scene==HELP?"DOWN DUCK  CLEAR PAUSE":"SHIFT FOR HELP",1,faint);
       if(scene!=HELP) {text_at(9,230,"BEST",1,faint);number(46,230,high_score,5,1,ink);}
