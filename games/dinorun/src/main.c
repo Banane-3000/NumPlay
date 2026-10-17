@@ -2,7 +2,7 @@
  * the Python Chrome Dino sprites. See dino_sprites.h for source/rights note.
  * 320x240, RGB565, 16-row bands; physics follows the Python frame steps.
  * Keyboard: OK jump, Down duck, Clear/Backspace pause, Back exits.
- * Faster jump physics (50ms) / original horizontal scroll pacing (100ms);
+ * Same 50ms jump physics; faster synced cacti + bird travel;
  * smooth 30 FPS presentation with dirty-tile screen uploads.
  */
 #include <eadk.h>
@@ -32,10 +32,11 @@ const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level")))
 #define DUCK (KEY(eadk_key_down) | KEY(eadk_key_two))
 #define PAUSE KEY(eadk_key_backspace)
 #define EXIT (KEY(eadk_key_back) | KEY(eadk_key_home) | KEY(eadk_key_on_off))
-/* R3: The previous 100ms physics tick made the 14-frame jump last 1.4s.
- * At 50ms per physics step the SAME -13/+2 jump arc lasts 0.7s.
- * World/spawn timing stays at 100ms using two half-distance scroll steps,
- * so birds/cacti don't become twice as fast. */
+/* R4: preserve the proven 700ms jump (14 steps x 50ms). Spawn/score
+ * cadence remains 100ms, but the obstacles now advance 9 pixels each
+ * 50ms tick at the start, instead of 5px for cacti and 2-3px for birds.
+ * This makes double cacti cross during a good 700ms jump and means the
+ * two hazard kinds literally share the same LEFT-moving position code. */
 #define GAME_FRAME_MS 50
 #define WORLD_FRAME_MS 100
 #define DRAW_FRAME_MS 33
@@ -71,7 +72,7 @@ static int count, dino_y, dino_vy, duck, score, high_score, speed;
  * cacti move Q=10..14 px/frame, birds move T=5..14 px/frame.
  * The simulation uses one step per frame, just like the source. */
 static int gravity_units, cactus_meter, bird_meter;
-static int bird_speed;
+static int cloud_speed;  /* Clouds use Python T; bird obstacles use scroll_step(). */
 static uint32_t rng=0xA319F4B5u, ticks, distance_px;
 static bool new_record;
 /* Always predict objects to the LEFT of their settled x coordinates.
@@ -83,11 +84,15 @@ static uint32_t last_step_ms;
 static int projected(int position,int motion_per_tick) {
   return position + motion_per_tick*(int)render_ms/GAME_FRAME_MS;
 }
-/* Preserve the old world speed using two deterministic half-steps. For
- * example cactus=10 becomes 5+5 px per 100ms, bird=5 becomes 2+3. */
+/* Only the decorative clouds keep the slow Python T speed. */
 static int half_move(int full_speed,uint32_t step) {
   return full_speed/2 + ((full_speed&1) && (step&1));
 }
+/* One leftward speed for BOTH cacti and birds (and ground details).
+ * 10..14 Python pixels/world frame become 9..13 pixels/50ms tick.
+ * Initial 180 px/s vs R3's 100 px/s cacti and 50 px/s birds.
+ * Higher speed allows a double cactus to clear before the jump lands. */
+static int scroll_step(void) { return (speed*9+5)/10; }
 
 static uint32_t random32(void) {
   rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5;
@@ -211,11 +216,11 @@ static void scenery(void) {
   }
   /* Clouds at 5 px/frame, like Python's j[] list, visible in both palettes. */
   for(int i=0;i<cloud_count;i++)
-    SPRITE(CLOUD_ORIGINAL,projected(clouds[i].x,-half_move(bird_speed,ticks)),clouds[i].y,faint);
+    SPRITE(CLOUD_ORIGINAL,projected(clouds[i].x,-half_move(cloud_speed,ticks)),clouds[i].y,faint);
   /* Moving ground specks and tufts use the original W/av sprite lists. */
-  for(int i=0;i<dust_count;i++) rect(projected(dust[i].x,-half_move(speed,ticks)),dust[i].y,2,1,ink);
+  for(int i=0;i<dust_count;i++) rect(projected(dust[i].x,-scroll_step()),dust[i].y,2,1,ink);
   for(int i=0;i<pebble_count;i++)
-    SPRITE(GROUND_DETAIL_1,projected(pebbles[i].x,-half_move(speed,ticks)),DY,ink);
+    SPRITE(GROUND_DETAIL_1,projected(pebbles[i].x,-scroll_step()),DY,ink);
 }
 /* Match the original Python aM, ay and ap collision predicates, which operate
  * on sprite anchor positions (not on the old approximated C bounding boxes). */
@@ -238,7 +243,7 @@ static bool collision(void) {
   return false;
 }
 static void start_game(void) {
-  scene=PLAY;count=0;score=0;speed=10;bird_speed=5;distance_px=0;
+  scene=PLAY;count=0;score=0;speed=10;cloud_speed=5;distance_px=0;
   cactus_meter=0;bird_meter=0;gravity_units=2;
   cloud_count=dust_count=pebble_count=0;
   cloud_clock=dust_clock=pebble_clock=0;
@@ -293,7 +298,7 @@ static void spawn(void) {
 }
 static void advance_decorations(void) {
   for(int i=0;i<cloud_count;) {
-    clouds[i].x-=half_move(bird_speed,ticks);
+    clouds[i].x-=half_move(cloud_speed,ticks);
     if(clouds[i].x<=-50) {
       for(int j=i+1;j<cloud_count;j++) {
         clouds[j-1]=clouds[j];
@@ -302,7 +307,7 @@ static void advance_decorations(void) {
     } else i++;
   }
   for(int i=0;i<dust_count;) {
-    dust[i].x-=half_move(speed,ticks);
+    dust[i].x-=scroll_step();
     if(dust[i].x<=-10) {
       for(int j=i+1;j<dust_count;j++) {
         dust[j-1]=dust[j];
@@ -311,7 +316,7 @@ static void advance_decorations(void) {
     } else i++;
   }
   for(int i=0;i<pebble_count;) {
-    pebbles[i].x-=half_move(speed,ticks);
+    pebbles[i].x-=scroll_step();
     if(pebbles[i].x<=-20) {
       for(int j=i+1;j<pebble_count;j++) {
         pebbles[j-1]=pebbles[j];
@@ -329,11 +334,11 @@ static void lose(void) {
   }
 }
 static void update(bool jump,bool down) {
-  /* Half-height step interval affects JUMP ONLY. Cacti, birds, sky and score
-   * retain exactly the previous pixels/second and spawns/second. */
+  /* 50ms physics cadence preserves the jump; hazards advance together at
+   * R4 scroll speed while spawn/score cadence stays at 100ms. */
   bool world_tick=(ticks%2)==0;
   speed=10+(int)((ticks/2)/180); if(speed>14)speed=14;
-  bird_speed=5+(int)((ticks/2)/180); if(bird_speed>14)bird_speed=14;
+  cloud_speed=5+(int)((ticks/2)/180); if(cloud_speed>14)cloud_speed=14;
   if(world_tick) { score++; spawn(); }
 
   /* Same original 49-pixel jump: -13, -11, -9, ... +13. */
@@ -347,7 +352,7 @@ static void update(bool jump,bool down) {
 
   /* Every actual obstacle movement is nonpositive, for every tick. */
   for(int i=0;i<count;) {
-    int move=half_move(obstacles[i].kind==BIRD?bird_speed:speed,ticks);
+    int move=scroll_step(); /* SAME leftward displacement for every hazard. */
     obstacles[i].x-=(int16_t)move;
     bool gone=(obstacles[i].kind==BIRD?obstacles[i].x<=-30:obstacles[i].x<=-10);
     if(gone) {
@@ -357,7 +362,7 @@ static void update(bool jump,bool down) {
   }
   advance_decorations();
   if(collision())lose();
-  distance_px+=(uint32_t)half_move(speed,ticks);
+  distance_px+=(uint32_t)scroll_step();
   if(world_tick) {
     int difficulty=(int)((ticks/2)/60);
     cactus_meter+=randrange(1,4+difficulty/3);
@@ -423,7 +428,7 @@ static void frame(void) {
       for(int i=0;i<count;i++) {
         obstacle drawn=obstacles[i];
         /* Predict motion in the same LEFTWARD direction as the next tick. */
-        drawn.x=(int16_t)projected(drawn.x,-half_move(drawn.kind==BIRD?bird_speed:speed,ticks));
+        drawn.x=(int16_t)projected(drawn.x,-scroll_step());
         if(drawn.kind==BIRD)bird(&drawn);else cactus(&drawn);
       }
       /* Draw intermediate jump/fall positions without altering the original
@@ -433,7 +438,7 @@ static void frame(void) {
       dino(DX,visual_y/256,duck,score);
       text_at(11,11,"HI",2,faint);number(47,11,high_score,5,2,ink);
       number(245,11,(unsigned)score,5,2,ink);
-      text_at(302,230,"R3",1,faint);
+      text_at(302,230,"R4",1,faint);
       /* Hardware diagnostic: the number under B decreases as the bird
        * travels LEFT. Temporary for confirming movement on a real NumWorks. */
       for(int i=0;i<count;i++) if(obstacles[i].kind==BIRD) {
@@ -445,8 +450,8 @@ static void frame(void) {
       /* The original title character is the separately encoded 3x sprite. */
       SPRITE(DINO_MENU_LARGE,120,150,ink);
       centered(40,"CHROME DINO",3,ink);
-      /* Visible R3 marker makes it impossible to mistake an old .nwa build. */
-      text_at(302,230,"R3",1,faint);
+      /* Visible R4 marker makes it impossible to mistake an old .nwa build. */
+      text_at(302,230,"R4",1,faint);
       centered(202,scene==HELP?"OK TO JUMP":"PRESS OK TO PLAY",2,ink);
       centered(225,scene==HELP?"DOWN DUCK  CLEAR PAUSE":"SHIFT FOR HELP",1,faint);
       if(scene!=HELP) {text_at(9,230,"BEST",1,faint);number(46,230,high_score,5,1,ink);}

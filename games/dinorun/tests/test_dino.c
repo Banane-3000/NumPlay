@@ -36,6 +36,13 @@ static void verify_dirty_matches_full(void) {
   frame();
   assert(memcmp(screen_copy,screen,sizeof screen)==0);
 }
+/* Bird and cactus visible silhouettes are measured in nonoverlapping
+ * scanlines. Their pixels must travel left together throughout frames. */
+static int cactus_screen_left(void) {
+  for(int x=100;x<300;x++)for(int y=181;y<195;y++)
+    if(screen[y*W+x]==RGB(0x535353))return x;
+  return -1;
+}
 static void screenshot(const char *f) {
   FILE *fp=fopen(f,"wb"); assert(fp);
   fprintf(fp,"P6\n%d %d\n255\n",W,H);
@@ -103,19 +110,56 @@ int main(int argc,char **argv) {
   assert(dino_y==DY*256 && score==7 && speed==10);
   assert(GAME_FRAME_MS==50 && DRAW_FRAME_MS==33); /* 14 x 50ms = 700ms in the air. */
 
-  /* The world's previous 100ms scroll pace is unchanged. */
+  /* R4 scroll is deliberately faster; physics jump stays 700ms. */
   start_game();ticks=359;cactus_meter=bird_meter=-100000;
-  update(false,false);assert(speed==10 && bird_speed==5 && score==0);
-  update(false,false);assert(speed==11 && bird_speed==6 && score==1);
-  ticks=1440;update(false,false);assert(speed==14 && bird_speed==9);
-  /* Exactly 10px left / 100ms for cactus, 5px left / 100ms for bird. */
+  update(false,false);assert(speed==10 && cloud_speed==5 && score==0);
+  update(false,false);assert(speed==11 && cloud_speed==6 && score==1);
+  ticks=1440;update(false,false);assert(speed==14 && cloud_speed==9);
+  /* Exactly 9px left / 50ms for BOTH cactus and bird, from tick zero. */
   start_game();cactus_meter=bird_meter=-100000;
   obstacles[0]=(obstacle){280,DY,14,23,CACTUS};
   obstacles[1]=(obstacle){270,165,21,18,BIRD};count=2;
   update(false,false);
-  assert(obstacles[0].x==275 && obstacles[1].x==268);
+  assert(obstacles[0].x==271 && obstacles[1].x==261);
   update(false,false);
-  assert(obstacles[0].x==270 && obstacles[1].x==265);
+  assert(obstacles[0].x==262 && obstacles[1].x==252);
+
+  /* R4: enforce the same screen direction and step for both obstacle types. */
+  assert(scroll_step()==9);
+  for(int i=0;i<16;i++) {
+    assert(obstacles[0].x-obstacles[1].x==10); /* Relative gap NEVER changes. */
+    update(false,false);
+    assert(obstacles[0].x-obstacles[1].x==10);
+  }
+  /* A pair of adjacent original cacti is actually jumpable with normal
+   * timing. Before R4 they moved too slowly for the 700ms jump window. */
+  start_game();cactus_meter=bird_meter=-100000;
+  count=2;
+  obstacles[0]=(obstacle){120,DY,14,23,CACTUS};
+  obstacles[1]=(obstacle){140,DY,14,23,CACTUS};
+  for(int i=0;i<14;i++) {
+    update(i==0,false);
+    assert(scene==PLAY); /* No unavoidable collision midair or on landing. */
+  }
+  assert(dino_y==DY*256 && obstacles[0].x==-6 && obstacles[1].x==14);
+
+  /* On-screen parity: visible bird AND cactus must scroll LEFT at the
+   * exact same rate. Compare visible sprite pixels, not just x coordinates. */
+  start_game();cactus_meter=bird_meter=-100000;last_step_ms=0;
+  obstacles[0]=(obstacle){240,DY,14,23,CACTUS};
+  obstacles[1]=(obstacle){200,150,21,18,BIRD};count=2;
+  const uint32_t shared_times[]={0,20,49,50,70,99,100,130,149,150,180,199,200,250,300};
+  int previous_bird=999,previous_cactus=999;
+  for(unsigned i=0;i<sizeof(shared_times)/sizeof(shared_times[0]);i++) {
+    assert(!timed_input(shared_times[i],0,0));
+    frame();
+    int bx=bird_screen_left();
+    int cx=cactus_screen_left();
+    assert(bx>=0 && cx>=0);
+    assert(bx<=previous_bird && cx<=previous_cactus);
+    assert(cx-bx==20); /* The silhouettes keep exactly the same spacing. */
+    previous_bird=bx;previous_cactus=cx;
+  }
 
   /* Regression: the original sprite's beak faces LEFT. Mirroring it is wrong. */
   bg=RGB(0xFFFFFF);ink=RGB(0x535353);band_y=0;
@@ -141,17 +185,17 @@ int main(int argc,char **argv) {
     previous_x=visual_x;
   }
   assert(score==3 && ticks==6);
-  assert(obstacles[0].x==205); /* 15px left after 300ms. */
+  assert(obstacles[0].x==166); /* 54px LEFT after 300ms. */
 
   /* Even if hardware frame pushes are slow, simulation catches up. */
   start_game();cactus_meter=bird_meter=-100000;
   obstacles[0]=(obstacle){250,165,21,18,BIRD};count=1;
   last_step_ms=0;
   assert(!timed_input(340,0,0));
-  assert(score==3 && ticks==6 && obstacles[0].x==235);
+  assert(score==3 && ticks==6 && obstacles[0].x==196);
   assert(render_ms==40);
   assert(!timed_input(875,0,0));
-  assert(score==9 && ticks==17 && obstacles[0].x==208);
+  assert(score==9 && ticks==17 && obstacles[0].x==97);
   assert(render_ms==25);
   /* Input is still checked on draw-only frames. */
   assert(!timed_input(885,PAUSE,PAUSE) && scene==PAUSED);
@@ -212,6 +256,6 @@ int main(int argc,char **argv) {
   clouds[0]=(decoration){170,70};cloud_count=1;
   frame();
   if(argc>=3)screenshot(argv[2]);
-  printf("R3 PASSED: jump 700ms, cacti 10px/100ms, birds LEFT 5px/100ms, real pixels monotonic, dirty tiles, controls.\n");
+  printf("R4 PASSED: jump 700ms, cacti/birds LEFT together at 180px/s, double cactus feasible, dirty tiles, controls.\n");
   return 0;
 }
