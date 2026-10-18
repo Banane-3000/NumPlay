@@ -1,0 +1,53 @@
+name: Pages
+
+# Builds the site (mason363.github.io/NumPlay: the README and docs, with Jekyll, as GitHub Pages
+# did on its own) and deploys it, with the README's downloads, stars and version badges made from
+# GitHub's numbers (tools/badges.py). On each push to main, every six hours so the numbers stay
+# fresh, and after each release (Build starts it).
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Badges
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          stars=$(gh api "repos/$GITHUB_REPOSITORY" --jq .stargazers_count)
+          downloads=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].assets[].download_count' | awk '{s += $1} END {print s + 0}')
+          version=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
+          python3 tools/badges.py --downloads "$downloads" --stars "$stars" --version "$version" --out docs/badges
+          cat docs/badges/*.json
+      - uses: actions/configure-pages@v5
+      - uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+      - uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

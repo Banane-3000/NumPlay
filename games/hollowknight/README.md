@@ -72,7 +72,7 @@ In menus, OK or EXE confirms and Back goes back. In the inventory, left and righ
 ## Good to know
 
 * **One app at a time:** Hollow Knight takes all the room the calculator has for apps. Installing it from the NumWorks website swaps out NumPlay and the other apps, and installing NumPlay again swaps it back out. Your saves in each one are kept.
-* **Only the start of the game:** it ends with Hornet in Greenpath. The ways on to places further in stay shut, like Jiji's door, the lift down to the mines and the Dream Nail's paths.
+* **Only the start of the game:** it ends with Hornet in Greenpath. The ways on to places further in stay shut, like Jiji's door, the lift down to the mines and the Dream Nail's paths, and so do the Forgotten Crossroads' side rooms off the way to Greenpath, like Brooding Mawlek's and the Glowing Womb.
 * **No music or sound:** the calculator has no speaker.
 * **A few things are simpler:** dust, sparks and other particles are left out, and characters and scenery are drawn a little less finely so the whole game fits.
 * **Busy rooms stay smooth:** when the calculator falls behind, the room is drawn at half the height, each line shown twice. The HUD, text and menus stay sharp.

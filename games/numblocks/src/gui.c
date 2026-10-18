@@ -1593,8 +1593,9 @@ void keys_update(int seen) {
 static bool settable(int k) { return k == 4 || k == 5 || (k >= 12 && k <= 51 && k != 35 && k != 41 && k != 47); }
 uint32_t keys_of(uint64_t raw) {
   uint32_t r = 0;
-  static const uint32_t fixed[8] = {K_LEFT, K_UP, K_DOWN, K_RIGHT, K_OK, K_BACK, K_HOME, K_HOME};
-  for (int k = 0; k < 8; k++)
+  /* (On/Off is key 8: it saves and leaves, as Home does) */
+  static const uint32_t fixed[9] = {K_LEFT, K_UP, K_DOWN, K_RIGHT, K_OK, K_BACK, K_HOME, 0, K_HOME};
+  for (int k = 0; k < 9; k++)
     if (raw >> k & 1) r |= fixed[k];
   if (raw >> 12 & 1) r |= K_SHIFT;
   if (raw >> 52 & 1) r |= K_EXE, raw |= 1 << 4;   /* (EXE: what OK does) */

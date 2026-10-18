@@ -1,0 +1,31 @@
+name: Game request
+description: A game you'd like in NumPlay (one game per issue)
+title: "Add "
+labels: ["game request"]
+assignees: ["Mason363"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **First, check the [roadmap](https://github.com/Mason363/NumPlay#roadmap).** If your game is there, it's done or on the way, so there's no need to open an issue. You can 👍 an open request for it instead.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send it
+      options:
+        - label: I checked the roadmap and this game isn't on it.
+          required: true
+        - label: This issue asks for one game only. (Open one issue for each game.)
+          required: true
+  - type: input
+    id: game
+    attributes:
+      label: Game
+      description: Its name, and a link if it isn't well known.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why on the calculator?
+      description: What would make it fun to play on a NumWorks?

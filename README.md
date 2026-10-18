@@ -10,9 +10,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Mason363/NumPlay/releases"><img src="https://img.shields.io/github/downloads/Mason363/NumPlay/total?style=for-the-badge&label=downloads&color=1E7F74" alt="Total downloads"></a>
-  <a href="https://github.com/Mason363/NumPlay/stargazers"><img src="https://img.shields.io/github/stars/Mason363/NumPlay?style=for-the-badge&color=E3B341" alt="GitHub stars"></a>
-  <a href="https://github.com/Mason363/NumPlay/releases/latest"><img src="https://img.shields.io/github/v/release/Mason363/NumPlay?style=for-the-badge&label=version&color=2D9F4F" alt="Latest version"></a>
+  <a href="https://github.com/Mason363/NumPlay/releases"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fmason363.github.io%2FNumPlay%2Fdocs%2Fbadges%2Fdownloads.json&style=for-the-badge" alt="Total downloads"></a>
+  <a href="https://github.com/Mason363/NumPlay/stargazers"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fmason363.github.io%2FNumPlay%2Fdocs%2Fbadges%2Fstars.json&style=for-the-badge" alt="GitHub stars"></a>
+  <a href="https://github.com/Mason363/NumPlay/releases/latest"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fmason363.github.io%2FNumPlay%2Fdocs%2Fbadges%2Fversion.json&style=for-the-badge" alt="Latest version"></a>
 </p>
 
 <p align="center">
@@ -61,8 +61,6 @@ All of these come in one app, **NumPlay.nwa**.
     <td align="center"><a href="games/minesweeper/README.md"><img src="docs/media/thumb_minesweeper.png" width="120" alt="Minesweeper"><br><b>Minesweeper</b></a></td>
     <td align="center"><a href="games/breakout/README.md"><img src="docs/media/thumb_breakout.png" width="120" alt="Block Breaker"><br><b>Block Breaker</b></a></td>
     <td align="center"><a href="games/numvisuals/README.md"><img src="docs/media/thumb_numvisuals.png" width="120" alt="NumVisuals"><br><b>NumVisuals</b></a></td>
-    <td align="center"><a href="games/dinorun/README.md"><img src="games/dinorun/docs/shot.png" width="120" alt="Chrome Dino"><br><b>Chrome Dino</b></a></td>
-
   </tr>
 </table>
 
@@ -215,13 +213,14 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 - **[Upsilon](https://github.com/UpsilonNumworks/Upsilon)**, the custom software NumPlay-Upsilon.nwa runs on.
 - **reversal_lava63**, a beta tester who plays NumPlay's apps on a real calculator and reports what's wrong.
 - **[Gabriel](https://github.com/tomcalif9-stack)**, who made the home screen's moving backgrounds, translated NumPlay into French first, and tests it on Upsilon and an N0115.
+- **[LanoCodes17](https://github.com/LanoCodes17)**, whose idea the Konami code is: one of the secret ways into NumPlay from Matrices.
 - Everyone who reported a bug: **NEE** ([reversallava63](https://github.com/reversallava63)), **Gabriel**, **[briac134](https://github.com/briac134)**, **[Raphanobie](https://github.com/Raphanobie)**, **[zbigzo](https://github.com/zbigzo)**, **Yacine**, **PelicanMan75**, **[Spykube](https://github.com/Spykube)** and **[axio-m](https://github.com/axio-m)**. Thank you!
 
 ## License
 
 NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyright (c) 2026 Mason Chen. Code and fonts from others keep their own licenses: the `UNLICENSE` files in the games' folders and the [LICENSES](LICENSES) folder. The names, artwork and music of the games NumPlay is inspired by belong to their makers and are not covered by it.
 
-<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Chrome Dino, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco and Connect Four of Hasbro.</sub>
+<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco and Connect Four of Hasbro.</sub>
 
 ## Gallery
 
