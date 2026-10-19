@@ -272,6 +272,111 @@ Name the fallen human, then walk and talk your way through the Ruins, Snowdin, W
 
 <br clear="right">
 
+## Doom
+
+<img src="media/doom.gif" width="320" align="right" alt="Doom: imps down a corridor of Phobos Lab, then zombiemen around the yellow key">
+
+Doom comes as its own app, `Doom.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **Up** / **Down** | Walk forward / back |
+| **Left** / **Right** | Turn |
+| **OK** | Fire |
+| **EXE** or **⌫** | Use: open doors, press switches |
+| **shift** (held) | Strafe with left and right |
+| **x,n,t** / **var** | Strafe left / right |
+| **alpha** (held) | Run |
+| **1** to **7** | Choose a weapon |
+| **toolbox** | Automap (**+** and **−** zoom, **×** follows you, **÷** shows the grid, **0** the whole map) |
+| **√** | Brightness |
+| **Back** | Menu and pause |
+| **Home** | Keep the moment and quit |
+
+Press a key on the title screen for the menu, then choose New Game, Knee-Deep in the Dead and a skill. In menus, **OK** or **EXE** confirms and **Back** goes back; when the game asks a question, **OK** says yes and **Back** says no. Read This! shows the keys. Home keeps the moment you were at, and the next start puts you back there. Save Game has six slots; your saves are also copied into `doom_saves.py`, so installing the app again doesn't erase them.
+
+<br clear="right">
+
+## The Binding of Isaac
+
+<img src="media/isaac.gif" width="320" align="right" alt="The Binding of Isaac: Isaac clears a room of the Basement, then fights Monstro">
+
+The Binding of Isaac comes as its own app, `BindingOfIsaac.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** | Walk |
+| **8 4 6 2** (or 5) | Cry up, left, right, down |
+| **9**, **shift** or **×** | Drop a bomb |
+| **7**, **alpha** or **OK** | Use the active item |
+| **1**, **3** or **−** | Take the pill or use the card |
+| **toolbox**, **var** or **x,n,t** | Hold to see the whole map |
+| **Back** | Pause |
+| **Home** | Keep the run and quit |
+
+On the menu, **Controls** swaps them: the number keys walk and the arrows cry. Every run is a new set of floors, from the Basement down to Mom, her heart and beyond: clear a room to open its doors, find the treasure room, the shop and the boss, and bomb the walls for secret rooms. Keys open the golden doors and chests, coins buy in the shop, and the Devil's and the angel's rooms come after a boss. Win a run to unlock ???, Eve, Samson and Azazel. Home keeps the run, and it is copied into `isaac_saves.py`, so installing the app again doesn't erase it.
+
+<br clear="right">
+
+## Five Nights at Freddy's
+
+<img src="media/fnaf.gif" width="320" align="right" alt="Five Nights at Freddy's: Bonnie at the left door, the door comes down, then the cameras">
+
+Five Nights at Freddy's comes as its own app, `FiveNightsAtFreddys.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **← →** (or 4 / 6) | Look left and right |
+| **7** / **1** | The left door / the left light |
+| **9** / **3** | The right door / the right light |
+| **OK**, **EXE** or **8** | The monitor up and down |
+| **1** to **7** | On the monitor: that camera (1, 2 and 4 again for 1B, 1C, 2B, 4B) |
+| **Arrows** | On the monitor: the camera next to it on the map |
+| **0** or **⌫** | Mute the phone call |
+| **Back** | Pause |
+| **Home** | Keep the night and quit: the next start is back in it |
+
+Last from 12 AM to 6 AM, five nights in a row. Light the doorways to see who is there and close the door on them, check the cameras (Foxy comes out of Pirate Cove when they stay down), and watch the power: when it runs out, the doors won't close. The Phone Guy's calls are subtitles, and what you would hear is written at the bottom left. Your nights and stars are also copied into `fnaf_saves.py`, so installing the app again doesn't erase them.
+
+<br clear="right">
+
+## Subway Surfers
+
+<img src="media/subway.gif" width="320" align="right" alt="Subway Surfers: running between trains, jumping barriers, then flying with the jetpack">
+
+Subway Surfers comes as its own app, `SubwaySurfers.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **Left / Right** (or 4 / 6) | Change tracks |
+| **Up** (or 8) | Jump |
+| **Down** (or 2) | Roll; in the air, dive down and roll |
+| **OK**, **EXE** or 5 | Ride a hoverboard: one crash is forgiven |
+| **1** / **3** | At the start of a run: a headstart / a score booster |
+| **Back** | Pause (Resume, Quit game), or go back in menus |
+| **Home** or **On/Off** | Save and quit |
+
+Hit the side of a train or a barrier's edge and you stumble: the Inspector and his dog are right behind you, and a second stumble gets you caught. Run into anything head-on and the run is over, unless you spend keys to be saved. Ramps lead up onto the trains' roofs; Super Sneakers jump high enough to land on them. Missions raise your score multiplier, and coins buy upgrades, items, characters and boards in the shop. Your progress is also copied into `subway_saves.py`, so installing the app again doesn't erase it.
+
+<br clear="right">
+
+## Hill Climb Racing
+
+<img src="media/hillclimb.gif" width="320" align="right" alt="Hill Climb Racing: the Hill Climber up the Countryside's hills, then the Motocross Bike's back flip on the Moon">
+
+Hill Climb Racing comes as its own app, `HillClimbRacing.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **Right**, **OK** or **EXE** (or 6) | Gas; in the air, tilt back |
+| **Left** (or 4) | Brake, then reverse; in the air, tilt forward |
+| **Back** | Pause (Resume, Restart, Garage, Quit game) |
+| **Home** | Keep the run's coins and quit |
+
+Drive as far as you can before the fuel runs out or Bill lands on his head. Pick up fuel cans on the way, collect coins, and earn more with air time and flips; each level of the road pays a reward. In the garage, spend coins on new vehicles and their four upgrades, and on new stages: the Desert's rope bridges, the slippery Arctic, the Cave's ceiling, the Moon's low gravity, the Forest's trees to ram through. Your coins, upgrades and best distances are saved, and copied into `hillclimb_saves.py` so installing the app again doesn't erase them.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">
@@ -434,6 +539,53 @@ Beginner, Intermediate, Expert or your own size and number of mines. The first s
 | **Back** | Pause menu (with Quit game) |
 
 Google's brick breaker: seven bricks across in blue, red, yellow and green, wall after wall, each a little faster. Bricks with a sign hold a power-up: **TNT** blows up its neighbors, **+** gives a ball, **O** splits the ball in three, **<->** widens the paddle, a **flame** makes a fireball and **beams** fire lasers. Settings: speed and screen shake.
+
+<br clear="right">
+
+## Level Devil
+
+<img src="media/leveldevil.gif" width="320" align="right" alt="Level Devil: the floor drops away under the runner, then spikes come up in front of the door">
+
+| Key | What it does |
+| --- | --- |
+| **Left / Right** (or 4 / 6) | Run |
+| **Up**, **OK** or **EXE** | Jump; hold it to jump higher |
+| **Back** | Pause: Resume, Restart, Levels, How to play, Quit game |
+
+Run to the door. Floors drop away, spikes pop up, walls slide out and the door runs off, each trap waiting for you to reach its spot, and some rooms change again after you die in them. Sixteen levels of five rooms, picked on a map of doors; your deaths are counted, and the fewest you cleared each level with is kept.
+
+<br clear="right">
+
+## 2 Players
+
+<img src="../games/twoplayer/docs/games.png" width="320" align="right" alt="2 Players: Pong, Air Hockey, Tanks and Light Cycles">
+
+| Key | Player 1 | Player 2 |
+| --- | --- | --- |
+| **Move** (in Pong, up and down) | Arrows | **×** up, **Ans** down, **3** left, **−** right |
+| **Fire** (Tanks) | **shift** | **EXE** |
+
+On the menu, **Up / Down** pick a game and **Left / Right** who player 2 is: a friend, or the computer (easy, normal, hard). Against the computer, **OK** and **EXE** fire too. **Back** pauses (Resume, Restart, Other games, Quit game).
+
+Pong (first to 11), Air Hockey (first to 7), Tanks in a new maze every round and Light Cycles (first to 5 rounds). Before each game, a map of the keyboard lights up each player's keys. The matches each side wins are kept for every game.
+
+<br clear="right">
+
+## Cookie Clicker
+
+<img src="../games/cookieclicker/docs/shot.png" width="320" align="right" alt="Cookie Clicker">
+
+| Key | What it does |
+| --- | --- |
+| **OK** | Click the big cookie |
+| **shift** | Catch a golden cookie |
+| **Up, Down** | Choose a building, an upgrade or an achievement |
+| **Left, Right** | Upgrades, Buildings, Stats |
+| **EXE** | Buy it |
+| **×** | Buy 1, 10 or 100 buildings at a time |
+| **Back** | Menu (with How to play and Quit) |
+
+Click the cookie, buy buildings that bake for you and upgrades that make them bake more; the store lists what you can buy, cheapest first. Catch a golden cookie for a Frenzy (production ×7), Lucky! (a share of your bank) or now and then a Click frenzy. Achievements fill your milk, which kittens turn into more cookies. Your bakery is saved, but it only bakes while the game is open.
 
 <br clear="right">
 
