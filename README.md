@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>23 free games for your NumWorks calculator, in one app.</b><br>
-  Plus 15 big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
+  Plus 16 big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
 </p>
 
 <p align="center">
@@ -104,7 +104,8 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
     <td align="center"><a href="games/leveldevil/README.md"><img src="docs/media/thumb_leveldevil.png" width="200" alt="Level Devil"><br><b>Level Devil</b></a><br><sub>Unept's troll platformer: the game's 80 rooms, with their own traps</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/LevelDevil.nwa">Download</a></td>
   </tr>
   <tr>
-    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Super Mario 64, Minecraft 1.18.2 and more: see the roadmap</sub></td>
+    <td align="center"><a href="games/sm64/README.md"><img src="docs/media/thumb_sm64.png" width="200" alt="Super Mario 64"><br><b>Super Mario 64</b></a><br><sub>Peach's castle and its first five courses, in 3D</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/SuperMario64.nwa">Download</a></td>
+    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Minecraft 1.18.2, Retro-Go and more: see the roadmap</sub></td>
   </tr>
 </table>
 
@@ -211,8 +212,8 @@ Filmed on my own calculator, no emulator.
 - [x] Sokoban
 - [x] Sudoku
 - [x] Ultimate Tic-Tac-Toe
+- [x] Super Mario 64: Peach's castle and its first five courses (the rest of the castle, its courses and Bowser to come)
 - [x] The Nether and the End in NumBlocks: portals, fortresses, strongholds and the Ender Dragon, in NumBlocks.nwa
-- [ ] Super Mario 64
 - [ ] Full Minecraft 1.18.2 as a standalone app
 - [ ] A customizer website: pick the games you want in your launcher, with Enlarged Extra Apps support to fit several big games, or big and small ones together
 - [ ] [Retro-Go](https://github.com/ducalex/retro-go) for Game Boy, NES and more: upload your own ROMs on the website and get a .nwa app that plays them
@@ -246,6 +247,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 - **Sokoban** by Hiroyuki Imabayashi (Thinking Rabbit, 1982) inspired NumPlay's Sokoban, written in C for NumPlay with no code or art from any Sokoban. Its levels are **Microban** by David W. Skinner (2000), used with credit to him.
 - **Sudoku**, the number place puzzle (Dell Magazines, 1979; named by Nikoli), is written in C for NumPlay: its puzzles are made on the calculator, and its look and controls follow the phone apps.
 - **Ultimate tic-tac-toe** is a folk game, made widely known by [Ben Orlin's 2013 article](https://mathwithbaddrawings.com/2013/06/16/ultimate-tic-tac-toe/); NumPlay's is written in C for it.
+- **Super Mario 64** by Nintendo inspired NumPlay's Super Mario 64, which runs the game's own code and data from the [n64decomp/sm64](https://github.com/n64decomp/sm64) decompilation (Nintendo's game, not covered by NumPlay's GPL), with pictures painted after the game's. Not affiliated with Nintendo.
 
 - **[The Powder Toy](https://powdertoy.co.uk)** inspired NumPowder, which ports its materials' behaviour, its font and its icons from [its source code](https://github.com/The-Powder-Toy/The-Powder-Toy) (GNU GPL v3.0), by Stanislaw K Skowronek, Simon Robertshaw and its contributors. Not affiliated with them.
 - **[The Final Earth 2](https://store.steampowered.com/app/1180130/The_Final_Earth_2/)** by [Florian van Strien](https://florianvanstrien.nl) inspired NumPlay's The Final Earth 2, which uses the game's own pictures, fonts and texts, with additional sprites by LukXD99. Not affiliated with him.
@@ -262,9 +264,9 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 
 ## License
 
-NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyright (c) 2026 Mason Chen. Code and fonts from others keep their own licenses: the `UNLICENSE` files in the games' folders and the [LICENSES](LICENSES) folder. The names, artwork and music of the games NumPlay is inspired by belong to their makers and are not covered by it.
+NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyright (c) 2026 Mason Chen. Code and fonts from others keep their own licenses: the `UNLICENSE` files in the games' folders and the [LICENSES](LICENSES) folder. The names, artwork and music of the games NumPlay is inspired by belong to their makers and are not covered by it, and neither is Super Mario 64's decompiled code in `games/sm64/decomp`, which is Nintendo's, from the n64decomp/sm64 project.
 
-<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog of SEGA and Space Invaders of Taito.</sub>
+<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Nintendo (Super Mario 64), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog of SEGA and Space Invaders of Taito.</sub>
 
 ## Gallery
 
@@ -336,5 +338,6 @@ NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyri
   </tr>
   <tr>
     <td align="center"><img src="docs/media/gallery/sokoban.gif" width="100%" alt="Sokoban: Microban's ninth level, pushed through to its goals"><br><a href="games/sokoban/README.md"><b>Sokoban</b></a></td>
+    <td align="center"><img src="docs/media/gallery/sm64.gif" width="100%" alt="Super Mario 64: Mario runs up to Peach's castle, then gets a star in Bob-omb Battlefield"><br><a href="games/sm64/README.md"><b>Super Mario 64</b></a></td>
   </tr>
 </table>

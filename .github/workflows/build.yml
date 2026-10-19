@@ -68,6 +68,7 @@ jobs:
           make -C games/sudoku host test
           make -C games/uttt host test
           make -C games/sokoban host test
+          make -C games/sm64 host test
 
       - uses: actions/upload-artifact@v4
         with:

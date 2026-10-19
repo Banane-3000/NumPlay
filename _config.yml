@@ -1,4 +1,4 @@
 title: NumPlay
-description: "23 games for the NumWorks calculator in one app: NumDash, Crossy Road, NumBlocks, NumDrive, Balatro, Buckshot Roulette, Block Blast, Portal Returns, Tetris, Chess, Space Invaders, Sudoku and more, plus NumVisuals. And Doom, Sonic, Plants vs. Zombies, Cookie Clicker and more on their own."
+description: "23 games for the NumWorks calculator in one app: NumDash, Crossy Road, NumBlocks, NumDrive, Balatro, Buckshot Roulette, Block Blast, Portal Returns, Tetris, Chess, Space Invaders, Sudoku and more, plus NumVisuals. And Super Mario 64, Doom, Sonic, Plants vs. Zombies, Cookie Clicker and more on their own."
 theme: jekyll-theme-cayman
 exclude: [games, launcher, tools, tests, build, LICENSES, Makefile, .github]
