@@ -159,7 +159,7 @@ void hud_draw(void) {
   /* banners: an item's name and what it does, or the floor's */
   if (banner_t > 0) {
     int a = banner_t > 8 ? 32 : banner_t * 4;
-    int y = 62;
+    int y = 30;   /* (over the top wall and the floor's edge, clear of him) */
     int w = gfx_text_width(FONT_UPHEAVAL, banner_title, 2);
     int ws = gfx_text_width(FONT_UPHEAVAL, banner_sub, 1);
     if (ws > w) w = ws;

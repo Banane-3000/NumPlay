@@ -156,10 +156,11 @@ GAMES = {
     # Press OK to Play: the first scenario, its first goal closed, the city runs; then Continue
     "finalearth2": ("FinalEarth2.nwa", "finalearth2.sav", presses((2000, "ok"), (3000, "ok")), 9000,
                     presses((2000, "ok")), 6000),
-    # past the title, a new run: the floor's name, then Isaac walks and cries; Home keeps the run. Next time,
+    # past the title, a new run as Isaac: the floor's name, then he walks and cries; Home keeps the run. Next time,
     # Continue, and the run goes on (quitting with On/Off)
     "isaac": ("BindingOfIsaac.nwa", "isaacrun.sav",
-              presses((1500, "ok"), (2200, "ok"), (2800, "ok"), (3300, "left", 1200), (3600, "6", 900), (4800, "up", 600)), 6500,
+              presses((1500, "ok"), (2200, "ok"), (2800, "ok"), (3400, "ok"), (3900, "left", 1200), (4200, "6", 900),
+                      (5400, "up", 600)), 7000,
               presses((1500, "ok"), (2200, "ok"), (2800, "right", 900), (3000, "8", 600)), 4500),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
