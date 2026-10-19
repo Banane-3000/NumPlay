@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
   const char *out = "build/play", *shots = "";
   int give = 0, showcase = 0, title_screen = 0, mobs = 0, animals = 0, start_time = -1, torches = 0, water = 0, creative = 0, build = 0, rain = 0;
   float hurt = 0;
-  int frames = 60, mspf = 50, go_dim = 0, portal = 0, at = 0, fortress = 0;
+  int frames = 60, mspf = 50, go_dim = 0, portal = 0, at = 0, fortress = 0, hold = -1;
   float at_v[5] = {0};
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "--frames") && i + 1 < argc) frames = atoi(argv[++i]);
@@ -59,6 +59,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--end")) go_dim = 2;
     else if (!strcmp(argv[i], "--portal")) portal = 1;
     else if (!strcmp(argv[i], "--fortress")) go_dim = 1, fortress = 1;
+    else if (!strcmp(argv[i], "--stronghold") && i + 1 < argc) hold = atoi(argv[++i]);   /* 0-2: in its portal room */
     else if (!strcmp(argv[i], "--at") && i + 1 < argc)   /* x,y,z,yaw,pitch: there, flying (Creative) */
       at = sscanf(argv[++i], "%f,%f,%f,%f,%f", &at_v[0], &at_v[1], &at_v[2], &at_v[3], &at_v[4]) >= 3;
     else if (!strcmp(argv[i], "--storm")) rain = 2;
@@ -137,11 +138,26 @@ int main(int argc, char **argv) {
       at = 1, at_v[0] = f[0] + 0.5f, at_v[1] = (float)f[1], at_v[2] = f[2] + 0.5f, at_v[3] = pl.yaw, at_v[4] = 20;
     }
   }
+  if (hold >= 0) {
+    /* stronghold n: in its portal room, looking at the frame (and where an eye of ender would fly) */
+    int f[6], e[3] = {0};
+    if (gen_stronghold_find(hold, f)) {
+      bool ok = gen_stronghold_near(f[0], f[1], e);
+      printf("stronghold %d: start %d %d, portal %d %d %d, %d pieces; an eye flies to %d %d %d (%d)\n", hold, f[0], f[1],
+             f[2], f[3], f[4], f[5], e[0], e[1], e[2], ok);
+      if (!at) at = 1, at_v[0] = f[2] + 0.5f, at_v[1] = f[3] + 0.5f, at_v[2] = f[4] + 0.5f, at_v[3] = pl.yaw, at_v[4] = 50;
+    }
+  }
   if (at) {
     pl.x = at_v[0], pl.y = at_v[1], pl.z = at_v[2], pl.yaw = at_v[3], pl.pitch = at_v[4];
     pl.mode = 1, pl.flying = true;
     world_finish(pl.x, pl.y, pl.z);
     camera_reset();
+  }
+  if (hold >= 0) {
+    printf("column under the player:");
+    for (int y = (int)pl.y + 2; y > (int)pl.y - 12; y--) printf(" %d", world_get((int)floorf(pl.x), y, (int)floorf(pl.z)));
+    printf("\n");
   }
   if (go_dim) printf("at %.2f %.2f %.2f: feet %d head %d below %d (cache y %d)\n", pl.x, pl.y, pl.z, world_get((int)floorf(pl.x), (int)floorf(pl.y), (int)floorf(pl.z)), world_get((int)floorf(pl.x), (int)floorf(pl.y) + 1, (int)floorf(pl.z)), world_get((int)floorf(pl.x), (int)floorf(pl.y) - 1, (int)floorf(pl.z)), vc_y0);
   if (rain) {

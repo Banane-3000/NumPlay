@@ -171,10 +171,12 @@ static void fill_chunk(int cx, int cz, const uint8_t *keep, int oy, int ylo, int
   memset(hb, 0, sizeof hb);
   if (air) memset(slab, B_AIR, (size_t)h * 256);
   else {
+    gen_hi = hb;   /* (a stronghold's blocks past 255 come with their ninth bit) */
     dims_slab(cx, cz, vc_y0 + ylo, h, slab);
+    gen_hi = NULL;
     for (int c = 0; c < h * 256; c++) {
       unsigned k = (unsigned)(slab[c] - GEN_CODE(0));
-      if (k >= GC_N) continue;
+      if (k >= GC_N || (hb[c >> 3] >> (c & 7) & 1)) continue;
       int b = gen_code_block[k];
       slab[c] = (uint8_t)b;
       hb[c >> 3] |= (uint8_t)((b >> 8) << (c & 7));

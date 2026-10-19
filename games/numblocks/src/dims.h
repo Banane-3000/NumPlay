@@ -48,6 +48,9 @@ void dragon_offsets(int i, float pt, float *yaw, float *y);
 float dragon_anim(float pt);
 void throw_eye(int tx, int ty, int tz);   /* (mob.c) an eye of ender towards there */
 bool gen_stronghold_near(int x, int z, int *out);   /* (gen.c) where an eye of ender flies to from there */
+int gen_stronghold_chest(int x, int y, int z);      /* (gen.c) a stronghold's chest there: its list (0: none) */
+int gen_stronghold_find(int s, int *out);           /* (gen.c, tests) stronghold s: where, its portal */
+extern uint8_t *gen_hi;                             /* (gen.c) the ninth bits of the slab gen_slab fills */
 void pearl_land(float x, float y, float z);        /* (mob.c) the player's ender pearl lands there */
 enum { SKIN_CRYSTAL = 16, SKIN_DRAGON = 17 };   /* (the big skins: data.h's skin_crystal_px, skin_dragon_px) */
 void dims_credits(void);

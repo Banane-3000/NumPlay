@@ -103,6 +103,8 @@
 #include "dims.h"
 static int dims_slab(int cx, int cz, int y0, int h, uint8_t *out);   /* (gen_dims.h: the Nether, the End) */
 static int gd_dim;
+static void stronghold_slab(int cx, int cz, int y0, int h, uint8_t *out);   /* (gen_stronghold.h) */
+static int stronghold_prepare(int cx, int cz);
 #endif
 
 /* The float arithmetic here must be done as written (IEEE single precision, each operation
@@ -5482,6 +5484,9 @@ int gen_prepare(int cx, int cz) {
                 sum_get(cx + dx, cz + dz);
                 return 1;
             }
+#if NB_DIMS
+    if (stronghold_prepare(cx, cz)) return 1;
+#endif
     return 0;
 }
 
@@ -5536,6 +5541,9 @@ void gen_slab(int cx, int cz, int y0, int h, uint8_t *out) {
     populate(cx, cz - 1, pb[1]);
     populate(cx - 1, cz, pb[2]);
     populate(cx, cz, pb[3]);
+#if NB_DIMS
+    stronghold_slab(cx, cz, y0, h, out);
+#endif
     memset(sum_pin, 0, sizeof sum_pin);
     last_cx = cx;
     last_cz = cz;
