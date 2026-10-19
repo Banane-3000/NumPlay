@@ -46,6 +46,8 @@ typedef struct {
   int asc_mode;              /* ascension: the challenge mode chosen */
   float asc_x, asc_y, asc_tx, asc_ty;   /* where the heavens are (and are going) */
   bool store_dirty;
+  bool news_long;            /* the news goes by (too long for two lines) */
+  int dirty;                 /* frames still to draw whole */
 } Ui;
 extern Ui U;
 

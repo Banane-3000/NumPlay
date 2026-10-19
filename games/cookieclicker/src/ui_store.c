@@ -272,7 +272,7 @@ const ParaStyle PS_SMALL = {F_BODY, F_BOLD, F_ITALIC, 0xCE79, WHITE, WHITE, 11, 
 
 void draw_frame_box(int x, int y, int w, int h) {
   gfx_pattern(IM_DARK_NOISE, x, y, w, h, 128, 128, 0, 0, 256);
-  gfx_image_scaled(IM_BORDER_SOFT, (float)x, (float)y, (float)w, (float)h, 256);
+  gfx_image_scaled_fast(IM_BORDER_SOFT, (float)x, (float)y, (float)w, (float)h, 256);
   /* the gold frame (frameBorder.png's colours) */
   gfx_rect(x, y, w, h, 0xEF16 /* #ece2b6 */, 256);
   gfx_fill(x + 1, y + h - 2, w - 2, 1, 0x7144);

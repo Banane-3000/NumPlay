@@ -137,7 +137,7 @@ static void draw_heavens(void) {
     int slot = permanent_slot_of(u);
     if (slot >= 0 && bought && S.permanent[slot]) gfx_icon_scaled(upgrade_rec(S.permanent[slot] - 1)->icon, x + 2, y + 2, 12, 256);
   }
-  gfx_image_scaled(IM_BORDER_SOFT, 0, 0, SCREEN_W, SCREEN_H, 256);
+  gfx_image_scaled_fast(IM_BORDER_SOFT, 0, 0, SCREEN_W, SCREEN_H, 256);
   /* the top: prestige, the chips, Reincarnate */
   char a[48], t[64];
   beautify(S.prestige, 0, a);

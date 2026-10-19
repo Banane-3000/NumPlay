@@ -197,6 +197,10 @@ GAMES = {
     "sonic": ("SonicTheHedgehog.nwa", "sonic.sav",
               presses((1500, "ok"), (5500, "ok"), (7000, "ok"), (9000, "right", 6000)), 16000,
               presses((5500, "ok"), (7000, "ok"), (9500, "right", 2000)), 13000),
+    # past the keys, the big cookie clicked three times; Home saves the bakery. Next time, from the copy, two more
+    "cookieclicker": ("CookieClicker.nwa", "cookieclicker.sav",
+                      presses((2500, "ok"), (3500, "ok"), (4000, "ok"), (4500, "ok")), 6500,
+                      presses((3000, "ok"), (3600, "ok")), 5500),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -227,7 +231,8 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "hollowknight": "hollowknight_saves.py", "finalearth2": "finalearth2_saves.py",
           "numpowder": "numpowder_saves.py", "undertale": "undertale_saves.py", "subway": "subway_saves.py",
           "fnaf": "fnaf_saves.py", "doom": "doom_saves.py", "isaac": "isaac_saves.py",
-          "hillclimb": "hillclimb_saves.py", "pvz": "pvz_saves.py", "sonic": "sonic_saves.py"}
+          "hillclimb": "hillclimb_saves.py", "pvz": "pvz_saves.py", "sonic": "sonic_saves.py",
+          "cookieclicker": "cookieclicker_saves.py"}
 CHECKS = {
     # the island remembers where Lucky was; after the reinstall, from the copy
     "championisland": (lambda v: v[:3] == b"CI1" and b"PLAYER_LOC" in v,) * 2,
@@ -319,6 +324,10 @@ CHECKS = {
              lambda v: v[5] == 3 and v[34] == 2),
     # how to play seen and the first level played last; then the second
     "sokoban": (lambda v: len(v) == 314 and v[:4] == b"S\1\1\0", lambda v: len(v) == 314 and v[:4] == b"S\1\1\1"),
+    # the bakery kept ("CCK1", the cookies at 8, the clicks at 48): 3 clicks; after the reinstall, from the copy, 5
+    "cookieclicker": (lambda v: v[:4] == b"CCK1" and struct.unpack_from("<d", v, 48)[0] == 3
+                      and struct.unpack_from("<d", v, 8)[0] >= 3,
+                      lambda v: v[:4] == b"CCK1" and struct.unpack_from("<d", v, 48)[0] == 5),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
     # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies kept

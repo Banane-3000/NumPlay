@@ -36,7 +36,7 @@ static void background(void) {
   if (d >= 1 && d < 2) r = d - 1, fade = IM_BG_GRANDMAS1;
   else if (d >= 2 && d < 3) r = d - 2, bg = IM_BG_GRANDMAS1, fade = IM_BG_GRANDMAS2;
   else if (d >= 3) r = d - 3 > 1 ? 1 : d - 3, bg = IM_BG_GRANDMAS2, fade = IM_BG_GRANDMAS3;
-  float tile = 512 * SC;
+  float tile = (float)gfx_image_w(IM_BG_BLUE);   /* (512 x 0.37, as it is packed) */
   gfx_pattern(bg, 0, NEWS_H, LEFT_W, PANEL_H, tile, tile, 0, NEWS_H, 256);
   if (fade >= 0 && r > 0) gfx_pattern(fade, 0, NEWS_H, LEFT_W, PANEL_H, tile, tile, 0, NEWS_H, (int)(r * 256));
 }
@@ -54,7 +54,7 @@ static void shower(void) {
   float opacity = 1;
   if (d >= 1 && !S.prefs.not_scary) opacity = 1 - ((d < 1.5f ? d : 1.5f) - 1) / 0.5f;
   float y = fmodf(floorf(G.real_t * 2), 512) * SC;
-  gfx_pattern(pic, 0, NEWS_H, LEFT_W, PANEL_H, 512 * SC, 512 * SC, 0, NEWS_H + y, (int)(opacity * 256));
+  gfx_pattern(pic, 0, NEWS_H, LEFT_W, PANEL_H, (float)gfx_image_w(pic), (float)gfx_image_h(pic), 0, NEWS_H + y, (int)(opacity * 256));
 }
 
 static void particles(int kind) {
@@ -80,8 +80,8 @@ static void flares(float cx, float cy) {
   float rot = fmodf(G.real_t * 0.5f, 360) / 360 * 2 * (float)M_PI;
   float s1 = 512 * SC * (0.5f + sqrtf(r1)), s2 = 512 * SC * (0.5f + sqrtf(r2));
   gfx_blend(BLEND_NORMAL);
-  gfx_image_rotated(pic, cx, cy, s1, s1, rot, (int)(sinf(r1 * (float)M_PI) * alpha_mult * 256));
-  gfx_image_rotated(pic, cx, cy, s2, s2, rot + (float)M_PI, (int)(sinf(r2 * (float)M_PI) * alpha_mult * 256));
+  gfx_image_rotated_soft(pic, cx, cy, s1, s1, rot, (int)(sinf(r1 * (float)M_PI) * alpha_mult * 256));
+  gfx_image_rotated_soft(pic, cx, cy, s2, s2, rot + (float)M_PI, (int)(sinf(r2 * (float)M_PI) * alpha_mult * 256));
 }
 
 static void cursors(float cx, float cy) {
@@ -108,7 +108,9 @@ static void cursors(float cx, float cy) {
     float lx = 16, ly = y + 16;
     float sx = cx + (lx * cosf(rot) - ly * sinf(rot)) * SC, sy = cy + (lx * sinf(rot) + ly * cosf(rot)) * SC;
     if (!gfx_visible((int)sx - 7, (int)sy - 7, 14, 14)) continue;
-    gfx_image_rotated(IM_CURSOR, sx, sy, 32 * SC, 32 * SC, rot, dragon ? 64 : 256);
+    /* (turned beforehand: the nearest of 32 turns) */
+    int k = (int)floorf(rot / (2 * (float)M_PI) * 32 + 0.5f) & 31;
+    gfx_image(IM_CURSOR_R0 + k, (int)floorf(sx - 7.5f), (int)floorf(sy - 7.5f), dragon ? 64 : 256);
   }
 }
 
@@ -250,7 +252,7 @@ void draw_left(void) {
       float s = 300 * 2 * (1 + sinf(G.real_t * 0.013f) * 0.1f) * SC;
       gfx_image_scaled(IM_DRAGON_BG, cx - s / 2, cy - s / (1.4f + 0.2f * sinf(G.real_t * 0.01f)), s, s, 256);
     }
-    float s = 256 * G.big_size * SC;
+    float s = gfx_image_w(IM_COOKIE) * (fabsf(G.big_size - 1) < 0.004f ? 1 : G.big_size);   /* (as it is, but when it wobbles) */
     if (S.prefs.fancy) gfx_image_scaled(IM_COOKIE_SHADOW, cx - s / 2, cy - s / 2 + 20 * SC, s, s, 256);
     gfx_image_scaled(IM_COOKIE, cx - s / 2, cy - s / 2, s, s, 256);
     if (good_buff && S.prefs.particles) {
@@ -284,12 +286,12 @@ void draw_left(void) {
     }
     int border = good_buff ? IM_BORDER_GOLD : bad_buff ? IM_BORDER_RED : IM_BORDER_SOFT;
     if (good_buff && S.prefs.fancy) gfx_blend(BLEND_ADD);
-    gfx_image_scaled(border, 0, NEWS_H, LEFT_W, PANEL_H, 256);
+    gfx_image_scaled_fast(border, 0, NEWS_H, LEFT_W, PANEL_H, 256);
     gfx_blend(BLEND_NORMAL);
     bakery_box();
     counter();
   } else
-    gfx_image_scaled(IM_BORDER_SOFT, 0, NEWS_H, LEFT_W, PANEL_H, 256);
+    gfx_image_scaled_fast(IM_BORDER_SOFT, 0, NEWS_H, LEFT_W, PANEL_H, 256);
   gfx_unclip();
 }
 

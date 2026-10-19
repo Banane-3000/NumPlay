@@ -55,6 +55,10 @@ ALONE = {
     "sonic": ("Sonic the Hedgehog", "the whole 1991 game: Green Hill to Scrap Brain, the Final Zone, the Special "
               "Stages and the six Chaos Emeralds, and the ending. Too big to share the calculator with NumPlay: install "
               "it on its own"),
+    "cookieclicker": ("Cookie Clicker", "the whole game, with its own pictures: every building and upgrade, golden and "
+                      "wrath cookies, the grandmapocalypse, ascension and the heavenly upgrades, sugar lumps, the "
+                      "dragon, Santa and the Grimoire. Too big to share the calculator with NumPlay: install it on its "
+                      "own"),
 }
 VARIANTS = [
     ("NumPlay-Invisible.nwa", "The same app, hidden: a blank icon with no name"),

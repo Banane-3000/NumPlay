@@ -190,6 +190,7 @@ static void news_text(const char *s, int alpha, int dy) {
     gfx_text_outline_center(F_SMALL, NEWS_X + w / 2 + 2, 9 + dy, lines[0], c, alpha);
     gfx_text_outline_center(F_SMALL, NEWS_X + w / 2 + 2, 18 + dy, lines[1], c, alpha);
   } else {   /* too long: it goes by */
+    U.news_long = true;
     int tw = gfx_text_width(F_SMALL, s);
     int x = SCREEN_W - (int)(U.news_t * 1.2f) % (tw + SCREEN_W - NEWS_X);
     gfx_clip(NEWS_X, 0, SCREEN_W - NEWS_X, NEWS_H);
@@ -200,6 +201,7 @@ static void news_text(const char *s, int alpha, int dy) {
 
 void draw_news(void) {
   if (!gfx_visible(0, 0, SCREEN_W, NEWS_H)) return;
+  U.news_long = false;
   gfx_pattern(IM_DARK_NOISE, 0, 0, SCREEN_W, NEWS_H, 128, 128, 0, 0, 256);
   gfx_vgrad(0, 0, SCREEN_W, NEWS_H, BLACK, 140, 60);
   for (int x = 0; x < SCREEN_W; x += 128) gfx_image(IM_PANEL_H, x, NEWS_H - 3, 256);
@@ -260,6 +262,7 @@ static void scroll_to_selection(void) {
 }
 
 void ui_keys(uint32_t pressed, uint32_t held) {
+  if (pressed) U.dirty = 2;
   /* the arrows repeat while held */
   uint32_t arrows = held & (K_LEFT | K_RIGHT | K_UP | K_DOWN);
   if (arrows && arrows == repeat_held) {
@@ -402,8 +405,19 @@ void ui_tick(void) {
   if (U.news_t > FPS * 10) ui_news_next();
 }
 
+/* what is drawn: the left column every frame (it moves all the time), the rest of the screen when a key
+ * was pressed and five times a second (prices, notes), the news while it changes; the pages that fill
+ * the screen when pressed and three times a second */
 void ui_frame(void) {
   ui_store_layout();
-  gfx_render(0, 0, SCREEN_W, SCREEN_H, draw_all);
+  bool page = U.overlay == OV_OPTIONS || U.overlay == OV_STATS || U.overlay == OV_INFO || U.overlay == OV_KEYS;
+  bool full = U.dirty > 0 || G.on_ascend || G.ascend_timer > 0 || G.reincarnate_timer > 0 ||
+              G.draw_t % (page ? 10 : 6) == 0;
+  if (U.dirty > 0) U.dirty--;
+  if (full) gfx_render(0, 0, SCREEN_W, SCREEN_H, draw_all);
+  else if (!page) {
+    gfx_render(0, NEWS_H, LEFT_W, SCREEN_H - NEWS_H, draw_all);
+    if (U.news_fade > 0 || U.news_long || G.draw_t % 3 == 0) gfx_render(0, 0, SCREEN_W, NEWS_H, draw_all);
+  }
   G.draw_t++;
 }

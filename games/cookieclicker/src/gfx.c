@@ -210,19 +210,40 @@ static inline uint16_t texel(const Img *m, int x, int y, int *a) {
   return m->col[i];
 }
 
+/* a row of n pixels of the picture from (sx, sy), on p: each format its own loop (most of what is drawn) */
+static void row(const Img *m, int sx, int sy, int n, uint16_t *p, int alpha) {
+  bool plain = alpha >= 256 && blend_mode == BLEND_NORMAL;
+  if (m->fmt == FMT_RGB) {
+    const uint16_t *src = m->col + sy * m->w + sx;
+    if (plain)
+      for (int i = 0; i < n; i++) p[i] = src[i];
+    else
+      for (int i = 0; i < n; i++) put(p + i, src[i], alpha);
+  } else if (m->fmt == FMT_P8) {
+    const uint8_t *src = m->px + sy * m->w + sx;
+    for (int i = 0; i < n; i++) {
+      int k = src[i], a = m->opa[k];
+      if (!a) continue;
+      if (a == 255 && plain) p[i] = m->col[k];
+      else put(p + i, m->col[k], (a + (a >> 7)) * alpha >> 8);
+    }
+  } else {
+    const uint8_t *src = m->px + sy * ((m->w + 1) >> 1);
+    for (int i = 0; i < n; i++) {
+      int x = sx + i, k = x & 1 ? src[x >> 1] >> 4 : src[x >> 1] & 15, a = m->opa[k];
+      if (!a) continue;
+      if (a == 255 && plain) p[i] = m->col[k];
+      else put(p + i, m->col[k], (a + (a >> 7)) * alpha >> 8);
+    }
+  }
+}
+
 void gfx_image_part(int im, int sx, int sy, int sw, int sh, int x, int y, int alpha) {
   Img m = img(im);
   int dx = x, dy = y, w = sw, h = sh;
   if (alpha <= 0 || !clipr(&dx, &dy, &w, &h)) return;
   sx += dx - x, sy += dy - y;
-  for (int r = 0; r < h; r++) {
-    uint16_t *p = at(dx, dy + r);
-    for (int i = 0; i < w; i++) {
-      int a;
-      uint16_t c = texel(&m, sx + i, sy + r, &a);
-      if (a) put(p + i, c, (a + (a >> 7)) * alpha >> 8);
-    }
-  }
+  for (int r = 0; r < h; r++) row(&m, sx, sy + r, w, at(dx, dy + r), alpha);
 }
 void gfx_image(int im, int x, int y, int alpha) { gfx_image_part(im, 0, 0, gfx_image_w(im), gfx_image_h(im), x, y, alpha); }
 
@@ -240,34 +261,69 @@ void gfx_image_dark(int im, int x, int y, int alpha) {
   }
 }
 
+/* the index of pixel (x, y) of a paletted picture (inside it) */
+static inline int index_at(const Img *m, int x, int y) {
+  if (m->fmt == FMT_P8) return m->px[y * m->w + x];
+  uint8_t b = m->px[y * ((m->w + 1) >> 1) + (x >> 1)];
+  return x & 1 ? b >> 4 : b & 15;
+}
+
 /* the colour at (u, v), in 1/256ths of a pixel of the picture, between its four nearest pixels;
- * opacity 0..255. wrap: tiled, else clear outside */
+ * opacity 0..255. wrap: tiled, else clear outside. (Flat areas and opaque ones take shortcuts: this
+ * runs for most pixels drawn.) */
 static uint16_t bilinear(const Img *m, int u, int v, bool wrap, int *a_out) {
   u -= 128, v -= 128;
-  int x0 = u >> 8, y0 = v >> 8, fx = u & 255, fy = v & 255;
+  int x0 = u >> 8, y0 = v >> 8, fx = (u & 255) >> 4, fy = (v & 255) >> 4;
+  int x1 = x0 + 1, y1 = y0 + 1;
+  bool in0x = true, in1x = true, in0y = true, in1y = true;
+  if (wrap) {
+    if ((unsigned)x0 >= (unsigned)m->w) x0 %= m->w, x0 += x0 < 0 ? m->w : 0;
+    if ((unsigned)y0 >= (unsigned)m->h) y0 %= m->h, y0 += y0 < 0 ? m->h : 0;
+    x1 = x0 + 1 == m->w ? 0 : x0 + 1, y1 = y0 + 1 == m->h ? 0 : y0 + 1;
+  } else {
+    in0x = (unsigned)x0 < (unsigned)m->w, in1x = (unsigned)x1 < (unsigned)m->w;
+    in0y = (unsigned)y0 < (unsigned)m->h, in1y = (unsigned)y1 < (unsigned)m->h;
+  }
+  uint16_t c[4];
+  int a[4];
+  if (m->fmt == FMT_RGB) {
+    c[0] = in0x && in0y ? m->col[y0 * m->w + x0] : 0, a[0] = in0x && in0y ? 255 : 0;
+    c[1] = in1x && in0y ? m->col[y0 * m->w + x1] : 0, a[1] = in1x && in0y ? 255 : 0;
+    c[2] = in0x && in1y ? m->col[y1 * m->w + x0] : 0, a[2] = in0x && in1y ? 255 : 0;
+    c[3] = in1x && in1y ? m->col[y1 * m->w + x1] : 0, a[3] = in1x && in1y ? 255 : 0;
+  } else {
+    int i0 = in0x && in0y ? index_at(m, x0, y0) : -1, i1 = in1x && in0y ? index_at(m, x1, y0) : -1;
+    int i2 = in0x && in1y ? index_at(m, x0, y1) : -1, i3 = in1x && in1y ? index_at(m, x1, y1) : -1;
+    if (i0 == i1 && i0 == i2 && i0 == i3) {   /* (a flat area) */
+      *a_out = i0 < 0 ? 0 : m->opa[i0];
+      return i0 < 0 ? 0 : m->col[i0];
+    }
+    c[0] = i0 < 0 ? 0 : m->col[i0], a[0] = i0 < 0 ? 0 : m->opa[i0];
+    c[1] = i1 < 0 ? 0 : m->col[i1], a[1] = i1 < 0 ? 0 : m->opa[i1];
+    c[2] = i2 < 0 ? 0 : m->col[i2], a[2] = i2 < 0 ? 0 : m->opa[i2];
+    c[3] = i3 < 0 ? 0 : m->col[i3], a[3] = i3 < 0 ? 0 : m->opa[i3];
+  }
+  int w[4] = {(16 - fx) * (16 - fy), fx * (16 - fy), (16 - fx) * fy, fx * fy};   /* (sum 256) */
+  if ((a[0] & a[1] & a[2] & a[3]) == 255) {   /* (opaque: no weighting by opacity) */
+    uint32_t R = 0, G = 0, B = 0;
+    for (int k = 0; k < 4; k++) R += (c[k] >> 11) * w[k], G += ((c[k] >> 5) & 63) * w[k], B += (c[k] & 31) * w[k];
+    *a_out = 255;
+    return (uint16_t)((R >> 8) << 11 | (G >> 8) << 5 | (B >> 8));
+  }
   uint32_t R = 0, G = 0, B = 0, A = 0;
   for (int k = 0; k < 4; k++) {
-    int x = x0 + (k & 1), y = y0 + (k >> 1);
-    int w = (k & 1 ? fx : 256 - fx) * (k >> 1 ? fy : 256 - fy);   /* 0..65536 */
-    if (!w) continue;
-    if (wrap) {
-      x %= m->w, y %= m->h;
-      if (x < 0) x += m->w;
-      if (y < 0) y += m->h;
-    } else if ((unsigned)x >= (unsigned)m->w || (unsigned)y >= (unsigned)m->h)
-      continue;
-    int a;
-    uint16_t c = texel(m, x, y, &a);
-    if (!a) continue;
-    uint32_t wa = (uint32_t)(w >> 8) * (uint32_t)a;   /* 0..65280 */
-    R += (c >> 11) * wa, G += ((c >> 5) & 63) * wa, B += (c & 31) * wa, A += wa;
+    uint32_t wa = (uint32_t)(w[k] * a[k]);   /* 0..65280 */
+    R += (c[k] >> 11) * wa, G += ((c[k] >> 5) & 63) * wa, B += (c[k] & 31) * wa, A += wa;
   }
   *a_out = (int)(A >> 8);
   if (!A) return 0;
   return (uint16_t)((R / A) << 11 | (G / A) << 5 | (B / A));
 }
 
-void gfx_image_scaled(int im, float x, float y, float w, float h, int alpha) {
+/* scaled: the picture's pixels in steps of su, sv (1/256ths of its pixels per screen pixel); nearest
+ * picks the nearest pixel (smooth overlays), lo samples every other pixel in both directions (soft
+ * pictures: the flares) */
+static void scaled(int im, float x, float y, float w, float h, int alpha, bool nearest) {
   if (w < 0.5f || h < 0.5f || alpha <= 0) return;
   int x0 = (int)floorf(x), y0 = (int)floorf(y), x1 = (int)ceilf(x + w), y1 = (int)ceilf(y + h);
   if (x0 < g_x0) x0 = g_x0;
@@ -276,19 +332,37 @@ void gfx_image_scaled(int im, float x, float y, float w, float h, int alpha) {
   if (y1 > g_y1) y1 = g_y1;
   if (x1 <= x0 || y1 <= y0) return;
   Img m = img(im);
-  float su = m.w / w * 256, sv = m.h / h * 256;
+  int su = (int)(m.w / w * 256);
+  int u0 = (int)((x0 + 0.5f - x) * m.w / w * 256);
   for (int py = y0; py < y1; py++) {
-    int v = (int)((py + 0.5f - y) * sv);
+    int v = (int)((py + 0.5f - y) * m.h / h * 256);
     uint16_t *p = at(x0, py);
-    for (int px = x0; px < x1; px++, p++) {
-      int u = (int)((px + 0.5f - x) * su), a;
-      uint16_t c = bilinear(&m, u, v, false, &a);
+    int u = u0;
+    for (int px = x0; px < x1; px++, p++, u += su) {
+      int a;
+      uint16_t c;
+      if (nearest) {
+        int tx = u >> 8, ty = v >> 8;
+        if ((unsigned)tx >= (unsigned)m.w || (unsigned)ty >= (unsigned)m.h) continue;
+        c = texel(&m, tx, ty, &a);
+      } else
+        c = bilinear(&m, u, v, false, &a);
       if (a) put(p, c, (a + (a >> 7)) * alpha >> 8);
     }
   }
 }
 
-void gfx_image_rotated(int im, float cx, float cy, float w, float h, float angle, int alpha) {
+void gfx_image_scaled(int im, float x, float y, float w, float h, int alpha) {
+  const ImageRec *r = image_rec(im);
+  if (fabsf(w - r->w) < 0.05f && fabsf(h - r->h) < 0.05f) {   /* (its own size: as it is) */
+    gfx_image(im, (int)floorf(x + 0.5f), (int)floorf(y + 0.5f), alpha);
+    return;
+  }
+  scaled(im, x, y, w, h, alpha, false);
+}
+void gfx_image_scaled_fast(int im, float x, float y, float w, float h, int alpha) { scaled(im, x, y, w, h, alpha, true); }
+
+static void rotated(int im, float cx, float cy, float w, float h, float angle, int alpha, int step) {
   if (w < 0.5f || h < 0.5f || alpha <= 0) return;
   float c = cosf(angle), s = sinf(angle);
   float ex = (fabsf(c) * w + fabsf(s) * h) / 2, ey = (fabsf(s) * w + fabsf(c) * h) / 2;
@@ -301,48 +375,76 @@ void gfx_image_rotated(int im, float cx, float cy, float w, float h, float angle
   Img m = img(im);
   float ku = m.w / w * 256, kv = m.h / h * 256;
   /* screen (dx, dy) from the centre -> picture: turned back by angle */
-  float uxs = c * ku, uys = s * ku, vxs = -s * kv, vys = c * kv;
-  float hu = m.w * 128.f, hv = m.h * 128.f;
+  int uxs = (int)(c * ku), uys = (int)(s * ku), vxs = (int)(-s * kv), vys = (int)(c * kv);
+  int hu = m.w * 128, hv = m.h * 128, umax = (m.w + 1) * 256, vmax = (m.h + 1) * 256;
+  if (step > 1) {   /* (every other pixel, both ways: on even screen coordinates, so that bands agree) */
+    y0 &= ~1, x0 &= ~1;
+    for (int py = y0; py < y1; py += 2) {
+      float dy = py + 1 - cy, dx = x0 + 1 - cx;
+      int u = hu + (int)(dx * uxs + dy * uys), v = hv + (int)(dx * vxs + dy * vys);
+      for (int px = x0; px < x1; px += 2, u += 2 * uxs, v += 2 * vxs) {
+        if (u < -256 || v < -256 || u >= umax || v >= vmax) continue;
+        int a;
+        uint16_t col = bilinear(&m, u, v, false, &a);
+        if (!a) continue;
+        a = (a + (a >> 7)) * alpha >> 8;
+        for (int yy = py; yy < py + 2; yy++) {
+          if (yy < g_y0 || yy >= g_y1) continue;
+          uint16_t *p = at(px, yy);
+          if (px >= g_x0 && px < g_x1) put(p, col, a);
+          if (px + 1 >= g_x0 && px + 1 < g_x1) put(p + 1, col, a);
+        }
+      }
+    }
+    return;
+  }
   for (int py = y0; py < y1; py++) {
     float dy = py + 0.5f - cy, dx = x0 + 0.5f - cx;
-    float u = hu + dx * uxs + dy * uys, v = hv + dx * vxs + dy * vys;
+    int u = hu + (int)(dx * uxs + dy * uys), v = hv + (int)(dx * vxs + dy * vys);
     uint16_t *p = at(x0, py);
     for (int px = x0; px < x1; px++, p++, u += uxs, v += vxs) {
-      if (u < -256 || v < -256 || u >= (m.w + 1) * 256.f || v >= (m.h + 1) * 256.f) continue;
+      if (u < -256 || v < -256 || u >= umax || v >= vmax) continue;
       int a;
-      uint16_t col = bilinear(&m, (int)u, (int)v, false, &a);
+      uint16_t col = bilinear(&m, u, v, false, &a);
       if (a) put(p, col, (a + (a >> 7)) * alpha >> 8);
     }
   }
+}
+void gfx_image_rotated(int im, float cx, float cy, float w, float h, float angle, int alpha) {
+  rotated(im, cx, cy, w, h, angle, alpha, 1);
+}
+void gfx_image_rotated_soft(int im, float cx, float cy, float w, float h, float angle, int alpha) {
+  rotated(im, cx, cy, w, h, angle, alpha, 2);
 }
 
 void gfx_pattern(int im, int x, int y, int w, int h, float tw, float th, float ox, float oy, int alpha) {
   if (alpha <= 0 || !clipr(&x, &y, &w, &h)) return;
   Img m = img(im);
   bool same = fabsf(tw - m.w) < 0.01f && fabsf(th - m.h) < 0.01f;
-  float su = m.w / tw * 256, sv = m.h / th * 256;
+  int su = (int)(m.w / tw * 256), sv = (int)(m.h / th * 256);
   for (int r = 0; r < h; r++) {
     uint16_t *p = at(x, y + r);
     float fy = y + r + 0.5f - oy;
-    if (same) {
+    if (same) {   /* (the tiles as they are: in runs of a row of the picture) */
       int ty = (int)floorf(fy) % m.h;
       if (ty < 0) ty += m.h;
       int tx = (int)floorf(x + 0.5f - ox) % m.w;
       if (tx < 0) tx += m.w;
-      for (int i = 0; i < w; i++, p++) {
-        int a;
-        uint16_t c = texel(&m, tx, ty, &a);
-        if (a) put(p, c, (a + (a >> 7)) * alpha >> 8);
-        if (++tx == m.w) tx = 0;
+      for (int i = 0; i < w;) {
+        int n = m.w - tx < w - i ? m.w - tx : w - i;
+        row(&m, tx, ty, n, p + i, alpha);
+        i += n, tx = 0;
       }
       continue;
     }
-    int v = (int)(fy * sv);
-    for (int i = 0; i < w; i++, p++) {
+    int v = (int)(fy * m.h / th * 256);
+    int u = (int)((x + 0.5f - ox) * m.w / tw * 256);
+    for (int i = 0; i < w; i++, p++, u += su) {
       int a;
-      uint16_t c = bilinear(&m, (int)((x + i + 0.5f - ox) * su), v, true, &a);
+      uint16_t c = bilinear(&m, u, v, true, &a);
       if (a) put(p, c, (a + (a >> 7)) * alpha >> 8);
     }
+    (void)sv;
   }
 }
 
@@ -396,7 +498,7 @@ static int draw_char(int f, int x, int y, unsigned char ch, uint16_t c, int alph
         if (xx < g_x0 || xx >= g_x1) continue;
         uint8_t b = d[r * stride + (i >> 1)];
         int cov = i & 1 ? b >> 4 : b & 15;
-        if (cov) put(at(xx, yy), c, cov * alpha / 15);
+        if (cov) put(at(xx, yy), c, cov == 15 ? alpha : cov * alpha / 15);
       }
     }
   }
@@ -425,11 +527,47 @@ int gfx_text_center(int f, int cx, int y, const char *s, uint16_t c, int alpha) 
 int gfx_text_right(int f, int rx, int y, const char *s, uint16_t c, int alpha) {
   return gfx_text(f, rx - gfx_text_width(f, s), y, s, c, alpha);
 }
+/* a character's black outline (the pixels next to it, and a shadow below): made in a little mask, then
+ * blended in one go */
+static int draw_char_outline(int f, int x, int y, unsigned char ch, int alpha) {
+  const uint8_t *d;
+  const Glyph *g = glyph(f, ch, &d);
+  if (!g) return x;
+  int gx = x + g->x - 1, gy = y + g->y - 1, W = g->w + 2, H = g->h + 4;
+  if (g->w && W <= 40 && H <= 44 && gfx_visible(gx, gy, W, H)) {
+    uint8_t m[40 * 44];
+    memset(m, 0, (size_t)(W * H));
+    int stride = (g->w + 1) >> 1;
+    for (int r = 0; r < g->h; r++)
+      for (int i = 0; i < g->w; i++) {
+        uint8_t b = d[r * stride + (i >> 1)];
+        int cov = (i & 1 ? b >> 4 : b & 15) * 17, third = cov / 3;
+        if (!cov) continue;
+        uint8_t *o = m + (r + 1) * W + (i + 1);
+#define MAX(p, v) (*(p) < (v) ? *(p) = (uint8_t)(v) : 0)
+        MAX(o - 1, cov), MAX(o + 1, cov), MAX(o - W, cov), MAX(o + W, cov);
+        MAX(o - W - 1, third), MAX(o - W + 1, third), MAX(o + W - 1, third), MAX(o + W + 1, third);
+        MAX(o + 2 * W, third);
+#undef MAX
+      }
+    for (int r = 0; r < H; r++) {
+      int yy = gy + r;
+      if (yy < g_y0 || yy >= g_y1) continue;
+      for (int i = 0; i < W; i++) {
+        int xx = gx + i, a = m[r * W + i];
+        if (a && xx >= g_x0 && xx < g_x1) put(at(xx, yy), BLACK, (a + (a >> 7)) * alpha >> 8);
+      }
+    }
+  }
+  return x + g->adv;
+}
+
+/* (the outlines first, then the letters over them) */
 void gfx_text_outline(int f, int x, int y, const char *s, uint16_t c, int alpha) {
-  static const int8_t d[8][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {1, -1}, {-1, 1}, {1, 1}};
-  for (int i = 0; i < 8; i++) gfx_text(f, x + d[i][0], y + d[i][1], s, BLACK, i < 4 ? alpha : alpha / 3);
-  gfx_text(f, x, y + 2, s, BLACK, alpha / 3);
-  gfx_text(f, x, y, s, c, alpha);
+  int x0 = x;
+  for (const char *p = s; *p; p++)
+    if ((unsigned char)*p >= 32) x = draw_char_outline(f, x, y, (unsigned char)*p, alpha);
+  gfx_text(f, x0, y, s, c, alpha);
 }
 void gfx_text_outline_center(int f, int cx, int y, const char *s, uint16_t c, int alpha) {
   gfx_text_outline(f, cx - gfx_text_width(f, s) / 2, y, s, c, alpha);

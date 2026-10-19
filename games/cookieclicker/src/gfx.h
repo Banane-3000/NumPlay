@@ -42,10 +42,13 @@ int gfx_image_w(int im);
 int gfx_image_h(int im);
 void gfx_image(int im, int x, int y, int alpha);
 void gfx_image_part(int im, int sx, int sy, int sw, int sh, int x, int y, int alpha);
-/* scaled to w x h at (x, y), smoothly */
+/* scaled to w x h at (x, y), smoothly; or fast, from its nearest pixels (smooth overlays) */
 void gfx_image_scaled(int im, float x, float y, float w, float h, int alpha);
+void gfx_image_scaled_fast(int im, float x, float y, float w, float h, int alpha);
 /* centred on (cx, cy), w x h, turned by angle (radians, clockwise on screen) */
 void gfx_image_rotated(int im, float cx, float cy, float w, float h, float angle, int alpha);
+/* the same, sampled every other pixel both ways (soft pictures, drawn large: the flares) */
+void gfx_image_rotated_soft(int im, float cx, float cy, float w, float h, float angle, int alpha);
 /* the rectangle tiled with the picture at tw x th, the tiles shifted by (ox, oy) */
 void gfx_pattern(int im, int x, int y, int w, int h, float tw, float th, float ox, float oy, int alpha);
 /* an icon of the game's sheet (its index: y * ICON_COLS + x), 24 pixels, or scaled to size */

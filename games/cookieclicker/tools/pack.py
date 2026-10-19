@@ -307,8 +307,9 @@ def main(ref, game_json):
 
     # ---- the left column
     L = lambda name, rel, size, fmt="p8", box=None, n=256: P.image(name, scaled(ref, rel, size, box), fmt, n)
-    L("COOKIE", "perfectCookie.png", (104, 104))
-    L("COOKIE_SHADOW", "cookieShadow.png", (40, 40))
+    big = round(256 * S)   # (drawn as they are, but when the cookie wobbles)
+    L("COOKIE", "perfectCookie.png", (big, big))
+    L("COOKIE_SHADOW", "cookieShadow.png", (big, big))
     L("FLARE", "flare.png", (112, 112))
     L("FLARE_GOLD", "flareGold.png", (112, 112))
     L("FLARE_RED", "flareSuckRed.png", (112, 112))
@@ -324,16 +325,26 @@ def main(ref, game_json):
     for i in range(8):
         L(f"SMALL_COOKIE{i}", "smallCookies.png", (24, 24), box=(64 * i, 0, 64 * i + 64, 64))
     L("CURSOR", "cursor.png", (32, 32), box=(0, 0, 32, 32))
+    # the cursors around the cookie, turned beforehand: 32 turns of the 12-pixel cursor (drawn 4 times larger,
+    # turned, then reduced: smooth)
+    cur = load(ref, "cursor.png").crop((0, 0, 32, 32))
+    side = round(32 * S)
+    for k in range(32):
+        big4 = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+        c4 = premul_resize(cur, (side * 4, side * 4))
+        big4.paste(c4, ((64 - side * 4) // 2, (64 - side * 4) // 2))
+        turned = big4.rotate(-k * 360 / 32, resample=Image.BICUBIC)
+        P.image(f"CURSOR_R{k}", premul_resize(turned, (16, 16)), "p4")
     L("GOLD_COOKIE", "goldCookie.png", (48, 48))
     L("WRATH_COOKIE", "wrathCookie.png", (48, 48))
-    # the milks: the game draws its 240-pixel pictures at 480; here at 120, drawn at 178 (480 x S): the top of
-    # them that the milk shows, at most 0.35 of the column
+    # the milks: the game draws its 240-pixel pictures at 480; here at 178 (480 x S): the top of them that the
+    # milk shows, at most 0.35 of the column
     milk_tile = round(480 * S)
-    milk_w, milk_h = 120, math.ceil((0.35 * 220 + 2) * 120 / milk_tile)
+    milk_w, milk_h = milk_tile, math.ceil(0.35 * 220 + 3)   # (at the size drawn, 16 colours)
     defs.append(f"#define MILK_TILE {milk_tile}")
     for m in G["milks"]:
         rows = round(milk_h / milk_w * 240)
-        L("MILK_" + cname(m["name"].replace(" milk", "")), m["pic"], (milk_w, milk_h), box=(0, 0, 240, rows))
+        L("MILK_" + cname(m["name"].replace(" milk", "")), m["pic"], (milk_w, milk_h), "p4", box=(0, 0, 240, rows))
     L("WRINKLER", "wrinkler.png", (38, 76))
     L("SHINY_WRINKLER", "shinyWrinkler.png", (38, 76))
     L("SHIMMERING_VEIL", "shimmeringVeil.png", (64, 64))

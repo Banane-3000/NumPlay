@@ -342,7 +342,7 @@ static void spell_pos(int s, int *x, int *y) {
 void grimoire_draw(void) {
   gfx_clip(GX, NEWS_H, GW, SCREEN_H - NEWS_H);
   gfx_pattern(IM_MG_BG_GRIMOIRE, GX, NEWS_H, GW, SCREEN_H - NEWS_H, 192, 48, GX, NEWS_H, 256);
-  gfx_image_scaled(IM_BORDER_SOFT, GX, NEWS_H, GW, SCREEN_H - NEWS_H, 256);
+  gfx_image_scaled_fast(IM_BORDER_SOFT, GX, NEWS_H, GW, SCREEN_H - NEWS_H, 256);
   gfx_text_outline_center(F_KAVOON, GX + GW / 2, NEWS_H + 20, "Grimoire", WHITE, 256);
   for (int s = 0; s < N_SPELLS; s++) {
     int x, y;

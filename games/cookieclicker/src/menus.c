@@ -31,7 +31,7 @@ extern bool g_quit;
 
 static void panel(const char *title) {
   gfx_pattern(IM_DARK_NOISE, 0, PANEL_Y, SCREEN_W, PANEL_H, 128, 128, 0, 0, 256);
-  gfx_image_scaled(IM_BORDER_SOFT, 0, PANEL_Y, SCREEN_W, PANEL_H, 256);
+  gfx_image_scaled_fast(IM_BORDER_SOFT, 0, PANEL_Y, SCREEN_W, PANEL_H, 256);
   for (int x = 0; x < SCREEN_W; x += 128) gfx_image(IM_PANEL_H, x, PANEL_Y, 256);
   if (title) gfx_text_outline_center(F_KAVOON, SCREEN_W / 2, PANEL_Y + 20, title, WHITE, 256);
 }
