@@ -20,6 +20,8 @@ void plat_push(int x, int y, int w, int h, const uint16_t *px);
 void plat_fill(int x, int y, int w, int h, uint16_t c);
 /* waits for the display's next refresh to start (false if it cannot tell) */
 bool plat_vblank(void);
+/* what the display shows, back */
+void plat_pull(int x, int y, int w, int h, uint16_t *px);
 bool plat_save(const char *name, const void *data, uint32_t len);
 const uint8_t *plat_load(const char *name, uint32_t *len);   /* NULL if absent */
 /* a file of len bytes to write in place (the calculator's storage is RAM): plat_reserve gives its

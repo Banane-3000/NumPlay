@@ -27,6 +27,11 @@ void plat_push(int x, int y, int w, int h, const uint16_t *px) {
       if ((unsigned)(x + c) < PLAT_W && (unsigned)(y + r) < PLAT_H) host_fb[(y + r) * PLAT_W + x + c] = px[r * w + c];
 }
 bool plat_vblank(void) { return false; }
+void plat_pull(int x, int y, int w, int h, uint16_t *px) {
+  for (int r = 0; r < h; r++)
+    for (int c = 0; c < w; c++)
+      px[r * w + c] = (unsigned)(x + c) < PLAT_W && (unsigned)(y + r) < PLAT_H ? host_fb[(y + r) * PLAT_W + x + c] : 0;
+}
 void plat_fill(int x, int y, int w, int h, uint16_t c) {
   for (int r = 0; r < h; r++)
     for (int k = 0; k < w; k++)

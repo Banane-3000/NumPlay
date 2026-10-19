@@ -480,8 +480,93 @@ static void nw_draw_band(uint8_t *band, int x0, int x1, bool view, int help, boo
     nw_band_end(x0, x1);
 }
 
+// the frame's bands, in the order the panel refreshes them
+static bool nw_frame_view, nw_frame_strips;
+static int nw_frame_help;
+
+static void nw_draw_frame() {
+    bool view = nw_frame_view, strips = nw_frame_strips;
+    int help = nw_frame_help;
+    nw_frame_begin();
+    uint8_t __aligned(8) band[NW_BAND_W * SCREENHEIGHT];
+    const int bands = SCREENWIDTH / NW_BAND_W;
+    if (nw_scan_right_to_left) {
+        // (a frame drawn band by band has its visplanes in each band's pass: the spans' starts in the bands
+        // on the left are not known, and are taken where the band starts)
+        bool edges = view && !automapactive && !strips;
+        if (edges) nw_plane_edges(band);
+        for (int k = bands - 1; k >= 0; k--) {
+            if (edges && k) {
+                memcpy(nw_carry_plane, nw_edge_plane[k - 1], sizeof nw_carry_plane);
+                memcpy(nw_carry_start, nw_edge_start[k - 1], sizeof nw_carry_start);
+            } else {
+                memset(nw_carry_plane, -1, sizeof nw_carry_plane);
+            }
+            nw_draw_band(band, k * NW_BAND_W, (k + 1) * NW_BAND_W, view, help, strips);
+        }
+    } else {
+        memset(nw_carry_plane, -1, sizeof nw_carry_plane);
+        for (int k = 0; k < bands; k++) nw_draw_band(band, k * NW_BAND_W, (k + 1) * NW_BAND_W, view, help, strips);
+    }
+    nw_band_x0 = 0;
+    nw_band_x1 = SCREENWIDTH;
+    nw_frame_end();
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// vanilla's screen melt (f_wipe.c) from the screen shown to the new one: the panel keeps the old screen, each
+// of its columns (two pixels wide) slides down, and the new screen's rows show above it; the new screen is the
+// frame drawn when it started, drawn again from its records each time (nw/i_video.c moves the columns)
+
+extern "C" {
+int16_t nw_melt_from[SCREENWIDTH / 2], nw_melt_to[SCREENWIDTH / 2];
+int nw_melting;
+int M_Random(void);
+}
+static int16_t nw_melt_y[SCREENWIDTH / 2];
+static bool nw_melt_going;
+
+// a tic or more of it; true when it is done
+extern "C" int nw_melt(int tics) {
+    const int height = SCREENHEIGHT;
+    if (!nw_melt_going) {
+        // wipe_initMelt: the columns' starting places (for all 320 of them, though half are used)
+        nw_melt_going = true;
+        int y = -(M_Random() % 16);
+        nw_melt_y[0] = (int16_t) y;
+        for (int i = 1; i < SCREENWIDTH; i++) {
+            int r = (M_Random() % 3) - 1;
+            y += r;
+            if (y > 0) y = 0;
+            else if (y == -16) y = -15;
+            if (i < SCREENWIDTH / 2) nw_melt_y[i] = (int16_t) y;
+        }
+    }
+    // wipe_doMelt
+    bool done = true;
+    for (int i = 0; i < SCREENWIDTH / 2; i++) nw_melt_from[i] = nw_melt_y[i] > 0 ? nw_melt_y[i] : 0;
+    while (tics--) {
+        for (int i = 0; i < SCREENWIDTH / 2; i++) {
+            if (nw_melt_y[i] < 0) {
+                nw_melt_y[i]++;
+                done = false;
+            } else if (nw_melt_y[i] < height) {
+                int dy = nw_melt_y[i] < 16 ? nw_melt_y[i] + 1 : 8;
+                if (nw_melt_y[i] + dy >= height) dy = height - nw_melt_y[i];
+                nw_melt_y[i] = (int16_t) (nw_melt_y[i] + dy);
+                done = false;
+            }
+        }
+    }
+    for (int i = 0; i < SCREENWIDTH / 2; i++) nw_melt_to[i] = nw_melt_y[i] > 0 ? nw_melt_y[i] : 0;
+    nw_melting = 1;
+    nw_draw_frame();
+    nw_melting = 0;
+    if (done) nw_melt_going = false;
+    return done;
+}
+
 void pd_end_frame(int wipe_start) {
-    (void) wipe_start;
     int help = inhelpscreens;
     bool view = gamestate == GS_LEVEL && !help;
 #if HOST
@@ -519,43 +604,23 @@ void pd_end_frame(int wipe_start) {
     nw_patches[0].header.max = count_of(nw_patches) - 1;
     V_BeginPatchList(nw_patches);
     if (!help) {
-        if (gamestate == GS_LEVEL) ST_Drawer(false, !pre_wipe_state);
+        if (gamestate == GS_LEVEL) ST_Drawer(false, true);
         else if (gamestate == GS_INTERMISSION) WI_Drawer();
     } else if (gamestate == GS_LEVEL) {
         ST_doPaletteStuff();
     }
     ST_FpsDrawer(-1);
-    if (!pre_wipe_state && gamestate == GS_LEVEL && gametic && !inhelpscreens) HU_Drawer();
+    if (gamestate == GS_LEVEL && gametic && !inhelpscreens) HU_Drawer();
     if (paused) {
         int y = automapactive ? 4 : viewwindowy + 4;
         V_DrawPatchDirect(viewwindowx + (scaledviewwidth - 68) / 2, y, VPATCH_HANDLE(VPATCH_NAME(M_PAUSE)));
     }
     M_Drawer();
-    if (pre_wipe_state == PRE_WIPE_EXTRA_FRAME_NEEDED) pre_wipe_state = PRE_WIPE_EXTRA_FRAME_DONE;
 
-    nw_frame_begin();
-    uint8_t __aligned(8) band[NW_BAND_W * SCREENHEIGHT];
-    const int bands = SCREENWIDTH / NW_BAND_W;
-    if (nw_scan_right_to_left) {
-        // (a frame drawn band by band has its visplanes in each band's pass: the spans' starts in the bands
-        // on the left are not known, and are taken where the band starts)
-        bool edges = view && !automapactive && !strips;
-        if (edges) nw_plane_edges(band);
-        for (int k = bands - 1; k >= 0; k--) {
-            if (edges && k) {
-                memcpy(nw_carry_plane, nw_edge_plane[k - 1], sizeof nw_carry_plane);
-                memcpy(nw_carry_start, nw_edge_start[k - 1], sizeof nw_carry_start);
-            } else {
-                memset(nw_carry_plane, -1, sizeof nw_carry_plane);
-            }
-            nw_draw_band(band, k * NW_BAND_W, (k + 1) * NW_BAND_W, view, help, strips);
-        }
-    } else {
-        memset(nw_carry_plane, -1, sizeof nw_carry_plane);
-        for (int k = 0; k < bands; k++) nw_draw_band(band, k * NW_BAND_W, (k + 1) * NW_BAND_W, view, help, strips);
-    }
+    nw_frame_view = view;
+    nw_frame_strips = strips;
+    nw_frame_help = help;
     fuzzpos = (int8_t) fuzz_end;
-    nw_band_x0 = 0;
-    nw_band_x1 = SCREENWIDTH;
-    nw_frame_end();
+    // (a wipe: the old screen stays, and melts into this one, nw_melt)
+    if (!wipe_start) nw_draw_frame();
 }

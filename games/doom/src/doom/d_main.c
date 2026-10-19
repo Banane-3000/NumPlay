@@ -468,6 +468,28 @@ boolean D_GrabMouseCallback(void)
 //
 void D_RunFrame()
 {
+#if NUMWORKS
+    // vanilla's wipe: the melt, a tic or more at a time (nw/nw_back.inc)
+    int nowtime;
+    int tics;
+    static int wipestart;
+    static boolean wipe;
+    extern int nw_melt(int tics);
+
+    if (wipe)
+    {
+        do
+        {
+            nowtime = I_GetTime ();
+            tics = nowtime - wipestart;
+            I_Sleep(1);
+        } while (tics <= 0);
+
+        wipestart = nowtime;
+        wipe = !nw_melt(tics);
+        return;
+    }
+#endif
 #if !DOOM_TINY
     int nowtime;
     int tics;
@@ -514,6 +536,9 @@ void D_RunFrame()
             // normal update
             I_FinishUpdate ();              // page flip or blit buffer
         }
+#elif NUMWORKS
+        if ((wipe = D_Display ()))
+            wipestart = I_GetTime () - 1;
 #else
         do {
             D_Display();

@@ -51,14 +51,15 @@ def check(cond, what):
 
 
 # the title, the credits and the three demos, which must play exactly as in Chocolate Doom 3.1.0 (vanilla Doom
-# 1.9): where each ends, the player there and both random number generators are Chocolate Doom's, tic for tic
+# 1.9): where each ends, the player there and both random number generators are Chocolate Doom's, tic for tic (the
+# screen melts take theirs from the second one, M_Random, as they do there)
 CHOCOLATE = [
     "leveltime=5026 map=E1M5 x=87385351 y=84364146 z=5767168 angle=2514731840 health=0 armor=36 kills=61 items=7 "
-    "secrets=1 ammo=103,0,0,0 weapon=1 prnd=181 rnd=108",
+    "secrets=1 ammo=103,0,0,0 weapon=1 prnd=181 rnd=172",
     "leveltime=3836 map=E1M3 x=-9362093 y=-84944896 z=3145728 angle=2688383391 health=0 armor=0 kills=41 items=14 "
-    "secrets=0 ammo=140,34,0,0 weapon=2 prnd=75 rnd=152",
+    "secrets=0 ammo=140,34,0,0 weapon=2 prnd=75 rnd=216",
     "leveltime=2134 map=E1M7 x=-91417116 y=-164628508 z=7340032 angle=2593932736 health=0 armor=68 kills=20 items=9 "
-    "secrets=0 ammo=70,14,0,0 weapon=2 prnd=207 rnd=107",
+    "secrets=0 ammo=70,14,0,0 weapon=2 prnd=207 rnd=171",
 ]
 e = run(["--ms", "340000"], what="the demos")
 if e:

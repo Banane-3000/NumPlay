@@ -218,6 +218,32 @@ void nw_band_begin(uint8_t *band, int x0, int x1) {
 uint8_t host_doom_screen[SCREENWIDTH * SCREENHEIGHT]; /* (tests: the frame in Doom's own pixels) */
 #endif
 
+/* the melt (nw/nw_back.inc): the band's columns of the screen moved down, the new rows above them */
+extern int16_t nw_melt_from[SCREENWIDTH / 2], nw_melt_to[SCREENWIDTH / 2];
+extern int nw_melting;
+static void nw_melt_band(int x0, int x1) {
+    uint16_t col[8 * PLAT_H], doom[SCREENHEIGHT];
+    for (int x = x0; x < x1; x += 8) {
+        int moved = 0;
+        for (int c = 0; c < 8; c += 2) moved |= nw_melt_to[(x + c) / 2] > nw_melt_from[(x + c) / 2];
+        if (!moved) continue;
+        plat_pull(x, 0, 8, PLAT_H, col);
+        for (int c = 0; c < 8; c++) {
+            int from = nw_melt_from[(x + c) / 2], to = nw_melt_to[(x + c) / 2];
+            if (to <= from) continue;
+            /* the screen's rows as Doom's (screen row 6k + j is Doom's 5k + j, the sixth the fifth again) */
+            for (int d = 0; d < SCREENHEIGHT; d++) doom[d] = col[(d / 5 * 6 + d % 5) * 8 + c];
+            for (int d = SCREENHEIGHT - 1; d >= to; d--) doom[d] = doom[d - to + from];
+            for (int d = from; d < to; d++) doom[d] = palette[nw_band[d * NW_BAND_W + x + c - x0]];
+            for (int l = 0; l < PLAT_H; l++) {
+                int j = l % 6;
+                col[l * 8 + c] = doom[l / 6 * 5 + (j < 5 ? j : 4)];
+            }
+        }
+        plat_push(x, 0, 8, PLAT_H, col);
+    }
+}
+
 void nw_band_end(int x0, int x1) {
     int w = x1 - x0;
 #ifdef HOST
@@ -229,6 +255,10 @@ void nw_band_end(int x0, int x1) {
     nw_band_ms += (made - nw_band_ms) / 4;
     if (nw_sync_period && !nw_sync_off) nw_sync_band(j);
     uint32_t t = plat_millis();
+    if (nw_melting) {
+        nw_melt_band(x0, x1);
+        return;
+    }
     uint16_t lines[NW_BAND_W * 24];
     for (int y = 0; y < SCREENHEIGHT; y += 20) {
         const uint8_t *src = nw_band + y * NW_BAND_W;

@@ -1312,6 +1312,9 @@ static void nw_draw_vis_sprite(vissprite_t *vis, int x1, int x2) {
     nw_masked_flush();
 }
 
+// the columns of each masked seg drawn in the band
+static uint64_t nw_masked_done[NW_DRAWSEG_MAX];
+
 // vanilla's R_RenderMaskedSegRange
 static void nw_masked_seg_range(nw_drawseg_t *ds, int x1, int x2) {
     if (x1 > x2) return;
@@ -1335,8 +1338,12 @@ static void nw_masked_seg_range(nw_drawseg_t *ds, int x1, int x2) {
     framedrawable_t *fd = lookup_masked_texture(m->texture);
     int width_mask = whd_textures[m->texture].width - 1;
     if (fixedcolormap) dc_colormap_index = fixedcolormap;
+    uint64_t *done = &nw_masked_done[ds - nw_drawsegs];
     for (dc_x = x1; dc_x <= x2; dc_x++, spryscale += step) {
-        if (cols[dc_x] == SHRT_MAX) continue;
+        // (each column once in the band: the frame may be drawn again, in a melt, so the columns are kept)
+        uint64_t bit = (uint64_t) 1 << (dc_x - nw_band_x0);
+        if (*done & bit) continue;
+        *done |= bit;
         if (!fixedcolormap) {
             unsigned index = spryscale >> LIGHTSCALESHIFT;
             if (index >= MAXLIGHTSCALE) index = MAXLIGHTSCALE - 1;
@@ -1345,7 +1352,6 @@ static void nw_masked_seg_range(nw_drawseg_t *ds, int x1, int x2) {
         sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
         dc_iscale = 0xffffffffu / (unsigned) spryscale;
         nw_draw_masked_column(R_GetMaskedColumn(fd, cols[dc_x] & width_mask));
-        cols[dc_x] = SHRT_MAX;
     }
     nw_masked_flush();
 }
@@ -1488,6 +1494,7 @@ int nw_fuzz_prepass(int fuzzpos) {
 
 // the band's sprites, masked walls and weapon (nw_band_x0 to nw_band_x1): vanilla's R_DrawMasked
 void nw_draw_masked(void) {
+    memset(nw_masked_done, 0, nw_drawseg_count * sizeof nw_masked_done[0]);
     for (int k = 0; k < nw_vissprite_count; k++) {
         vissprite_t *spr = &nw_vissprites[nw_vis_order[k]];
         if (spr->x2 < nw_band_x0 || spr->x1 >= nw_band_x1) continue;

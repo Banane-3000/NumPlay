@@ -980,7 +980,7 @@ void G_Ticker (void)
     // do things to change the game state
     while (gameaction != ga_nothing)
     {
-#if DOOM_TINY
+#if DOOM_TINY && !NUMWORKS
         if (gameaction == ga_loadlevel || gameaction == ga_newgame || gameaction == ga_completed || gameaction == ga_worlddone) {
             // we prefer (real doom seems to, chocolate doesn't, but i think it looks better without the menu wiping at least)
             // to remove menu/status before wipe, so insert an extra frame so it can be drawn as an (non framebuffer) overlay instead
@@ -1158,7 +1158,7 @@ void G_Ticker (void)
     { 
       case GS_LEVEL:
 	P_Ticker ();
-#if DOOM_TINY
+#if DOOM_TINY && !NUMWORKS
     if (!pre_wipe_state)
 #endif
 	    ST_Ticker ();

@@ -102,6 +102,10 @@ void host_demo_end(void) {
            gametic, leveltime, gameepisode, gamemap, mo ? mo->xy.x : 0, mo ? mo->xy.y : 0, mo ? mo->z : 0,
            mo ? (unsigned)mobj_full(mo)->angle : 0u, p->health, p->armorpoints, p->killcount, p->itemcount,
            p->secretcount, p->ammo[0], p->ammo[1], p->ammo[2], p->ammo[3], (int)p->readyweapon, prndindex, rndindex);
+    int mapped = 0;
+    line_t *li = lines;
+    for (int i = 0; i < (int)numlines; i++, li += line_next_step(li)) mapped += line_is_mapped(li) != 0;
+    printf("MAPPED %d of %d\n", mapped, (int)numlines);
     fflush(stdout);
 }
 
