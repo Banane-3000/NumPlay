@@ -5,7 +5,6 @@
  * the sleepers) are kept in tables, sharp ones near and blurred ones far (each half as wide as the one
  * before), and a row only reads its table at a steady step: no flicker on the far rails. The sleepers come
  * one row in so many: rows that see part of one get a table with them mixed in. */
-#include <string.h>
 #include "actors.h"
 #include "scene.h"
 
@@ -22,6 +21,8 @@ enum { G_NONE, G_SLEEPER, G_MIX, G_KINDS };
 static uint16_t ground[2][G_KINDS][GROUND_W * 2];   /* outside and in tunnels; levels one after the other */
 static const int level_at[LEVELS] = {0, 384, 576, 672, 720, 744, 756};
 static uint16_t sky[SCREEN_H];
+/* how far the details go: on the slower calculators (N0110, N0115) they stop sooner, and the haze comes nearer */
+static float detail = 1;
 static int horizon;                /* the first row of ground */
 
 /* each row of ground: its table, where it starts and its step (16.16), its haze */
@@ -74,7 +75,13 @@ static void ground_tables(void) {
     }
 }
 
-void scene_init(void) { ground_tables(); }
+void scene_init(void) {
+  ground_tables();
+  if (plat_slow()) {
+    detail = 0.65f;
+    r_haze0 *= detail, r_haze1 *= detail;
+  }
+}
 
 float scene_light(float z) { return world_tunnel(z) ? 0.5f : 1.0f; }
 uint32_t scene_lit(uint32_t rgb, float z) { return world_tunnel(z) ? r_mix888(r_mix888(rgb, 0, 120), 0x10203A, 30) : rgb; }
@@ -295,7 +302,7 @@ static void graffiti(float x, int dir, float z0, float w, float h, uint32_t seed
   float cu0 = u0 - cell * 1.1f, cu1 = u0 + ww + cell * 1.1f + lean * lh, cv0 = v0 - cell * 1.2f, cv1 = v0 + lh + cell * 1.1f, r = cell * 1.2f;
   float c[16] = {cu0 + r, cv1, cu1 - r, cv1, cu1, cv1 - r, cu1, cv0 + r, cu1 - r, cv0, cu0 + r, cv0, cu0, cv0 + r, cu0, cv1 - r};
   on_wall(x, dir, z0, w, c, 8, cloud, P_DECAL);
-  if (dist > 85) return;
+  if (dist > 85 * detail) return;
   for (int i = 0; i < n; i++) {
     const Letter *L = letter(word[i]);
     if (!L) continue;
@@ -306,7 +313,7 @@ static void graffiti(float x, int dir, float z0, float w, float h, uint32_t seed
       float y0 = v0 + L->bar[b][1] * cell, y1 = v0 + L->bar[b][3] * cell;
       /* leaning: the higher, the further along */
       float q[8] = {x0 + lean * (y1 - v0), y1, x1 + lean * (y1 - v0), y1, x1 + lean * (y0 - v0), y0, x0 + lean * (y0 - v0), y0};
-      if (dist < 50) {
+      if (dist < 50 * detail) {
         float d = cell * 0.35f;
         float sh[8] = {q[0] + d, q[1] - d, q[2] + d, q[3] - d, q[4] + d, q[5] - d, q[6] + d, q[7] - d};
         on_wall(x, dir, z0, w, sh, 4, shadow, P_DECAL2);
@@ -322,13 +329,13 @@ static const uint32_t house[8] = {0xC4553A, 0xE8C9A0, 0x5E8FC4, 0xF2E6C8, 0x3FA6
 static void building(int dir, float z0, float z1, float near_x, float depth, float h, uint32_t col, float dist) {
   float x0 = dir > 0 ? -near_x - depth : near_x, x1 = dir > 0 ? -near_x : near_x + depth;
   cube(x0, 0, z0, x1, h, z1, col, 2);
-  if (dist > 110) return;
+  if (dist > 110 * detail) return;
   /* windows, floor by floor, on the side facing the tracks and the end facing the camera */
   uint32_t glass = L(0x2C4A6E);
   float wx = dir > 0 ? x1 : x0;
   for (float y = 3.6f; y + 1.6f < h - 0.8f; y += 3.2f) {
     side(wx, dir, z0 + 0.8f, z1 - 0.8f, y, y + 1.5f, glass, P_DECAL);
-    if (dist < 70) front(z0, x0 + 0.8f, x1 - 0.8f, y, y + 1.5f, glass, P_DECAL);
+    if (dist < 70 * detail) front(z0, x0 + 0.8f, x1 - 0.8f, y, y + 1.5f, glass, P_DECAL);
   }
 }
 
@@ -343,7 +350,7 @@ static void station_side(int dir, float z0, float dist, uint32_t hs) {
   r_poly(line, 4, L(0xF2C230), P_DECAL, 0);
   /* the wall behind: tiles, posters, the sign */
   side(back, dir, z0, z0 + BLOCK, 1.1f, 6.4f, L(0xE9E2CF), 0);
-  if (dist < 100) {
+  if (dist < 100 * detail) {
     for (int k = 0; k < 3; k++) {
       float pz = z0 + 2.5f + (float)k * 8;
       uint32_t c = spray[(hs >> (k * 3)) % 7];
@@ -388,7 +395,7 @@ static void open_block(int b, float z0, float dist) {
       float px0 = dir > 0 ? wx - 0.2f : wx - 0.25f, px1 = dir > 0 ? wx + 0.25f : wx + 0.2f;
       cube(px0, 0, pz, px1, wh + 0.3f, pz + 0.7f, 0x8E877D, 2);
     }
-    if (dist < 110) {
+    if (dist < 110 * detail) {
       for (int k = 0; k < 2; k++) {
         uint32_t g = world_hash(hs + (uint32_t)k * 31);
         if (g % 4 == 0) continue;
@@ -402,7 +409,7 @@ static void open_block(int b, float z0, float dist) {
       float bh = 9 + (float)(g % 16), depth = 8 + (float)(g >> 4 & 7);
       float bz = z0 + (float)k * 12 + 0.6f;
       building(dir, bz, bz + 10.8f, 7.5f + (float)(g >> 8 & 3), depth, bh, house[(g >> 12) & 7], dist);
-      if ((g >> 16) % 3 == 0 && dist < 80) {
+      if ((g >> 16) % 3 == 0 && dist < 80 * detail) {
         /* a water tank on the roof */
         float cx = dir > 0 ? -12 : 12;
         cube(cx - 1.2f, bh, bz + 3, cx + 1.2f, bh + 2.2f, bz + 5.4f, 0x8A5A3C, 2);
@@ -430,7 +437,7 @@ static void tunnel_block(float z0, float dist) {
   side(-WALL_X, 1, z0, z0 + BLOCK, 0, ROOF, scene_lit(wall, z0), 0);
   side(WALL_X, -1, z0, z0 + BLOCK, 0, ROOF, scene_lit(wall, z0), 0);
   ceiling(ROOF, -WALL_X, WALL_X, z0, z0 + BLOCK, scene_lit(dark, z0));
-  if (dist < 120)
+  if (dist < 120 * detail)
     for (int k = 0; k < 3; k++) {
       float lz = z0 + 4 + (float)k * 8;
       side(-WALL_X + 0.01f, 1, lz, lz + 1.2f, 5.6f, 6.0f, 0xFFF2B0, P_DECAL | P_NOHAZE);
@@ -445,7 +452,7 @@ static void tunnel_block(float z0, float dist) {
     front(z0, WALL_X, 60, 0, 14, brick, 0);
     front(z0, -WALL_X, WALL_X, ROOF, 14, brick, 0);
     /* courses of brick, a darker band on top, a frame round the opening */
-    if (dist < 110) {
+    if (dist < 110 * detail) {
       for (int i = 1; i <= 4; i++) {
         float y = 1.5f * (float)i;
         front(z0, -60, -WALL_X - 0.9f, y, y + 0.12f, line, P_DECAL);
@@ -476,7 +483,7 @@ static void car(float lx, float z0, float z1, int look, bool head, bool moving, 
   cube(lx - 0.85f, 0.18f, z0 + 0.6f, lx + 0.85f, 0.5f, z1 - 0.6f, 0x2B2B30, 1 | 2);
   cube(lx - 1.0f, 0.0f, z0 + 0.8f, lx + 1.0f, 0.55f, z0 + 3.0f, 0x232327, 1 | 2);
   cube(lx - 1.0f, 0.0f, z1 - 3.0f, lx + 1.0f, 0.55f, z1 - 0.8f, 0x232327, 1 | 2);
-  if (dist > 120) return;
+  if (dist > 120 * detail) return;
   uint32_t glass = L(0x2B4260), door = L(r_mix888(body, 0, 60)), b = L(band);
   for (int s = -1; s <= 1; s += 2) {
     float x = s < 0 ? x0 - 0.005f : x1 + 0.005f;
@@ -489,7 +496,7 @@ static void car(float lx, float z0, float z1, int look, bool head, bool moving, 
       side(x, dir, dz, dz + 1.3f, 0.6f, 3.0f, door, P_DECAL);
       side(x, dir, dz + 0.2f, dz + 1.1f, 1.9f, 2.8f, glass, P_DECAL2);
     }
-    if (dist < 80)
+    if (dist < 80 * detail)
       for (int w = 0; w < 4; w++) {
         float wz = z0 + len * (0.05f + 0.115f * (float)w) + (w >= 2 ? len * 0.36f : 0);
         side(x, dir, wz, wz + len * 0.09f, 1.95f, 2.8f, glass, P_DECAL);
@@ -595,7 +602,7 @@ static void coin(const Item *it, float t) {
 }
 
 void scene_draw(float t) {
-  float zfar = cam.z + 175;
+  float zfar = cam.z + 175 * detail;
   int b0 = (int)(cam.z / BLOCK) - (cam.z < 0), b1 = (int)(zfar / BLOCK);
   for (int b = b1; b >= b0; b--) {
     float z0 = (float)b * BLOCK, dist = z0 - cam.z;
@@ -611,7 +618,6 @@ void scene_draw(float t) {
     const Obstacle *o = &obs[i];
     if (o->z0 > zfar || o->z1 < cam.z) continue;
     lit = world_tunnel(o->z0) ? 128 : 256;
-    float dist = o->z0 - cam.z;
     if (o->type == O_TRAIN || o->type == O_MOVING) {
       float z = o->z0;
       for (int c = 0; c < o->cars; c++, z += CAR_LEN + CAR_GAP) {
@@ -621,11 +627,10 @@ void scene_draw(float t) {
       }
     } else if (o->type == O_RAMP) ramp(LANE_X(o->lane), o->z0, o->z1);
     else barrier(o);
-    (void)dist;
   }
   for (int i = 0; i < nitems; i++) {
     const Item *it = &items[i];
-    if (it->z > cam.z + 120 || it->z < cam.z + 1) continue;
+    if (it->z > cam.z + 120 * detail || it->z < cam.z + 1) continue;
     if (it->kind == I_COIN) coin(it, t);
     else actors_pickup(it, t);
   }

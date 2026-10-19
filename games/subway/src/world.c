@@ -189,7 +189,7 @@ static float pattern(float z, float speed) {
     train(2, z, cars);
     int n = 1 + (int)(d * 2.5f);
     for (int i = 0; i < n; i++) {
-      float bz = z + 8 + (float)i * (len - 12) / (float)(n > 1 ? n - 1 : 1) * (n > 1);
+      float bz = n > 1 ? z + 8 + (float)i * (len - 16) / (float)(n - 1) : z + len / 2;
       int t = rn(2) ? O_HURDLE : O_HIGHBAR;
       barrier(t, 1, bz);
       if (t == O_HURDLE) coin_arc(1, bz, 0);

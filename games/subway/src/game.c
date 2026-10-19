@@ -361,7 +361,6 @@ static void collide(float prev_x) {
 }
 
 void run_step(uint32_t keys, uint32_t pressed) {
-  (void)keys;
   if (run.toast_t > 0) run.toast_t -= DT;
   for (int i = 0; i < NSPARKS; i++)
     if (sparks[i].t < 1) sparks[i].t += DT;
