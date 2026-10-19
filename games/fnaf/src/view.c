@@ -75,10 +75,10 @@ static bool wrap(int font, const char *s, int w, int k, const char **start, int 
 
 /* ------------------------------------------------------------------ around the view */
 static void clock_and_night(void) {
-  int h = N.hour ? N.hour : 12;
-  int w = gfx_text_w(FONT_BIG, " AM") + gfx_text_w(FONT_CLOCK, h >= 10 ? "12" : "1");
-  int x = 310 - w;
-  x += gfx_text(FONT_CLOCK, x, 6, h >= 10 ? (h == 12 ? "12" : "10") : (char[]){(char)('0' + h), 0}, WHITE);
+  char h[3] = {'1', '2', 0};   /* 12 AM, then 1 to 5 */
+  if (N.hour) h[0] = (char)('0' + N.hour), h[1] = 0;
+  int x = 310 - gfx_text_w(FONT_BIG, " AM") - gfx_text_w(FONT_CLOCK, h);
+  x += gfx_text(FONT_CLOCK, x, 6, h, WHITE);
   gfx_text(FONT_BIG, x, 8, " AM", WHITE);
   int nx = 310 - gfx_text_w(FONT_HUD, "Night ") - gfx_text_w(FONT_PIXEL, "0");
   nx += gfx_text(FONT_HUD, nx, 31, "Night ", WHITE);
@@ -209,7 +209,7 @@ static void camera_map(void) {
       if (row[c >> 3] >> (c & 7) & 1) d[c] = WHITE;
   }
   const uint8_t *centres = m + 4 + size * stride;
-  bool blink = (int)(g.t * 3) & 1 ? false : true;
+  bool blink = !((int)(g.t * 3) & 1);
   for (int k = 0; k < CAM_COUNT; k++) {
     int cx = mx + (int)rd16(centres + 4 * k), cy = my + (int)rd16(centres + 4 * k + 2);
     bool sel = k == N.cam;

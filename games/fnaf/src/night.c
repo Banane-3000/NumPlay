@@ -82,7 +82,6 @@ static void power_out(void) {
   caption("*the power goes out*");
 }
 
-bool night_power_out(void) { return N.dark != 0; }
 
 /* ------------------------------------------------------------------ the office */
 static bool side_in_view(int side) { return side == LEFT ? N.pan <= 24 : N.pan >= OFFICE_PAN - 24; }
@@ -276,7 +275,8 @@ static void wanderer(int who) {
 
 static void freddy(void) {
   uint8_t *pos = &N.pos[FREDDY];
-  if (*pos == IN_OFFICE) {   /* a try every second, 1 in 4 */
+  if (*pos == IN_OFFICE) {   /* once the monitor is down: a try every second, 1 in 4 */
+    if (watching()) return;
     N.freddy_try += DT;
     if (N.freddy_try >= 1) {
       N.freddy_try -= 1;

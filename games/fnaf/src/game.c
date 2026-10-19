@@ -12,7 +12,6 @@ uint32_t rnd(void) {
   seed ^= seed << 13, seed ^= seed >> 17, seed ^= seed << 5;
   return seed;
 }
-float rndf(void) { return (float)(rnd() >> 8) / 16777216.0f; }
 
 static bool pressed(uint32_t k) { return (g.pressed & k) != 0; }
 

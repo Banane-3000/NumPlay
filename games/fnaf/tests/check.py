@@ -132,8 +132,9 @@ if s:
 s, ev = run(["--night", "1", "--ai", "20,0,0,0"], 60 * 40, None, "Freddy waits")
 if s:
     check(s["pos"][0] == 0, f"Freddy left the stage before the others: {s}")
-# with them gone he comes to the East Hall Corner, then in while the monitor looks elsewhere
-s, ev = run(["--night", "1", "--ai", "20,0,0,0", "--pos", "0,5,7", "--keys", "3000:8"], 60 * 70, None, "Freddy")
+# with them gone he comes to the East Hall Corner, then in while the monitor looks elsewhere; he gets you once
+# it is down
+s, ev = run(["--night", "1", "--ai", "20,0,0,0", "--pos", "0,5,7", "--keys", "3000:8,3300:8"], 60 * 80, None, "Freddy")
 if s:
     check(any(e["kind"] == "scare" and int(e["who"]) == SCARE_FREDDY for e in ev), f"Freddy: {s} {ev}")
 

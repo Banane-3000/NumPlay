@@ -39,11 +39,10 @@ typedef struct {
   uint8_t freddy_state;  /* 0 waits, 1 counts down, 2 goes at the next chance */
   uint8_t foxy;          /* 0 behind the curtain, 1 peeking, 2 out, 3 gone down the hall */
   uint8_t foxy_pounds;   /* times he hit the closed door */
-  uint8_t foxy_seen;     /* seen running in 2A */
   uint8_t gold;          /* Golden Freddy: 0 may come, 1 on 2B's poster, 2 seen there, 3 in the office, 4 gone */
   uint8_t call_muted;
   uint8_t dark;          /* the power is out: 1 dark, 2 Freddy at the door, 3 all black */
-  uint8_t pad[3];
+  uint8_t pad[4];
   float t;               /* seconds since 12 AM */
   float hour_t;
   float drain_t, penalty_t;
@@ -89,20 +88,17 @@ void game_init(void);
 void game_step(uint32_t keys);
 void game_draw(void);
 uint32_t rnd(void);
-float rndf(void);
 void start_night(int night);
 void caption(const char *s);
 
 /* night.c */
 void night_begin(int night);
 void night_step(void);
-bool night_power_out(void);
 
 /* view.c */
 void view_night(void);
 void view_scare(void);
 void view_captions(void);
-void view_clock(void);
 
 /* calls.c: the phone call's line at t seconds into the night, or NULL; and when it ends */
 const char *call_line(int night, float t);
