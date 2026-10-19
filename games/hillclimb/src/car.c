@@ -44,7 +44,7 @@ void car_init(Car *c, int veh, const uint8_t lv[4], float x) {
   const VehDef *d = &vehicles[veh];
   const VehArt *a = &veh_art[veh];
   memset(c, 0, sizeof *c);
-  c->veh = veh, c->nw = a->naxles, c->tree_broken = -1;
+  c->veh = veh, c->nw = a->naxles, c->tree_broken = -1, c->tree_hurt_id = -1;
   float eng = 0, sus = 0, tir = 0, awd = d->awd, air = d->air, down = 0;
   for (int u = 0; u < 4; u++) {
     float f = (float)(lv[u] - 1) / (float)(d->max[u] - 1);
@@ -376,6 +376,21 @@ void car_step(Car *c, float gas, float brake, bool fuel) {
     /* a little air: nothing spins forever */
     c->ch.w *= 1 - 0.3f * DT;
     find_contacts(c);
+    /* a tree hit fast snaps at once: the vehicle goes through, a little slower */
+    for (int i = 0; i < ncon; i++) {
+      Contact *k = &con[i];
+      if (k->tree < 0 || !stage_tree_standing(k->tree)) continue;
+      float vn = (k->b->vx - k->b->w * k->ry) * k->nx + (k->b->vy + k->b->w * k->rx) * k->ny;
+      if (vn > -3.5f) continue;
+      stage_tree_fall(k->tree);
+      c->tree_broken = k->tree;
+      c->ch.vx *= 0.85f;
+      for (int w = 0; w < c->nw; w++) c->wh[w].vx *= 0.85f;
+    }
+    for (int i = 0; i < ncon;) {   /* (the pushes of trees that fell are gone) */
+      if (con[i].tree >= 0 && !stage_tree_standing(con[i].tree)) con[i] = con[--ncon];
+      else i++;
+    }
     prepare_contacts();
     prepare_joints(c, gas, brake, fuel);
     for (int it = 0; it < ITER; it++) {
@@ -383,11 +398,19 @@ void car_step(Car *c, float gas, float brake, bool fuel) {
       solve_contacts();
     }
     /* trees that took too hard a knock fall */
-    for (int i = 0; i < ncon; i++)
-      if (con[i].tree >= 0 && con[i].jn > 55.0f) {
+    for (int i = 0; i < ncon; i++) {
+      if (con[i].tree < 0) continue;
+      float knock = 0;   /* (all the pushes on that tree this step) */
+      for (int j = 0; j < ncon; j++)
+        if (con[j].tree == con[i].tree) knock += con[j].jn, con[j].jn = 0;
+      /* a hard knock, or pushing on it a while */
+      if (c->tree_hurt_id != con[i].tree) c->tree_hurt_id = con[i].tree, c->tree_hurt = 0;
+      c->tree_hurt += knock;
+      if (knock > 300.0f || c->tree_hurt > 700.0f) {
         stage_tree_fall(con[i].tree);
         c->tree_broken = con[i].tree;
       }
+    }
     integrate(&c->ch);
     for (int i = 0; i < c->nw; i++) {
       integrate(&c->wh[i]);

@@ -179,8 +179,9 @@ void run_frame(uint32_t keys) {
   if (c->tree_broken >= 0) {
     float tx;
     if (stage_tree(c->tree_broken, &tx))
-      for (int s = 0; s < 6; s++)
-        particle(tx, stage_floor(tx) + 0.6f + rndf() * 1.4f, rndf() * 3, rndf() * 2, 0.7f, 0.35f, 0);
+      for (int s = 0; s < 14; s++)
+        particle(tx, stage_floor(tx) + 0.3f + rndf() * 2.0f, c->ch.vx * 0.5f + rndf() * 4 - 1, rndf() * 4, 0.9f,
+                 0.3f + rndf() * 0.2f, 0);
   }
   /* fuel burns while the run goes on */
   if (!run.over && run.fuel > 0) {
@@ -390,15 +391,11 @@ static void draw_trees(void) {
     }
     if (tx > x1w) break;
     float ty = stage_floor(tx), sc = s / (img(IMG_TREE_TOP)->ppm4 / 4.0f);
-    if (stage_tree_standing(k)) {
-      /* a pine: the trunk, then three tiers of branches, each smaller */
-      gfx_image(IMG_TREE_TRUNK, scr_x(tx), scr_y(ty) + 2, sc, 0, 255);
-      for (int i = 0; i < 3; i++)
-        gfx_image(IMG_TREE_TOP, scr_x(tx), scr_y(ty + 0.75f + 0.55f * (float)i), sc * (1 - 0.18f * (float)i), 0, 255);
-    } else {   /* knocked down: lying ahead */
-      gfx_image(IMG_TREE_TRUNK, scr_x(tx + 0.4f), scr_y(ty + 0.2f), sc, -1.35f, 255);
-      gfx_image(IMG_TREE_TOP, scr_x(tx + 1.5f), scr_y(ty + 0.25f), sc, -1.45f, 255);
-    }
+    if (!stage_tree_standing(k)) continue;   /* (knocked down: gone in a burst of needles and bark) */
+    /* a pine: the trunk, then three tiers of branches, each smaller */
+    gfx_image(IMG_TREE_TRUNK, scr_x(tx), scr_y(ty) + 2, sc, 0, 255);
+    for (int i = 0; i < 3; i++)
+      gfx_image(IMG_TREE_TOP, scr_x(tx), scr_y(ty + 0.75f + 0.55f * (float)i), sc * (1 - 0.18f * (float)i), 0, 255);
   }
 }
 

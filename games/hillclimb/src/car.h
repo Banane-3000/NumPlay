@@ -34,6 +34,8 @@ typedef struct {
   float wob[2], wobv[2];    /* Bill's head nodding on its neck (chassis frame) */
   float last_vx, last_vy;
   int tree_broken;          /* a tree knocked down this step, or -1 */
+  int tree_hurt_id;         /* the tree being pushed on, and how hard so far (N s) */
+  float tree_hurt;
 } Car;
 
 /* levels: the vehicle's four upgrades (1 and up) */
