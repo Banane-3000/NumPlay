@@ -309,7 +309,7 @@ static void traps(void) {
     const uint8_t *r = o->r;
     int kind = r[0] & 15, b[4];
     if (kind == K_SAW || o->t > 200) mark((o->y >> 4) - 1, r[4] + 2); /* turning, springing */
-    if (kind == K_SPRING && o->t > 200 && ++o->t == 0) o->t = 0;
+    if (kind == K_SPRING && o->t > 200) o->t++; /* (springing back, to 0) */
     if (kind == K_BUTTON && o->st == S_DONE && !touching(o)) o->st = S_WAIT, mark(o->y >> 4, r[4]);
     if (o->st == S_WAIT && !dead && !won && fired(o)) o->st = S_DELAY, o->t = (uint8_t)((r[9] >> 4) * 4);
     if (o->st == S_DELAY && !(o->t && o->t--)) {
@@ -351,9 +351,8 @@ static void contacts(void) {
     if (!o->on) continue;
     box(o, b);
     if (kind >= K_SPIKE_U && kind <= K_SPIKE_R) { /* the points, a little inside the teeth */
-      int u = kind == K_SPIKE_U, d = kind == K_SPIKE_D, l = kind == K_SPIKE_L, rr = kind == K_SPIKE_R;
-      int hb[4] = {b[0] + (u || d ? 1 : 2 * l), b[1] + (l || rr ? 1 : 2 * u), b[2] - (u || d ? 2 : 2),
-                   b[3] - (l || rr ? 2 : 2)};
+      int vert = kind <= K_SPIKE_D, hb[4] = {b[0] + (vert ? 1 : 2 * (kind == K_SPIKE_L)),
+                                             b[1] + (vert ? 2 * (kind == K_SPIKE_U) : 1), b[2] - 2, b[3] - 2};
       if (overlap(x, y, PW, PH, hb)) die();
     } else if (kind == K_SAW) { /* the nearest point of the box to the middle of the saw */
       int c = b[2] / 2, cx = b[0] + c, cy = b[1] + c, dx = cx - clampi(cx, x, x + PW - 1), dy = cy - clampi(cy, y, y + PH - 1);
@@ -399,7 +398,10 @@ static void step(int in) {
   int ice = mode & R_ICE && ground, acc = ground ? (ice ? 5 : 60) : 40, dec = ground ? (ice ? 3 : 90) : 20;
   if (dir) vx = clampi(vx + dir * acc, -RUN, RUN), face = dir;
   else vx = vx > dec ? vx - dec : vx < -dec ? vx + dec : 0;
-  if (buffer && (buffer--, coyote || mode & R_AIR)) vy = -g * JUMP, buffer = coyote = 0;
+  if (buffer) { /* jump asked for a moment ago, on the ground or just off it (or anywhere in R_AIR) */
+    buffer--;
+    if (coyote || mode & R_AIR) vy = -g * JUMP, buffer = coyote = 0;
+  }
   sprung &= vy * g < 0; /* (a spring's lift isn't cut short like a jump let go) */
   vy += g * (vy * g < 0 && !(in & I_JUMP) && !sprung ? 3 * GRAV : GRAV);
   if (vy * g > FALL) vy = g * FALL;
