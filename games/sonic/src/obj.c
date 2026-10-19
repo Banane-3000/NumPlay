@@ -125,8 +125,40 @@ void AnimateSprite(Obj *o, const uint8_t *ani) {
 }
 
 /* ------------------------------------------------------------------ the sprite list */
+static int spr_n; /* v_spritecount */
+
+/* a frame's pieces into the sprite list at x, y (plus 128), flipped as render says (BuildSpr_Normal...) */
+void BuildSpr_Pieces(const uint8_t *p, int count, int16_t x, int16_t y, uint8_t r, uint16_t gfx) {
+  for (int i = 0; i < count && spr_n < 80; i++, p += 6) {
+    int8_t py = (int8_t)p[0], px = (int8_t)p[4];
+    uint8_t size = p[1];
+    uint16_t tile = (uint16_t)(p[2] | p[3] << 8);
+    int16_t sy = py, sx = px;
+    if (r & 2) sy = (int16_t)(-sy - (((size << 3) & 0x18) + 8));
+    if (r & 1) sx = (int16_t)(-sx - (((size << 1) & 0x18) + 8));
+    tile = (uint16_t)(tile + gfx);
+    tile ^= (uint16_t)((r & 1) << 11 | (r & 2) << 11);
+    Sprite *s = &spritetable[spr_n];
+    s->y = (int16_t)(sy + y);
+    s->size = size;
+    s->tile = tile;
+    int16_t fx = (int16_t)((sx + x) & 0x1FF);
+    s->x = fx ? fx : 1;
+    spr_n++;
+    s->link = (uint8_t)spr_n;
+  }
+}
+
+/* the end of the list: its last sprite links to none */
+void BuildSpr_End(void) {
+  int n = spr_n;
+  if (n == 80) spritetable[79].link = 0;
+  else spritetable[n].link = 0, spritetable[n].y = 0, spritetable[n].size = 0, spritetable[n].tile = 0, spritetable[n].x = 0;
+  if (n == 0) spritetable[0].y = 0;
+}
+
 void BuildSprites(void) {
-  int n = 0;
+  spr_n = 0;
   for (int layer = 0; layer < 8; layer++) {
     struct spritequeue_s *q = &spritequeue[layer];
     for (int k = 0; k < q->n; k++) {
@@ -154,41 +186,16 @@ void BuildSprites(void) {
         y = obScreenY(o);
         x = o->x.w.i;
       }
-      const uint8_t *p;
-      int count;
-      if (r & 0x20) {
-        p = o->map; /* a single piece */
-        count = 1;
-      } else {
-        p = map_frame(o->map, o->frame);
-        count = p[0];
-        p += 2;
-      }
-      for (int i = 0; i < count && n < 80; i++, p += 6) {
-        int8_t py = (int8_t)p[0], px = (int8_t)p[4];
-        uint8_t size = p[1];
-        uint16_t tile = (uint16_t)(p[2] | p[3] << 8);
-        int16_t sy = py, sx = px;
-        if (r & 2) sy = (int16_t)(-sy - (((size << 3) & 0x18) + 8));
-        if (r & 1) sx = (int16_t)(-sx - (((size << 1) & 0x18) + 8));
-        tile = (uint16_t)(tile + o->gfx);
-        tile ^= (uint16_t)((r & 1) << 11 | (r & 2) << 11);
-        Sprite *s = &spritetable[n];
-        s->y = (int16_t)(sy + y);
-        s->size = size;
-        s->tile = tile;
-        int16_t fx = (int16_t)((sx + x) & 0x1FF);
-        s->x = fx ? fx : 1;
-        n++;
-        s->link = (uint8_t)n;
+      if (r & 0x20) BuildSpr_Pieces(o->map, 1, x, y, r, o->gfx); /* a single piece */
+      else {
+        const uint8_t *p = map_frame(o->map, o->frame);
+        BuildSpr_Pieces(p + 2, p[0], x, y, r, o->gfx);
       }
       o->render |= 0x80;
     }
     q->n = 0;
   }
-  if (n == 80) spritetable[79].link = 0;
-  else spritetable[n].link = 0, spritetable[n].y = 0, spritetable[n].size = 0, spritetable[n].tile = 0, spritetable[n].x = 0;
-  if (n == 0) spritetable[0].y = 0;
+  BuildSpr_End();
 }
 
 /* ------------------------------------------------------------------ the object manager */

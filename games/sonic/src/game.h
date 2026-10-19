@@ -13,6 +13,8 @@ void GM_Continue(void);
 void GM_Ending(void);
 void GM_Credits(void);
 void PauseGame(void);
+void clear_level_ram(void);
+void MoveSonicInDemo(void);
 void pause_overlay_draw(void);
 
 /* saves (save.c) */
@@ -32,6 +34,8 @@ void Sonic_ResetOnFloor(Obj *o);
 void Sonic_ChkRoll(Obj *o);
 void Sonic_AnglePos(Obj *o);
 void Sonic_LoadGfx(Obj *o);
+void Sonic_Animate(Obj *o);
+void CollectRing(void);
 int ReactToItem(Obj *o);
 int HurtSonic(Obj *o, Obj *by);
 void KillSonic(Obj *o, Obj *by);

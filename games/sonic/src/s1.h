@@ -320,6 +320,8 @@ enum {
 /* ------------------------------------------------------------------ objects (obj.c) */
 void ExecuteObjects(void);
 void BuildSprites(void);
+void BuildSpr_Pieces(const uint8_t *p, int count, int16_t x, int16_t y, uint8_t r, uint16_t gfx);
+void BuildSpr_End(void);
 void DisplaySprite(Obj *o);
 void DeleteObject(Obj *o);
 Obj *FindFreeObj(void);

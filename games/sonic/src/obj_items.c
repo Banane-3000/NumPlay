@@ -9,7 +9,7 @@
 #define ring_origX 0x32
 #define ring_respawnbit 0x34
 
-static void CollectRing(void) {
+void CollectRing(void) {
   V.rings++;
   V.f_ringcount |= 1;
   if (V.rings < 100) return;

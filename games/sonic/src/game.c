@@ -35,7 +35,7 @@ void MoveSonicInDemo(void) {
   }
 }
 
-static void clear_level_ram(void) {
+void clear_level_ram(void) {
   memset(objs, 0, sizeof objs);
   /* v_misc_variables, v_levelvariables, v_timingandscreenvariables */
   V.vblank_routine = 0;
@@ -61,6 +61,7 @@ static void clear_level_ram(void) {
   V.ssangle = V.ssrotate = 0;
   V.btnpushtime1 = V.btnpushtime2 = 0;
   V.palchgspeed = 0;
+  V.palss_num = V.palss_time = V.palss_index = V.ssbganim = 0;
   V.obj31ypos = 0;
   V.bossstatus = 0;
   V.trackpos = 0;

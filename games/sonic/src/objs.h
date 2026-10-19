@@ -208,6 +208,11 @@ void BossFinal(Obj *o);
 void EggmanCylinder(Obj *o);
 void BossPlasma(Obj *o);
 
+/* special.c */
+void SonicSpecial(Obj *o);
+void SSResult(Obj *o);
+void SSRChaos(Obj *o);
+
 /* screens.c */
 void TitleSonic(Obj *o);
 void PSBTM(Obj *o);

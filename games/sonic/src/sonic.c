@@ -748,7 +748,7 @@ chkifleft: {
 }
 
 /* ------------------------------------------------------------------ animation */
-static void Sonic_Animate(Obj *o) {
+void Sonic_Animate(Obj *o) {
   const uint8_t *tab = ani_get(ANI_Sonic);
   uint8_t a = o->anim;
   if (a != o->prevani) o->prevani = a, o->aniframe = 0, o->timeframe = 0;
