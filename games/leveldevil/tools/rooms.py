@@ -194,6 +194,10 @@ def run(v):  # _MaximumRunningSpeed
     return hero(H_RUN, v * 10)
 
 
+def jump(force):  # _JumpingForce: the runner's push up (18 gives 188 pixels a second)
+    return hero(H_JUMP, force * 188 / 18)
+
+
 def gravity(gx, gy):
     return [Op(O_GRAV, None, round(gx * 10), round(gy * 10))]
 
@@ -559,7 +563,7 @@ r.on(1, show(r.all(609)))
 r.on(EV_KEY, hop(r.all(609), 30))
 
 r = room("Controls_4")
-r.init(at(100, hero(H_JUMP, 100), hero(H_MAXUP, 1000)))
+r.init(at(100, jump(100), hero(H_MAXUP, 1000)))
 
 r = room("Controls_5")
 r.init(at(50, hero(H_BACK, 1)))
@@ -829,9 +833,9 @@ walls = r.all(609) + r.all(645)
 r.init(hero(H_DIR, -1), grow(r.one(600), 3, 1), grow(r.all(645), 35, 11))
 r.on(1, hero(H_DIR, -1), at(1000, grow(r.one(600), 1, 1, 1)))
 r.on(2, hero(H_DIR, 1),
-     at(1000, run(6), hero(H_JUMP, 20), vel([w for w in walls if w.y < 120], 0, .6), vel([w for w in walls if w.y > 120], 0, -.6)),
-     at(2000, run(5), hero(H_JUMP, 18)), at(3000, run(4), hero(H_JUMP, 16)), at(4000, run(3), hero(H_JUMP, 14)),
-     at(5000, run(2), hero(H_JUMP, 12)), at(7000, steps([r.one(598), r.one(600)], 1, 0, 16, 10)),
+     at(1000, run(6), jump(20), vel([w for w in walls if w.y < 120], 0, .6), vel([w for w in walls if w.y > 120], 0, -.6)),
+     at(2000, run(5), jump(18)), at(3000, run(4), jump(16)), at(4000, run(3), jump(14)),
+     at(5000, run(2), jump(12)), at(7000, steps([r.one(598), r.one(600)], 1, 0, 16, 10)),
      at(13000, vel(walls, 0, 0)))
 
 r = room("Flappy_4")

@@ -775,7 +775,8 @@ static void hub_scene(void *ctx) {
     fg = gfx_rgb(colors[i][1]);
     if (!(i & 7)) gfx_fill(0, y + 40, SCREEN_W, 8, gfx_rgb(colors[0][1]));
     if (!open) fg = gfx_mix(fg, bg, 20);
-    draw_door(x, y, x + 22, y + 40, sv.done >> i & 1 ? 12 : 0);
+    draw_door(x, y, x + 22, y + 40, open ? 0 : 12); /* (a world cleared: its colour in the window) */
+    if (sv.done >> i & 1) gfx_fill(x + 3, y + 3, 16, 34, gfx_rgb(colors[i][0]));
     num(s, (uint32_t)i + 1);
     gfx_text_center(&np_font_small, x + 11, y - 6, s, fg, 256);
     if (i == sel_) picture(hero_px[0], 14, x - 22, y + 8, x - 2, y + 40, 0, 0, 0, BLACK);

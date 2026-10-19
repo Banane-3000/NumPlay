@@ -158,14 +158,16 @@ static int by_score(const void *a, const void *b) {
   return x != y ? (x > y) - (x < y) : *(const int *)a - *(const int *)b;
 }
 
-#define BEAM 600
+#define BEAM 1000
 #define DEPTH 900
+#define CELL_MAX 4
 static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out, int depth_max) {
   size_t sz = snap_size();
   uint8_t *cur = malloc(sz * BEAM), *nxt = malloc(sz * BEAM * 9), *path = malloc((size_t)BEAM * DEPTH),
           *npath = malloc((size_t)BEAM * DEPTH * 9);
   int *sc = malloc(sizeof(int) * BEAM * 9), *ord = malloc(sizeof(int) * BEAM * 9);
   uint64_t *keyv = malloc(8 * BEAM * 9);
+  uint16_t *cellv = malloc(2 * BEAM * 9);
   int ncur = 1, found = 0;
   setup(i);
   take(cur);
@@ -198,30 +200,40 @@ static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out,
                        (uint64_t)((vy >> 6) + 512) * 7u ^ (uint64_t)ground << 40 ^ (uint64_t)(gy < 0) << 41;
         for (int e = 0; e < EVENTS; e++) key = key * 31 + cnt[e];
         keyv[nn] = key;
+        uint32_t ev = 0;
+        for (int e = 1; e < EVENTS; e++) ev = ev * 3 + cnt[e];
+        uint32_t cell = (uint32_t)(((hx >> 12) & 63) | ((hy >> 12) & 31) << 6 | (vx > 0 ? 1 : vx < 0 ? 2 : 0) << 11 |
+                                  (vy > 0 ? 1 : vy < 0 ? 2 : 0) << 13) * 2654435761u + ev * 40503u;
+        cellv[nn] = (uint16_t)(cell >> 16);
         sc[nn] = score() * 4;
         ord[nn] = nn;
         nn++;
       }
-    if (found || !nn) break;
+    if (found || !nn) {
+      if (!found) fprintf(stderr, "(all dead after %d steps)\n", d * chunk);
+      break;
+    }
     /* the best, one of each state */
     sort_sc = sc;
     qsort(ord, (size_t)nn, sizeof *ord, by_score);
     ncur = 0;
     static uint64_t seen[1 << 15];
-    memset(seen, 0, sizeof seen);
+    static uint8_t per_cell[1 << 16];
+    memset(seen, 0, sizeof seen), memset(per_cell, 0, sizeof per_cell);
     for (int a = 0; a < nn && ncur < BEAM; a++) {
       int q = ord[a];
       uint64_t k = keyv[q] | 1;
       uint32_t h = (uint32_t)(k * 0x9E3779B97F4A7C15u >> 49);
       while (seen[h] && seen[h] != k) h = (h + 1) & ((1 << 15) - 1);
-      if (seen[h]) continue;
-      seen[h] = k;
+      if (seen[h] || per_cell[cellv[q]] >= CELL_MAX) continue; /* (a few states a place, for variety) */
+      seen[h] = k, per_cell[cellv[q]]++;
       memcpy(cur + sz * ncur, nxt + sz * q, sz);
       memcpy(path + (size_t)ncur * DEPTH, npath + (size_t)q * DEPTH, (size_t)d + 1);
       ncur++;
     }
+    if (getenv("LD_DEBUG")) fprintf(stderr, "depth %d: %d states, %d kept, best %d\n", d, nn, ncur, sc[ord[0]]);
   }
-  free(cur), free(nxt), free(path), free(npath), free(sc), free(ord), free(keyv);
+  free(cur), free(nxt), free(path), free(npath), free(sc), free(ord), free(keyv), free(cellv);
   return found;
 }
 
