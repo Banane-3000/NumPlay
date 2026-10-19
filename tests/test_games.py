@@ -126,6 +126,9 @@ GAMES = {
     # next time the game goes on: X, sent to the top left board, takes its top right (9)
     "uttt": ("UltimateTicTacToe.nwa", "uttt.sav", presses((1500, "ok"), (2000, "5"), (2300, "5"), (2700, "7")), 4000,
              presses((1500, "9")), 3000),
+    # past how to play, the first level and a few steps; next time the second level, picked in the list
+    "sokoban": ("Sokoban.nwa", "sokoban.sav", presses((1500, "ok"), (2000, "ok"), (2600, "right"), (2900, "right")), 4000,
+                presses((1500, "right"), (1900, "ok"), (2500, "up")), 4000),
     # the intro film is skipped (seen), Lucky walks up the dock and talks to the
     # guardians; next time the game starts where it was left
     "championisland": ("ChampionIsland.nwa", "champion.sav",
@@ -314,6 +317,8 @@ CHECKS = {
     # how to play read, the game's moves (at 32) kept: 40 then 36; then 2 more
     "uttt": (lambda v: len(v) == 114 and v[:2] == b"U\1" and v[4] & 1 and v[5] == 2 and v[32:34] == bytes([40, 36]),
              lambda v: v[5] == 3 and v[34] == 2),
+    # how to play seen and the first level played last; then the second
+    "sokoban": (lambda v: len(v) == 314 and v[:4] == b"S\1\1\0", lambda v: len(v) == 314 and v[:4] == b"S\1\1\1"),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
     # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies kept

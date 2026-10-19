@@ -120,3 +120,7 @@ Based on Space Invaders by Taito	D'après Space Invaders de Taito
 # a game the RAM of the calculator's software is too small for
 Needs 	Il manque 
  KB more memory	 Ko de mémoire
+
+Sokoban	Sokoban
+Push every box home	Pousse chaque caisse à sa place
+Levels: Microban by David W. Skinner	Niveaux : Microban de David W. Skinner

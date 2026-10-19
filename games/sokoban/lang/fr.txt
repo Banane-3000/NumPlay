@@ -1,0 +1,21 @@
+# Sokoban in French: the English text as in the source, a tab, the translation (see tools/lang.py).
+Resume	Reprendre
+Restart	Recommencer
+Levels	Niveaux
+How to play	Comment jouer
+Quit game	Quitter le jeu
+Quit game?	Quitter le jeu ?
+No	Non
+Yes	Oui
+Paused	Pause
+Solved!	Réussi !
+Push every box onto a goal: one at a time, and never pulled.\nArrows: walk and push\nBackspace: undo   Back: pause	Pousse chaque caisse sur une cible : une à la fois, et jamais en tirant.\nFlèches : marcher et pousser\nEffacer : annuler   Retour : pause
+Play	Jouer
+Next level	Niveau suivant
+Level 	Niveau 
+Moves 	Pas 
+Pushes 	Poussées 
+Solve the levels before it to open it	Réussis les niveaux d'avant pour l'ouvrir
+Solved in moves: 	Réussi en pas : 
+Not solved yet	Pas encore réussi
+Your best: 	Ton record : 

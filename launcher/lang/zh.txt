@@ -119,3 +119,7 @@ Based on Space Invaders by Taito	改编自 Taito 的 Space Invaders
 # a game the RAM of the calculator's software is too small for
 Needs 	内存还差 
  KB more memory	 KB
+
+Sokoban	推箱子
+Push every box home	把每个箱子推到位
+Levels: Microban by David W. Skinner	关卡：David W. Skinner 的 Microban
