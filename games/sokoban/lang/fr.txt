@@ -15,6 +15,4 @@ Next level	Niveau suivant
 Level 	Niveau 
 Moves 	Pas 
 Pushes 	Poussées 
-Solve the levels before it to open it	Réussis les niveaux d'avant pour l'ouvrir
-Not solved yet	Pas encore réussi
 Your best: 	Ton record : 

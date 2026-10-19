@@ -15,6 +15,4 @@ Next level	下一关
 Level 	关卡 
 Moves 	步数 
 Pushes 	推动 
-Solve the levels before it to open it	先过前面的关卡才能打开
-Not solved yet	还没过关
 Your best: 	最佳：
