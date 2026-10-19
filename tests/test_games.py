@@ -109,6 +109,10 @@ GAMES = {
     "blockblast": ("BlockBlast.nwa", "blockblast.sav", presses((1500, "ok"), (2000, "ok")), 3000,
                    presses(*[(1500 + 250 * i, "up") for i in range(4)], *[(2500 + 250 * i, "left") for i in range(4)],
                            (3600, "ok")), 4500),
+    # past how to play, the big cookie clicked three times; next time two more
+    "cookieclicker": ("CookieClicker.nwa", "cookieclicker.sav",
+                      presses((1500, "ok"), (2000, "ok"), (2300, "ok"), (2600, "ok")), 4000,
+                      presses((1500, "ok"), (1800, "ok")), 3000),
     # the intro film is skipped (seen), Lucky walks up the dock and talks to the
     # guardians; next time the game starts where it was left
     "championisland": ("ChampionIsland.nwa", "champion.sav",
@@ -269,6 +273,10 @@ CHECKS = {
     # the keys were shown and the runner died (the deaths at 8); then died again
     "leveldevil": (lambda v: len(v) == 48 and v[:2] == b"L\1" and v[2] & 1 and struct.unpack_from("<I", v, 8)[0] >= 1,
                    lambda v: struct.unpack_from("<I", v, 8)[0] >= 2),
+    # the guide read, 3 clicks and the cookies they made (the bank at 64, baked at 72); then 5
+    "cookieclicker": (lambda v: len(v) == 120 and v[:3] == b"C\1\1" and struct.unpack_from("<I", v, 44)[0] == 3
+                      and struct.unpack_from("<d", v, 72)[0] >= 3,
+                      lambda v: struct.unpack_from("<I", v, 44)[0] == 5 and struct.unpack_from("<d", v, 64)[0] >= 5),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
     # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies kept

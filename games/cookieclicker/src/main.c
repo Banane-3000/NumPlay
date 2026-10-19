@@ -86,7 +86,7 @@ static uint16_t text_at[N_TEXT];
 static uint8_t list[N_UP];
 static float cps, raw_cps, cpc, each[NB], milk;
 static int nach, nup, owned, nlist, tab = 1, sel[3], top[3], ov, osel, toast = -1, gc_x, gc_y, news_x, news_w;
-static uint32_t now, seed, toast_t, news_n, clicks_t, clicks_n, gc_life, gc_dur, pop_t, bounce_t;
+static uint32_t now, seed, toast_t, news_n, gc_life, gc_dur, pop_t, bounce_t;
 static struct {
   int16_t x, y;
   uint32_t t;
@@ -113,7 +113,7 @@ static int many(void) { return sv.mode == 2 ? 100 : sv.mode * 9 + 1; }
 /* the price of n more buildings b: 15% more for each one owned, rounded up */
 static float price(int b, int n) {
   float p = base_price(b) * powi(1.15f, sv.amount[b]);
-  return __builtin_ceilf(n > 1 ? p * (powi(1.15f, n) - 1) / 0.15f : p * 0.99999f);
+  return __builtin_ceilf((n > 1 ? p * (powi(1.15f, n) - 1) / 0.15f : p) * 0.999999f);
 }
 
 /* ------------------------------------------------------------ numbers, as the game writes them */
@@ -184,8 +184,6 @@ static void compute(void) {
     float c = bdata[b][2] * p10(bdata[b][3]);
     if (b == 0) c = c * clicks + fingers();
     else c *= (float)(1 << bought(U_TIER + (b - 1) * TIER_N, TIER_N));
-    if (b == 1) c *= (float)(1 << bought(U_GRANDMA, 18));
-    if (b > 1 && has(sv.up, U_GRANDMA + b - 2)) c *= 1 + sv.amount[1] / 100.f / (float)(b - 1);
     each[b] = c * mult * frenzy;
     total += sv.amount[b] * c;
   }
@@ -194,16 +192,15 @@ static void compute(void) {
 }
 
 /* ------------------------------------------------------------ upgrades */
-static const uint16_t cursor_at[10] = {1, 1, 10, 25, 50, 100, 150, 200, 250, 300};
-static const uint8_t cursor_e[10] = {2, 2, 4, 5, 7, 8, 9, 10, 13, 16}, kitten_e[3] = {6, 9, 13};
-static const uint8_t tier_e[TIER_N] = {1, 1, 2, 4, 6}, tier_at[TIER_N] = {1, 5, 25, 50, 100}, golden_at[3] = {7, 27, 77};
+static const uint8_t cursor_at[N_CURSOR] = {1, 1, 10, 25, 50, 100, 150, 200};
+static const uint8_t cursor_e[N_CURSOR] = {2, 2, 4, 5, 7, 8, 9, 10}, kitten_e[3] = {6, 9, 13};
+static const uint8_t tier_e[TIER_N] = {1, 1, 2}, tier_at[TIER_N] = {1, 5, 25}, golden_at[3] = {7, 27, 77};
 
 static float up_price(int u) {
   if (u < U_MOUSE) return (u == 1 ? 5 : 1) * p10(cursor_e[u]);
   if (u < U_KITTEN) return 5 * p10(4 + 2 * (u - U_MOUSE));
   if (u < U_GOLD) return 9 * p10(kitten_e[u - U_KITTEN]);
-  if (u < U_GRANDMA) return 7 * (p10(9 + 2 * (u - U_GOLD) + (u == U_GOLD + 2)) - 1) / 9; /* 777,777,777... */
-  if (u < U_COOKIE) return 50 * base_price(u - U_GRANDMA + 2);
+  if (u < U_COOKIE) return 7 * (p10(9 + 2 * (u - U_GOLD) + (u == U_GOLD + 2)) - 1) / 9; /* 777,777,777... */
   if (u < U_TIER) { /* 999,999 or 4,999,995... */
     int c = cookie_up[u - U_COOKIE];
     return (p10((c & 15) + 5) - 1) * (c & 16 ? 5 : 1);
@@ -215,23 +212,19 @@ static bool up_ready(int u) { /* unlocked by what the bakery has done */
   if (u < U_MOUSE) return sv.amount[0] >= cursor_at[u];
   if (u < U_KITTEN) return sv.handmade >= p10(3 + 2 * (u - U_MOUSE));
   if (u < U_GOLD) return milk >= (u == U_KITTEN ? 0.5f : (float)(u - U_KITTEN));
-  if (u < U_GRANDMA) return sv.golden >= golden_at[u - U_GOLD];
-  if (u < U_COOKIE) return sv.amount[u - U_GRANDMA + 2] >= 15 && sv.amount[1];
+  if (u < U_COOKIE) return sv.golden >= golden_at[u - U_GOLD];
   if (u < U_TIER) return sv.earned * 20 >= up_price(u);
   return sv.amount[1 + (u - U_TIER) / TIER_N] >= tier_at[(u - U_TIER) % TIER_N];
 }
 static void up_desc(int u) { /* what it does, in buf */
-  int b = u - U_GRANDMA + 2;
   if (u < 3) cpy(buf, T("The mouse and cursors are twice as efficient."));
-  else if (u == 3) cpy(buf, T("The mouse and cursors gain +0.1 cookies for each non-cursor building owned."));
-  else if (u < U_MOUSE) cat(buf, T("Multiplies the gain from Thousand fingers by "), u == 4 ? 5 : u == 5 ? 10 : 20, ".");
+  else if (u == 3) cpy(buf, T("The mouse and cursors gain +0.1 cookies for each other building."));
+  else if (u < U_MOUSE) cat(buf, T("Thousand fingers x"), u == 4 ? 5 : u == 5 ? 10 : 20, "");
   else if (u < U_KITTEN) cpy(buf, T("Clicking gains +1% of your CpS."));
-  else if (u < U_GOLD) cpy(buf, T("You gain more CpS the more milk you have."));
-  else if (u < U_GRANDMA) cpy(buf, u < U_GOLD + 2 ? T("Golden cookies appear twice as often and stay twice as long.")
-                                                : T("Golden cookie effects last twice as long."));
-  else if (u < U_COOKIE)
-    cat(cpy(cpy(buf, T("Grandmas are twice as efficient. ")), bname[b]), T(": +1% CpS per "), b - 1, T(" grandmas."));
-  else if (u < U_TIER) cat(buf, T("Cookie production multiplier +"), cookie_up[u - U_COOKIE] >> 5, "%.");
+  else if (u < U_GOLD) cpy(buf, T("More CpS the more milk you have."));
+  else if (u < U_COOKIE) cpy(buf, u < U_GOLD + 2 ? T("Golden cookies come twice as often, stay twice as long.")
+                                               : T("Golden cookie effects last twice as long."));
+  else if (u < U_TIER) cat(buf, T("Cookie production +"), cookie_up[u - U_COOKIE] >> 5, "%");
   else cpy(cpy(buf, bname[1 + (u - U_TIER) / TIER_N]), T(": twice as efficient."));
 }
 static void sort_list(void) { /* the store's upgrades: unlocked, not bought yet, cheapest first */
@@ -246,39 +239,25 @@ static void sort_list(void) { /* the store's upgrades: unlocked, not bought yet,
 }
 
 /* ------------------------------------------------------------ achievements */
-/* their kind: baked, per second, from clicking, buildings, golden cookies, owned, upgrades, or one of
-   their own (7); where each kind starts; the counts they ask for */
-static const uint8_t kinds[7] = {A_CPS, A_CLICK, A_BUILD, A_GOLDEN, A_OWNED, A_UPGRADED, A_MISC};
+/* their kind: baked, per second, from clicking, buildings, golden cookies, owned, upgrades; where each
+   kind starts; the counts they ask for */
+static const uint8_t kinds[6] = {A_CPS, A_CLICK, A_BUILD, A_GOLDEN, A_OWNED, A_UPGRADED};
 static const uint16_t counts[] = {1, 2, 50, 1, 7, 27, 77, 100, 500, 20, 50};
 static int threshold(int a, float *v) {
   static const uint8_t first[7] = {0, 0, 0, 0, 3, 7, 9}; /* (in counts) */
   int k = 0, i;
-  while (k < 7 && a >= kinds[k]) k++;
+  while (k < 6 && a >= kinds[k]) k++;
   i = a - (k ? kinds[k - 1] : 0);
   *v = k == 0 ? (a ? p10(3 * a / 2 + 2) : 1) : k == 1 ? p10(6 * i / 5) : k == 2 ? p10(3 + 2 * i)
-     : k == 3 ? counts[i < N_CURSOR_ACH ? i : 0] : k < 7 ? counts[first[k] + i] : 0;
+     : k == 3 ? counts[i < N_CURSOR_ACH ? i : 0] : counts[first[k] + i];
   return k;
 }
 static int ach_building(int a) { return a - A_BUILD < N_CURSOR_ACH ? 0 : a - A_BUILD - N_CURSOR_ACH + 1; }
 static bool ach_won(int a) {
   float v;
-  int k = threshold(a, &v), least = 65535;
-  switch (k) {
-  case 0: return sv.earned >= v;
-  case 1: return raw_cps >= v;
-  case 2: return sv.handmade >= v;
-  case 3: return sv.amount[ach_building(a)] >= v;
-  case 4: return sv.golden >= v;
-  case 5: return owned >= v;
-  case 6: return nup >= v;
-  }
-  for (int b = 0; b < NB; b++) least = sv.amount[b] < least ? sv.amount[b] : least;
-  switch (a - A_MISC) {
-  case 0: return least;                              /* one with everything */
-  case 1: return sv.earned >= 1e6 && sv.clicks <= 15; /* neverclick */
-  case 4: return bought(U_GRANDMA, 18) >= 7;         /* elder */
-  }
-  return false; /* the others are won as they happen */
+  int k = threshold(a, &v);
+  float have[7] = {0, raw_cps, 0, sv.amount[ach_building(a)], sv.golden, owned, nup};
+  return k == 0 ? sv.earned >= v : k == 2 ? sv.handmade >= v : have[k] >= v;
 }
 static void win(int a) {
   if (has(sv.ach, a)) return;
@@ -292,8 +271,7 @@ static void ach_desc(int a) { /* what it takes, in buf */
                                       T(" upgrades.")};
   float v;
   int k = threshold(a, &v);
-  if (k > 6) cpy(buf, txt(X_MDESC + a - A_MISC));
-  else cpy(cat(buf, pre[k], v, post[k]), k == 3 ? bname[ach_building(a)] : "");
+  cpy(cat(buf, pre[k], v, post[k]), k == 3 ? bname[ach_building(a)] : "");
 }
 
 static void check(void) { /* once a second, and after a purchase: what unlocks, what is won */
@@ -316,8 +294,6 @@ static void click(void) {
   int i = sv.clicks++ & 3;
   earn(cpc);
   sv.handmade += cpc, bounce_t = now;
-  if (now - clicks_t > 1000) clicks_t = now, clicks_n = 0;
-  if (++clicks_n >= 10) win(A_MISC + 2); /* uncanny clicker */
   rises[i].x = (int16_t)(CX - 30 + rnd() % 60), rises[i].y = (int16_t)(CY - 24 - rnd() % 24), rises[i].t = now;
   big(cpy(rises[i].s, "+"), cpc);
 }
@@ -339,10 +315,9 @@ static int luck(void) { return has(sv.up, U_GOLD) + has(sv.up, U_GOLD + 1); }
 static void golden_pop(void) {
   uint32_t dur = has(sv.up, U_GOLD + 2) + 1, e = rnd() % 20;
   sv.golden++, sv.gc_t = 0;
-  if (gc_life > gc_dur - 1000) win(A_MISC + 3); /* early bird */
   gc_life = 0;
-  if (e < 2) sv.cfrenzy = 13000 * dur, cpy(pop, T("Click frenzy! x777"));
-  else if (e < 11) sv.frenzy = 77000 * dur, cpy(pop, T("Frenzy! Production x7"));
+  if (e < 2) sv.cfrenzy = 13000 * dur;
+  else if (e < 11) sv.frenzy = 77000 * dur;
   else {
     double v = sv.cookies * 0.15 < cps * 900.0 ? sv.cookies * 0.15 : cps * 900.0;
     earn(v + 13);
@@ -374,30 +349,20 @@ static void cookie(int x, int y, int r, bool gold) {
 }
 
 static void left(void) {
-  gfx_vgrad(0, 16, LW, SCREEN_H - 16, 0x2E5480, 0x14263F);
-  /* light turning slowly behind the big cookie */
-  for (int y = gfx_y0; y < gfx_y1; y++)
-    for (int x = 0; x < LW; x++) {
-      int dx = x - CX, dy = y - CY, d = dx * dx + dy * dy, ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy;
-      if (d > 74 * 74 || d < 900) continue;
-      int q = ay * 256 / (ax + ay); /* an angle, 0 to 1023 around */
-      q = dx < 0 ? (dy < 0 ? 512 + q : 511 - q) : (dy < 0 ? 1023 - q : q);
-      color_t *p = gfx_buf + (y - gfx_y0) * SCREEN_W + x;
-      if (((q + (int)(now / 12)) & 127) < 64) *p = gfx_mix(*p, WHITE, (74 * 74 - d) * 9 / (74 * 74));
-    }
+  gfx_fill(0, 16, LW, SCREEN_H - 16, HEX(0x22406A));
+  gfx_circle(CX, CY, 70, WHITE, 24); /* the light behind the big cookie */
   uint32_t b = now - bounce_t; /* a little smaller for a moment when clicked */
   cookie(CX, CY, b < 240 ? 48 + (int)b / 60 : 52, false);
   /* the milk, which rises with the achievements and changes flavor every 25 */
   int h = 10 + (int)((milk > 1 ? 1 : milk) * 20), rank = nach / 25 < N_MILK ? nach / 25 : N_MILK - 1;
   for (int x = 0; x < LW; x++) {
-    int w = (int)(now / 40 + x) % 48, top = SCREEN_H - h + (w < 24 ? w : 48 - w) / 6;
-    gfx_fill(x, top, 1, h + 8, gfx_rgb(milk_rgb[rank]));
-    gfx_fill(x, top, 1, 2, WHITE);
+    int w = (int)(now / 40 + x) % 48;
+    gfx_fill(x, SCREEN_H - h + (w < 24 ? w : 48 - w) / 6, 1, h + 8, gfx_rgb(milk_rgb[rank]));
   }
   /* the cookies: "1.234 million", the number on its own line, "million cookies" under it; per second */
   if (VIS(16, 56)) {
     char *name = NULL, *line2 = buf + 80;
-    big(buf, sv.cookies);
+    big(buf, sv.cookies < 1e6 ? (double)(uint32_t)sv.cookies : sv.cookies); /* (whole cookies) */
     for (char *s = buf; *s && !name; s++)
       if (*s == ' ') *s = 0, name = s + 1;
     mid(&np_font_title, CX + 1, 41, buf, 0);
@@ -407,12 +372,10 @@ static void left(void) {
     cat(buf, T("per second: "), cps, "");
     mid(&np_font_small, CX, 67, buf, CREAM);
   }
-  /* the effects going on, what the golden cookie did, +1 rising from the cookie */
-  for (int i = 0; i < 2; i++) {
-    uint32_t ms = i ? sv.cfrenzy : sv.frenzy;
-    if (ms) num(cpy(buf, i ? T("Click frenzy ") : T("Frenzy ")), (ms + 999) / 1000), say(&np_font_small, 4, 84 + 11 * i, buf, GOLD);
-  }
-  if (now - pop_t < 2500) mid(&np_font_small, CX, 196, pop, GOLD);
+  /* what the golden cookie did, and for how long still; +1 rising from the cookie */
+  uint32_t ms = sv.cfrenzy ? sv.cfrenzy : sv.frenzy;
+  if (ms) num(cpy(buf, sv.cfrenzy ? T("Click frenzy x777: ") : T("Frenzy x7: ")), (ms + 999) / 1000);
+  if (ms || now - pop_t < 2500) mid(&np_font_small, CX, 196, ms ? buf : pop, GOLD);
   for (int i = 0; i < 4; i++) {
     uint32_t t = now - rises[i].t;
     if (rises[i].t && t < 900)
@@ -442,14 +405,13 @@ static void picture(int u, int x, int y) {
   int t = u, k = IC_CURSOR;
   if (u >= U_MOUSE) t = u - U_MOUSE, k = IC_MOUSE;
   if (u >= U_KITTEN) t = u - U_KITTEN, k = IC_KITTEN;
-  if (u >= U_GRANDMA) t = 1, k = IC_GRANDMA;
   if (u >= U_TIER) t = (u - U_TIER) % TIER_N, k = 1 + (u - U_TIER) / TIER_N;
   if (u < 0) t = 3, k = -1 - u; /* (a building) */
   gfx_rrect(x, y, 18, 18, 4, gfx_rgb(tier_rgb[t]), 256);
-  if ((u >= U_GOLD && u < U_GRANDMA) || (u >= U_COOKIE && u < U_TIER)) cookie(x + 9, y + 9, 7, u < U_GRANDMA);
+  if (u >= U_GOLD && u < U_TIER) cookie(x + 9, y + 9, 7, u < U_COOKIE);
   else
     for (int i = 0; i < 144; i++)
-      if (icons[k][i >> 3] >> (i & 7) & 1) gfx_fill(x + 3 + i % 12, y + 3 + i / 12, 1, 1, DARK);
+      if ((uint8_t)text[ICONS_AT + 18 * k + (i >> 3)] >> (i & 7) & 1) gfx_fill(x + 3 + i % 12, y + 3 + i / 12, 1, 1, DARK);
 }
 static bool locked(int b) { return !sv.amount[b] && sv.earned < base_price(b); }
 static int rows(void) {
@@ -468,9 +430,9 @@ static void store(void) {
       if (i == tab) gfx_rrect(SX + 1 + i * 58, 18, 56, 14, 5, HEX(0x8A6238), 256);
       mid(&np_font_small, SX + 29 + i * 58, 29, tabs[i], i == tab ? WHITE : HEX(0xB79C7C));
     }
+    *buf = 0;
     if (tab == 1) num(cpy(buf, T("Buy x")), (uint32_t)many());
-    else if (tab == 0) cpy(num(buf, (uint32_t)nlist), T(" upgrades"));
-    else cpy(num(cpy(num(buf, (uint32_t)nach), " / "), N_ACH), T(" achievements"));
+    if (tab == 2) cpy(num(cpy(num(buf, (uint32_t)nach), " / "), N_ACH), T(" achievements"));
     mid(&np_font_small, SX + 87, 42, buf, HEX(0x9CF29C));
   }
   /* the list */
@@ -495,7 +457,6 @@ static void store(void) {
       fit(&np_font_body, txt(list[i]), SCREEN_W - SX - 30);
       p = up_price(list[i]);
     }
-    say(&np_font_body, SX + 26, y + 12, buf, 0);
     say(&np_font_body, SX + 25, y + 11, buf, WHITE);
     big(buf, p);
     say(&np_font_small, SX + 25, y + 21, buf, sv.cookies >= p ? HEX(0x6CF26C) : HEX(0xFF6B6B));
@@ -505,12 +466,10 @@ static void store(void) {
   gfx_fill(SX, INFO, SCREEN_W - SX, SCREEN_H - INFO, DARK);
   int y = INFO + 14;
   *buf = 0;
-  if (tab == 1) {
-    if (locked(s)) return;
-    char *o = cat(buf, T("Each makes "), each[s], T(" cookies per second."));
-    o = cat(num(cpy(o, "\n"), sv.amount[s]), T(" make "), each[s] * sv.amount[s], "");
-    if (cps > 0) cat(o, " (", each[s] * sv.amount[s] * 100 / cps, "%)");
-  } else if (s >= n) cpy(buf, T("Upgrades show up here as your bakery grows."));
+  if (s >= n || (tab == 1 && locked(s))) return;
+  if (tab == 1)
+    cat(num(cpy(cat(buf, T("Each makes "), each[s], T(" cookies per second.")), "\n"), sv.amount[s]), T(" make "),
+        each[s] * sv.amount[s], "");
   else if (tab == 0) y = para(y, txt(list[s]), GOLD), up_desc(list[s]);
   else y = para(y, txt(X_ACH + s), GOLD), ach_desc(s);
   para(y, buf, CREAM);
@@ -537,7 +496,7 @@ static void overlay(void) {
   static const char *const titles[4] = {0, "Cookie Clicker", T("How to play"), T("Quit the game?")};
   gfx_fill_alpha(0, 0, SCREEN_W, SCREEN_H, 0, 130);
   gfx_rrect(40, 22, 240, 204, 14, WOOD, 256);
-  gfx_rrect_outline(40, 22, 240, 204, 14, 2, HEX(0xC8A27A), 256);
+
   mid(&np_font_title, 160, 52, titles[ov], WHITE);
   if (ov == OV_HELP) {
     for (int i = 0; i < 6; i++) {
