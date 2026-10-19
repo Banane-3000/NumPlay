@@ -196,6 +196,8 @@ void boss_spawn(int type, float x, float y);
 bool boss_on_death(Ent *e);
 void boss_draw(Ent *e);
 float bosses_hp(float *max);                 /* the boss bar */
+const char *boss_name(int type);
+int boss_sprite(int type);
 void mon_set_sprite(Ent *e);
 
 /* pickups (pickups.c) */
@@ -332,6 +334,7 @@ extern int g_killer;              /* what killed him (MON_*, or -1..-n: other ca
 extern bool g_room_was_cleared;
 extern uint32_t g_run_seed;
 extern int g_transition;          /* frames of the dip to black between rooms */
+extern int g_boss_intro;          /* frames left of the boss's introduction (him VS it) */
 extern uint8_t g_wins;            /* runs won: Mom, Mom's Heart, Satan, Isaac (progress kept) */
 extern uint16_t g_deaths, g_runs;
 extern uint8_t g_best_stage;

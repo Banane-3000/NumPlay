@@ -553,6 +553,7 @@ void floor_enter_room(int index, int from_dir) {
     if (!ents_alive_monsters()) r->state |= RS_CLEARED;
   }
   g_room_was_cleared = r->state & RS_CLEARED;
+  if ((r->kind == ROOM_BOSS || r->kind == ROOM_MINIBOSS) && !(r->state & RS_CLEARED) && g_mode == MODE_PLAY) g_boss_intro = 64;
   /* where he comes in */
   static const float ex[5] = {160, ROOM_X + 14, 160, ROOM_R - 14, 160}, ey[5] = {ROOM_B - 12, 120, ROOM_Y + 14, 120, 140};
   int d = from_dir < 0 || from_dir > 4 ? 4 : from_dir;

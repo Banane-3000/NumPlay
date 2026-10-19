@@ -84,6 +84,15 @@ static const BossInfo bosses[MON_COUNT - MON_MONSTRO] = {
 };
 
 static const BossInfo *info(int type) { return type >= MON_MONSTRO && type < MON_COUNT ? &bosses[type - MON_MONSTRO] : NULL; }
+const char *boss_name(int type) {
+  const BossInfo *b = info(type);
+  return b && b->name ? b->name : "";
+}
+int boss_sprite(int type) {
+  const BossInfo *b = info(type);
+  if (type == MON_SATAN) return SPR_SATAN;
+  return b && b->spr ? b->spr : -1;
+}
 
 static Ent *boss_new(int type, float x, float y, int hp_scale_pct) {
   const BossInfo *b = info(type);

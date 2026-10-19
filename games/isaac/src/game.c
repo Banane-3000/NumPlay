@@ -9,7 +9,7 @@
 int g_mode;
 bool g_running = true;
 uint32_t g_frame, g_keys, g_pressed;
-int g_room_frames, g_shake, g_killer, g_transition;
+int g_room_frames, g_shake, g_killer, g_transition, g_boss_intro;
 bool g_room_was_cleared;
 uint32_t g_run_seed, g_rng = 0x2545F491u;
 uint8_t g_wins, g_best_stage;
@@ -185,6 +185,11 @@ static void play_update(void) {
     }
     return;
   }
+  if (g_boss_intro > 0) {
+    g_boss_intro--;
+    if (g_boss_intro > 12 && (g_pressed & (K_OK | K_BACK))) g_boss_intro = 12;
+    return;
+  }
   if (pl.dead) {
     player_update(0);
     ents_update();
@@ -238,6 +243,26 @@ static void draw_room(void) {
   if (fl.curse & CURSE_DARKNESS) gfx_dark((int)pl.x, (int)pl.y - 8, 46, 26);
   hud_draw();
   if (g_keys & K_MAP) map_draw_full();
+  if (g_boss_intro > 0 && g_transition == 0) {
+    /* Rebirth's: a band across the room, him on the left, the boss on the right, VS between them */
+    int k = 64 - g_boss_intro, slide = k < 10 ? (10 - k) * 32 : g_boss_intro < 10 ? (10 - g_boss_intro) * 32 : 0;
+    int a = g_boss_intro < 8 ? g_boss_intro * 4 : 32;
+    gfx_rect(0, 0, SCREEN_W, SCREEN_H, C_BLACK, a / 2);
+    gfx_rect(0, 70, SCREEN_W, 100, rgb565(0x1A0E0A), a);
+    gfx_rect(0, 70, SCREEN_W, 2, rgb565(0x6A3020), a);
+    gfx_rect(0, 168, SCREEN_W, 2, rgb565(0x6A3020), a);
+    int head = character_head(pl.character);
+    gfx_sprite_scaled(head + 1, 0, 70 - slide, 156, 512, 512, 0, 0, 0, a);
+    gfx_sprite_scaled(head, 0, 70 - slide, 142, 512, 512, 0, 0, 0, a);
+    Room *r = room_cur();
+    int boss = r->kind == ROOM_MINIBOSS ? r->boss : fl.boss;
+    const char *name = boss_name(boss);
+    int spr = boss_sprite(boss);
+    if (spr >= 0) gfx_sprite_scaled(spr, 0, 238 + slide, 160, 300, 300, GFX_FLIPX, 0, 0, a);
+    gfx_text_c(FONT_UPHEAVAL, 160, 98, "VS", rgb565(0xE0D0B0), 3, true);
+    gfx_text_c(FONT_UPHEAVAL, 160, 178, name, C_WHITE, 2, true);
+    gfx_text_c(FONT_UPHEAVAL, 160, 50, character_name(pl.character), rgb565(0xE0D0B0), 2, true);
+  }
   if (g_transition > 0) {
     int a = g_transition > 5 ? (10 - g_transition) * 7 : g_transition * 7;
     gfx_rect(0, 0, SCREEN_W, SCREEN_H, C_BLACK, a > 32 ? 32 : a);
