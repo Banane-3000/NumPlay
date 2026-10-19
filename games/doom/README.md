@@ -89,7 +89,7 @@ The calculator gives an app about 130 KB of RAM: Doom on a PC asked for 4 MB. Th
 
 The calculator has less RAM still, and no room for a frame buffer: the screen is drawn 40 rows at a time. Each frame the engine walks the level once and keeps every column of wall, floor and sprite it would draw; then each band of rows is drawn from those lists, its floors and ceilings first, then its walls and things, texture by texture, and pushed to the screen through Doom's palette.
 
-`make` builds `output/doom.nwa` (needs `arm-none-eabi-gcc` and Node.js for nwlink). `make test` plays it on a computer with the sanitizers on. `python3 tools/fetch.py build/ref` downloads the shareware DOOM1.WAD and `make data WAD=build/ref/doom1.wad` packs it again into `src/doom1.whx`.
+`make` builds `output/doom.nwa` (needs `arm-none-eabi-gcc` and Node.js for nwlink). `make test` plays it on a computer with the sanitizers on, and `make media` takes the pictures on this page from there. `python3 tools/fetch.py build/ref` downloads the shareware DOOM1.WAD and `make data WAD=build/ref/doom1.wad` packs it again into `src/doom1.whx`.
 
 ## Credits
 
@@ -98,11 +98,11 @@ Doom is id Software's game (1993). Not affiliated with id Software, ZeniMax or B
 * **[RP2040 Doom](https://github.com/kilograham/rp2040-doom)** by Graham Sanderson: the engine, the WHD format and its converter (`tools/whd_gen`), and the renderer this port draws in bands.
 * **[Chocolate Doom](https://github.com/chocolate-doom/chocolate-doom)** by Simon Howard and its contributors, which RP2040 Doom is made from.
 * **The Doom source code** released by id Software in 1997 under the GNU GPL.
-* **The shareware DOOM1.WAD** (version 1.9), which id Software lets anyone copy: its levels, pictures and texts.
+* **The shareware DOOM1.WAD** (version 1.9) by id Software: its levels, pictures and texts.
 * **[ADPCM-XQ](https://github.com/dbry/adpcm-xq)** by David Bryant and **[LodePNG](https://github.com/lvandeve/lodepng)** by Lode Vandevenne, used by the converter.
 
 Made by Mason Chen as part of NumPlay.
 
 ## License
 
-The engine is licensed under the GNU General Public License, version 2 or later (`COPYING.md`); RP2040 Doom's own files under the BSD 3-Clause license, as they say at their top; the converter's libraries under their own licenses (`tools/whd_gen`). NumPlay's code is licensed under the GNU General Public License v3.0: see the `LICENSE` file at the root of the repository. The shareware DOOM1.WAD packed into `src/doom1.whx` is id Software's, copied under the terms that let anyone share it.
+The engine is licensed under the GNU General Public License, version 2 or later (`COPYING.md`); RP2040 Doom's own files under the BSD 3-Clause license, as they say at their top; the converter's libraries under their own licenses (`tools/whd_gen`). NumPlay's code is licensed under the GNU General Public License v3.0: see the `LICENSE` file at the root of the repository. The game's data in `src/doom1.whx` is id Software's shareware DOOM1.WAD (version 1.9), the free episode they let players share, repacked for the calculator: it stays id Software's.

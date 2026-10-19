@@ -400,7 +400,9 @@ enum
     mousesens,
     option_empty2,
 #endif
+#if !NUMWORKS // (the calculator has no sound)
     soundvol,
+#endif
     opt_end
 } options_e;
 
@@ -420,7 +422,9 @@ static const menuitem_t OptionsMenu[]=
     {2,VPATCH_NAME(M_MSENS),'m',	M_ChangeSensitivity},
     {-1,VPATCH_NAME_INVALID,'\0',0},
 #endif
+#if !NUMWORKS
     {1,VPATCH_NAME(M_SVOL),'s',	M_Sound}
+#endif
 };
 
 menu_t  OptionsDef =
