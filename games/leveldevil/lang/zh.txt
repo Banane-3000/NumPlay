@@ -1,0 +1,28 @@
+# Level Devil in Chinese: the English text as in the source, a tab, the translation (see tools/lang.py).
+Resume	继续
+Restart	重来
+Levels	关卡
+How to play	玩法
+Quit game	退出游戏
+Quit game?	退出游戏？
+No	否
+Yes	是
+Paused	暂停
+Play	开始
+OK	OK
+Left Right	左 右
+run	跑
+Up, OK, EXE	上、OK、EXE
+jump (hold: higher)	跳（按住跳得更高）
+Back	返回
+pause	暂停
+Reach the door. The level has other plans: trust nothing.	走到门口。关卡另有打算：什么都别相信。
+You beat the Devil!	你打败了恶魔！
+Every door of Level Devil is open behind you.	Level Devil 的每一扇门都已在你身后打开。
+Deaths in all: 	总死亡次数：
+Level 	第
+Level cleared! Deaths: 	过关！死亡次数：
+Locked	未解锁
+Cleared. Fewest deaths: 	已通过。最少死亡：
+Not cleared yet	尚未通过
+Deaths 	死亡
