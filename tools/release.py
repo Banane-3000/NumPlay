@@ -52,6 +52,9 @@ ALONE = {
     "pvz": ("Plants vs. Zombies", "the whole Adventure, from the front lawn to the roof and Dr. Zomboss: 50 levels, 40 "
             "plants, 24 zombies, Crazy Dave, his shop and the Almanac. Too big to share the calculator with NumPlay: "
             "install it on its own"),
+    "sonic": ("Sonic the Hedgehog", "the whole 1991 game: Green Hill to Scrap Brain, the Final Zone, the Special "
+              "Stages and the six Chaos Emeralds, and the ending. Too big to share the calculator with NumPlay: install "
+              "it on its own"),
 }
 VARIANTS = [
     ("NumPlay-Invisible.nwa", "The same app, hidden: a blank icon with no name"),

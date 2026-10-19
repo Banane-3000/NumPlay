@@ -176,6 +176,11 @@ GAMES = {
     "pvz": ("PlantsVsZombies.nwa", "pvzlevel.sav", presses((1500, "ok"), (2500, "ok"), (3500, "ok"), (12500, "1"),
                                                            (13000, "ok")), 16000,
             presses((1500, "ok"), (2500, "ok"), (3500, "ok")), 9000),
+    # past the keys, the SEGA screen and the title: Green Hill Zone, running; Home keeps the act, and next time
+    # Continue goes back to it
+    "sonic": ("SonicTheHedgehog.nwa", "sonic.sav",
+              presses((1500, "ok"), (5500, "ok"), (7000, "ok"), (9000, "right", 6000)), 16000,
+              presses((5500, "ok"), (7000, "ok"), (9500, "right", 2000)), 13000),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -206,7 +211,7 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "hollowknight": "hollowknight_saves.py", "finalearth2": "finalearth2_saves.py",
           "numpowder": "numpowder_saves.py", "undertale": "undertale_saves.py", "subway": "subway_saves.py",
           "fnaf": "fnaf_saves.py", "doom": "doom_saves.py", "isaac": "isaac_saves.py",
-          "hillclimb": "hillclimb_saves.py", "pvz": "pvz_saves.py"}
+          "hillclimb": "hillclimb_saves.py", "pvz": "pvz_saves.py", "sonic": "sonic_saves.py"}
 CHECKS = {
     # the island remembers where Lucky was; after the reinstall, from the copy
     "championisland": (lambda v: v[:3] == b"CI1" and b"PLAYER_LOC" in v,) * 2,
@@ -235,6 +240,10 @@ CHECKS = {
     # goes on
     "pvz": (lambda v: v[:4] == b"PVZL" and v[8] == 1 and struct.unpack_from("<I", v, 16)[0] > 0,
             lambda v: v[:4] == b"PVZL" and v[8] == 1 and struct.unpack_from("<I", v, 16)[0] > 500),
+    # a game kept ("S1SV": has_game at 6, Green Hill at 7, the frames played at 28); after the reinstall, from the
+    # copy, it goes on
+    "sonic": (lambda v: v[:4] == b"S1SV" and v[6] == 1 and v[7] == 0 and struct.unpack_from("<I", v, 28)[0] > 0,
+              lambda v: v[:4] == b"S1SV" and v[6] == 1 and struct.unpack_from("<I", v, 28)[0] > 600),
     # a simulation saved ("NPWD"); after the reinstall, from the copy, it goes on and is saved again
     "numpowder": (lambda v: v[:4] == b"NPWD",) * 2,
     # a run banked ("HCR1", runs at 212) with a best on the Countryside (at 48); after the reinstall, from the copy,
