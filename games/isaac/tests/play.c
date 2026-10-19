@@ -48,7 +48,8 @@ static void parse_keys(char *s) {
 }
 
 /* ---------------------------------------------------------------- the bot */
-static int bot_stuck, bot_last_room = -1, bot_target_door = -1;
+static int bot_stuck, bot_last_room = -1, bot_target_door = -1, bot_target = -1, bot_chase, bot_ignore_room = -1;
+static uint8_t bot_ignore[MAX_ENTS];
 static float bot_lx, bot_ly;
 static uint32_t bot_keys(void) {
   uint32_t k = 0;
@@ -58,7 +59,7 @@ static uint32_t bot_keys(void) {
   float best = 1e9f;
   for (int i = 0; i < MAX_ENTS; i++) {
     Ent *e = &ents[i];
-    if (e->kind != EK_MON || (e->flags & (EF_FRIEND | EF_HIDDEN))) continue;
+    if (e->kind != EK_MON || (e->flags & (EF_FRIEND | EF_HIDDEN | EF_NOCOUNT))) continue;
     float d = dist2(e->x, e->y, pl.x, pl.y);
     if (d < best) best = d, m = e;
   }
@@ -66,11 +67,14 @@ static uint32_t bot_keys(void) {
   if (m) {
     /* line up with it, a little way off, and cry at it */
     float dx = m->x - pl.x, dy = m->y - pl.y;
+    static const float off[4] = {55, 30, -55, -30};
     if (absf(dx) < absf(dy)) {
       tx = m->x, ty = m->y + (dy > 0 ? -50 : 50);
+      for (int i = 0; i < 4 && solid_at(tx, ty, false); i++) ty = m->y + (dy > 0 ? -off[i] : off[i]);
       if (absf(dx) < 12) k |= dy > 0 ? K_SDOWN : K_SUP;
     } else {
       ty = m->y, tx = m->x + (dx > 0 ? -55 : 55);
+      for (int i = 0; i < 4 && solid_at(tx, ty, false); i++) tx = m->x + (dx > 0 ? -off[i] : off[i]);
       if (absf(dy) < 12) k |= dx > 0 ? K_SRIGHT : K_SLEFT;
     }
     if (!(k & K_SHOOT)) k |= absf(dx) > absf(dy) ? (dx > 0 ? K_SRIGHT : K_SLEFT) : (dy > 0 ? K_SDOWN : K_SUP);
@@ -78,14 +82,21 @@ static uint32_t bot_keys(void) {
     /* pickups and items first, then the trapdoor, then a door to a room not yet visited */
     Ent *p = NULL;
     best = 1e9f;
+    if (bot_ignore_room != fl.cur) memset(bot_ignore, 0, sizeof bot_ignore), bot_ignore_room = fl.cur;
     for (int i = 0; i < MAX_ENTS; i++) {
       Ent *e = &ents[i];
+      if (bot_ignore[i]) continue;
       bool want = (e->kind == EK_PEDESTAL && e->t3 && !(e->flags & EF_DEVIL) && !e->price) || e->kind == EK_TRAPDOOR
                   || (e->kind == EK_PICKUP && !(e->flags & EF_SHOP) && e->type != PK_LOCKED_CHEST);
       if (!want) continue;
       float d = dist2(e->x, e->y, pl.x, pl.y) + (e->kind == EK_TRAPDOOR ? 1e6f : 0);
       if (d < best) best = d, p = e;
     }
+    /* (what it can't reach after a while, it leaves) */
+    if (p && (int)(p - ents) == bot_target) {
+      if (++bot_chase > 150 && p->kind != EK_TRAPDOOR) bot_ignore[p - ents] = 1, bot_chase = 0;
+    } else
+      bot_target = p ? (int)(p - ents) : -1, bot_chase = 0;
     if (p && !(p->kind == EK_TRAPDOOR && bot_target_door >= 0 && fl.cur != fl.boss_room)) tx = p->x, ty = p->y;
     else {
       if (fl.cur != bot_last_room) bot_last_room = fl.cur, bot_target_door = -1;
@@ -179,6 +190,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < nholds; i++)
       if (f >= holds[i].a && f <= holds[i].b) k |= holds[i].k;
     if (bot && !k) k = bot_keys();
+    if (getenv("TRACE") && f % 50 == 0) printf("f %d pl %.1f,%.1f v %.2f,%.2f keys %x mode %d room %d\n", f, pl.x, pl.y, pl.vx, pl.vy, k, g_mode, fl.cur);
     if (god) pl.invuln = pl.invuln > 2 ? pl.invuln : 2, pl.dead = false;
     host_keys = k;
     host_time += 33;
@@ -193,6 +205,10 @@ int main(int argc, char **argv) {
       host_shot(p);
     }
   }
+  for (int i = 0; i < MAX_ENTS; i++)
+    if (ents[i].kind == EK_MON)
+      printf("MON %d type %d hp %.1f/%.1f state %d at %.0f,%.0f flags %x\n", i, ents[i].type, ents[i].hp, ents[i].maxhp,
+             ents[i].state, ents[i].x, ents[i].y, ents[i].flags);
   printf("END mode %d stage %d room %d kind %d hp %d/%d soul %d coins %d bombs %d keys %d items %d frames %u floors %d dropped %d\n",
          g_mode, fl.stage, fl.cur, room_cur()->kind, pl.red, pl.containers * 2, pl.soul, pl.coins, pl.bombs, pl.keys, pl.norder,
          g_frame, floors_seen, gfx_dropped);

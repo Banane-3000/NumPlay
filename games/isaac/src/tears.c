@@ -358,5 +358,5 @@ void explode(float x, float y, float radius, float dmg, bool hurt_player, int ki
   grid_explode(x, y, radius);
   float dx = pl.x - x, dy = pl.y - y;
   if (hurt_player && dx * dx + dy * dy < (radius + 4) * (radius + 4) && !pl.has[190]) player_hurt(2, -1);
-  decal_blood(x, y, -radius * 0.7f);   /* (a scorch mark: negative is black) */
+  decal_blood(x, y, -radius * 0.45f);   /* (a scorch mark: negative is black) */
 }

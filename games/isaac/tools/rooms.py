@@ -166,7 +166,7 @@ room([".............",
       "....r...r....",
       ".1.........1.",
       "............."], weight=2)
-room(["......t......",
+room([".....t.......",
       ".2...........",
       "...r.....r...",
       "......3......",
@@ -201,13 +201,13 @@ room([".............",
       "..s.s.s.s.s..",
       ".1.........1.",
       "............."])
-room(["......o......",
-      "......o......",
-      "..1...o...1..",
-      "ooo.......ooo",
-      "..2...o...2..",
-      "......o......",
-      "......o......"], chapters=30)
+room([".............",
+      ".....o.o.....",
+      "..1..o.o..1..",
+      ".oo.......oo.",
+      "..2..o.o..2..",
+      ".....o.o.....",
+      "............."], chapters=30)
 room([".............",
       ".....rrr.....",
       "..2..r*r..2..",
@@ -250,13 +250,13 @@ room([".............",
       ".r..1...1..r.",
       ".rr.......rr.",
       "............."], weight=2)
-room(["......r......",
+room([".............",
       "......r......",
       "...3..r..3...",
       ".............",
       "...2..r..2...",
       "......r......",
-      "......r......"])
+      "............."])
 room([".............",
       ".............",
       ".1..1..1..1..",
@@ -271,13 +271,13 @@ room([".............",
       "...r.....r...",
       "...rrr.rrr...",
       "............."])
-room(["o.o.o.o.o.o.o",
+room(["o.o.o...o.o.o",
       ".............",
       "o.....2.....o",
       ".............",
       "o...2...2...o",
       ".............",
-      "o.o.o.o.o.o.o"], chapters=30)
+      "o.o.o...o.o.o"], chapters=30)
 room([".............",
       "..x.......x..",
       ".............",
@@ -302,7 +302,7 @@ room([".............",
 room(["..ppp...ppp..",
       ".............",
       "p.....2.....p",
-      "p...........p",
+      ".............",
       "p.....2.....p",
       ".............",
       "..ppp...ppp.."])
@@ -474,9 +474,29 @@ for k in ("SHOP", "BOSS", "ARCADE", "SACRIFICE", "LIBRARY", "MINIBOSS", "CHALLEN
     room(["............."] * 7, k)   # (laid out by the game itself)
 
 
+SOLID = set("rmtbpqoxkfF")
+
+
+def check(rows):
+    """every door's cell reaches every other's, walking (no bombs, no flight)"""
+    doors = [(6, 0), (0, 3), (6, 6), (12, 3)]
+    for c, r in doors:
+        assert rows[r][c] not in SOLID, (rows, "a door is blocked")
+    seen, todo = {doors[0]}, [doors[0]]
+    while todo:
+        c, r = todo.pop()
+        for dc, dr in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            n = (c + dc, r + dr)
+            if 0 <= n[0] < 13 and 0 <= n[1] < 7 and n not in seen and rows[n[1]][n[0]] not in SOLID:
+                seen.add(n)
+                todo.append(n)
+    assert all(d in seen for d in doors), (rows, "a door can't be reached")
+
+
 def encode():
     out = bytearray(struct.pack("<I", len(L)))
     for kind, chapters, weight, rows, mons in L:
+        check(rows)
         out += bytes([KINDS.index(kind), chapters, weight, 0])
         for r in rows:
             for ch in r:

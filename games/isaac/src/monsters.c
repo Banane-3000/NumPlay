@@ -146,6 +146,8 @@ Ent *mon_spawn(int type, float x, float y) {
   e->t = (int16_t)(20 + rnd(40));
   e->a = rndf() * 6.2831853f;
   e->c = x, e->b = y;   /* (where it began: tethers) */
+  if (m->ai == AI_CHARGER || m->ai == AI_KNIGHT || m->ai == AI_LEECH || m->ai == AI_WALL || m->ai == AI_VIS)
+    e->c = (float)rnd(4);   /* (for these, the way they go) */
   return e;
 }
 
