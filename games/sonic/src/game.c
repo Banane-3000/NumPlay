@@ -179,6 +179,7 @@ void GM_Level(void) {
     AddPLC(plcid_GHZAnimals + V.zone);
   }
   V.gamemode &= 0x7F;
+  if (!V.f_demo) save_progress(); /* (each act kept as it starts) */
   for (;;) {
     PauseGame();
     V.vblank_routine = id_VBlank_Levels;

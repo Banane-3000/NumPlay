@@ -21,6 +21,10 @@ void game_save_on_quit(void);
 void save_progress(void);
 bool save_load_progress(void);
 bool save_exists(void);
+void save_clear_progress(void);
+void save_peek(int *zone, int *act, int *lives);
+bool save_seen_keys(void);
+void save_set_seen_keys(void);
 
 /* Sonic (sonic.c, react.c) */
 void SonicPlayer(Obj *o);

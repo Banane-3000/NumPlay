@@ -122,4 +122,9 @@ void Newtron(Obj *o);
 void BossGreenHill(Obj *o);
 void BossBall(Obj *o);
 void boss_hit_flash(Obj *o, uint8_t restore);
+
+/* screens.c */
+void TitleSonic(Obj *o);
+void PSBTM(Obj *o);
+void CreditsText(Obj *o);
 #endif

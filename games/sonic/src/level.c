@@ -160,10 +160,15 @@ static const struct {
 int level_plc1(void) { return headers[V.zone].plc1; }
 int level_nchunks(void) { return nchunks; }
 
-void LevelDataLoad(void) {
+/* the zone's blocks and chunks */
+void level_blocks_load(void) {
   blocks16 = DATAW(headers[V.zone].blocks);
   chunks256 = DATAW(headers[V.zone].chunks);
   nchunks = headers[V.zone].nchunks;
+}
+
+void LevelDataLoad(void) {
+  level_blocks_load();
   LevelLayoutLoad();
   int pal = headers[V.zone].pal;
   if (V.zone == id_LZ && V.act == 3) pal = palid_SBZ3;
@@ -319,6 +324,9 @@ static void draw_chunks(uint16_t (*pl)[64], int plane, const Cam *cam) {
   for (int r = 0; r < 16; r++)
     for (int i = 0; i < 32; i++) draw_at(pl, plane, cam, -16 + r * 16, i * 16);
 }
+
+/* the title's background: the whole of plane B from the background camera (DrawChunks) */
+void DrawChunks_BG(void) { draw_chunks(plane_b, 1, &V.cam[1]); }
 
 static void bg_rows_by_map(const uint8_t *map, int ybase, int ymask, int from) {
   for (int r = 0; r < 16; r++) {

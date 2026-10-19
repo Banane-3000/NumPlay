@@ -132,6 +132,8 @@ void BuildSprites(void) {
     for (int k = 0; k < q->n; k++) {
       Obj *o = q->o[k];
       if (!o->id) continue;
+      /* (no mappings: the title's PRESS START BUTTON, never set up there in the original, nor here) */
+      if (!o->map) continue;
       o->render &= 0x7F;
       uint8_t r = o->render;
       int16_t x, y;

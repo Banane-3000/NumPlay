@@ -277,7 +277,6 @@ void FadeOut_ToBlack(void);
 void WhiteIn_FromWhite(void);
 void WhiteOut_ToWhite(void);
 void PaletteCycle(void);
-void PalCycle_Sega(void);
 void PalCycle_Title(void);
 enum {
   palid_SegaBG, palid_Title, palid_LevelSel, palid_Sonic, palid_GHZ, palid_LZ, palid_MZ, palid_SLZ, palid_SYZ,
@@ -289,6 +288,8 @@ enum {
 void LevelSizeLoad(void);
 void LevelDataLoad(void);
 void LevelLayoutLoad(void);
+void level_blocks_load(void);
+void DrawChunks_BG(void);
 void LoadTilesFromStart(void);
 void LoadTilesAsYouMove(void);
 void LoadTilesAsYouMove_BGOnly(void);

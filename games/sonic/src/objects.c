@@ -48,4 +48,7 @@ const ObjFn obj_index[0x8D + 1] = {
   [id_Newtron] = Newtron,
   [id_BossGreenHill] = BossGreenHill,
   [id_BossBall] = BossBall,
+  [id_TitleSonic] = TitleSonic,
+  [id_PSBTM] = PSBTM,
+  [id_CreditsText] = CreditsText,
 };

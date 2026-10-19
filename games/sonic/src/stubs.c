@@ -7,21 +7,7 @@ void ResumeMusic(void) { V.air = 30; }
 void AnimateLevelGfx(void) {}
 void LZWaterFeatures(void) {}
 void PalCycle_SS(void) {}
-void pause_overlay_draw(void) {}
-void PauseGame(void) {}
-void save_restore_copy(void) {}
-void game_save_on_quit(void) {}
-extern int host_level, host_act, host_lives;
-void game_init(void) {
-  V.gamemode = id_Level;
-  V.lives = 3;
-#ifdef HOST
-  if (host_level >= 0) V.zone = (uint8_t)host_level, V.act = (uint8_t)host_act, AddPLC(plcid_Main);
-#endif
-}
-void GM_Sega(void) {}
-void GM_Title(void) {}
-void GM_Special(void) {}
-void GM_Continue(void) {}
-void GM_Ending(void) {}
-void GM_Credits(void) {}
+void GM_Special(void) { V.gamemode = id_Level; }
+void GM_Continue(void) { V.gamemode = id_Sega; }
+void GM_Ending(void) { V.gamemode = id_Sega; }
+void GM_Credits(void) { V.gamemode = id_Sega; }

@@ -9,6 +9,7 @@
  * then the colours, 16 lines at a time to the screen, 8 lines below its top. */
 #include "s1.h"
 #include "plat.h"
+#include "ui.h"
 
 const uint8_t *vram[2048];
 uint16_t plane_a[32][64], plane_b[32][64];
@@ -146,6 +147,9 @@ void vdp_render(void) {
       uint16_t back = l[vdp_backdrop & 63];
       for (int x = 0; x < 320; x++) dst[x] = out[x] ? l[out[x] & 63] : back;
     }
-    if ((y & 15) == 15) plat_push(0, 8 + y - 15, 320, 16, band);
+    if ((y & 15) == 15) {
+      if (ui_active) ui_draw_band(band, y - 15);
+      plat_push(0, 8 + y - 15, 320, 16, band);
+    }
   }
 }

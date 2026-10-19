@@ -122,7 +122,7 @@ void GameOverCard(Obj *o) {
       V.f_restart = 1;
     } else {
       V.gamemode = id_Continue;
-      if (!V.continues) V.gamemode = id_Sega;
+      if (!V.continues) V.gamemode = id_Sega, save_clear_progress();
     }
     DisplaySprite(o);
   }
