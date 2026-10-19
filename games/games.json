@@ -399,6 +399,24 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/invaders"
   },
   {
+    "id": "sudoku",
+    "title": "Sudoku",
+    "tagline": "Fill the grid, 1 to 9",
+    "credit": null,
+    "top": "0x3F67B5",
+    "bottom": "0x18243A",
+    "accent": "0x8EC5FF",
+    "colors": 3,
+    "records": [
+      "sudoku.sav"
+    ],
+    "shots": [
+      "docs/card.png"
+    ],
+    "app": "Sudoku.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/sudoku"
+  },
+  {
     "id": "numvisuals",
     "title": "NumVisuals",
     "tagline": "Backgrounds, clocks, timers",

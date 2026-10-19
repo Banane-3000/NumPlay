@@ -119,6 +119,9 @@ GAMES = {
                  presses((1500, "ok"), (2600, "right", 700), (3500, "ok"), (4100, "ok"), (4700, "ok"), (5300, "ok")), 6000,
                  presses((1500, "ok"), (2600, "right", 700), (3500, "ok"), (4100, "ok"), (4700, "ok"), (5300, "ok"),
                          (5900, "ok")), 6500),
+    # past how to play, an Easy puzzle made, two hints; next time the game goes on: one more
+    "sudoku": ("Sudoku.nwa", "sudoku.sav", presses((1500, "ok"), (2000, "ok"), (3500, "shift"), (4000, "shift")), 5500,
+               presses((1500, "shift")), 3000),
     # the intro film is skipped (seen), Lucky walks up the dock and talks to the
     # guardians; next time the game starts where it was left
     "championisland": ("ChampionIsland.nwa", "champion.sav",
@@ -309,6 +312,9 @@ CHECKS = {
     # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies kept
     "twoplayer": (lambda v: len(v) == 36 and v[:4] == b"P\1\1\1",
                   lambda v: len(v) == 36 and v[:4] == b"P\1\2\2"),
+    # a game kept (Easy, the guide read) with the two digits the hints wrote (the digits at 109); then three
+    "sudoku": (lambda v: len(v) == 352 and v[:4] == b"S\1\3\0" and sum(1 <= b <= 9 for b in v[109:190]) == 2,
+               lambda v: v[2] & 1 and sum(1 <= b <= 9 for b in v[109:190]) == 3),
 }
 
 

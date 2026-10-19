@@ -96,6 +96,10 @@ Block Breaker	打砖块
 Break every brick	打碎每一块砖
 2 Players	双人对战
 Pong and more, side by side	Pong 等游戏，两人并肩玩
+Cookie Clicker	Cookie Clicker
+Click the cookie, bake billions	点击饼干，烤出亿万饼干
+Sudoku	数独
+Fill the grid, 1 to 9	填满九宫格，1 到 9
 Backgrounds, clocks, timers	背景、时钟、计时器
 Reach the door, trust nothing	走到门口，什么都别相信
 Space Invaders	太空侵略者
