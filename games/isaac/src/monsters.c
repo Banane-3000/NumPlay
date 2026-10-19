@@ -716,7 +716,7 @@ void mon_draw(Ent *e) {
   }
   uint16_t tint = 0;
   int amount = 0;
-  if (e->flash) tint = C_WHITE, amount = 20;
+  if (e->flash) tint = rgb565(0xFF5050), amount = e->flash > 1 ? 14 : 8;
   else if (e->freeze) tint = rgb565(0xC0C0C0), amount = 24;
   else if (e->poison) tint = rgb565(0x40C040), amount = 12;
   else if (e->flags & EF_CHAMPION) {

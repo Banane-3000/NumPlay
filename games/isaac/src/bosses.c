@@ -828,7 +828,7 @@ void boss_draw(Ent *e) {
   if (e->vx < -0.1f || (e->type >= MON_FAMINE && e->type <= MON_DEATH && e->vx < 0)) flags = GFX_FLIPX;
   uint16_t tint = 0;
   int amount = 0;
-  if (e->flash) tint = C_WHITE, amount = 18;
+  if (e->flash) tint = rgb565(0xFF5050), amount = e->flash > 1 ? 12 : 6;
   else if (e->freeze) tint = rgb565(0xC0C0C0), amount = 24;
   else if (e->poison) tint = rgb565(0x40C040), amount = 12;
   int sx = 256, sy = 256;

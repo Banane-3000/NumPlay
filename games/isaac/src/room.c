@@ -349,6 +349,7 @@ void doors_draw(void) {
     if (!room_door_exists(d, &kind)) continue;
     int fk = door_frame_kind(kind, false, here);
     bool open = room_door_open(d);
+    bool locked = !open && !ents_alive_monsters();
     int f = fk * 2 + (open ? 0 : 1);
     if (fk == 3) f = 6;   /* (a hole stays a hole) */
     if (d == DIR_UP) gfx_sprite(SPR_DOOR, f, door_x[2], door_y[2], 0, 32);
@@ -357,6 +358,15 @@ void doors_draw(void) {
       int spr = SPR_DOOR_SIDE_NORMAL + fk;
       if (d == DIR_LEFT) gfx_sprite(spr, open ? 0 : 1, door_x[1], door_y[1], 0, 32);
       else gfx_sprite(spr, open ? 0 : 1, door_x[3], door_y[3], GFX_FLIPX, 32);
+    }
+    if (locked) {   /* its padlock */
+      static const int16_t px[4] = {160, ROOM_X - 9, 160, ROOM_R + 9}, py[4] = {ROOM_B + 9, 120, ROOM_Y - 9, 120};
+      int x = px[d], y = py[d];
+      gfx_rect(x - 3, y - 6, 2, 4, rgb565(0xB0B0B0), 32);
+      gfx_rect(x + 2, y - 6, 2, 4, rgb565(0xB0B0B0), 32);
+      gfx_rect(x - 1, y - 7, 3, 2, rgb565(0xB0B0B0), 32);
+      gfx_rect(x - 4, y - 2, 9, 7, rgb565(0xD8A020), 32);
+      gfx_rect(x, y + 1, 1, 3, C_BLACK, 32);
     }
   }
 }

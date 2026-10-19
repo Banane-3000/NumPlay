@@ -267,13 +267,15 @@ void pedestal_draw(Ent *e) {
     int spr = item_sprite(e->t3);
     if ((fl.curse & CURSE_BLIND) && !e->price && room_cur()->kind != ROOM_SHOP) spr = SPR_ITEM_1, gfx_text_c(FONT_UPHEAVAL, x, y - 22, "?", C_WHITE, 2, true);
     else gfx_sprite(spr, 0, x, y - 4 - bob, 0, 32);
-    if (e->price) {
+    if (e->price || (e->flags & EF_DEVIL)) {
       char s[8];
       int n = 0, p = e->flags & EF_DEVIL ? devil_price(e->t3) : e->price;
       if (p >= 10) s[n++] = (char)('0' + p / 10);
       s[n++] = (char)('0' + p % 10), s[n] = 0;
       if (e->flags & EF_DEVIL) {
-        for (int k = 0; k < p; k++) gfx_sprite(SPR_HUD_HEART, 0, x - p * 6 + k * 12, y + 8, 0, 32);
+        bool soul = pl.containers == 0;   /* (no red hearts to give: three soul hearts) */
+        if (soul) p = 3;
+        for (int k = 0; k < p; k++) gfx_sprite(SPR_HUD_HEART, soul ? 3 : 0, x - p * 6 + k * 12, y + 8, 0, 32);
       } else
         gfx_text_c(FONT_UPHEAVAL, x, y + 9, s, C_WHITE, 1, true);
     }
@@ -378,8 +380,8 @@ void machine_update(Ent *e) {
 
 void machine_draw(Ent *e) {
   int sh = e->t2 ? ((e->t2 & 2) ? 1 : -1) : 0;
-  if (e->type == MA_DEVIL_STATUE || e->type == MA_ANGEL_STATUE) {
-    gfx_sprite_tint(e->spr, 0, (int)e->x, (int)e->y, 0, rgb565(0x707070), 18, 32);
+  if (e->type == MA_DEVIL_STATUE || e->type == MA_ANGEL_STATUE) {   /* a statue: grey stone, smaller */
+    gfx_sprite_scaled(e->spr, 0, (int)e->x, (int)e->y, 150, 150, 0, rgb565(0x8A8A8A), 22, 32);
     return;
   }
   gfx_sprite(e->spr, 0, (int)e->x + sh, (int)e->y + 8, 0, 32);
@@ -528,7 +530,8 @@ void trapdoor_update(Ent *e) {
     return;
   }
   float dx = pl.x - e->x, dy = pl.y - e->y;
-  if (dx * dx + dy * dy < 8 * 8) {
+  if (dx * dx + dy * dy > 16 * 16) e->state = 1;
+  if (e->state && dx * dx + dy * dy < 8 * 8) {
     if (e->type == 1) fl.alt = 1;   /* the beam: the Cathedral */
     else if (fl.stage == 8) fl.alt = 0;
     game_next_floor();

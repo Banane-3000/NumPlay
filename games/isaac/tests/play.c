@@ -1,12 +1,13 @@
 /* Plays The Binding of Isaac on a computer, with scripted keys, and saves frames.
  *
  *   play [--frames N] [--keys "10-40:right,50:ok,..."] [--shots 30,60|all|every:N] [--out DIR] [--saves DIR]
- *        [--seed N] [--run] [--stage S] [--give ID,ID...] [--bot] [--god] [--boss MON] [--room KIND]
+ *        [--seed N] [--run] [--stage S] [--give ID,ID...] [--bot] [--god] [--boss MON] [--goto KIND]
  *
  * Keys: left right up down sleft sright sup sdown ok back bomb item card map home; "a-b:key" holds the key
  * from frame a to b, "a:key" for one frame. --run starts a new run past the title (--stage: on that floor).
  * --bot plays by itself: it goes for the monsters, crying at them, then on through the doors to the rooms it
- * hasn't seen, then down the trapdoor; --god keeps Isaac alive. Screenshots are DIR/shot_<frame>.ppm. */
+ * hasn't seen, then down the trapdoor; --god keeps Isaac alive; --goto starts in the floor's first room of that kind
+ * (ROOM_* in src/data.h), --boss makes the floor's boss that one (MON_*). Screenshots are DIR/shot_<frame>.ppm. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -145,7 +146,7 @@ int main(int argc, char **argv) {
   int frames = 600, seed = 1, stage = 1, every = 0;
   char keys[65536] = "", shots[65536] = "", out[512] = "build/shots", saves[512] = "build/host-saves", give[1024] = "";
   bool all = false, run = false, bot = false, god = false;
-  int boss = -1;
+  int boss = -1, gokind = -1;
   for (int i = 1; i < argc; i++) {
     const char *a = argv[i];
     const char *v = i + 1 < argc ? argv[i + 1] : "";
@@ -162,6 +163,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(a, "--stage")) stage = atoi(v), i++;
     else if (!strcmp(a, "--give")) snprintf(give, sizeof give, "%s", v), i++;
     else if (!strcmp(a, "--boss")) boss = atoi(v), i++;
+    else if (!strcmp(a, "--goto")) gokind = atoi(v), i++;
     else if (!strcmp(a, "--run")) run = true;
     else if (!strcmp(a, "--bot")) bot = true;
     else if (!strcmp(a, "--god")) god = true;
@@ -183,6 +185,16 @@ int main(int argc, char **argv) {
     if (boss >= 0) fl.boss = (uint8_t)boss, fl.rooms[fl.boss_room].boss = (uint8_t)boss;
     for (char *tok = strtok(give, ","); tok; tok = strtok(NULL, ",")) item_give(atoi(tok));
     g_mode = MODE_PLAY;
+    if (gokind == ROOM_DEVIL || gokind == ROOM_ANGEL) {   /* (straight into the Devil's or an angel's room) */
+      fl.devil_angel = gokind == ROOM_ANGEL;
+      floor_open_devil();
+      room_teleport(fl.devil_room);
+    } else if (gokind >= 0)
+      for (int i = 0; i < fl.nrooms; i++)
+        if (fl.rooms[i].kind == gokind) {
+          room_teleport(i);
+          break;
+        }
   }
   int floors_seen = fl.stage;
   for (int f = 0; f < frames && g_running; f++) {

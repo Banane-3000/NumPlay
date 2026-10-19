@@ -262,6 +262,7 @@ typedef struct {
   int8_t cur, start, boss_room, devil_room;
   uint8_t boss;                                  /* the boss's MON_* */
   bool devil_open, devil_angel, boss_beaten, trapdoor;
+  int8_t devil_side;                             /* the wall of the boss's room it opens in */
   uint32_t seed;
   Room rooms[MAX_ROOMS];
 } Floor;

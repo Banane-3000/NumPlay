@@ -270,13 +270,13 @@ static int room_at(int mx, int my) {
 
 bool room_door_exists(int d, int *kind) {
   Room *r = room_cur();
-  if (fl.cur == fl.devil_room) {   /* the Devil's (or an angel's) room: its one door, down */
+  if (fl.cur == fl.devil_room) {   /* the Devil's (or an angel's) room: its one door, back the way he came */
     if (kind) *kind = ROOM_BOSS;
-    return d == DIR_DOWN;
+    return d == ((fl.devil_side + 2) & 3);
   }
   if (r->mx == 0 && r->my == 0) return false;
   int j = room_at(r->mx + DIR_X[d], r->my + DIR_Y[d]);
-  if (fl.cur == fl.boss_room && d == DIR_UP && fl.devil_open && j < 0) {
+  if (fl.cur == fl.boss_room && d == fl.devil_side && fl.devil_open && j < 0) {
     if (kind) *kind = fl.devil_angel ? ROOM_ANGEL : ROOM_DEVIL;
     return true;
   }
@@ -547,6 +547,7 @@ void floor_enter_room(int index, int from_dir) {
   int d = from_dir < 0 || from_dir > 4 ? 4 : from_dir;
   pl.x = ex[d], pl.y = ey[d], pl.vx = pl.vy = 0;
   if (r->kind == ROOM_START && d == 4) pl.x = 160, pl.y = 120;
+  if (d == 4 && r->kind != ROOM_START) pl.y = ROOM_B - 14;   /* (sent here: by the bottom wall, clear of what's in the room) */
   familiars_spawn();
   g_room_frames = 0;
   /* per-room effects end */
@@ -587,7 +588,7 @@ void floor_reveal(int what) {
 int floor_neighbour(int d) {
   Room *r = room_cur();
   if (fl.cur == fl.devil_room) return fl.boss_room;
-  if (fl.cur == fl.boss_room && d == DIR_UP && fl.devil_open && room_at(r->mx, r->my - 1) < 0) {
+  if (fl.cur == fl.boss_room && d == fl.devil_side && fl.devil_open && room_at(r->mx + DIR_X[d], r->my + DIR_Y[d]) < 0) {
     floor_open_devil();
     return fl.devil_room;
   }

@@ -128,8 +128,14 @@ static void boss_reward(void) {
     float p = 0.15f + (boss_hit ? 0 : 0.35f) + (pl.damage_taken_floor ? 0 : 0.35f);
     if (pl.has[51]) p += 0.1f;
     if (pl.has[122]) p += 0.1f;
-    if (chance(p)) {
-      fl.devil_open = true;
+    int side = -1;
+    for (int k = 0; k < 4 && side < 0; k++) {
+      static const int8_t order[4] = {DIR_UP, DIR_LEFT, DIR_RIGHT, DIR_DOWN};
+      int mx = r->mx + DIR_X[order[k]], my = r->my + DIR_Y[order[k]];
+      if (mx < 0 || my < 0 || mx >= MAP_W || my >= MAP_H || fl.map[my][mx] < 0) side = order[k];
+    }
+    if (side >= 0 && chance(p)) {
+      fl.devil_open = true, fl.devil_side = (int8_t)side;
       fl.devil_angel = !pl.has[79] && !pl.has[80] && rnd(2) == 0 && g_frame > 0 && !pl.has[118] && !pl.has[51];
     }
   }

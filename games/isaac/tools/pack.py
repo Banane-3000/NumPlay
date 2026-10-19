@@ -21,6 +21,7 @@ import os
 import struct
 import sys
 
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -353,7 +354,15 @@ BACKDROPS = [
 
 
 def encode_backdrop(name):
-    im = scaled(bg(name)).convert("RGB")   # 234 x 156 -> 180 x 120
+    src = bg(name)
+    if src.getextrema()[3][0] < 255:
+        # (the Cathedral's floor has a cross left open for a layer under it: the floor's own colour, darker)
+        a = np.asarray(src.crop((100, 80, 230, 150)))
+        mean = tuple(int(v) * 3 // 4 for v in a[a[:, :, 3] == 255][:, :3].mean(axis=0))
+        under = Image.new("RGBA", src.size, mean + (255,))
+        under.alpha_composite(src)
+        src = under
+    im = scaled(src).convert("RGB")   # 234 x 156 -> 180 x 120
     assert im.size == (180, 120), im.size
     q = im.quantize(colors=256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
     pal = q.getpalette()[:256 * 3]

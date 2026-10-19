@@ -153,7 +153,7 @@ bool save_run(void) {
   /* the floor, then each room: its grid in runs of (cell, state) */
   put8(fl.stage), put8(fl.alt), put8(fl.curse), put8(fl.nrooms), put(fl.map, sizeof fl.map);
   put8(fl.cur), put8(fl.start), put8(fl.boss_room), put8(fl.devil_room), put8(fl.boss);
-  put8(fl.devil_open | fl.devil_angel << 1 | fl.boss_beaten << 2 | fl.trapdoor << 3);
+  put8(fl.devil_open | fl.devil_angel << 1 | fl.boss_beaten << 2 | fl.trapdoor << 3 | (fl.devil_side & 3) << 4);
   put(&fl.seed, 4);
   for (int i = 0; i < fl.nrooms; i++) {
     Room *r = &fl.rooms[i];
@@ -197,6 +197,7 @@ bool load_run(void) {
   fl.boss = (uint8_t)get8();
   int b = get8();
   fl.devil_open = b & 1, fl.devil_angel = (b >> 1) & 1, fl.boss_beaten = (b >> 2) & 1, fl.trapdoor = (b >> 3) & 1;
+  fl.devil_side = (int8_t)((b >> 4) & 3);
   get(&fl.seed, 4);
   if (fl.nrooms > MAX_ROOMS) return false;
   for (int i = 0; i < fl.nrooms && !bad; i++) {
