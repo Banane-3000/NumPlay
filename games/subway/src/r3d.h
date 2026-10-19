@@ -1,0 +1,85 @@
+/* Subway Surfers: the 3D renderer.
+ *
+ * The world is convex polygons with flat colours: each frame they are moved
+ * in front of the camera, cut at the near plane, projected and kept in a
+ * list; then the screen is drawn in bands of BAND_H rows, each one its
+ * background (sky and the ground, scene.c), the polygons that cross it with
+ * a depth buffer, the see-through ones (shadows) after them, and what is
+ * drawn flat over the picture (ui.c). The whole screen never has to fit in
+ * RAM: a band and its depths do. */
+#ifndef SS_R3D_H
+#define SS_R3D_H
+#include <stdbool.h>
+#include <stdint.h>
+#include "plat.h"
+
+#define BAND_H 30
+#define NBANDS (SCREEN_H / BAND_H)
+
+typedef struct {
+  float x, y, z;
+} V3;
+
+/* the band being drawn: its colours (SCREEN_W x BAND_H) and rows [r_y0, r_y1) */
+extern uint16_t *r_col;
+extern int r_y0, r_y1;
+void r_set_band_memory(uint16_t *band);
+
+/* the camera: where it is, how far it looks down (radians), its focal length and the
+ * screen point straight ahead */
+typedef struct {
+  float x, y, z, pitch, f, cx, cy;
+  float sp, cp;   /* sine and cosine of pitch */
+} Camera;
+extern Camera cam;
+void r_camera(float x, float y, float z, float pitch, float f, float cx, float cy);
+/* camera space (x right, y up, z ahead) of a world point */
+static inline V3 r_view(V3 p) {
+  float dy = p.y - cam.y, dz = p.z - cam.z;
+  return (V3){p.x - cam.x, dy * cam.cp + dz * cam.sp, -dy * cam.sp + dz * cam.cp};
+}
+/* the screen point of a world point; false behind the camera */
+bool r_project(V3 p, float *sx, float *sy);
+
+/* distance haze: from HAZE0 to HAZE1 metres ahead colours go to the horizon's */
+extern float r_haze0, r_haze1;
+extern uint32_t r_haze_rgb;
+
+/* polygons: their corners in order (clockwise on the screen when seen from the front: the back is not
+ * drawn unless P_TWOSIDED), a colour already lit (r_shade) */
+enum {
+  P_TWOSIDED = 1,
+  P_DECAL = 2,      /* lies on another polygon: drawn over it */
+  P_DECAL2 = 16,    /* lies on a decal */
+  P_DECAL3 = 32,    /* lies on that */
+  P_ALPHA = 4,      /* see-through (alpha 0..255): drawn last, no depth written */
+  P_NOHAZE = 8
+};
+void r_begin(void);
+void r_poly(const V3 *v, int n, uint32_t rgb, int flags, int alpha);
+/* a box: centre, its three half-axes (x, y and z sides), a colour each for the top, sides, front and
+ * back, and flags for the faces to leave out (1 top, 2 bottom, 4 -x, 8 +x, 16 front -z, 32 back +z) */
+void r_box(V3 c, V3 ax, V3 ay, V3 az, const uint32_t *rgb6, int skip);
+/* an axis-aligned box from (x0,y0,z0) to (x1,y1,z1), one colour lit by face */
+void r_cube(float x0, float y0, float z0, float x1, float y1, float z1, uint32_t rgb, int skip);
+int r_count(void);   /* polygons this frame */
+
+/* sine and cosine (short series: no C library) */
+void r_sincos(float a, float *s, float *c);
+/* lighting: the colour of a face whose normal is n */
+uint32_t r_shade(uint32_t rgb, V3 n);
+uint32_t r_mix888(uint32_t a, uint32_t b, int t256);
+static inline uint16_t r_565(uint32_t c) {
+  return (uint16_t)(((c >> 8) & 0xF800) | ((c >> 5) & 0x07E0) | ((c >> 3) & 0x1F));
+}
+__attribute__((always_inline)) static inline uint16_t r_mix565(uint16_t a, uint16_t b, int t32) {   /* t32 = 0 (a) .. 32 (b) */
+  uint32_t x = (a | (uint32_t)a << 16) & 0x07E0F81F, y = (b | (uint32_t)b << 16) & 0x07E0F81F;
+  x = (x + ((y - x) * (uint32_t)t32 >> 5)) & 0x07E0F81F;
+  return (uint16_t)(x | x >> 16);
+}
+
+/* draws the frame: bg fills each band's colours (sky, ground), the polygons go over it, then
+ * overlay draws flat things over the band (both may be NULL) */
+typedef void (*r_band_fn)(void);
+void r_render(r_band_fn bg, r_band_fn overlay);
+#endif
