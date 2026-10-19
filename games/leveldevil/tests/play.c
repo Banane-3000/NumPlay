@@ -164,8 +164,9 @@ static int score(void) { /* lower is better: the distance to the door (or the wa
         int d = iabs(dx) + iabs(dy);
         if (d < best) best = d, gxp = ob[k].x >> 8, gyp = ob[k].y >> 8;
       }
-  int dx = gxp - (hx >> 8) - hw / 2, dy = gyp - (hy >> 8) - hh / 2;
-  return iabs(dx) + iabs(dy);
+  int dx = iabs(gxp - (hx >> 8) - hw / 2), dy = iabs(gyp - (hy >> 8) - hh / 2);
+  if (modes & R_WRAP) dx = imin(dx, 424 - dx), dy = imin(dy, 242 - dy); /* (the short way, round the screen) */
+  return dx + dy;
 }
 
 static const int *sort_sc;
@@ -213,6 +214,7 @@ static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out,
       for (int m = 0; m < nmoves; m++) {
         give(cur + sz * c);
         for (int k = 0; k < chunk && !dead && !won; k++) step(moves[m]);
+        if (getenv("PLAY_DEBUG2") && d < 12) fprintf(stderr, "d%d m%d x%d%s\n", d, m, (int)(hx >> 8), dead ? " dead" : "");
         if (dead) continue;
         memcpy(npath + (size_t)nn * DEPTH, path + (size_t)c * DEPTH, (size_t)d);
         npath[(size_t)nn * DEPTH + d] = (uint8_t)m;
@@ -265,7 +267,7 @@ static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out,
       fprintf(stderr, "depth %d: %d states, %d kept:", d, nn, ncur);
       for (int c = 0; c < ncur; c++) {
         give(cur + sz * c);
-        if (cnt[1]) fprintf(stderr, " %d,%d%s%d", (int)(hx >> 8), (int)(hy >> 8), frozen ? "f" : "", frozen);
+        fprintf(stderr, " %d,%d%s%d", (int)(hx >> 8), (int)(hy >> 8), frozen ? "f" : "", frozen);
       }
       fprintf(stderr, "\n");
     }
@@ -296,7 +298,10 @@ int main(int argc, char **argv) {
   }
   if (!strcmp(cmd, "trace") && argc > 3) {
     setup(i);
-    printf("%d\n", play(argc > 4 ? argv[4] : solutions[i], 0, getenv("PLAY_EVERY") ? atoi(getenv("PLAY_EVERY")) : 4));
+    exact = getenv("PLAY_EXACT") || (argc <= 4 && walk[i]);
+    int got = play(argc > 4 ? argv[4] : solutions[i], 0, getenv("PLAY_EVERY") ? atoi(getenv("PLAY_EVERY")) : 4);
+    fprintf(stderr, "%d events set off\n", events_set_off());
+    printf("%d\n", got);
     return 0;
   }
   if (!strcmp(cmd, "film") && argc > 4) {
