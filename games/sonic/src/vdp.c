@@ -20,7 +20,7 @@ bool vdp_line_scroll = true;
 int vdp_hint_line = -1;
 bool vdp_display = true;
 
-static const uint8_t blank_pattern[32];
+const uint8_t vdp_blank_pattern[32];
 #define PATTERNS ((const uint8_t *)DATA(D_TILES))
 #define ARTS DATAW(D_ARTS)
 
@@ -34,7 +34,7 @@ void vdp_clear_planes(void) {
   memset(plane_a, 0, sizeof plane_a);
   memset(plane_b, 0, sizeof plane_b);
   for (int i = 0; i < 2048; i++)
-    if (!vram[i]) vram[i] = blank_pattern;
+    if (!vram[i]) vram[i] = vdp_blank_pattern;
 }
 
 /* a rectangle of tile words into a plane, each plus add */

@@ -8,6 +8,7 @@
 #include "s1.h"
 #include "collide.h"
 #include "game.h"
+#include "objs.h"
 
 #define son_maxspeed 0x600
 #define son_acceleration 0xC
@@ -18,16 +19,6 @@
 #define sonic_roll_width 7
 #define sonic_roll_height 14
 #define sonic_quick_size 10
-#define flashtime 0x30
-#define invtime 0x32
-#define shoetime 0x34
-#define angleright 0x36
-#define angleleft 0x37
-#define sticktoconvex 0x38
-#define restartime 0x3A
-#define jumping 0x3C
-#define standonobject 0x3D
-#define locktime 0x3E
 
 uint16_t tracksonic[64][2];   /* v_tracksonic: where he was, for the invincibility stars */
 

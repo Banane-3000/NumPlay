@@ -6,11 +6,14 @@
 
 struct spritequeue_s spritequeue[8];
 
+int obj_d7; /* the objects left to run after this one (the original's d7, which some objects read) */
+
 void ExecuteObjects(void) {
   int n = NOBJ;
   if (player->routine >= 6) n = NRESERVED;
   for (int i = 0; i < n; i++) {
     Obj *o = &objs[i];
+    obj_d7 = n - 1 - i;
     if (o->id && obj_index[o->id]) obj_index[o->id](o);
   }
   if (n == NOBJ) return;

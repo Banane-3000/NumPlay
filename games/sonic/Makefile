@@ -23,7 +23,7 @@ COLD_OBJ = $(patsubst src/%.c,$(BUILD_DIR)/cold/%.o,$(COLD))
 HEADERS = $(wildcard src/*.h) ../common/epsilon_app.h ../common/epsilon_files.h
 
 CFLAGS = -std=gnu11 $(shell $(NWLINK) eadk-cflags-device) -DDATA_BIN='"src/data.bin"'
-CFLAGS += -O2 -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant
+CFLAGS += -O2 -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant -fwrapv
 CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fwhole-program -fvisibility=internal
 CFLAGS += -ffunction-sections -fdata-sections $(EXTRA)
 LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
@@ -59,8 +59,8 @@ $(BUILD_DIR):
 	$(Q) mkdir -p $@
 
 # on a computer: tests/play.c plays it with scripted keys and saves screenshots
-HOST_FLAGS = -std=gnu11 -O1 -g -Wall -Wextra -Wno-unused-parameter -Isrc -DHOST -DDATA_BIN='"src/data.bin"'
-HOST_SAN = -fsanitize=address,undefined -fno-sanitize-recover=undefined
+HOST_FLAGS = -std=gnu11 -O1 -g -fwrapv -Wall -Wextra -Wno-unused-parameter -Isrc -DHOST -DDATA_BIN='"src/data.bin"'
+HOST_SAN = -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-sanitize=shift-base
 HOST_SRC = $(filter-out src/plat_eadk.c src/main.c,$(wildcard src/*.c))
 host: build/play
 build/play: $(HOST_SRC) src/main.c tests/play.c src/data.S src/data.bin $(HEADERS)

@@ -194,7 +194,7 @@ typedef struct {
   uint8_t timemin, timesec, timecent; /* v_time: (unused), minutes, seconds, frames */
   uint32_t score;
   uint8_t shield, invinc, shoes, unused1;
-  uint8_t lastlamp;
+  uint8_t lastlamp, lastlamp_dup;
   int16_t lamp_xpos, lamp_ypos;
   uint16_t lamp_rings;
   uint8_t lamp_timemin, lamp_timesec, lamp_timecent;

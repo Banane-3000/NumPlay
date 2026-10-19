@@ -22,19 +22,12 @@ const uint8_t *ani_get(int id) { return DATA(((const uint32_t *)DATA(D_ANIS))[id
 
 /* ------------------------------------------------------------------ numbers */
 uint32_t RandomNumber(void) {
-  uint32_t d1 = V.random;
-  if (!d1) d1 = 0x2A6D365A;
-  uint32_t d0 = d1;
-  d1 = (d1 << 2) + d0;
-  d1 = (d1 << 3) + d0;
-  uint16_t lo = (uint16_t)((d1 & 0xFFFF) + (d1 >> 16));
-  d1 = (d1 & 0xFFFF0000u) | lo;
-  d1 = (d1 << 16) | (d1 >> 16);
-  d1 = (d1 & 0xFFFF0000u) | lo;
-  d1 = (d1 << 16) | (d1 >> 16);
-  V.random = d1;
-  /* (d0: its low word the sum, its high word the original's d0 high word) */
-  return (d0 & 0xFFFF0000u) | lo;
+  uint32_t seed = V.random ? V.random : 0x2A6D365A;
+  uint32_t m = seed * 41;
+  uint16_t lo = (uint16_t)(m + (m >> 16));
+  V.random = (uint32_t)lo << 16 | (m & 0xFFFF);
+  /* (the original's d0: the old seed's high word and the new number) */
+  return (seed & 0xFFFF0000u) | lo;
 }
 
 int16_t CalcSine(uint8_t angle, int16_t *cos) {
