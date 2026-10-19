@@ -47,8 +47,6 @@ ALONE = {
              "big to share the calculator with NumPlay: install it on its own"),
     "isaac": ("The Binding of Isaac", "a whole run, from the Basement past Mom and her heart to Sheol and the Cathedral. "
               "Too big to share the calculator with NumPlay: install it on its own"),
-    "pvz": ("Plants vs. Zombies", "the whole Adventure, Day to Roof and Dr. Zomboss: 50 levels, 48 plants, 26 zombies, "
-            "Crazy Dave, the Almanac and his shop. Too big to share the calculator with NumPlay: install it on its own"),
     "pvz": ("Plants vs. Zombies", "the whole Adventure, from the front lawn to the roof and Dr. Zomboss: 50 levels, 40 "
             "plants, 24 zombies, Crazy Dave, his shop and the Almanac. Too big to share the calculator with NumPlay: "
             "install it on its own"),
