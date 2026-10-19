@@ -381,6 +381,24 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/twoplayer"
   },
   {
+    "id": "invaders",
+    "title": "Space Invaders",
+    "tagline": "Stop the invasion, one cannon",
+    "credit": "Based on Space Invaders by Taito",
+    "top": "0x2B2F4A",
+    "bottom": "0x05060C",
+    "accent": "0x3CF03C",
+    "colors": 4,
+    "records": [
+      "invaders.sav"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "app": "SpaceInvaders.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/invaders"
+  },
+  {
     "id": "numvisuals",
     "title": "NumVisuals",
     "tagline": "Backgrounds, clocks, timers",

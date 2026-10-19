@@ -1,0 +1,9 @@
+# Space Invaders in Chinese: the English text as in the source, a tab, the translation (see tools/lang.py).
+Resume	继续
+Quit game	退出游戏
+No	否
+Yes	是
+Paused	暂停
+Quit game?	退出游戏？
+Left Right: move    OK, EXE, Up: fire    Back: pause	左右：移动    OK、EXE、上：射击    返回：暂停
+Press OK to play	按 OK 开始

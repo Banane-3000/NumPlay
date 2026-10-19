@@ -99,6 +99,7 @@ Break every brick	Casse toutes les briques
 Pong and more, side by side	Pong et plus, côte à côte
 Backgrounds, clocks, timers	Fonds, horloges, minuteurs
 Reach the door, trust nothing	Atteins la porte, ne te fie à rien
+Stop the invasion, one cannon	Arrête l'invasion avec un seul canon
 # (names that stay as they are)
 NumDash	NumDash
 NumBlocks	NumBlocks
@@ -106,6 +107,7 @@ NumDrive	NumDrive
 2048	2048
 NumVisuals	NumVisuals
 Level Devil	Level Devil
+Space Invaders	Space Invaders
 # the games' credits
 Inspired by Minecraft, not affiliated with Mojang	Inspiré de Minecraft, sans lien avec Mojang
 By Tatone26, from All the Apps	Par Tatone26, tiré d'All the Apps
@@ -113,6 +115,8 @@ Inspired by Tatone26's All the Apps	Inspiré d'All the Apps de Tatone26
 Based on 2048 by Gabriele Cirulli	D'après 2048 de Gabriele Cirulli
 Based on Block Blast! by Hungry Studio	D'après Block Blast! de Hungry Studio
 Based on Level Devil by Unept	D'après Level Devil d'Unept
+Based on Cookie Clicker by Orteil	D'après Cookie Clicker d'Orteil
+Based on Space Invaders by Taito	D'après Space Invaders de Taito
 # a game the RAM of the calculator's software is too small for
 Needs 	Il manque 
  KB more memory	 Ko de mémoire

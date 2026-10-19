@@ -1,0 +1,9 @@
+# Space Invaders in French: the English text as in the source, a tab, the translation (see tools/lang.py).
+Resume	Reprendre
+Quit game	Quitter le jeu
+No	Non
+Yes	Oui
+Paused	Pause
+Quit game?	Quitter le jeu ?
+Left Right: move    OK, EXE, Up: fire    Back: pause	Gauche Droite : bouger    OK, EXE, Haut : tirer    Retour : pause
+Press OK to play	Appuie sur OK pour jouer
