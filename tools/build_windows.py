@@ -10,14 +10,16 @@ Run from PowerShell in the repository root:
     python tools/build_windows.py --organize-only --tidy-legacy
     python tools/build_windows.py --watch --launcher-only --skip-languages -j2
 
-V6 keeps Make's intermediate outputs untouched under build/ and atomically
+V7 keeps Make's intermediate outputs untouched under build/ and atomically
 exports finished calculator apps into top-level dist/, including the stable
 live-emulator input dist/live/NumPlay.nwa. `--watch` monitors source edits and
 rebuilds incrementally, publishing only after successful builds. `--organize-only`
 exports an existing successful build with no toolchain necessary.
 
-V5's Tetris native Windows nwlink.exe bridge and Windows-specific dependency
-installers are preserved unchanged. This script does not modify emulator code.
+V7 also finds an existing Rustup installation under the current user's
+.cargo/bin even when VS Code did not refresh PATH; no permanent environment
+changes are needed. V5's Tetris nwlink.exe bridge and Windows-specific
+dependency installers are preserved unchanged. This script does not modify emulator code.
 """
 from __future__ import annotations
 
@@ -63,6 +65,34 @@ def where(name: str) -> Path | None:
     # links to rustup.exe. Their invoked file name is important: rustup.exe
     # behaves differently from rustc.exe. Never resolve proxy links here.
     return Path(os.path.abspath(candidate)) if candidate else None
+
+
+def ensure_rust_on_path() -> Path | None:
+    """Use the current user's *installed* Windows Rust tools despite a stale PATH.
+
+    The Rustup installer normally places cargo.exe and rustup.exe in
+    %USERPROFILE%\\.cargo\\bin. VS Code's integrated terminal can inherit an
+    older process environment after the user PATH was updated. Prepending the
+    verified installation to this script's process PATH also makes it visible
+    to Cargo and Git Bash subprocesses. This does not modify the registry or
+    require administrative rights. Never replace the rustup proxy filenames
+    with their resolved filesystem targets.
+    """
+    if os.name != "nt":
+        return None
+    if (where("cargo.exe") or where("cargo")) and (where("rustup.exe") or where("rustup")):
+        return None
+    cargo_home = Path(os.environ.get("CARGO_HOME", str(Path.home() / ".cargo"))).expanduser()
+    cargo_bin = cargo_home / "bin"
+    if not (cargo_bin / "rustup.exe").is_file() or not (cargo_bin / "cargo.exe").is_file():
+        return None
+    # PATH here is only changed inside this running Python process (and its
+    # children), never for PowerShell, Windows or other apps.
+    existing = os.environ.get("PATH", "")
+    normalized = lambda p: os.path.normcase(os.path.normpath(p.strip('"')))
+    if normalized(str(cargo_bin)) not in {normalized(p) for p in existing.split(os.pathsep) if p}:
+        os.environ["PATH"] = str(cargo_bin) + os.pathsep + existing
+    return cargo_bin
 
 
 def git_bash() -> Path | None:
@@ -716,6 +746,10 @@ def main() -> int:
                     help="seconds between source scans in watch mode (default 1.0)")
     ap.add_argument("-j", "--jobs", type=int, default=4, help="parallel make jobs (default 4)")
     a = ap.parse_args()
+    rust_bin = ensure_rust_on_path()
+    if rust_bin:
+        print(f"Found installed Rust at {rust_bin}; using it for this command "
+              "(no permanent PATH changes).", flush=True)
     if a.jobs < 1 or a.jobs > 32:
         ap.error("--jobs must be between 1 and 32")
     if a.make_zip and not a.install_make:
