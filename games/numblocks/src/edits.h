@@ -14,4 +14,8 @@ void edits_apply(int cx, int cz, int y0, int h, uint8_t *slab);   /* onto a chun
 int edits_top(int x, int z, int top);            /* the column's sky top with the edits (1 + y) */
 int edits_count(void);
 void *edits_scratch(uint32_t n);   /* in the journal */
+#if NB_DIMS
+void edits_apply9(int cx, int cz, int y0, int h, uint8_t *slab, uint8_t *hb);   /* NumBlocks.nwa: 9-bit blocks */
+void edits_dim(int d);   /* the dimension whose records are used */
+#endif
 #endif

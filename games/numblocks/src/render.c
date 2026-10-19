@@ -235,7 +235,7 @@ static int front_face(int x, int y, int z) {
   static const int8_t fx[4] = {0, 0, 1, -1}, fz[4] = {1, -1, 0, 0}, ff[4] = {3, 2, 5, 4};
   for (int k = 0; k < 4; k++) {
     int nx = x + fx[k], nz = z + fz[k];
-    if ((unsigned)nx >= VCX || (unsigned)nz >= VCZ || !(blk_flags[vc[VC_I(nx, y, nz)]] & BF_OPAQUE)) return ff[k];
+    if ((unsigned)nx >= VCX || (unsigned)nz >= VCZ || !(blk_flags[VB(VC_I(nx, y, nz))] & BF_OPAQUE)) return ff[k];
   }
   return 3;
 }
@@ -245,7 +245,7 @@ static int bed_way(int b, int x, int y, int z) {
   int other = b == B_BED_FOOT ? B_BED_HEAD : B_BED_FOOT;
   for (int k = 0; k < 4; k++) {
     int nx = x + fx[k], nz = z + fz[k];
-    if ((unsigned)nx < VCX && (unsigned)nz < VCZ && vc[VC_I(nx, y, nz)] == other) return b == B_BED_FOOT ? 2 + k : (2 + k) ^ 1;
+    if ((unsigned)nx < VCX && (unsigned)nz < VCZ && VB(VC_I(nx, y, nz)) == other) return b == B_BED_FOOT ? 2 + k : (2 + k) ^ 1;
   }
   return 2;
 }
@@ -450,7 +450,7 @@ static __attribute__((noinline)) int cell_hit(Ray *R, int b, int i, int x, int y
       /* BlockLiquid: (8 - level) / 9 high, full when falling or under the same liquid */
       static const int8_t LIQH[9] = {14, 12, 11, 9, 7, 5, 4, 2, 16};
       int lv = blk_meta[b] > 8 ? 8 : blk_meta[b];
-      int above = y + 1 < VCY ? vc[i + VCX * VCZ] : B_AIR;
+      int above = y + 1 < VCY ? VB(i + VCX * VCZ) : B_AIR;
       if (is_water(b) ? is_water(above) : is_lava(above)) lv = 8;
       shp[0][0] = shp[0][1] = shp[0][2] = 0, shp[0][3] = shp[0][5] = 16, shp[0][4] = LIQH[lv];
       nbx = 1;
@@ -503,10 +503,10 @@ static __attribute__((noinline)) int cell_hit(Ray *R, int b, int i, int x, int y
 
 /* the top of each block's shape, sixteenths (16: whole, or shaped by its place): a ray going
  * over a lower one (a snow layer, a slab) has nothing to meet in its cell */
-static uint8_t shape_top[B_COUNT];
-static uint8_t liquid[B_COUNT];   /* 1 water, 2 lava (a ray in one goes through more of it) */
+static uint8_t shape_top[B_N];
+static uint8_t liquid[B_N];   /* 1 water, 2 lava (a ray in one goes through more of it) */
 static void shape_tops(void) {
-  for (int b = 0; b < B_COUNT; b++) {
+  for (int b = 0; b < B_N; b++) {
     liquid[b] = blk_model[b] != M_LIQUID ? 0 : is_water(b) ? 1 : is_lava(b) ? 2 : 0;
     int m = blk_model[b], top = 16;
     if (blk_nbox[b] && !(m == M_LIQUID || m == M_LADDER || m == M_VINE || m == M_FENCE || m == M_PANE || m == M_DOOR)) {
@@ -572,7 +572,7 @@ static uint16_t trace(float dx, float dy, float dz) {
   if (!vmac[mi] || (vmac[mi] == 2 && in_liq == 1)) goto jump;
   for (;;) {
     ST(st_steps++);
-    int b = vc[i];
+    int b = VB(i);
     if (b != B_AIR && liquid[b] != in_liq) {
       float te = fminf(fminf(tx, ty), tz);
       /* (over a low shape the whole way through its cell: nothing there) */
@@ -674,7 +674,7 @@ static int face_pixel(float dx, float dy, float dz, int plane, int f, bool wet) 
   else if (a == 1) z = c;
   else x = c;
   if ((unsigned)x >= VCX || (unsigned)y >= VCY || (unsigned)z >= VCZ) return -1;
-  int i = VC_I(x, y, z), b = vc[i], m = blk_model[b];
+  int i = VC_I(x, y, z), b = VB(i), m = blk_model[b];
   float lx = hx - x, ly = hy - y, lz = hz - z;
   int edge = plane - c * 16;   /* where the face is in its cell (0, 16: on its side) */
   bool cube = m == M_CUBE || m == M_LEAVES || m == M_GLASS;
@@ -697,7 +697,7 @@ static int face_pixel(float dx, float dy, float dz, int plane, int f, bool wet) 
     if ((unsigned)px < VCX && (unsigned)py < VCY && (unsigned)pz < VCZ) {
       int fi = VC_I(px, py, pz);
       /* hidden, or something stands in front: trace (wet: water in front is clear) */
-      if (vc[fi] != B_AIR && !(wet && is_water(vc[fi]))) return -1;
+      if (vc[fi] != B_AIR && !(wet && is_water(VB(fi)))) return -1;
       light = vl[fi];
     }
   } else light = vl[i];
@@ -906,7 +906,7 @@ static __attribute__((unused)) void plane_fill(uint16_t (*cb)[RW], float (*zb)[R
       int i = VC_I(c[0], c[1], c[2]);
       if (i != last) {
         last = i;
-        int bk = vc[i], m = blk_model[bk];
+        int bk = VB(i), m = blk_model[bk];
         bool cube = m == M_CUBE || m == M_LEAVES || m == M_GLASS;
         q = NULL;
         if (cube) ok = !(edge & 15);
@@ -919,7 +919,7 @@ static __attribute__((unused)) void plane_fill(uint16_t (*cb)[RW], float (*zb)[R
           light = 15;
           if ((unsigned)px < VCX && (unsigned)py < VCY && (unsigned)pz < VCZ) {
             int fi = VC_I(px, py, pz);
-            if (vc[fi] != B_AIR && !(wet && is_water(vc[fi]))) {
+            if (vc[fi] != B_AIR && !(wet && is_water(VB(fi)))) {
               ok = 0;
               goto miss;
             }
@@ -971,7 +971,7 @@ static int water_pixel(float dx, float dy, float dz, int wplane, int plane, int 
   float hx = ox + dx * t, hz = oz + dz * t;
   int x = (int)hx, y = (wplane - 1) >> 4, z = (int)hz;
   if (hx < 0 || hz < 0 || (unsigned)x >= VCX || (unsigned)y >= VCY - 1 || (unsigned)z >= VCZ) return -1;
-  int i = VC_I(x, y, z), b = vc[i], above = vc[i + VCX * VCZ];
+  int i = VC_I(x, y, z), b = VB(i), above = VB(i + VCX * VCZ);
   if (!is_water(b) || above != B_AIR) return -1;
   static const int8_t LIQH[9] = {14, 12, 11, 9, 7, 5, 4, 2, 16};
   if (y * 16 + LIQH[blk_meta[b] > 8 ? 8 : blk_meta[b]] != wplane) return -1;   /* (not this height here) */
@@ -996,7 +996,7 @@ static void sample_at(Sample *s, int px, int py) {
   s->plane = (int16_t)hit_p;
   s->cell = (uint16_t)hit_i;
   if (hit_kind == 1) {
-    int x = hit_i % VCX, z = hit_i / VCX % VCZ, y = hit_i / (VCX * VCZ), b = vc[hit_i], m = blk_model[b], f = hit_f;
+    int x = hit_i % VCX, z = hit_i / VCX % VCZ, y = hit_i / (VCX * VCZ), b = VB(hit_i), m = blk_model[b], f = hit_f;
     s->x = (uint8_t)x, s->z = (uint8_t)z, s->y = (uint8_t)y;
     s->light = (uint8_t)hit_l;
     s->tex = (uint16_t)(blk_front[b] ? face_tex(b, f, x, y, z) : blk_tex[b][f]);
@@ -1006,7 +1006,7 @@ static void sample_at(Sample *s, int px, int py) {
     int flags = 0;
     if (hit_p & 15) flags |= 1;   /* (inside its cell: nothing else there) */
     else {
-      int fb = vc[came_from(hit_i, f, x, y, z)];
+      int fb = VB(came_from(hit_i, f, x, y, z));
       if (fb == B_AIR || (is_water(fb) && is_water(cam_b))) flags |= 1;
     }
     if (m == M_CUBE || m == M_LEAVES || m == M_GLASS) flags |= 2;
@@ -1042,7 +1042,7 @@ static uint16_t agreed(float dx, float dy, float dz, const Sample *a, bool one) 
   }
   if (a->kind == 3) {
     /* the same plant: its two planes, from the camera */
-    int i = a->cell, x = i % VCX, z = i / VCX % VCZ, y = i / (VCX * VCZ), b = vc[i];
+    int i = a->cell, x = i % VCX, z = i / VCX % VCZ, y = i / (VCX * VCZ), b = VB(i);
     Hit h;
     if (hit_cross(blk_tex[b][3], ox - x, oy - y, oz - z, dx, dy, dz, 0, 1e9f, &h)) {
       last_t = h.t;
@@ -2079,7 +2079,7 @@ void render_frame(const Camera *c, uint32_t tod) {
   fog0 = MAX_T * 0.75f;
   cam_x = (int)floorf(ox), cam_y = (int)floorf(oy), cam_z = (int)floorf(oz);
   cam_i = (unsigned)cam_x < VCX && (unsigned)cam_y < VCY && (unsigned)cam_z < VCZ ? VC_I(cam_x, cam_y, cam_z) : -1;
-  cam_b = cam_i < 0 ? B_AIR : vc[cam_i];
+  cam_b = cam_i < 0 ? B_AIR : VB(cam_i);
   cam_mi = cam_i < 0 ? 0 : MC_I(cam_x, cam_y, cam_z);
   cam_fr[0][0] = cam_x - ox, cam_fr[0][1] = cam_x + 1 - ox;
   cam_fr[1][0] = cam_y - oy, cam_fr[1][1] = cam_y + 1 - oy;

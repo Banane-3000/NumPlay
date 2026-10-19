@@ -262,4 +262,46 @@ enum {
 enum { M_NONE, M_CUBE, M_CROSS, M_LIQUID, M_TORCH, M_SLAB, M_LAYER, M_CACTUS, M_LEAVES, M_GLASS, M_FLAT, M_VINE, M_PANE, M_FENCE, M_DOOR, M_LADDER, M_STAIRS, M_CHEST, M_BED };
 enum { T_NONE, T_PICKAXE, T_AXE, T_SHOVEL, T_SHEARS, T_SWORD };
 
+/* the Nether and the End (NumBlocks.nwa only) */
+#if NB_DIMS
+enum {
+  B_NETHERRACK = 257,   /* 87:0 */
+  B_SOUL_SAND = 258,   /* 88:0 */
+  B_PORTAL_X = 259,   /* 90:1 */
+  B_PORTAL_Z = 260,   /* 90:2 */
+  B_NETHER_BRICK = 261,   /* 112:0 */
+  B_NETHER_BRICK_FENCE = 262,   /* 113:0 */
+  B_NETHER_BRICK_STAIRS_E = 263,   /* 114:0 */
+  B_NETHER_BRICK_STAIRS_W = 264,   /* 114:1 */
+  B_NETHER_BRICK_STAIRS_S = 265,   /* 114:2 */
+  B_NETHER_BRICK_STAIRS_N = 266,   /* 114:3 */
+  B_NETHER_WART_0 = 267,   /* 115:0 */
+  B_NETHER_WART_1 = 268,   /* 115:1 */
+  B_NETHER_WART_2 = 269,   /* 115:2 */
+  B_NETHER_WART_3 = 270,   /* 115:3 */
+  B_END_PORTAL = 271,   /* 119:0 */
+  B_END_PORTAL_FRAME = 272,   /* 120:0 */
+  B_END_PORTAL_FRAME_EYE = 273,   /* 120:4 */
+  B_END_STONE = 274,   /* 121:0 */
+  B_DRAGON_EGG = 275,   /* 122:0 */
+  B_QUARTZ_ORE = 276,   /* 153:0 */
+  B_QUARTZ_BLOCK = 277,   /* 155:0 */
+  B_CHISELED_QUARTZ = 278,   /* 155:1 */
+  B_PILLAR_QUARTZ = 279,   /* 155:2 */
+  B_PILLAR_QUARTZ_X = 280,   /* 155:3 */
+  B_PILLAR_QUARTZ_Z = 281,   /* 155:4 */
+  B_QUARTZ_STAIRS_E = 282,   /* 156:0 */
+  B_QUARTZ_STAIRS_W = 283,   /* 156:1 */
+  B_QUARTZ_STAIRS_S = 284,   /* 156:2 */
+  B_QUARTZ_STAIRS_N = 285,   /* 156:3 */
+  B_NETHER_BRICK_SLAB = 286,   /* 44:6 */
+  B_QUARTZ_SLAB = 287,   /* 44:7 */
+  B_ALL = 288
+};
+enum { M_PORTAL = 19, M_FRAME = 20, M_ENDPORTAL = 21, M_EGG = 22 };
+#define B_N B_ALL
+#else
+#define B_N B_COUNT
+#endif
+
 #endif

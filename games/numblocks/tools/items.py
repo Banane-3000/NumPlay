@@ -450,6 +450,108 @@ def tab_of(iid):
     return 10
 
 
+# --- the Nether and the End: only in NumBlocks.nwa (NB_DIMS). Their blocks are numbered past 256 (see
+# blocks.py), where items are: in a hand or a chest each is an item of its own that places it.
+KINDS_DIMS = KINDS + ['dblock', 'ender_pearl', 'ender_eye', 'fire_charge']
+ID = []
+
+
+def ditem(name, label, tex, kind='none', stack=64, place=None, fuel=0, icon_block=None):
+    ID.append(dict(name=name, label=label, tex=tex, kind=kind, stack=stack, dur=0, tier=0, a=0, b=0, place=place,
+                   fuel=fuel, icon_block=icon_block))
+
+
+# the blocks: name, label (en_US), the state it places (its icon)
+DBLOCKS = [('NETHERRACK', 'Netherrack', 'NETHERRACK'), ('SOUL_SAND', 'Soul Sand', 'SOUL_SAND'),
+           ('NETHER_BRICK', 'Nether Brick', 'NETHER_BRICK'),
+           ('NETHER_BRICK_FENCE', 'Nether Brick Fence', 'NETHER_BRICK_FENCE'),
+           ('NETHER_BRICK_STAIRS', 'Nether Brick Stairs', 'NETHER_BRICK_STAIRS_E'),
+           ('NETHER_BRICK_SLAB', 'Nether Brick Slab', 'NETHER_BRICK_SLAB'),
+           ('END_PORTAL_FRAME', 'End Portal', 'END_PORTAL_FRAME'), ('END_STONE', 'End Stone', 'END_STONE'),
+           ('DRAGON_EGG', 'Dragon Egg', 'DRAGON_EGG'), ('QUARTZ_ORE', 'Nether Quartz Ore', 'QUARTZ_ORE'),
+           ('QUARTZ_BLOCK', 'Block of Quartz', 'QUARTZ_BLOCK'), ('CHISELED_QUARTZ', 'Chiseled Quartz Block',
+                                                                   'CHISELED_QUARTZ'),
+           ('PILLAR_QUARTZ', 'Pillar Quartz Block', 'PILLAR_QUARTZ'), ('QUARTZ_STAIRS', 'Quartz Stairs',
+                                                                      'QUARTZ_STAIRS_E'),
+           ('QUARTZ_SLAB', 'Quartz Slab', 'QUARTZ_SLAB')]
+for n, lab, st in DBLOCKS:
+    ditem(n, lab, None, 'dblock', place=st, icon_block=st)
+ditem('NETHERBRICK', 'Nether Brick', 'netherbrick')
+ditem('QUARTZ', 'Nether Quartz', 'quartz')
+ditem('NETHER_WART', 'Nether Wart', 'nether_wart', 'placer', place='NETHER_WART_0')
+ditem('BLAZE_ROD', 'Blaze Rod', 'blaze_rod', fuel=2400)
+ditem('BLAZE_POWDER', 'Blaze Powder', 'blaze_powder')
+ditem('GHAST_TEAR', 'Ghast Tear', 'ghast_tear')
+ditem('MAGMA_CREAM', 'Magma Cream', 'magma_cream')
+ditem('ENDER_PEARL', 'Ender Pearl', 'ender_pearl', 'ender_pearl', stack=16)
+ditem('ENDER_EYE', 'Eye of Ender', 'ender_eye', 'ender_eye')
+ditem('FIRE_CHARGE', 'Fire Charge', 'fireball', 'fire_charge')
+IDNAMES = [x['name'] for x in ID]
+I_ALL = I + ID
+DBNAMES = [s['name'] for s in blocks.D]
+# the item each state of the Nether and the End counts as (None: none)
+DITEM_OF = {'PORTAL_X': None, 'PORTAL_Z': None, 'END_PORTAL': None, 'END_PORTAL_FRAME_EYE': 'END_PORTAL_FRAME',
+            'PILLAR_QUARTZ_X': 'PILLAR_QUARTZ', 'PILLAR_QUARTZ_Z': 'PILLAR_QUARTZ'}
+for d in 'EWSN':
+    DITEM_OF[f'NETHER_BRICK_STAIRS_{d}'] = 'NETHER_BRICK_STAIRS'
+    DITEM_OF[f'QUARTZ_STAIRS_{d}'] = 'QUARTZ_STAIRS'
+for age in range(4):
+    DITEM_OF[f'NETHER_WART_{age}'] = 'NETHER_WART'
+
+
+def resolve_dims(n):
+    """an item id in NumBlocks.nwa: the new items first (a new block's name is its item)"""
+    if n.startswith('I:'):
+        n = n[2:]
+    if n in IDNAMES:
+        return 256 + len(I) + IDNAMES.index(n)
+    return resolve(n)
+
+
+def place_dims(n):
+    """the state a name places, any of NumBlocks.nwa's"""
+    return blocks.FIRST_DIMS + DBNAMES.index(n) if n in DBNAMES else BNAMES.index(n)
+
+
+def block_item_dims(i):
+    """the item a state of NumBlocks.nwa counts as (None: none)"""
+    if i < len(blocks.S):
+        return block_item(BNAMES[i])
+    if i < blocks.FIRST_DIMS:
+        return None
+    n = DBNAMES[i - blocks.FIRST_DIMS]
+    t = DITEM_OF.get(n, n)
+    return None if t is None else resolve_dims(t)
+
+
+RD = []   # their recipes, as R
+SMELT_D = [('NETHERRACK', 'NETHERBRICK'), ('QUARTZ_ORE', 'QUARTZ')]
+RD.append(('NETHER_BRICK', 1, ['##', '##'], {'#': 'NETHERBRICK'}))
+RD.append(('NETHER_BRICK_FENCE', 6, ['###', '###'], {'#': 'NETHER_BRICK'}))
+RD.append(('NETHER_BRICK_STAIRS', 4, ['#  ', '## ', '###'], {'#': 'NETHER_BRICK'}))
+RD.append(('NETHER_BRICK_SLAB', 6, ['###'], {'#': 'NETHER_BRICK'}))
+RD.append(('QUARTZ_BLOCK', 1, ['##', '##'], {'#': 'QUARTZ'}))
+RD.append(('CHISELED_QUARTZ', 1, ['#', '#'], {'#': 'QUARTZ_SLAB'}))
+RD.append(('PILLAR_QUARTZ', 2, ['#', '#'], {'#': 'QUARTZ_BLOCK'}))
+RD.append(('QUARTZ_STAIRS', 4, ['#  ', '## ', '###'], {'#': 'QUARTZ_BLOCK'}))
+RD.append(('QUARTZ_SLAB', 6, ['###'], {'#': 'QUARTZ_BLOCK'}))
+RD.append(('BLAZE_POWDER', 2, None, ['BLAZE_ROD']))
+RD.append(('MAGMA_CREAM', 1, None, ['BLAZE_POWDER', 'SLIME_BALL']))
+RD.append(('ENDER_EYE', 1, None, ['ENDER_PEARL', 'BLAZE_POWDER']))
+RD.append(('FIRE_CHARGE', 3, None, ['GUNPOWDER', 'BLAZE_POWDER', 'COAL']))
+RD.append(('FIRE_CHARGE', 3, None, ['GUNPOWDER', 'BLAZE_POWDER', 'CHARCOAL']))
+# the creative tabs: building blocks, decoration, materials, brewing, miscellaneous
+TAB_D = {'NETHER_BRICK_FENCE': 1, 'END_PORTAL_FRAME': 1, 'DRAGON_EGG': 1, 'NETHERBRICK': 10, 'QUARTZ': 10,
+         'BLAZE_ROD': 10, 'NETHER_WART': 9, 'BLAZE_POWDER': 9, 'GHAST_TEAR': 9, 'MAGMA_CREAM': 9, 'ENDER_PEARL': 4,
+         'ENDER_EYE': 4, 'FIRE_CHARGE': 4}
+
+
+def tab_of_dims(iid):
+    if iid < 256 + len(I):
+        return None if iid >= blocks.FIRST_DIMS and iid < 256 else tab_of(iid)
+    return TAB_D.get(ID[iid - 256 - len(I)]['name'], 0)
+
+
 def header():
     out = ['/* Generated by tools/items.py: the items NumBlocks knows (ids 256 and up; below 256 a block state). */',
            '#ifndef NB_ITEMS_H', '#define NB_ITEMS_H', '#include <stdint.h>', '#include "blocks.h"', '', 'enum {']
@@ -458,6 +560,13 @@ def header():
     out += [f'  I_END = {256 + len(I)}', '};', f'#define N_ITEMS {len(I)}', '']
     out.append('enum { ' + ', '.join(f'IK_{k.upper()}' for k in KINDS) + ' };')
     out.append('enum { ' + ', '.join(f'G_{g[2:]} = 0x{v:X}' for g, v in GROUPS.items()) + ' };')
+    out += ['', '/* the Nether and the End (NumBlocks.nwa only) */', '#if NB_DIMS', 'enum {']
+    for k, x in enumerate(ID):
+        out.append(f'  I_{x["name"]} = {256 + len(I) + k},')
+    out += [f'  I_ALL = {256 + len(I_ALL)}', '};', f'#define N_ITEMS_ALL {len(I_ALL)}']
+    out.append('enum { ' + ', '.join(f'IK_{k.upper()} = {len(KINDS) + j}'
+                                     for j, k in enumerate(KINDS_DIMS[len(KINDS):])) + ' };')
+    out += ['#define IT_N N_ITEMS_ALL', '#else', '#define IT_N N_ITEMS', '#endif']
     out += ['', '#endif', '']
     return '\n'.join(out)
 

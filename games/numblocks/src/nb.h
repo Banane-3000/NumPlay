@@ -92,6 +92,19 @@ extern uint8_t vmac[MCY * MCZ * MCX];
 #define MC_I(x, y, z) ((((y) >> 2) * MCZ + ((z) >> 2)) * MCX + ((x) >> 2))
 static inline int light_at(int i) { return vl[i] & 15; }          /* sky light */
 static inline int block_light_at(int i) { return vl[i] >> 4; }   /* torches, lava, glowstone... */
+#if NB_DIMS
+/* NumBlocks.nwa: a block is 9 bits (the Nether's and the End's are 257 and up): vc holds the low 8, vhi
+ * the ninth, a bit a cell. None of those blocks has the low byte of air (256 is none). */
+extern uint8_t vhi[(VCY * VCZ * VCX + 7) / 8];
+static inline int VB(int i) { return vc[i] | (vhi[i >> 3] >> (i & 7) & 1) << 8; }
+static inline void VSET(int i, int b) {
+  vc[i] = (uint8_t)b;
+  vhi[i >> 3] = (uint8_t)((vhi[i >> 3] & ~(1 << (i & 7))) | (b >> 8 & 1) << (i & 7));
+}
+#else
+#define VB(i) (vc[i])
+#define VSET(i, b) (vc[i] = (uint8_t)(b))
+#endif
 
 void world_new(int64_t seed, const char *name);   /* name: the save's record prefix */
 void world_follow(float x, float y, float z);   /* keeps the cache around (x, y, z) */
@@ -102,6 +115,19 @@ bool world_loaded(int x, int y, int z);
 bool world_pending(void);                       /* chunks still being made after a move */
 int world_rain_top(int x, int z);               /* the first y above what rain lands on, 255 if unknown */
 void *world_scratch(uint32_t n);                /* n bytes free while a frame is drawn, or NULL */
+#if NB_DIMS
+/* ---------------------------------------------------------------- the dimensions (dims.c): NumBlocks.nwa only */
+enum { DIM_OVERWORLD = 0, DIM_NETHER = 1, DIM_END = 2 };
+extern int dim;   /* where the player is */
+/* the generators' bytes: codes 67..82 (wool, which no generator makes) stand for the blocks past 255 */
+#define GEN_CODE(k) (B_WOOL_WHITE + (k))
+enum { GC_NETHERRACK, GC_SOUL_SAND, GC_QUARTZ_ORE, GC_NETHER_BRICK, GC_FENCE, GC_STAIRS_E, GC_STAIRS_W, GC_STAIRS_S,
+       GC_STAIRS_N, GC_WART, GC_END_STONE, GC_FRAME, GC_FRAME_EYE, GC_N };
+extern const uint16_t gen_code_block[GC_N];
+void dims_slab(int cx, int cz, int y0, int h, uint8_t *out);   /* gen_slab, for the dimension the player is in */
+int dims_biome(int x, int z);
+int dims_top(int x, int z);
+#endif
 
 /* ---------------------------------------------------------------- items (inv.c) */
 typedef struct { uint16_t id, aux; } Stack;   /* aux: how many; for tools and armour, their damage (one) */

@@ -5,7 +5,13 @@
  * lies: sorted 32-bit entries, chunk (4 bits), x and z in it (8), y (7), then
  * the block (8, the top byte). New changes go to a small journal in RAM, kept
  * in the same order; when it fills up (and when the game saves), its entries
- * are merged into the records. */
+ * are merged into the records.
+ *
+ * NumBlocks.nwa's blocks are 9 bits: one past 255 is kept with its ninth bit in bit 23 of the entry
+ * (outside every key NumPlay's NumBlocks looks up, which so never sees those blocks), its low byte
+ * on top; records stay sorted by the 24 bits. If a spot has both kinds of entry (NumPlay's
+ * NumBlocks changed it after), the other kind wins. Each dimension has its own records: the
+ * Nether's "nb1rn-3_12.nbe", the End's "nb1re...". */
 #include "edits.h"
 #include "nb.h"
 #pragma GCC optimize("Os")   /* (not where the time goes: small) */
@@ -15,13 +21,22 @@ typedef struct {
   uint32_t e;   /* the entry, as in the records */
 } Journal;
 
+#if NB_DIMS
+#define J_MAX 128   /* (NumBlocks.nwa: room for the 9th bits of blocks, nb.h) */
+#else
 #define J_MAX 256
+#endif
 static Journal jn[J_MAX];
 static int nj;
 static char prefix[8] = "nb1";
 static bool full;   /* a record could not grow: storage is full */
 static uint32_t *scratch;
 static uint32_t scratch_n;
+#if NB_DIMS
+static char dim_tag;   /* 0 the Overworld, 'n' the Nether, 'e' the End */
+void edits_dim(int d) { dim_tag = d == DIM_NETHER ? 'n' : d == DIM_END ? 'e' : 0; }
+#define HI (1u << 23)
+#endif
 
 void edits_setup(const char *world, uint32_t *buf, uint32_t n) {
   int i = 0;
@@ -39,6 +54,9 @@ static void region_name(char *out, int rx, int rz) {
   char *p = out;
   for (const char *s = prefix; *s;) *p++ = *s++;
   *p++ = 'r';
+#if NB_DIMS
+  if (dim_tag) *p++ = dim_tag;
+#endif
   int v[2] = {rx, rz};
   for (int k = 0; k < 2; k++) {
     if (k) *p++ = '_';
@@ -118,6 +136,14 @@ static int rlower(const uint8_t *r, int n, uint32_t key) {
   return lo;
 }
 
+#if NB_DIMS
+/* the journal has an entry of key in region (rx, rz), among its entries [i, j) */
+static bool journal_has(int rx, int rz, uint32_t key, int i, int j) {
+  int k = jlower(rx, rz, key);
+  return k >= i && k < j && jcmp(rx, rz, key, &jn[k]) == 0;
+}
+#endif
+
 /* the journal's entries go into their regions' records */
 bool edits_flush(void) {
   bool ok = true;
@@ -131,6 +157,12 @@ bool edits_flush(void) {
     uint32_t m = 0;
     int a = 0, b = i;
     while ((a < n || b < j) && m < scratch_n) {
+#if NB_DIMS
+      if (a < n && (b >= j || KEY(R(a)) < KEY(jn[b].e)) && journal_has(rx, rz, KEY(R(a)) ^ HI, i, j)) {
+        a++;   /* (the journal has its spot, as the other kind) */
+        continue;
+      }
+#endif
       if (b >= j || (a < n && KEY(R(a)) < KEY(jn[b].e))) scratch[m++] = R(a), a++;
       else {
         if (a < n && KEY(R(a)) == KEY(jn[b].e)) a++;
@@ -156,6 +188,17 @@ bool edits_flush(void) {
 bool edits_put(int x, int y, int z, int b) {
   int rx = floordiv(x, 64), rz = floordiv(z, 64);
   uint32_t key = entry_key(x, y, z);
+#if NB_DIMS
+  {
+    /* the spot's entry of the other kind goes: this one replaces it */
+    int o = jlower(rx, rz, key ^ HI);
+    if (o < nj && jcmp(rx, rz, key ^ HI, &jn[o]) == 0) {
+      memmove(&jn[o], &jn[o + 1], (size_t)(nj - o - 1) * sizeof jn[0]);
+      nj--;
+    }
+    key |= (uint32_t)(b >> 8 & 1) << 23;
+  }
+#endif
   int i = jlower(rx, rz, key);
   if (i < nj && jcmp(rx, rz, key, &jn[i]) == 0) {
     jn[i].e = key | (uint32_t)b << 24;
@@ -189,18 +232,61 @@ void edits_apply(int cx, int cz, int y0, int h, uint8_t *slab) {
   }
 }
 
+#if NB_DIMS
+/* edits_apply, the ninth bits in hb (a bit a cell of the slab): first the record's entries of each kind
+ * (the low ones last: they win), then the journal's */
+static void apply_range(const uint8_t *r, int n, uint32_t k0, uint32_t k1, int y0, int h, uint8_t *slab, uint8_t *hb,
+                        bool hi) {
+  for (int i = rlower(r, n, k0); i < n && KEY(R(i)) < k1; i++) {
+    uint32_t e = R(i);
+    int y = (int)(e & 127) - y0, xz = (int)(e >> 7) & 255;
+    if (y < 0 || y >= h) continue;
+    int c = (y * 16 + (xz >> 4)) * 16 + (xz & 15);
+    slab[c] = (uint8_t)(e >> 24);
+    hb[c >> 3] = (uint8_t)((hb[c >> 3] & ~(1 << (c & 7))) | hi << (c & 7));
+  }
+}
+void edits_apply9(int cx, int cz, int y0, int h, uint8_t *slab, uint8_t *hb) {
+  int rx = floordiv(cx, 4), rz = floordiv(cz, 4), chunk = (cx & 3) | (cz & 3) << 2;
+  uint32_t k0 = (uint32_t)chunk << 15, k1 = k0 + (1 << 15);
+  int n;
+  const uint8_t *r = region(rx, rz, &n);
+  apply_range(r, n, k0 | HI, k1 | HI, y0, h, slab, hb, true);
+  apply_range(r, n, k0, k1, y0, h, slab, hb, false);
+  for (int pass = 0; pass < 2; pass++) {
+    uint32_t a = pass ? k0 | HI : k0, b = pass ? k1 | HI : k1;
+    for (int i = jlower(rx, rz, a); i < nj && jn[i].rx == rx && jn[i].rz == rz && KEY(jn[i].e) < b; i++) {
+      int y = (int)(jn[i].e & 127) - y0, xz = (int)(jn[i].e >> 7) & 255;
+      if (y < 0 || y >= h) continue;
+      int c = (y * 16 + (xz >> 4)) * 16 + (xz & 15);
+      slab[c] = (uint8_t)(jn[i].e >> 24);
+      hb[c >> 3] = (uint8_t)((hb[c >> 3] & ~(1 << (c & 7))) | pass << (c & 7));
+    }
+  }
+}
+#define BLOCK_OF(e) ((int)((e) >> 24) | (int)((e) >> 23 & 1) << 8)
+#else
+#define BLOCK_OF(e) ((e) >> 24)
+#endif
+
 /* the column's sky top (1 + the highest opaque y) with the changes */
 int edits_top(int x, int z, int top) {
   int rx = floordiv(x, 64), rz = floordiv(z, 64);
   uint32_t k0 = entry_key(x, 0, z), k1 = k0 + 128;
   int n;
   const uint8_t *r = region(rx, rz, &n);
+#if NB_DIMS
+  for (int pass = 0; pass < 2; pass++, k0 |= HI, k1 |= HI) {
+#endif
   for (int i = rlower(r, n, k0); i < n && KEY(R(i)) < k1; i++) {
     uint32_t e = R(i);
-    if ((blk_flags[e >> 24] & BF_OPAQUE) && (int)(e & 127) + 1 > top) top = (int)(e & 127) + 1;
+    if ((blk_flags[BLOCK_OF(e)] & BF_OPAQUE) && (int)(e & 127) + 1 > top) top = (int)(e & 127) + 1;
   }
   for (int i = jlower(rx, rz, k0); i < nj && jn[i].rx == rx && jn[i].rz == rz && KEY(jn[i].e) < k1; i++)
-    if ((blk_flags[jn[i].e >> 24] & BF_OPAQUE) && (int)(jn[i].e & 127) + 1 > top) top = (int)(jn[i].e & 127) + 1;
+    if ((blk_flags[BLOCK_OF(jn[i].e)] & BF_OPAQUE) && (int)(jn[i].e & 127) + 1 > top) top = (int)(jn[i].e & 127) + 1;
+#if NB_DIMS
+  }
+#endif
   return top;
 }
 
