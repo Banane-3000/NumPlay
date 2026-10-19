@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Writes levels/microban.txt: David W. Skinner's Microban (155 levels), in the usual Sokoban text
-format, from the copy on Scott Lindhurst's Sokoban levels page. Run once; the file is kept in the
+format, from the copy on sneezingtiger.com's Sokoban levels page. Run once; the file is kept in the
 repository, so building needs no network.
 
   #  wall      @  the keeper     $  a box     .  a goal

@@ -33,14 +33,15 @@ def film(level):
 
 
 def gif(path, clips):
-    """Clips of frames, each shown 50 ms; a clip's first frame and last (Solved!) are held."""
+    """Clips of frames, a step each 110 ms (as when an arrow is held); a clip's first frame and last
+    (Solved!) are held."""
     frames, times = [], []
     for c in clips:
         for i, f in enumerate(c):
             frames.append(f)
-            times.append(700 if i == 0 else 1600 if i == len(c) - 1 else 50)
-    sheet = Image.new("RGB", (320, 240 * len(frames[::8])))
-    for i, f in enumerate(frames[::8]):
+            times.append(700 if i == 0 else 1600 if i == len(c) - 1 else 110)
+    sheet = Image.new("RGB", (320, 240 * len(frames[::4])))
+    for i, f in enumerate(frames[::4]):
         sheet.paste(f, (0, 240 * i))
     pal = sheet.quantize(64, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
     out = [f.quantize(palette=pal, dither=Image.Dither.NONE) for f in frames]

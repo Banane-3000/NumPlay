@@ -8,9 +8,10 @@
  * The levels are packed by tools/levels.py as Microban has them, but for the walls around the floor,
  * which the game puts back (the few that differ are written out), compressed with DEFLATE and unpacked
  * into the strip buffer when a level opens. Only the rows a step changes are drawn again, in the launcher's strips
- * (launcher/src/gfx.c). Inside NumPlay it uses the launcher's shapes, fonts, files and inflater; on
+ * (launcher/src/gfx.c); the keeper steps a cell at a time, as in the original. Inside NumPlay it uses the launcher's shapes, fonts, files and inflater; on
  * its own it brings them along. */
 #include <eadk.h>
+#include <string.h>
 #include "../../../launcher/src/gfx.h"
 #include "../../../launcher/src/inflate.h"
 #include "../../common/np_text.h"
@@ -39,7 +40,6 @@ static uint32_t keys(void) {
   return ((uint32_t)s & 0x800201FFu) | ((uint32_t)(s >> 32) & 0x00100870u) << 10;
 }
 #define HDR 22   /* the band on top */
-#define STEPS 4  /* frames a step slides over */
 #define HIST 1024
 #define F_FLOOR 1
 #define F_GOAL 2
@@ -66,10 +66,10 @@ static struct {
    the first and last cells) */
 static uint8_t g[MAXW * (MAXH + 2) + 2];
 #define G (g + MAXW + 1)
-static const int8_t off[4] = {-MAXW, 1, MAXW, -1}, ddx[4] = {0, 1, 0, -1}, ddy[4] = {-1, 0, 1, 0}; /* up, right... */
+static const int8_t off[4] = {-MAXW, 1, MAXW, -1}, ddx[4] = {0, 1, 0, -1}; /* up, right, down, left */
 static uint8_t hist[HIST]; /* the steps taken: the way, and 4 for a push */
 static color_t strip[SCREEN_W * STRIP_H];
-static int level, rows, size, ox, oy, keeper, face, left, moves, pushes, nh, anim, moved;
+static int level, rows, size, ox, oy, keeper, face, left, moves, pushes, nh;
 static int scr, ov, sel, pick, top, dlo, dhi;
 enum { OV_NONE, OV_PAUSE, OV_QUIT, OV_HELP, OV_DONE };
 static char line[64], msg[48]; /* any text; what the Solved! panel says */
@@ -108,7 +108,7 @@ static void open_level(int n) {
   const uint8_t *t = (const uint8_t *)strip;
   np_inflate((uint8_t *)strip, TEXT_BYTES, levels_z, sizeof levels_z, (np_inflate_tables_t *)(void *)tables);
   for (int k = n; k; t++) k -= *t == '|';
-  for (unsigned i = 0; i < sizeof g; i++) g[i] = 0;
+  memset(g, 0, sizeof g);
   int x = 0, y = 0, w = 0;
   for (left = 0; *t != '|'; t++) {
     int c = *t, i = y * MAXW + x++;
@@ -127,7 +127,7 @@ static void open_level(int n) {
   if ((SCREEN_H - HDR - 8) / rows < size) size = (SCREEN_H - HDR - 8) / rows;
   if (size > 24) size = 24;
   ox = (SCREEN_W - w * size) / 2, oy = HDR + (SCREEN_H - HDR - rows * size) / 2;
-  level = sv.level = (uint8_t)n, moves = pushes = nh = anim = ov = 0, face = 2, scr = 1;
+  level = sv.level = (uint8_t)n, moves = pushes = nh = ov = 0, face = 2, scr = 1;
   mark(0, SCREEN_H);
   save();
 }
@@ -139,7 +139,7 @@ static void shove(int from, int to) {
 /* the keeper steps one way, pushing a box if there is one and it can go; or a step back */
 static void step(int d) {
   int o = off[d], to = keeper + o, b = to + o;
-  face = d, moved = -1;
+  face = d;
   mark_cell(keeper);
   if (!(G[to] & F_FLOOR) || (G[to] & F_BOX && (!(G[b] & F_FLOOR) || G[b] & F_BOX))) return;
   if (nh == HIST) { /* the oldest steps can't be undone any more */
@@ -147,11 +147,8 @@ static void step(int d) {
     nh = HIST / 2;
   }
   hist[nh++] = (uint8_t)d;
-  if (G[to] & F_BOX) {
-    shove(to, b);
-    pushes++, hist[nh - 1] |= 4, moved = b;
-  }
-  moves++, keeper = to, anim = STEPS;
+  if (G[to] & F_BOX) shove(to, b), pushes++, hist[nh - 1] |= 4, mark_cell(b);
+  moves++, keeper = to;
 }
 static void undo(void) {
   int h = hist[--nh], o = off[h & 3];
@@ -161,8 +158,8 @@ static void undo(void) {
 }
 
 /* ------------------------------------------------------------ drawing */
-static void box(int i, int dx, int dy) {
-  int s = size, x = ox + i % MAXW * s + dx, y = oy + i / MAXW * s + dy;
+static void box(int i) {
+  int s = size, x = ox + i % MAXW * s, y = oy + i / MAXW * s;
   color_t dark = G[i] & F_GOAL ? HEX(0x3F7A2C) : HEX(0x8A5422);
   gfx_rrect(x + 1, y + 1, s - 2, s - 2, s / 5, dark, 256);
   gfx_rrect(x + 3, y + 3, s - 6, s - 6, s / 5 - 1, G[i] & F_GOAL ? GREEN : HEX(0xD6943E), 256);
@@ -190,7 +187,7 @@ static void overlay(void) {
 }
 
 static void play_scene(void *ctx) {
-  int s = size, sh = s * anim / STEPS, ex = -ddx[face] * sh, ey = -ddy[face] * sh;
+  int s = size;
   gfx_fill(0, gfx_y0, SCREEN_W, gfx_y1 - gfx_y0, BG);
   for (int i = 0; i < rows * MAXW; i++) {
     int x = ox + i % MAXW * s, y = oy + i / MAXW * s, f = G[i];
@@ -204,12 +201,11 @@ static void play_scene(void *ctx) {
     } else if (f) {
       gfx_fill(x, y, s, s, (i ^ i / MAXW) & 1 ? HEX(0xE4D7BC) : HEX(0xDCCDAF));
       if (f & F_GOAL) gfx_circle(x + s / 2, y + s / 2, s / 5 + 1, HEX(0xD2452F), 256);
-      if (f & F_BOX && (!anim || i != moved)) box(i, 0, 0);
+      if (f & F_BOX) box(i);
     }
   }
-  if (anim && moved >= 0) box(moved, ex, ey);
   /* the keeper: a warehouse man in blue overalls and a red cap, looking the way he goes */
-  int cx = ox + keeper % MAXW * s + ex + s / 2, cy = oy + keeper / MAXW * s + ey + s / 2;
+  int cx = ox + keeper % MAXW * s + s / 2, cy = oy + keeper / MAXW * s + s / 2;
   gfx_rrect(cx - s * 5 / 16, cy - s / 16, s * 5 / 8, s * 7 / 16, s / 6, HEX(0x2F5FC4), 256);
   gfx_circle(cx, cy - s / 6, s / 4, HEX(0xF2C29B), 256);
   gfx_rrect(cx - s / 4, cy - s * 7 / 16, s / 2, s / 6 + 1, s / 12, HEX(0xC83A2C), 256);
@@ -226,21 +222,17 @@ static void play_scene(void *ctx) {
 /* the levels, ten a row, six rows on the screen at a time */
 static void hub_scene(void *ctx) {
   char s[8];
-  int n = 0;
   gfx_fill(0, 0, SCREEN_W, SCREEN_H, BG);
   gfx_fill(0, 0, SCREEN_W, 36, BAR);
   gfx_text(&np_font_title, 12, 27, "SOKOBAN", GOLD, 256);
   for (int i = 0; i < LEVELS; i++) {
     int x = 12 + 30 * (i % 10), y = 46 + 27 * (i / 10 - top);
-    n += sv.best[i] != 0;
     if (y < 40 || y > 190) continue;
     gfx_rrect(x, y, 26, 22, 6, sv.best[i] ? GREEN : unlocked(i) ? CREAM : HEX(0x57505E), 256);
     if (i == pick) gfx_rrect_outline(x - 3, y - 3, 32, 28, 8, 2, GOLD, 256);
     put(s, "", (uint32_t)i + 1);
     gfx_text_center(&np_font_small, x + 13, y + 15, s, sv.best[i] ? WHITE : BG, 256);
   }
-  put(cat(put(line, "", (uint32_t)n), " / "), "", LEVELS);
-  gfx_text_right(&np_font_body, 308, 24, line, CREAM, 256);
   gfx_fill(0, 214, SCREEN_W, 26, BAR);
   put(line, T("Your best: "), sv.best[pick]);
   if (sv.best[pick]) gfx_text_center(&np_font_body, 160, 232, line, CREAM, 256);
@@ -253,7 +245,7 @@ int main(void) {
   gfx_buf = strip;
   uint32_t len = 0;
   const uint8_t *d = np_file_read(SAVE_NAME, &len);
-  for (uint32_t i = 0; d && len == sizeof sv && d[0] == 'S' && d[1] == 1 && i < len; i++) ((uint8_t *)&sv)[i] = d[i];
+  if (d && len == sizeof sv && d[0] == 'S' && d[1] == 1) memcpy(&sv, d, len);
   if (sv.level >= LEVELS) sv.level = 0;
   pick = sv.level, top = pick / 10 > 3 ? pick / 10 - 3 : 0;
   if (!(sv.flags & 1)) ov = OV_HELP;
@@ -296,19 +288,14 @@ int main(void) {
     } else if (hit & back) {
       ov = OV_PAUSE, sel = 0;
       mark(0, SCREEN_H);
-    } else if (!anim && way >= 0 && (tap >= 0 || (int32_t)(now - again) >= 0)) { /* held, it goes on */
+    } else if (way >= 0 && (tap >= 0 || (int32_t)(now - again) >= 0)) { /* held, it goes on */
       if (way < 4) step(way);
       else if (nh) undo();
-      again = now + (tap >= 0 ? 240 : 100);
-    }
-    if (anim) {
-      anim--;
-      if (moved >= 0) mark_cell(moved);
-      mark_cell(keeper);
+      again = now + (tap >= 0 ? 240 : 110);
       mark(0, HDR);
-      if (!anim && !left) { /* solved */
+      if (!left) { /* solved */
         if (!sv.best[level] || moves < sv.best[level]) sv.best[level] = (uint16_t)moves;
-        put(cat(put(msg, T("Moves "), (uint32_t)moves), "   "), T("Your best: "), sv.best[level]);
+        put(msg, T("Your best: "), sv.best[level]);
         ov = OV_DONE;
         save();
         mark(0, SCREEN_H);

@@ -98,7 +98,6 @@ static const char *play(const char *m) {
     int d = way(*p), n = moves, q = pushes;
     if (d < 0) continue;
     step(d);
-    anim = 0;
     if (moves != n + 1 || pushes != q + (*p < 'a')) return "a step didn't go";
   }
   if (left) return "not solved";
@@ -143,16 +142,16 @@ int main(int argc, char **argv) {
     open_level(atoi(argv[2]) - 1);
     const char *m = argc > 4 ? argv[4] : "";
     for (const char *p = m; *p; p++)
-      if (way(*p) >= 0) step(way(*p)), anim = p[1] ? 0 : STEPS / 2;
+      if (way(*p) >= 0) step(way(*p));
     if (argc > 5) { /* and a panel on top: 1 paused, 2 quit, 3 how to play, 4 solved */
       ov = atoi(argv[5]);
-      if (ov == OV_DONE) put(cat(put(msg, T("Moves "), (uint32_t)moves), "   "), T("Your best: "), (uint32_t)moves);
+      if (ov == OV_DONE) put(msg, T("Your best: "), (uint32_t)moves);
     }
     gfx_render(play_scene, 0, 0, SCREEN_H);
     picture(argv[3]);
     return 0;
   }
-  if (argc >= 5 && !strcmp(argv[1], "film")) { /* film L DIR MOVES: two pictures a step, then Solved! */
+  if (argc >= 5 && !strcmp(argv[1], "film")) { /* film L DIR MOVES: a picture a step, then Solved! */
     char path[256];
     int n = 0;
     open_level(atoi(argv[2]) - 1);
@@ -162,15 +161,12 @@ int main(int argc, char **argv) {
     for (const char *p = argv[4]; *p; p++) {
       if (way(*p) < 0) continue;
       step(way(*p));
-      for (int a = STEPS / 2; a >= 0; a -= STEPS / 2) {
-        anim = a;
-        gfx_render(play_scene, 0, 0, SCREEN_H);
-        snprintf(path, sizeof path, "%s/f_%04d.ppm", argv[3], n++);
-        picture(path);
-      }
+      gfx_render(play_scene, 0, 0, SCREEN_H);
+      snprintf(path, sizeof path, "%s/f_%04d.ppm", argv[3], n++);
+      picture(path);
     }
     if (!left) {
-      put(cat(put(msg, T("Moves "), (uint32_t)moves), "   "), T("Your best: "), (uint32_t)moves);
+      put(msg, T("Your best: "), (uint32_t)moves);
       ov = OV_DONE;
       gfx_render(play_scene, 0, 0, SCREEN_H);
       snprintf(path, sizeof path, "%s/f_%04d.ppm", argv[3], n++);

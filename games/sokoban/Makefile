@@ -15,7 +15,7 @@ NWLINK ?= npx --yes -- nwlink@1.0.0
 BUILD_DIR = output
 SRC = src/main.c
 LEVELS = $(BUILD_DIR)/levels.inc
-NUMPLAY_LEVELS ?= 50
+NUMPLAY_LEVELS ?= 35
 HEADERS = ../common/epsilon_app.h ../common/epsilon_files.h ../common/np_text.h ../../launcher/src/gfx.h \
   ../../launcher/src/np.h ../../launcher/src/font.h ../../launcher/src/inflate.h
 
