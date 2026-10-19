@@ -363,6 +363,24 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/leveldevil"
   },
   {
+    "id": "twoplayer",
+    "title": "2 Players",
+    "tagline": "Pong and more, side by side",
+    "credit": null,
+    "top": "0xD33B3B",
+    "bottom": "0x172A72",
+    "accent": "0x2E7CF6",
+    "records": [
+      "twoplayer.sav"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "colors": 16,
+    "app": "TwoPlayers.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/twoplayer"
+  },
+  {
     "id": "numvisuals",
     "title": "NumVisuals",
     "tagline": "Backgrounds, clocks, timers",

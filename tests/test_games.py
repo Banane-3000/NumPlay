@@ -93,6 +93,10 @@ GAMES = {
     # Play, serve, a brick or more: the best is kept; next time, Settings, screen shake off, back
     "breakout": ("BlockBreaker.nwa", "breakout.sav", presses((1500, "ok"), (2500, "ok")), 6000,
                  presses((1500, "down"), (1800, "ok"), (2100, "down"), (2400, "ok"), (2800, "back")), 4000),
+    # Air Hockey against the easy computer, a little play; next time the normal computer, and Tanks
+    "twoplayer": ("TwoPlayers.nwa", "twoplayer.sav",
+                  presses((1500, "down"), (1800, "right"), (2100, "ok"), (2600, "ok"), (3000, "up", 800)), 5000,
+                  presses((1500, "right"), (1800, "down")), 3000),
     # play, new run, the small blind, pick two cards and play them; then continue the run
     "balatro": ("Balatro.nwa", "balatro.sav",
                 presses((1500, "ok"), (2500, "ok"), (3500, "ok"), (5000, "ok"), (5400, "right"), (5800, "ok"),
@@ -240,6 +244,9 @@ CHECKS = {
                    lambda v: struct.unpack_from("<I", v, 8)[0] >= 2),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
+    # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies kept
+    "twoplayer": (lambda v: len(v) == 36 and v[:4] == b"P\1\1\1",
+                  lambda v: len(v) == 36 and v[:4] == b"P\1\2\2"),
 }
 
 

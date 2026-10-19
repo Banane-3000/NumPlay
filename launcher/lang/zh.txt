@@ -94,6 +94,8 @@ Minesweeper	扫雷
 Clear the field, flag the mines	清理雷区，标出地雷
 Block Breaker	打砖块
 Break every brick	打碎每一块砖
+2 Players	双人对战
+Pong and more, side by side	Pong 等游戏，两人并肩玩
 Backgrounds, clocks, timers	背景、时钟、计时器
 Reach the door, trust nothing	走到门口，什么都别相信
 # (names that stay as they are)

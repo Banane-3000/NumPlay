@@ -95,6 +95,8 @@ Minesweeper	Démineur
 Clear the field, flag the mines	Déblaie le terrain, pose les drapeaux
 Block Breaker	Casse-briques
 Break every brick	Casse toutes les briques
+2 Players	2 joueurs
+Pong and more, side by side	Pong et plus, côte à côte
 Backgrounds, clocks, timers	Fonds, horloges, minuteurs
 Reach the door, trust nothing	Atteins la porte, ne te fie à rien
 # (names that stay as they are)
