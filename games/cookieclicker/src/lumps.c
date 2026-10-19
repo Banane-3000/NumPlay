@@ -132,7 +132,7 @@ void do_lumps(void) {
     S.lump_t = lump_now(), S.lumps_total = 0, S.lumps = 0;
     compute_lump_type();
     notify("Sugar lumps!",
-           "Because you've baked a \x01billion cookies\x02 in total, you are now attracting \x01sugar lumps\x02. "
+           "Because you've baked a \x01" "billion cookies\x02 in total, you are now attracting \x01" "sugar lumps\x02. "
            "They coalesce quietly near the top of your screen.\nYou will be able to harvest them when they're "
            "ripe, after which you may spend them on all sorts of things!",
            ICON(23, 14), 0);

@@ -362,7 +362,7 @@ void grimoire_draw(void) {
   /* the magic meter, its lump refill at its left */
   int bw = (int)(magic_max * 1.5f), bx, by = NEWS_H + 118;
   if (bw > GW - 40) bw = GW - 40;
-  if (bw < 20) bw = 20;
+  if (bw < 100) bw = 100;
   bx = GX + (GW - bw) / 2 + 10;
   gfx_icon_scaled(ICON(29, 14), bx - 22, by - 3, 18, can_lumps() ? 256 : 120);
   if (sel == N_SPELLS) gfx_rect(bx - 23, by - 4, 20, 20, WHITE, 256);
@@ -408,15 +408,17 @@ int grimoire_tip(int x, int y, int w, bool draw) {
   if (draw) gfx_text_outline(F_NAME, x + 27, yy + 11, s->name, WHITE, 256);
   int cost = spell_cost(sel);
   snprintf(c, sizeof c, "%d", cost);
-  char cb[64] = "";
-  if (s->cost_percent) snprintf(cb, sizeof cb, " (%d magic +%d%% of max magic)", s->cost_min, (int)ceilf(s->cost_percent * 100));
   if (draw) {
     int tx = x + 27;
     tx = gfx_text(F_SMALL, tx, yy + 22, "Magic cost: ", RGB(204, 204, 204), 256);
-    tx = gfx_text(F_BOLD, tx, yy + 22, c, cost <= S.grimoire_magic ? RGB(102, 255, 102) : RGB(255, 102, 102), 256);
-    gfx_text(F_SMALL, tx, yy + 22, cb, RGB(170, 170, 170), 256);
+    gfx_text(F_BOLD, tx, yy + 22, c, cost <= S.grimoire_magic ? RGB(102, 255, 102) : RGB(255, 102, 102), 256);
   }
   yy += 26;
+  if (s->cost_percent) {
+    snprintf(l, sizeof l, "(%d magic +%d%% of max magic)", s->cost_min, (int)ceilf(s->cost_percent * 100));
+    if (draw) gfx_text(F_SMALL, x + 27, yy + 6, l, RGB(170, 170, 170), 256);
+    yy += 10;
+  }
   if (s->fail_desc) {
     snprintf(l, sizeof l, "Chance to backfire: %d%%", (int)ceil(100 * fail_chance(sel)));
     if (draw) gfx_text(F_SMALL, x + 27, yy + 6, l, RGB(255, 102, 102), 256);

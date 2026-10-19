@@ -110,49 +110,68 @@ static Opt opts[] = {
 };
 #define N_OPTS (int)(sizeof opts / sizeof opts[0])
 
+/* where each option is (from the top of the page's content), and its label's lines */
+static int opt_y[N_OPTS + 1];
+static void options_layout(void) {
+  int y = 16;
+  for (int i = 0; i < N_OPTS; i++) {
+    if (i == O_FIRST_PREF) y += 20;
+    opt_y[i] = y;
+    char t[64], l[96];
+    snprintf(t, sizeof t, "%s OFF", opts[i].name);
+    int lx = PAD + gfx_text_width(F_NAME_SMALL, t) + 20;
+    int h = 15;
+    if (opts[i].label) {
+      snprintf(l, sizeof l, "(%s)", opts[i].label);
+      int lh = gfx_para(&PS_SMALL, lx, 0, SCREEN_W - lx - 6, l, false);
+      if (lh + 2 > h) h = lh + 2;
+    }
+    y += h + 4;
+  }
+  opt_y[N_OPTS] = y;
+}
+
 static void draw_options(void) {
   panel("Options");
-  int y = PANEL_Y + 30 - U.list_top;
+  options_layout();
+  int top = PANEL_Y + 30 - U.list_top;
   gfx_clip(0, PANEL_Y + 26, SCREEN_W, PANEL_H - 28);
-  gfx_text_outline(F_NAME, PAD, y + 10, "General", RGB(246, 218, 184), 256);
-  y += 16;
+  gfx_text_outline(F_NAME, PAD, top + 10, "General", RGB(246, 218, 184), 256);
+  gfx_text_outline(F_NAME, PAD, top + opt_y[O_FIRST_PREF] - 6, "Settings", RGB(246, 218, 184), 256);
   for (int i = 0; i < N_OPTS; i++) {
-    if (i == O_FIRST_PREF) {
-      y += 4;
-      gfx_text_outline(F_NAME, PAD, y + 10, "Settings", RGB(246, 218, 184), 256);
-      y += 16;
-    }
-    char t[64];
+    int y = top + opt_y[i];
+    char t[64], w[64];
     bool on = true;
     if (opts[i].pref) {
       on = (*opts[i].pref != 0) != opts[i].invert;
       snprintf(t, sizeof t, "%s %s", opts[i].name, on ? "ON" : "OFF");
     } else
       snprintf(t, sizeof t, "%s", opts[i].name);
-    int bw = gfx_text_width(F_NAME_SMALL, t) + 14;
-    if (gfx_visible(0, y - 2, SCREEN_W, 20)) {
-      button(PAD, y, bw, t, U.list_sel == i, on);
-      if (opts[i].label) {
-        char l[96];
-        snprintf(l, sizeof l, "(%s)", opts[i].label);
-        int lx = PAD + bw + 6;
-        if (gfx_text_width(F_SMALL, l) > SCREEN_W - lx - 4) gfx_para(&PS_SMALL, lx, y - 3, SCREEN_W - lx - 4, l, true);
-        else gfx_text(F_SMALL, lx, y + 11, l, RGB(180, 180, 180), 256);
-      }
+    snprintf(w, sizeof w, "%s OFF", opts[i].name);
+    int bw = gfx_text_width(F_NAME_SMALL, opts[i].pref ? w : t) + 14;
+    if (!gfx_visible(0, y - 2, SCREEN_W, opt_y[i + 1] - opt_y[i] + 4)) continue;
+    button(PAD, y, bw, t, U.list_sel == i, on);
+    if (opts[i].label) {
+      char l[96];
+      snprintf(l, sizeof l, "(%s)", opts[i].label);
+      int lx = PAD + gfx_text_width(F_NAME_SMALL, w) + 20;
+      ParaStyle st = PS_SMALL;
+      st.color = RGB(180, 180, 180);
+      int lh = gfx_para(&st, lx, 0, SCREEN_W - lx - 6, l, false);
+      gfx_para(&st, lx, y + (15 - lh) / 2 - (lh > 15 ? 0 : 1), SCREEN_W - lx - 6, l, true);
     }
-    y += 19;
   }
   gfx_unclip();
 }
 
-static int options_y(int i) { return 46 + i * 19 + (i >= O_FIRST_PREF ? 20 : 0); }
-
 static void options_keys(uint32_t p) {
   if (p & K_UP && U.list_sel > 0) U.list_sel--;
   if (p & K_DOWN && U.list_sel < N_OPTS - 1) U.list_sel++;
-  int y = options_y(U.list_sel), view = PANEL_H - 30;
-  if (y - U.list_top > view - 20) U.list_top = y - view + 20;
-  if (y - U.list_top < 30) U.list_top = y - 30 < 0 ? 0 : y - 30;
+  options_layout();
+  int y = opt_y[U.list_sel], view = PANEL_H - 30;
+  if (y - U.list_top > view - 26) U.list_top = y - view + 26;
+  if (y - U.list_top < 20) U.list_top = y - 20 < 0 ? 0 : y - 20;
+  if (U.list_sel == 0) U.list_top = 0;
   if (p & (K_OK | K_EXE)) {
     Opt *o = &opts[U.list_sel];
     if (U.list_sel == O_SAVE) {
@@ -416,14 +435,18 @@ static void draw_grid(int tab) {
     }
     if (!gfx_visible(x, y0 + y, CRATE, CRATE)) continue;
     bool sel = U.list_sel == i;
+    /* (as the game's statistics show them: the icons alone, the heavenly ones in their slots) */
+    int icon;
     if (tab == TAB_UPGRADES) {
       const UpgradeRec *r = upgrade_rec(grid[i]);
-      draw_crate(r->icon, x, y0 + y, sel ? 1 : 0, false);
+      icon = r->icon;
+      if (r->pool == POOL_PRESTIGE) gfx_image_scaled(IM_ASCEND_SLOT0, x - 3, y0 + y - 3, 35, 35, 256);
     } else {
       int a = grid[i];
-      bool won = has_achiev(a);
-      draw_crate(won ? achiev_rec(a)->icon : ICON(0, 7), x, y0 + y, sel ? 1 : won ? 0 : 2, false);
+      icon = has_achiev(a) ? achiev_rec(a)->icon : ICON(0, 7);
     }
+    gfx_icon(icon, x + 2, y0 + y + 2 - sel, tab == TAB_ACHIEVS && !has_achiev(grid[i]) ? 140 : 256);
+    if (sel) gfx_rect(x, y0 + y, CRATE - 1, CRATE - 1, WHITE, 200);
   }
 }
 

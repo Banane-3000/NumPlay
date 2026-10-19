@@ -353,18 +353,6 @@ static int tooltip_body(int x, int y, int w, bool draw) {
                floor(m->total_cookies) == 1 ? "cookie" : "cookies", res_text(r->action));
       yy += gfx_para(&PS_SMALL, x, yy, w, line, draw) + 2;
     }
-    {
-      if (can_lumps()) {
-        if (draw) {
-          gfx_hgrad(x, yy, w / 2, 1, BLACK, 0, 110);
-          gfx_hgrad(x + w / 2, yy, w - w / 2, 1, BLACK, 110, 0);
-        }
-        yy += 3;
-        snprintf(line, sizeof line, "\x01Level %d %s\x02 (+%d%% CpS). [toolbox] levels up for %d sugar lump%s.",
-                 m->level, res_text(r->plural), m->level, m->level + 1, m->level ? "s" : "");
-        yy += gfx_para(&PS_SMALL, x, yy, w, line, draw) + 2;
-      }
-    }
     return yy - y;
   }
   return 0;

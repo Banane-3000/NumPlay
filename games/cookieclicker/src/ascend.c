@@ -89,6 +89,7 @@ void ascend_enter(void) {
   U.asc_x = U.asc_tx, U.asc_y = U.asc_ty;
   chips_shown = S.heavenly_chips;
   U.asc_mode = 0;
+  U.tip_t = FPS * 5;
 }
 
 static void draw_link(int a, int b, int alpha) {
@@ -156,8 +157,8 @@ static void draw_heavens(void) {
   gfx_text_outline_center(F_SMALL, SCREEN_W / 2, SCREEN_H - 5,
                           S.prestige > 0 ? "EXE buy   Back reincarnate   shift challenge mode" : "EXE buy   Back reincarnate",
                           RGB(170, 170, 170), 256);
-  /* the tooltip of the upgrade chosen */
-  if (sel_u >= 0) {
+  /* the tooltip of the upgrade chosen (a while after it is chosen) */
+  if (sel_u >= 0 && U.tip_t > 0) {
     int w = 200, pad = 5;
     int h = crate_tip(0, sel_u, CTX_ASCEND, 0, 0, w - 2 * pad, false) + 2 * pad;
     int slot = permanent_slot_of(sel_u);
@@ -249,6 +250,7 @@ void draw_ascend(void) {
 }
 
 void ascend_tick(void) {
+  if (U.tip_t > 0) U.tip_t--;
   U.asc_x += (U.asc_tx - U.asc_x) * 0.5f;
   U.asc_y += (U.asc_ty - U.asc_y) * 0.5f;
   chips_shown += (S.heavenly_chips - chips_shown) * 0.4;
@@ -275,9 +277,11 @@ void ascend_keys(uint32_t p) {
       if (score < best) best = score, found = u;
     }
     if (found >= 0) sel_u = found, focus();
+    U.tip_t = FPS * 5;
   }
   if (p & K_SHIFT && S.prestige > 0) U.asc_mode ^= 1;
   if (p & (K_EXE | K_OK) && sel_u >= 0) {
+    U.tip_t = FPS * 5;
     if (!bit_get(S.upgrades_bought, sel_u)) {
       if (heavenly_can_be_purchased(sel_u) && upgrade_buy(sel_u, true)) build();
     } else if (permanent_slot_of(sel_u) >= 0) {

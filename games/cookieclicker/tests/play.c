@@ -121,10 +121,13 @@ static void preset(const char *name) {
     S.lumps = 7, S.lumps_total = 9, S.lump_t = S.play_time - 1000;
     for (int a = 0; a < 60; a++) win(a);
     game_recount();
-    if (!strcmp(name, "golden")) shimmer_new(SHIMMER_GOLDEN, GC_NONE, false);
+    if (!strcmp(name, "golden")) {   /* (as one comes by itself) */
+      Shimmer *m = shimmer_new(SHIMMER_GOLDEN, GC_NONE, false);
+      if (m) m->spawn_lead = 1;
+    }
     if (!strcmp(name, "wrath")) {
       Shimmer *m = shimmer_new(SHIMMER_GOLDEN, GC_NONE, false);
-      if (m) m->wrath = 1;
+      if (m) m->wrath = 1, m->spawn_lead = 1;
       S.elder_wrath = 3;
     }
     if (!strcmp(name, "wrinklers")) {
@@ -150,6 +153,10 @@ static void preset(const char *name) {
     }
     buy_upgrades(1e21);
     S.cookies = 7.7e20;
+    bit_set(S.upgrades_bought, U_A_FESTIVE_HAT, true), bit_set(S.upgrades_bought, U_A_CRUMBLY_EGG, true);
+    bit_set(S.upgrades_unlocked, U_A_FESTIVE_HAT, true), bit_set(S.upgrades_unlocked, U_A_CRUMBLY_EGG, true);
+    S.santa_level = 6, S.dragon_level = 12, S.dragon_aura = AURA_DRAGON_CURSOR;
+    S.buildings[B_WIZARD_TOWER].level = 3, S.buildings[B_GRANDMA].level = 5;
     S.lumps = 41, S.lumps_total = 60;
     for (int a = 0; a < 300; a++) win(a);
     game_recount();

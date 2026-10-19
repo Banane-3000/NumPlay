@@ -115,7 +115,7 @@ void prompt_text(char *title, int ts, char *body, int bs, const char **yes, cons
     break;
   case PROMPT_REINCARNATE:
     snprintf(title, ts, "Reincarnate");
-    snprintf(body, bs, arg == 1 ? "Are you ready to return to the mortal world?\nYou will be \x01Born again\x02: "
+    snprintf(body, bs, arg == 1 ? "Are you ready to return to the mortal world?\nYou will be \x01" "Born again\x02: "
                                   "your heavenly upgrades and prestige will not count this run."
                                 : "Are you ready to return to the mortal world?");
     *yes = "Reincarnate";
