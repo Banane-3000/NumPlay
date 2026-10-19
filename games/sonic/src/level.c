@@ -68,7 +68,7 @@ void LevelSizeLoad(void) {
     x = (int16_t)p[0], y = (int16_t)p[1];
 #ifdef HOST
     extern int host_at_x, host_at_y;
-    if (host_at_x && V.f_demo >= 0) x = (int16_t)host_at_x, y = (int16_t)host_at_y;
+    if (host_at_x && V.f_demo >= 0) x = (int16_t)host_at_x, y = (int16_t)host_at_y, host_at_x = 0;
 #endif
     player->x.w.i = x, player->y.w.i = y;
   }

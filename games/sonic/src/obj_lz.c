@@ -912,7 +912,7 @@ static const uint16_t lcon_data[6][2 + 12] = {
 
 static const uint16_t *lcon_targets(Obj *o) { return &lcon_data[OB(o, lcon_targetdata)][2]; }
 
-static void LCon_ChangeDir(Obj *o) {
+void LCon_ChangeDir(Obj *o) {
   int16_t d2 = -0x100, d3 = -0x100;
   uint16_t d0 = (uint16_t)(o->x.w.i - OW(o, lcon_nextX)), d1 = (uint16_t)(o->y.w.i - OW(o, lcon_nextY));
   if ((uint16_t)o->x.w.i < (uint16_t)OW(o, lcon_nextX)) d0 = (uint16_t)-d0, d2 = 0x100;

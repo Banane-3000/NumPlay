@@ -613,10 +613,6 @@ void Bomb(Obj *o) {
 #define BossSpikeball_SeesawY 0x34
 #define BossSpikeball_SeesawPtr 0x3C
 
-/* the spiked ball's subtype is a word (the subtype and the byte after it) */
-static uint16_t sbw(const Obj *o) { return (uint16_t)(o->s.b[0] << 8 | o->s.b[1]); }
-static void set_sbw(Obj *o, uint16_t v) { o->s.b[0] = (uint8_t)(v >> 8), o->s.b[1] = (uint8_t)v; }
-
 static void BSLZ_StatusUpdate(Obj *o) {
   if (o->routine2 >= 6) return;
   if (o->status & 0x80) {
@@ -838,8 +834,8 @@ display: {
 }
 
 static void BossSpikeball_CheckFlicker(Obj *o) {
-  if (sbw(o) == 120) o->delayani = 5;
-  if (sbw(o) == 60) o->delayani = 2;
+  if (subw(o) == 120) o->delayani = 5;
+  if (subw(o) == 60) o->delayani = 2;
   if ((int8_t)--o->timeframe > 0) return;
   o->frame ^= 1;
   o->timeframe = o->delayani;
@@ -904,7 +900,7 @@ void BossSpikeball(Obj *o) {
     Obj *a1 = spikeball_saw(o);
     if (!spikeball_landed(o, a1)) break;
     uint8_t d1 = (o->status & 1) ? 0 : 2;
-    set_sbw(o, 240);
+    set_subw(o, 240);
     o->delayani = 10;
     o->timeframe = o->delayani;
     BossSpikeball_LaunchSonic(o, a1, d1);
@@ -920,9 +916,9 @@ void BossSpikeball(Obj *o) {
       o->y.w.i = (int16_t)(OW(o, BossSpikeball_SeesawY) + ball_yoffsets[k < 5 ? k : 4]);
       o->x.w.i = (int16_t)(obBossX(o).w.i + d2);
       o->y.w.f = o->x.w.f = 0;
-      set_sbw(o, (uint16_t)(sbw(o) - 1));
-      if (!sbw(o)) {
-        set_sbw(o, 32);
+      set_subw(o, (uint16_t)(subw(o) - 1));
+      if (!subw(o)) {
+        set_subw(o, 32);
         o->routine = 8;
         break;
       }
@@ -939,7 +935,7 @@ void BossSpikeball(Obj *o) {
     o->vx = d2;
     if ((uint16_t)o->x.w.i < (uint16_t)obBossX(o).w.i) o->vx = (int16_t)-o->vx;
     o->frame = 1;
-    set_sbw(o, 32);
+    set_subw(o, 32);
     o->routine += 2;
   }
     /* fall through */
@@ -956,7 +952,7 @@ void BossSpikeball(Obj *o) {
       if (d2 >= d0 && (uint16_t)(d0 + bosshit[1]) >= (uint16_t)(d2 + ballhit[1]) && d3 >= d1 &&
           (uint16_t)(d1 + bosshit[3]) >= (uint16_t)(d3 + ballhit[3])) {
         o->routine += 2;
-        set_sbw(o, 0);
+        set_subw(o, 0);
         boss->coltype = 0;
         if (!--obBossHits(boss)) {
           boss->status |= 0x80;
@@ -977,7 +973,7 @@ void BossSpikeball(Obj *o) {
       break;
     }
     uint8_t d1 = o->vx < 0 ? 2 : 0;
-    set_sbw(o, 0);
+    set_subw(o, 0);
     BossSpikeball_LaunchSonic(o, a1, d1);
     break;
   }
@@ -985,7 +981,7 @@ void BossSpikeball(Obj *o) {
     static const int16_t speeds[4][2] = {{-0x100, -0x340}, {-0xA0, -0x240}, {0x100, -0x340}, {0xA0, -0x240}};
     o->id = id_Explosion;
     o->routine = 0;
-    if (sbw(o) != 32) break;
+    if (subw(o) != 32) break;
     o->y.w.i = OW(o, BossSpikeball_SeesawY);
     for (int i = 0; i < 4; i++) {
       Obj *a1 = FindFreeObj();

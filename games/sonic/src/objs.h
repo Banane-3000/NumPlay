@@ -45,6 +45,9 @@ enum {
 /* objects that keep a list of their children's slots after a count (at the subtype) */
 #define CHILD(o, i) OBJ((o)->s.b[1 + (i)] & 0x7F)
 #define SLOT(o) ((uint8_t)(((o) - objs) & 0x7F))
+/* the subtype read as a word (with the byte after it), as some objects keep a word there */
+static inline uint16_t subw(const Obj *o) { return (uint16_t)(o->s.b[0] << 8 | o->s.b[1]); }
+static inline void set_subw(Obj *o, uint16_t v) { o->s.b[0] = (uint8_t)(v >> 8), o->s.b[1] = (uint8_t)v; }
 /* obAngle read as a word (with the byte after it) */
 static inline uint16_t anglew(const Obj *o) { return (uint16_t)(o->angle << 8 | o->x27); }
 static inline void set_anglew(Obj *o, uint16_t v) { o->angle = (uint8_t)(v >> 8), o->x27 = (uint8_t)v; }
@@ -170,6 +173,7 @@ void Gargoyle(Obj *o);
 void LabyrinthConvey(Obj *o);
 void Waterfall(Obj *o);
 void BossLabyrinth(Obj *o);
+void LCon_ChangeDir(Obj *o);
 
 /* obj_slz.c */
 void Elevator(Obj *o);
@@ -181,6 +185,28 @@ void Seesaw(Obj *o);
 void Bomb(Obj *o);
 void BossStarLight(Obj *o);
 void BossSpikeball(Obj *o);
+
+/* obj_sbz.c */
+void BallHog(Obj *o);
+void Cannonball(Obj *o);
+void AutoDoor(Obj *o);
+void Junction(Obj *o);
+void RunningDisc(Obj *o);
+void Conveyor(Obj *o);
+void SpinPlatform(Obj *o);
+void Saws(Obj *o);
+void ScrapStomp(Obj *o);
+void VanishPlatform(Obj *o);
+void Flamethrower(Obj *o);
+void Electro(Obj *o);
+void SpinConvey(Obj *o);
+void Girder(Obj *o);
+void Teleport(Obj *o);
+void ScrapEggman(Obj *o);
+void FalseFloor(Obj *o);
+void BossFinal(Obj *o);
+void EggmanCylinder(Obj *o);
+void BossPlasma(Obj *o);
 
 /* screens.c */
 void TitleSonic(Obj *o);
