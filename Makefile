@@ -24,7 +24,7 @@ RAM_LIMIT = 148928
 # custom builds of Epsilon 25.2's source give apps less: 133652 bytes; every game fits there too, in NumPlay and on
 # its own (their big buffers are on the stack, 32 KB apart from that RAM, or in the RAM the software has left)
 CUSTOM_RAM = 133652
-BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom
+BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac
 # the calculator's space for installed apps (0x90200000 to 0x903F0000 in its flash)
 APP_SPACE = 2031616
 # Upsilon, the N0110 and N0115's custom software, gives .nwa apps less RAM: NumPlay-Upsilon.nwa has
@@ -211,6 +211,7 @@ APP_fnaf = games/fnaf/output/fnaf.nwa:FiveNightsAtFreddys.nwa
 APP_finalearth2 = games/finalearth2/output/finalearth2.nwa:FinalEarth2.nwa
 APP_numpowder = games/numpowder/output/numpowder.nwa:NumPowder.nwa
 APP_doom = games/doom/output/doom.nwa:Doom.nwa
+APP_isaac = games/isaac/output/isaac.nwa:BindingOfIsaac.nwa
 
 apps: | $(B)
 	$(MAKE) -C games/numdash build NWLINK="node node_modules/nwlink/bin/nwlink"
@@ -230,6 +231,7 @@ apps: | $(B)
 	$(MAKE) -C games/finalearth2 build NWLINK="$(NWLINK)"
 	$(MAKE) -C games/numpowder build NWLINK="$(NWLINK)"
 	$(MAKE) -C games/doom build NWLINK="$(NWLINK)"
+	$(MAKE) -C games/isaac build NWLINK="$(NWLINK)"
 	cd games/tetris/tetris && NWLINK="$(NWLINK)" $(CARGO) build --release --quiet
 	cp $(word 1,$(subst :, ,$(APP_numdash))) $(B)/apps/$(word 2,$(subst :, ,$(APP_numdash)))
 	cp $(word 1,$(subst :, ,$(APP_crossyroad))) $(B)/apps/$(word 2,$(subst :, ,$(APP_crossyroad)))
@@ -249,6 +251,7 @@ apps: | $(B)
 	cp $(word 1,$(subst :, ,$(APP_finalearth2))) $(B)/apps/$(word 2,$(subst :, ,$(APP_finalearth2)))
 	cp $(word 1,$(subst :, ,$(APP_numpowder))) $(B)/apps/$(word 2,$(subst :, ,$(APP_numpowder)))
 	cp $(word 1,$(subst :, ,$(APP_doom))) $(B)/apps/$(word 2,$(subst :, ,$(APP_doom)))
+	cp $(word 1,$(subst :, ,$(APP_isaac))) $(B)/apps/$(word 2,$(subst :, ,$(APP_isaac)))
 	arm-none-eabi-strip --strip-unneeded $(B)/apps/Tetris.nwa
 
 STD_APPS = $(foreach g,$(STD_GAMES),$(B)/apps/$(NWA_$(g)))
@@ -309,5 +312,6 @@ clean:
 	-$(MAKE) -C games/finalearth2 clean
 	-$(MAKE) -C games/numpowder clean
 	-$(MAKE) -C games/doom clean
+	-$(MAKE) -C games/isaac clean
 	-cd games/tetris/tetris && $(CARGO) clean
 	-$(foreach g,$(STD_GAMES),$(MAKE) -C games/$(g) clean;)

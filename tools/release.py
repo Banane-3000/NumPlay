@@ -43,6 +43,8 @@ ALONE = {
                     "Too big to share the calculator with NumPlay: install it on its own"),
     "doom": ("Doom", "id Software's Doom, the shareware episode Knee-Deep in the Dead: all nine levels of Phobos. Too "
              "big to share the calculator with NumPlay: install it on its own"),
+    "isaac": ("The Binding of Isaac", "a whole run, from the Basement past Mom and her heart to Sheol and the Cathedral. "
+              "Too big to share the calculator with NumPlay: install it on its own"),
 }
 VARIANTS = [
     ("NumPlay-Invisible.nwa", "The same app, hidden: a blank icon with no name"),

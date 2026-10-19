@@ -156,6 +156,11 @@ GAMES = {
     # Press OK to Play: the first scenario, its first goal closed, the city runs; then Continue
     "finalearth2": ("FinalEarth2.nwa", "finalearth2.sav", presses((2000, "ok"), (3000, "ok")), 9000,
                     presses((2000, "ok")), 6000),
+    # past the title, a new run: the floor's name, then Isaac walks and cries; Home keeps the run. Next time,
+    # Continue, and the run goes on (quitting with On/Off)
+    "isaac": ("BindingOfIsaac.nwa", "isaacrun.sav",
+              presses((1500, "ok"), (2200, "ok"), (2800, "ok"), (3300, "left", 1200), (3600, "6", 900), (4800, "up", 600)), 6500,
+              presses((1500, "ok"), (2200, "ok"), (2800, "right", 900), (3000, "8", 600)), 4500),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -185,7 +190,7 @@ SEEDS = {
 COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.py", "celeste": "celeste_saves.py",
           "hollowknight": "hollowknight_saves.py", "finalearth2": "finalearth2_saves.py",
           "numpowder": "numpowder_saves.py", "undertale": "undertale_saves.py", "subway": "subway_saves.py",
-          "fnaf": "fnaf_saves.py", "doom": "doom_saves.py"}
+          "fnaf": "fnaf_saves.py", "doom": "doom_saves.py", "isaac": "isaac_saves.py"}
 CHECKS = {
     # the island remembers where Lucky was; after the reinstall, from the copy
     "championisland": (lambda v: v[:3] == b"CI1" and b"PLAYER_LOC" in v,) * 2,
@@ -207,6 +212,9 @@ CHECKS = {
              lambda v: v[:4] == b"FNAF" and struct.unpack_from("<f", v, 40)[0] > 6.5),
     # the moment kept (a save named "the moment"); after the reinstall, from the copy, loaded and kept again
     "doom": (lambda v: v[:10] == b"the moment",) * 2,
+    # the run kept ("ISR1", the frames played at 16); after the reinstall, from the copy, it goes on
+    "isaac": (lambda v: v[:4] == b"ISR1" and struct.unpack_from("<I", v, 16)[0] > 30,
+              lambda v: v[:4] == b"ISR1" and struct.unpack_from("<I", v, 16)[0] > 80),
     # a simulation saved ("NPWD"); after the reinstall, from the copy, it goes on and is saved again
     "numpowder": (lambda v: v[:4] == b"NPWD",) * 2,
     # a game saved ("HKSV", then the play time at 152); after the reinstall, from the copy, it goes on
