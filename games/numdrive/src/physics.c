@@ -643,7 +643,9 @@ void phys_add_force(int o, const vec3 *f, const vec3 *at, const vec3 *t) {
     b->fy += f->y;
     if (at) b->tq += cross2(at->x - b->x, at->y - b->y, f->x, f->y);
   }
-  if (t) b->tq += t->z * DEG2RAD;
+  /* a torque, not an angle: taken as it is, like the force (and like the force of an angular motor). Read as
+     per degree it was 57 times too weak: Flying Carpet's (160) and Raft's (1000) could not keep them level */
+  if (t) b->tq += t->z;
 }
 
 void phys_set_locked(int o, const vec3 *p, const vec3 *r) {
@@ -817,8 +819,10 @@ void phys_con_spring(int c, bool ang, vec3 k, vec3 d) {
 #endif
   Joint *j = &joints[c];
   if (ang) {
-    x->k[2] = k.z;
-    x->c[2] = d.z;
+    /* Fancade's angles are in degrees, so is its angular spring: stiffness and damping per degree. Walk
+       Mad's knees (50) hold its walker up only that way; per radian they fold under it. */
+    x->k[2] = k.z * RAD2DEG;
+    x->c[2] = d.z * RAD2DEG;
     j->spring = (uint8_t)((j->spring & 3) | (k.z > 0 || d.z > 0) << 2);
   } else {
     x->k[0] = k.x;
@@ -1655,6 +1659,20 @@ static void warm_store(void) {
   nwarm = 0;
   for (int i = 0; i < ncon && nwarm < warm_cap; i++) {
     const Contact *c = &con[i];
+    /* like Bullet's refreshContactPoints, a point whose two sides slide apart along it by more than the
+       contact breaking threshold (0.02) this step is dropped, and starts afresh. Runaway's goal, popping out
+       of its hole, kept the impulse that stopped it against one wall: the other wall pushed back as hard,
+       and the two held it half way up by friction until the car drove over it. */
+    const Body *A = &bodies[c->a], *B = c->b >= 0 ? &bodies[c->b] : 0;
+    float vax, vay, vbx = 0, vby = 0;
+    vel_at(A, c->rax, c->ray, &vax, &vay);
+    if (B) vel_at(B, c->rbx, c->rby, &vbx, &vby);
+    float dx = vax - vbx, dy = vay - vby, dz = c->z3 ? A->vz - (B ? B->vz : 0) : 0;
+    float vn = dx * c->nx + dy * c->ny + dz * (c->z3 ? c->nz : 0);
+    dx -= vn * c->nx;
+    dy -= vn * c->ny;
+    if (c->z3) dz -= vn * c->nz;
+    if ((dx * dx + dy * dy + dz * dz) * (DT * DT) > 0.02f * 0.02f) continue;
     Warm *m = &warm[nwarm++];
     int lx, ly;
     warm_point(c, &lx, &ly);
