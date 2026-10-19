@@ -6,7 +6,8 @@
  * Keys: left right up down ok back one three home. "a-b:key" holds the key from frame a to b, "a:key" for one
  * frame (frames are the game's steps, 60 a second). --bot plays the run from frame FROM on: it reads the
  * tracks ahead and changes lanes, jumps and rolls (it is no expert: it stumbles and crashes now and then).
- * Screenshots are DIR/shot_<frame>.ppm. */
+ * Screenshots are DIR/shot_<frame>.ppm. --raw DIR:FROM-TO keeps the frames drawn from FROM to TO as raw RGB565
+ * files for tools/record.py --frames (GIFs for the documentation). */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -134,7 +135,9 @@ int main(int argc, char **argv) {
   int frames = 600, draw_every = 1, bot_from = -1;
   const char *out = "build/shots", *shots = "", *saves = "build/host-saves";
   long coins = -1, keys_owned = -1;
-  bool stats = false, god = false;   /* god: nothing hurts (long runs for tests) */
+  bool stats = false, god = false;
+  const char *raw = NULL;
+  int raw_from = 0, raw_to = -1;   /* god: nothing hurts (long runs for tests) */
   for (int i = 1; i < argc; i++) {
     const char *a = argv[i], *v = i + 1 < argc ? argv[i + 1] : "";
     if (!strcmp(a, "--frames")) frames = atoi(v), i++;
@@ -149,6 +152,13 @@ int main(int argc, char **argv) {
     else if (!strcmp(a, "--draw-every")) draw_every = atoi(v), i++;
     else if (!strcmp(a, "--stats")) stats = true;
     else if (!strcmp(a, "--god")) god = true;
+    else if (!strcmp(a, "--raw")) {
+      static char dir[256];
+      snprintf(dir, sizeof dir, "%s", v);
+      char *c = strrchr(dir, ':');
+      if (c) *c = 0, sscanf(c + 1, "%d-%d", &raw_from, &raw_to);
+      raw = dir, i++;
+    }
     else if (!strcmp(a, "--power") && npower < 8) {
       /* FRAME:KIND, KIND a power-up (0 jetpack, 1 sneakers, 2 magnet, 3 2x) */
       power_at[npower] = atoi(v), power_kind[npower] = atoi(strchr(v, ':') ? strchr(v, ':') + 1 : "0"), npower++, i++;
@@ -200,9 +210,17 @@ int main(int argc, char **argv) {
     char list[8192];
     snprintf(list, sizeof list, ",%s,", shots);
     bool shot = all || strstr(list, name);
-    if (shot || f % draw_every == 0) {
+    bool keep = raw && f >= raw_from && f <= raw_to && f % 4 == 0;   /* (15 frames a second) */
+    if (shot || keep || f % draw_every == 0) {
       app_draw();
       if ((int)perf_polys > max_polys) max_polys = (int)perf_polys;
+    }
+    if (keep) {
+      char p[512];
+      mkdir(raw, 0755);
+      snprintf(p, sizeof p, "%s/%06d_%06d.raw", raw, f, (f - raw_from) * 50 / 3);
+      FILE *o = fopen(p, "wb");
+      if (o) fwrite(host_fb, 2, SCREEN_W * SCREEN_H, o), fclose(o);
     }
     if (shot) {
       char p[512];

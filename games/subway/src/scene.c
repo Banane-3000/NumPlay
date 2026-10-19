@@ -331,11 +331,50 @@ static void building(int dir, float z0, float z1, float near_x, float depth, flo
   }
 }
 
+/* a station: platforms on both sides under a roof on pillars, tiles, posters and the station's sign */
+static void station_side(int dir, float z0, float dist, uint32_t hs) {
+  float s = dir > 0 ? -1.0f : 1.0f;   /* -1 on the left */
+  float e = 4.3f * s, back = 6.7f * s, x0 = s < 0 ? back : e, x1 = s < 0 ? e : back;
+  cube(x0, 0, z0, x1, 1.1f, z0 + BLOCK, 0xCFCAC0, 2 | (s < 0 ? 4 : 8));
+  /* the yellow line along the edge */
+  float y0 = s < 0 ? e - 0.45f : e + 0.15f, y1 = s < 0 ? e - 0.15f : e + 0.45f;
+  V3 line[4] = {{y0, 1.101f, z0 + BLOCK}, {y1, 1.101f, z0 + BLOCK}, {y1, 1.101f, z0}, {y0, 1.101f, z0}};
+  r_poly(line, 4, L(0xF2C230), P_DECAL, 0);
+  /* the wall behind: tiles, posters, the sign */
+  side(back, dir, z0, z0 + BLOCK, 1.1f, 6.4f, L(0xE9E2CF), 0);
+  if (dist < 100) {
+    for (int k = 0; k < 3; k++) {
+      float pz = z0 + 2.5f + (float)k * 8;
+      uint32_t c = spray[(hs >> (k * 3)) % 7];
+      side(back + 0.01f * -s, dir, pz, pz + 2.2f, 2.0f, 4.2f, L(0x2A2A30), P_DECAL);
+      side(back + 0.01f * -s, dir, pz + 0.12f, pz + 2.08f, 2.12f, 4.08f, L(c), P_DECAL2);
+      side(back + 0.01f * -s, dir, pz + 0.4f, pz + 1.8f, 2.5f, 3.0f, L(0xF8F8F8), P_DECAL3);
+    }
+    side(back + 0.01f * -s, dir, z0 + 9.6f, z0 + 14.4f, 4.6f, 5.6f, L(0x2E5FA8), P_DECAL);
+    side(back + 0.01f * -s, dir, z0 + 10.0f, z0 + 14.0f, 4.9f, 5.3f, L(0xF4F4F4), P_DECAL2);
+  }
+  /* pillars, and the roof on them */
+  for (int k = 0; k < 3; k++) {
+    float pz = z0 + 3.5f + (float)k * 8, px = 5.4f * s;
+    cube(px - 0.22f, 1.1f, pz, px + 0.22f, 6.4f, pz + 0.44f, 0x7E8A96, 2);
+  }
+  float r0 = s < 0 ? back : 3.9f, r1 = s < 0 ? -3.9f : back;
+  ceiling(6.4f, r0, r1, z0, z0 + BLOCK, L(0x5E6870));
+  side(s < 0 ? -3.9f : 3.9f, -dir, z0, z0 + BLOCK, 6.4f, 7.0f, L(0x2E5FA8), 0);
+  cube(r0, 6.4f, z0, r1, 7.0f, z0 + BLOCK, 0x2E5FA8, 1 | 2 | 4 | 8 | 32);
+}
+
 static void open_block(int b, float z0, float dist) {
   uint32_t h = world_hash((uint32_t)b * 7919u + 3 + world_seed);
   bool before_tunnel = world_tunnel(z0 + BLOCK + 1);
+  /* now and then a station: two blocks in a row */
+  bool station = !before_tunnel && !world_tunnel(z0 - 1) && world_hash((uint32_t)(b / 2) * 31u + world_seed) % 9 == 0 && z0 > 200;
   for (int dir = -1; dir <= 1; dir += 2) {
     uint32_t hs = world_hash(h + (uint32_t)(dir + 1));
+    if (station) {
+      station_side(dir, z0, dist, hs);
+      continue;
+    }
     float wx = dir > 0 ? -WALL_X : WALL_X;   /* the wall's face towards the tracks: the left one faces +x */
     float wh = 3.4f + (float)(hs % 3) * 0.4f;
     static const uint32_t walls[6] = {0xB9B1A3, 0xA9A39A, 0xA65A42, 0xC9BFA8, 0x8E9AA3, 0xB46B4E};

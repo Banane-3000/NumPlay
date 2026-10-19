@@ -30,6 +30,9 @@ ALONE = {
     "undertale": ("Undertale", "the whole Underground, from the bed of golden flowers to the barrier and the neutral "
                   "ending: the Ruins, Snowdin, Waterfall, Hotland, the CORE and New Home. Too big to share the calculator "
                   "with NumPlay: install it on its own"),
+    "subway": ("Subway Surfers", "the endless run down the subway's tracks in 3D: trains, ramps, barriers, coins, "
+               "power-ups, hoverboards, the Inspector and his dog, the shop and the missions. Too big to share the "
+               "calculator with NumPlay: install it on its own"),
     "championisland": ("Champion Island", "the Doodle Champion Island Games. Too big to share the calculator with "
                        "NumPlay: install it on its own"),
     "numpowder": ("NumPowder", "The Powder Toy on the calculator: sand, water, fire, acid, electricity and nearly 200 "
