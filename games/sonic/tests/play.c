@@ -1,11 +1,12 @@
 /* Plays Sonic the Hedgehog on a computer, with scripted keys, and saves frames.
  *
  *   play [--frames N] [--keys "10-40:right,50:a,..."] [--shots 30,60|all|every:N] [--out DIR]
- *        [--saves DIR] [--level Z.A] [--lives N] [--trace]
+ *        [--saves DIR] [--level Z.A] [--lives N] [--trace] [--dump N] [--god]
  *
  * Keys: up down left right a b c start home. "a-b:key" holds the key from frame a to b, "a:key" for one
  * frame. --level starts the act straight away (zone 0-6, act 0-3), past the SEGA and title screens.
- * Screenshots are DIR/shot_<frame>.ppm; --trace prints Sonic's position and state every frame. */
+ * Screenshots are DIR/shot_<frame>.ppm; --trace prints Sonic's position and state every frame, --dump N
+ * the objects at frame N; --god keeps Sonic invincible (pits still kill). */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,7 +26,7 @@ typedef struct {
 } Hold;
 static Hold holds[4096];
 static int nholds;
-static int frames = 600, frame, every, trace;
+static int frames = 600, frame, every, trace, dump = -1, god;
 static char out_dir[256] = "build/shots";
 static bool shot_all;
 static int shots[1024], nshots;
@@ -70,6 +71,13 @@ void host_frame(void) {
     printf("f%d mode %02x zone %d.%d sonic %d,%d r%d st%02x an%02x v%d,%d in%d rings %d lives %d cam %d,%d\n", frame,
            V.gamemode, V.zone, V.act, player->x.w.i, player->y.w.i, player->routine, player->status, player->angle,
            player->vx, player->vy, player->inertia, V.rings, V.lives, V.cam[0].x.w.i, V.cam[0].y.w.i);
+  if (frame == dump)
+    for (int i = 0; i < NOBJ; i++)
+      if (objs[i].id)
+        printf("obj %d id %02x r%d.%d x %d y %d render %02x col %02x frame %d sub %02x\n", i, objs[i].id,
+               objs[i].routine, objs[i].routine2, objs[i].x.w.i, objs[i].y.w.i, objs[i].render, objs[i].coltype,
+               objs[i].frame, objs[i].s.b[0]);
+  if (god && V.gamemode == id_Level) V.invinc = 1, player->s.w[(0x32 - 0x28) / 2] = 100;
   host_keys = 0;
   for (int i = 0; i < nholds; i++)
     if (frame + 1 >= holds[i].a && frame + 1 <= holds[i].b) host_keys |= holds[i].k;
@@ -85,6 +93,8 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--out") && i + 1 < argc) snprintf(out_dir, sizeof out_dir, "%s", argv[++i]);
     else if (!strcmp(argv[i], "--saves") && i + 1 < argc) snprintf(saves, sizeof saves, "%s", argv[++i]);
     else if (!strcmp(argv[i], "--trace")) trace = 1;
+    else if (!strcmp(argv[i], "--god")) god = 1;
+    else if (!strcmp(argv[i], "--dump") && i + 1 < argc) dump = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--lives") && i + 1 < argc) host_lives = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--level") && i + 1 < argc) {
       char *s = argv[++i];

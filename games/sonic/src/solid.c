@@ -203,15 +203,27 @@ void SlopeObject(Obj *o, int16_t d1, const uint8_t *heights) {
   plat_alt_y(o, (int16_t)(o->y.w.i - heights[(uint16_t)d0 >> 1]));
 }
 
-void ExitPlatform2(Obj *o, int16_t d1, int16_t d2) {
+/* Sonic still on the platform: his offset from its left end; off it: -1 (and the platform let go) */
+int ExitPlatform2(Obj *o, int16_t d1, int16_t d2) {
   Obj *a1 = player;
   d2 = (int16_t)(d2 * 2);
   if (!(a1->status & 2)) {
     int16_t d0 = (int16_t)(a1->x.w.i - o->x.w.i + d1);
-    if (d0 >= 0 && (uint16_t)d0 < (uint16_t)d2) return;
+    if (d0 >= 0 && (uint16_t)d0 < (uint16_t)d2) return d0;
   }
   a1->status &= (uint8_t)~8;
   o->routine = 2;
   o->status &= (uint8_t)~8;
+  return -1;
 }
-void ExitPlatform(Obj *o, int16_t d1) { ExitPlatform2(o, d1, d1); }
+int ExitPlatform(Obj *o, int16_t d1) { return ExitPlatform2(o, d1, d1); }
+
+/* Sonic standing on a sloped platform: kept on its surface, moved with it (d2: its x before moving) */
+void SlopeObject_AssumeStoodOn(Obj *o, int16_t d1, const uint8_t *heights, int16_t d2) {
+  Obj *a1 = player;
+  if (!(a1->status & 8)) return;
+  uint16_t d0 = (uint16_t)((uint16_t)(a1->x.w.i - o->x.w.i + d1) >> 1);
+  if (o->render & 1) d0 = (uint16_t)(~d0 + d1);
+  a1->y.w.i = (int16_t)(o->y.w.i - heights[d0] - (uint8_t)a1->height);
+  a1->x.w.i = (int16_t)(a1->x.w.i - (d2 - o->x.w.i));
+}

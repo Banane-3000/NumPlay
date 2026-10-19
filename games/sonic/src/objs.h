@@ -38,6 +38,17 @@ enum {
 
 #define vblank_byte ((uint8_t)V.vblank_count)
 
+/* v_oscillate's bytes and words by their offset from it (2: the first value) */
+#define OSC_B(off) ((uint8_t)(V.osc[((off) - 2) >> 1] >> (((off) & 1) ? 0 : 8)))
+#define OSC_W(off) (V.osc[((off) - 2) >> 1])
+
+/* objects that keep a list of their children's slots after a count (at the subtype) */
+#define CHILD(o, i) OBJ((o)->s.b[1 + (i)] & 0x7F)
+#define SLOT(o) ((uint8_t)(((o) - objs) & 0x7F))
+/* obAngle read as a word (with the byte after it) */
+static inline uint16_t anglew(const Obj *o) { return (uint16_t)(o->angle << 8 | o->x27); }
+static inline void set_anglew(Obj *o, uint16_t v) { o->angle = (uint8_t)(v >> 8), o->x27 = (uint8_t)v; }
+
 /* Sonic's own variables */
 #define flashtime 0x30
 #define invtime 0x32
@@ -90,4 +101,25 @@ void Button(Obj *o);
 void PushBlock(Obj *o);
 void WaterSound(Obj *o);
 void EdgeWalls(Obj *o);
+
+/* obj_ghz.c */
+void Bridge(Obj *o);
+void SwingingPlatform(Obj *o);
+void Helix(Obj *o);
+void BasicPlatform(Obj *o);
+void CollapseLedge(Obj *o);
+void CollapseFloor(Obj *o);
+void Scenery(Obj *o);
+void PurpleRock(Obj *o);
+void SmashWall(Obj *o);
+void MotoBug(Obj *o);
+void Crabmeat(Obj *o);
+void BuzzBomber(Obj *o);
+void Missile(Obj *o);
+void UnusedExplosion(Obj *o);
+void Chopper(Obj *o);
+void Newtron(Obj *o);
+void BossGreenHill(Obj *o);
+void BossBall(Obj *o);
+void boss_hit_flash(Obj *o, uint8_t restore);
 #endif

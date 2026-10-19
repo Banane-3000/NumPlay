@@ -43,8 +43,9 @@ void Plat_NoXCheck(Obj *o);
 void Plat_NoXCheck_AltY(Obj *o, int16_t y);
 void Plat_NoCheck_ext(Obj *o);
 void SlopeObject(Obj *o, int16_t d1, const uint8_t *heights);
-void ExitPlatform(Obj *o, int16_t d1);
-void ExitPlatform2(Obj *o, int16_t d1, int16_t d2);
+int ExitPlatform(Obj *o, int16_t d1);
+int ExitPlatform2(Obj *o, int16_t d1, int16_t d2);
+void SlopeObject_AssumeStoodOn(Obj *o, int16_t d1, const uint8_t *heights, int16_t d2);
 void MvSonicOnPtfm(Obj *o, int16_t d2, int16_t d3);
 void MvSonicOnPtfm2(Obj *o, int16_t d2);
 
