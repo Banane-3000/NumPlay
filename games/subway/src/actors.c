@@ -90,7 +90,7 @@ static void draw_model(const Model *m, const float (*a)[3], const M34 *root, flo
   /* (nothing to do far away or behind) */
   V3 c = ap(&cm[0], (V3){m->joints[0][0] * 0.001f, m->joints[0][1] * 0.001f, m->joints[0][2] * 0.001f});
   if (c.z < -2.5f || c.z > 140) return;
-  float amb = 0.6f * light * 255, dif = 0.45f * light * 255;
+  float amb = 0.55f * light * 255, dif = 0.5f * light * 255;
   RV rv[256];
   for (int pi = 0; pi < m->nparts; pi++) {
     const MPart *p = &m->parts[pi];

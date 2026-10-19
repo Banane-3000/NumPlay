@@ -24,8 +24,8 @@ static char note[40];           /* the shop's word on the last try */
 static float note_t;
 static float cam_x, cam_y;      /* the run's camera, smoothed */
 static bool drawn;              /* a screen that does not move is drawn once, then again when something changes */
-#define CAM_Y 4.8f              /* above the ground */
-#define CAM_BACK 5.8f           /* behind the runner */
+#define CAM_Y 4.4f              /* above the ground */
+#define CAM_BACK 5.2f           /* behind the runner */
 
 /* colours of the game's screens */
 #define NAVY 0x0B2A55
