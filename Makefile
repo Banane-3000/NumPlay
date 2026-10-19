@@ -24,7 +24,7 @@ RAM_LIMIT = 148928
 # custom builds of Epsilon 25.2's source give apps less: 133652 bytes; every game fits there too, in NumPlay and on
 # its own (their big buffers are on the stack, 32 KB apart from that RAM, or in the RAM the software has left)
 CUSTOM_RAM = 133652
-BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac
+BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing
 # the calculator's space for installed apps (0x90200000 to 0x903F0000 in its flash)
 APP_SPACE = 2031616
 # Upsilon, the N0110 and N0115's custom software, gives .nwa apps less RAM: NumPlay-Upsilon.nwa has
@@ -208,6 +208,7 @@ APP_hollowknight = games/hollowknight/output/hollowknight.nwa:HollowKnight.nwa
 APP_undertale = games/undertale/output/undertale.nwa:Undertale.nwa
 APP_subway = games/subway/output/subway.nwa:SubwaySurfers.nwa
 APP_fnaf = games/fnaf/output/fnaf.nwa:FiveNightsAtFreddys.nwa
+APP_hillclimb = games/hillclimb/output/hillclimb.nwa:HillClimbRacing.nwa
 APP_finalearth2 = games/finalearth2/output/finalearth2.nwa:FinalEarth2.nwa
 APP_numpowder = games/numpowder/output/numpowder.nwa:NumPowder.nwa
 APP_doom = games/doom/output/doom.nwa:Doom.nwa
@@ -228,6 +229,7 @@ apps: | $(B)
 	$(MAKE) -C games/undertale build NWLINK="$(NWLINK)"
 	$(MAKE) -C games/subway build NWLINK="$(NWLINK)"
 	$(MAKE) -C games/fnaf build NWLINK="$(NWLINK)"
+	$(MAKE) -C games/hillclimb build NWLINK="$(NWLINK)"
 	$(MAKE) -C games/finalearth2 build NWLINK="$(NWLINK)"
 	$(MAKE) -C games/numpowder build NWLINK="$(NWLINK)"
 	$(MAKE) -C games/doom build NWLINK="$(NWLINK)"
@@ -248,6 +250,7 @@ apps: | $(B)
 	cp $(word 1,$(subst :, ,$(APP_undertale))) $(B)/apps/$(word 2,$(subst :, ,$(APP_undertale)))
 	cp $(word 1,$(subst :, ,$(APP_subway))) $(B)/apps/$(word 2,$(subst :, ,$(APP_subway)))
 	cp $(word 1,$(subst :, ,$(APP_fnaf))) $(B)/apps/$(word 2,$(subst :, ,$(APP_fnaf)))
+	cp $(word 1,$(subst :, ,$(APP_hillclimb))) $(B)/apps/$(word 2,$(subst :, ,$(APP_hillclimb)))
 	cp $(word 1,$(subst :, ,$(APP_finalearth2))) $(B)/apps/$(word 2,$(subst :, ,$(APP_finalearth2)))
 	cp $(word 1,$(subst :, ,$(APP_numpowder))) $(B)/apps/$(word 2,$(subst :, ,$(APP_numpowder)))
 	cp $(word 1,$(subst :, ,$(APP_doom))) $(B)/apps/$(word 2,$(subst :, ,$(APP_doom)))
@@ -309,6 +312,7 @@ clean:
 	-$(MAKE) -C games/undertale clean
 	-$(MAKE) -C games/subway clean
 	-$(MAKE) -C games/fnaf clean
+	-$(MAKE) -C games/hillclimb clean
 	-$(MAKE) -C games/finalearth2 clean
 	-$(MAKE) -C games/numpowder clean
 	-$(MAKE) -C games/doom clean

@@ -35,6 +35,8 @@ ALONE = {
                "calculator with NumPlay: install it on its own"),
     "fnaf": ("Five Nights at Freddy's", "survive five nights at Freddy Fazbear's Pizza, then the 6th and the Custom "
              "Night, with the game's own pictures. Too big to share the calculator with NumPlay: install it on its own"),
+    "hillclimb": ("Hill Climb Racing", "Newton Bill's ride up the hills: ten stages, eight vehicles and their "
+                  "upgrades. Too big to share the calculator with NumPlay: install it on its own"),
     "championisland": ("Champion Island", "the Doodle Champion Island Games. Too big to share the calculator with "
                        "NumPlay: install it on its own"),
     "numpowder": ("NumPowder", "The Powder Toy on the calculator: sand, water, fire, acid, electricity and nearly 200 "

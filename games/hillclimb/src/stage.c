@@ -143,7 +143,7 @@ float stage_ground(float x) {
   if (!stage_bridge(x, &x0, &x1)) return h;
   float t = (x - x0) / (x1 - x0), b = bridge_y(x, x0, x1) - 0.4f;
   if (h > b) h = b;
-  return h - 9.0f * powf(sinf(3.14159265f * t), 0.35f);
+  return h - 4.5f * powf(sinf(3.14159265f * t), 0.35f);
 }
 
 /* ------------------------------------------------------------------ ceilings */

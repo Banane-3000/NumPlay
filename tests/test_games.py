@@ -145,6 +145,11 @@ GAMES = {
     # paused: Back, and the night goes on
     "fnaf": ("FiveNightsAtFreddys.nwa", "fnafres.sav", presses((1500, "down"), (1800, "ok")), 9000,
              presses((1500, "back")), 5000),
+    # the title, the garage, the stage, how to drive, then the Hill Climber up the Countryside: Home keeps the run's
+    # coins and best; next time straight from the stage to a second run
+    "hillclimb": ("HillClimbRacing.nwa", "hillclimb.sav",
+                  presses((1500, "ok"), (2500, "ok"), (3500, "ok"), (4500, "ok"), (5000, "right", 6000)), 12000,
+                  presses((1500, "ok"), (2500, "ok"), (3500, "ok"), (4000, "right", 2500)), 7500),
     # the intro, then OK draws for a while (the autosave on Home); next time it comes back and more is drawn
     "numpowder": ("NumPowder.nwa", "numpowder.sav", presses((2000, "ok"), (3000, "ok", 1500)), 6000,
                   presses((2000, "ok"), (2500, "right", 600), (3200, "ok", 800)), 5000),
@@ -191,7 +196,8 @@ SEEDS = {
 COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.py", "celeste": "celeste_saves.py",
           "hollowknight": "hollowknight_saves.py", "finalearth2": "finalearth2_saves.py",
           "numpowder": "numpowder_saves.py", "undertale": "undertale_saves.py", "subway": "subway_saves.py",
-          "fnaf": "fnaf_saves.py", "doom": "doom_saves.py", "isaac": "isaac_saves.py"}
+          "fnaf": "fnaf_saves.py", "doom": "doom_saves.py", "isaac": "isaac_saves.py",
+          "hillclimb": "hillclimb_saves.py"}
 CHECKS = {
     # the island remembers where Lucky was; after the reinstall, from the copy
     "championisland": (lambda v: v[:3] == b"CI1" and b"PLAYER_LOC" in v,) * 2,
@@ -218,6 +224,11 @@ CHECKS = {
               lambda v: v[:4] == b"ISR1" and struct.unpack_from("<I", v, 16)[0] > 80),
     # a simulation saved ("NPWD"); after the reinstall, from the copy, it goes on and is saved again
     "numpowder": (lambda v: v[:4] == b"NPWD",) * 2,
+    # a run banked ("HCR1", runs at 212) with a best on the Countryside (at 48); after the reinstall, from the copy,
+    # a second one
+    "hillclimb": (lambda v: v[:4] == b"HCR1" and struct.unpack_from("<I", v, 212)[0] == 1
+                  and struct.unpack_from("<H", v, 48)[0] > 0,
+                  lambda v: v[:4] == b"HCR1" and struct.unpack_from("<I", v, 212)[0] == 2),
     # a game saved ("HKSV", then the play time at 152); after the reinstall, from the copy, it goes on
     "hollowknight": (lambda v: v[:4] == b"HKSV" and struct.unpack_from("<f", v, 152)[0] > 0,
                      lambda v: v[:4] == b"HKSV" and struct.unpack_from("<f", v, 152)[0] > 10),

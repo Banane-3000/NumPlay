@@ -364,13 +364,13 @@ static void draw_bridges(void) {
       float px = e ? b1 : b0, py = stage_floor(px);
       gfx_tube(scr_x(px), scr_y(py - 0.3f), scr_x(px), scr_y(py + 1.3f), 0.12f * s, rgb565(0x6B4423), 255);
     }
-    int n = (int)((b1 - b0) / 0.55f);
+    int n = (int)((b1 - b0) / 0.8f);
     float lx = 0, ly = 0;
     for (int i = 0; i <= n; i++) {
       float px = b0 + (b1 - b0) * (float)i / (float)n, py = stage_floor(px);
       float a = atan2f(stage_floor(px + 0.1f) - stage_floor(px - 0.1f), 0.2f);
       float sx = scr_x(px), sy = scr_y(py - 0.14f);
-      gfx_image(IMG_PLANK, sx, sy, s / img(IMG_PLANK)->ppm4 * 4.0f * 0.5f, a, 255);
+      gfx_image(IMG_PLANK, sx, sy, s / img(IMG_PLANK)->ppm4 * 4.0f * 0.8f, a, 255);
       float rx = scr_x(px), ry = scr_y(py + 1.0f);
       if (i) gfx_tube(lx, ly, rx, ry, 0.035f * s, rgb565(0x8A6A3A), 255);
       lx = rx, ly = ry;

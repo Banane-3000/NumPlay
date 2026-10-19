@@ -58,7 +58,8 @@ static uint32_t autopilot(void) {
     if (d < -0.35f) return K_RIGHT;
     return 0;
   }
-  if (d > 0.75f) return 0;            /* rearing up: ease off */
+  if (d > 0.6f) return K_LEFT;        /* rearing up: a touch of brake brings the nose down */
+  if (d > 0.3f && c->ch.w > 0.6f) return 0;   /* coming up fast: ease off */
   if (car_speed(c) < 0.3f && run.fuel <= 0) return 0;
   return K_RIGHT;
 }
@@ -88,7 +89,18 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--coins")) coins = atol(argv[++i]);
     else if (!strcmp(argv[i], "--auto")) autop = true;
     else if (!strcmp(argv[i], "--trace")) trace = atoi(argv[++i]);
-    else if (!strcmp(argv[i], "--slopes")) {   /* the steepest slope of each 100 m of a stage, in degrees */
+    else if (!strcmp(argv[i], "--things")) {   /* where the first bridges, tunnels and fuel cans of a stage are */
+      stage_set(atoi(argv[++i]));
+      float b0, b1, c, f;
+      for (float x = 0; x < 2000; x += 1) {
+        if (stage_bridge(x, &b0, &b1)) printf("bridge %.0f to %.0f\n", b0, b1), x = b1;
+      }
+      bool in = false;
+      for (float x = 0; x < 2000; x += 1)
+        if (stage_ceiling(x, &c) != in) in = !in, printf("ceiling %s at %.0f\n", in ? "starts" : "ends", x);
+      for (int k = 0; k < 8 && stage_fuel(k, &f); k++) printf("fuel %.0f\n", f);
+      return 0;
+    } else if (!strcmp(argv[i], "--slopes")) {   /* the steepest slope of each 100 m of a stage, in degrees */
       stage_set(atoi(argv[++i]));
       for (int s = 0; s < 4000; s += 100) {
         float most = 0, lo = 1e9f, hi = -1e9f;
