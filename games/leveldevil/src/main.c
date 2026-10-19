@@ -1,100 +1,86 @@
 /* Level Devil: run to the door. The level has other plans.
  *
- * Unept's troll platformer (2023), its first world: sixteen doors of five short rooms in flat
- * colours, with its tiny black runner. Floors drop away under you, spikes pop up in front of the
- * door, walls slide out, the door runs off, the controls turn round, gravity flips... Every trap
- * waits for the runner to reach its spot, so a room catches you the first time and is easy once
- * you know it; some rooms change again after you die in them.
+ * Unept's troll platformer (2023): sixteen worlds of five short rooms in flat colours, with a tiny
+ * black runner. Floors drop away under you, spikes pop up, walls push, the door runs off, the
+ * controls turn round, gravity flips... The rooms are the game's own: their tiles, their actors and
+ * what their scripts do (tools/rooms.py, from tools/scenes.json).
  *
- * A room is a list of objects (blocks, spikes, saws, springs, warps, switches and the door), each
- * with an optional trap: what sets it off (the runner crossing a line, touching it, the trap
- * before it, the room starting), after how many deaths it is there, and what it does (slide,
- * loop, chase, fall, appear or vanish). The rooms are written in tools/rooms.py, which packs them
- * (DEFLATE); they are unpacked into RAM when the game starts. The game steps 60 times a second
- * and only the rows that change are drawn again, in the launcher's strips (launcher/src/gfx.c).
- * Inside NumPlay it uses the launcher's shapes, fonts, files and inflater; on its own it brings
- * them along. */
+ * A room: its ground (tiles of 16 pixels, 33 x 15), its objects (blocks, spikes, saws, springs,
+ * doors, triggers, coins, warps, buttons...) and its script: steps, each set off by an event (the
+ * room starting, the runner touching a trigger, a key) after so many 60ths of a second, that move,
+ * grow, show or hide objects, or change the runner (its speed, its jump, its size, gravity). The
+ * game steps 60 times a second, in the scene's pixels; it is drawn at 3/4 (the screen shows x 50
+ * to 477 of the 528 pixels, all 240 high), in the launcher's strips (launcher/src/gfx.c). */
 #include <eadk.h>
 #include "../../../launcher/src/gfx.h"
-#include "../../../launcher/src/inflate.h"
 #include "../../common/np_text.h"
-
-#if NP_MODULE /* (np_file_read and np_file_write: NumPlay's, launcher/src/np.h) */
-#define np_app_begin()
-#define np_app_end() 0
-#else
 #include "../../common/epsilon_app.h"
 #include "../../common/epsilon_files.h"
-#define np_file_read ef_read
-#define np_file_write ef_write
+
 const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name"))) = "Level Devil";
 const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level"))) = 0;
 void np_push(int x, int y, int w, int h, const color_t *px) {
   eadk_display_push_rect((eadk_rect_t){(uint16_t)x, (uint16_t)y, (uint16_t)w, (uint16_t)h}, px);
 }
-#endif
 
 #define KEY(k) (1ull << (k))
-#define G 2    /* screen pixels to a pixel of the game, each way */
-#define FW 160 /* the room, in the game's pixels */
-#define FH 120
-#define TOP 10 /* the ceiling: the band with the level, its rooms and the deaths */
-#define WALL 4
-#define PW 5   /* the runner's box */
-#define PH 7
-#define DW 11  /* the door */
-#define DH 20
 #define ROOMS 5
 #define LEVELS 16
 
-/* A room (tools/rooms.py): its modes (R_*), where the runner starts (x, and the y of its feet), how
- * many objects, then the objects. An object: its kind and flags, then x, y, w and h in pixels of the
- * game (a door: h 1 when it hangs from the ceiling; a warp: its two ends, w and h the second one's
- * x and y; a switch or a button: dx the modes it toggles). With F_TRAP, five more bytes, its trap: what
- * sets it off (T_* and a value: the line the runner crosses, how near it comes, the object whose
- * trap goes first), how many deaths in the room it waits for (1-3: there from that death on; 5-7:
- * there until death 1-3), how it moves (M_*), by how much (dx, dy, signed), how fast (speeds[]),
- * and after how many 4ths of 16 steps. */
-enum { K_BLOCK, K_SECRET, K_SPIKE_U, K_SPIKE_D, K_SPIKE_L, K_SPIKE_R, K_DOOR, K_SAW, K_SPRING, K_WARP, K_SWITCH, K_BUTTON };
-#define F_HIDDEN 0x10 /* not there until its trap goes off */
-#define F_VANISH 0x20 /* gone when its trap goes off */
-#define F_GHOST 0x40  /* drawn, but nothing to stand on (a fake block), or a fake door */
-#define F_TRAP 0x80
-enum { T_START, T_RIGHT, T_LEFT, T_UP, T_DOWN, T_TOUCH, T_AFTER, T_NEAR };
-enum { M_ONCE, M_LOOP, M_CHASE, M_FALL };
-/* the modes of a room, which switches and buttons toggle (their dx) */
-#define R_BACK 1  /* left and right swapped */
-#define R_ICE 2   /* the floor is slippery */
-#define R_AIR 4   /* jump in the air as often as you like */
-#define R_FLIP 8  /* gravity upwards */
-#define R_WRAP 16 /* no side walls: out one side, in at the other */
-#include "rooms.inc" /* rooms_z, ROOM_BYTES */
-static uint8_t rooms[ROOM_BYTES];
+/* the packed rooms (tools/rooms.py), column by column: 80 rooms' modes and runners, their ground
+   (33 columns of 15 bits), how many spans each has, the spans' fields, how many steps, the steps' */
+#include "rooms.inc" /* data, ROOM_BYTES, SPANS, STEPS */
+#define D_GROUND (5 * 80)
+#define D_NSPAN (D_GROUND + 66 * 80)
+#define D_KIND (D_NSPAN + 80)
+#define D_FLAG (D_KIND + SPANS)
+#define D_EV (D_FLAG + SPANS)
+#define D_X (D_EV + SPANS)
+#define D_Y (D_X + 2 * SPANS)
+#define D_W (D_Y + 2 * SPANS)
+#define D_H (D_W + SPANS)
+#define D_N (D_H + SPANS)
+#define D_NSTEP (D_N + SPANS)
+#define D_SEV (D_NSTEP + 80)
+#define D_ST (D_SEV + STEPS)
+#define D_CODE (D_ST + 2 * STEPS)
+#define D_OBJ (D_CODE + STEPS)
+#define D_SN (D_OBJ + STEPS)
+#define D_COND (D_SN + STEPS)
+#define D_A (D_COND + STEPS)
+#define D_B (D_A + 2 * STEPS)
+#define D_C (D_B + 2 * STEPS)
+#define D_K (D_C + 2 * STEPS)
 
-/* each level's background and ground */
-static const color_t colors[LEVELS][2] = {
-  {HEX(0xF49F7E), HEX(0x634D40)}, {HEX(0xF68048), HEX(0xB8461E)}, {HEX(0xF2BD48), HEX(0xA9690A)},
-  {HEX(0xA5CF55), HEX(0x2E5A45)}, {HEX(0x84C9E6), HEX(0x274F6E)}, {HEX(0xB9A3DE), HEX(0x46356B)},
-  {HEX(0x8FD9B6), HEX(0x285C49)}, {HEX(0xF29BB5), HEX(0x7A2E4A)}, {HEX(0xE6CF9C), HEX(0x6B5235)},
-  {HEX(0x6CC7C2), HEX(0x1D5052)}, {HEX(0xF7B58B), HEX(0x8A4B2A)}, {HEX(0xA3B5F0), HEX(0x2F3D7A)},
-  {HEX(0xCDB2E8), HEX(0x5B2F73)}, {HEX(0xD3ECF4), HEX(0x3A6A82)}, {HEX(0xF07C6C), HEX(0x5E2420)},
-  {HEX(0xC8452A), HEX(0x2A0A06)},
+enum { K_BLOCK, K_SPIKE, K_SAW, K_SPRING, K_DOOR, K_TRIG, K_COIN, K_BAD, K_WARP, K_BUTTON, K_THRU, K_GSPIKE, K_DEATH };
+#define F_HIDE 1
+#define F_GHOST 2  /* nothing to stand on */
+#define F_OFF 4    /* not there (yet, or any more) */
+#define F_BIG 8    /* a saw's second picture, twice as big */
+#define F_USED 16  /* a trigger gone off, a coin taken, a button pressed */
+#define F_ICE 32
+#define F_HOP 64   /* thrown up, falling back */
+enum { R_WRAP = 1, R_WRAPY = 2, R_SWAP = 4, R_FLAPPY = 16, R_GRAVITY = 32 };
+enum { O_VEL, O_MOVE, O_SET, O_GROW, O_FLAG, O_SPAWN, O_WARP, O_HERO, O_GRAV, O_HGROW, O_SHAKE, O_FIRE, O_REARM,
+       O_TOWARD, O_RULE, O_ACCEL, O_HOP, O_KEY };
+enum { H_RUN, H_JUMP, H_MAXUP, H_MAXDOWN, H_BACK, H_DOWNJUMP, H_DIR, H_SLIDE, H_PUSHX };
+enum { U_NONE, U_PATROL, U_FOLLOW, U_STOPX, U_WRAPX };
+#define EV_KEY 9
+#define EV_MOVE 10
+#define EVENTS 11
+
+/* the colours of the sixteen worlds: background, ground */
+static const uint32_t colors[LEVELS][2] = {
+  {0xFEB854, 0x996B07}, {0xF5B13A, 0xBE7708}, {0xF8C750, 0xCD8507}, {0xF8C750, 0xE37B07},
+  {0xE4C448, 0xE36821}, {0xFD8E57, 0xD65C2C}, {0xFECB30, 0xD34F2B}, {0xED9970, 0xB44D2A},
+  {0xCDB67D, 0xA24829}, {0xF48B7C, 0x844934}, {0xFFBC73, 0x754E39}, {0xF49E7C, 0x624C40},
+  {0xEA7851, 0x4A3B35}, {0xCD7647, 0x40312A}, {0xAB7050, 0x401D0D}, {0xCD7647, 0x2F1509},
 };
-
-/* the runner, 256ths of a pixel a step (60 a second) */
-#define RUN 280
-#define GRAV 56
-#define JUMP 770
-#define FALL 900
-#define SPRING 1180
-
-#define WHITE 0xFFFF
 #define BLACK 0
+#define WHITE 0xFFFF
 #define GREY HEX(0xC8C8C8)
-#define HUB_BG HEX(0xF2BD48)
-#define HUB_FG HEX(0xC47A0A)
-#define RED HEX(0xD9512C)
-#define DARK_RED HEX(0x6E1A0E)
+#define DARK HEX(0x6D1102) /* the game's dark red: its transitions, its buttons */
+#define YELLOW HEX(0xFCF965)
 
 /* leveldevil.sav */
 static struct {
@@ -106,31 +92,48 @@ static struct {
   uint16_t best[LEVELS];               /* the fewest deaths each level was cleared with */
 } sv;
 #define SAVE_NAME "leveldevil.sav"
+#define COPY_NAME "leveldevil_saves.py"
 
 typedef struct {
-  const uint8_t *r;     /* its record */
-  int16_t x, y, v;      /* where it is, in 16ths of a pixel; its speed falling */
-  uint8_t i, st, t, on; /* its place in the room; its trap's state and delay left; there or not */
+  int32_t x, y, tx, ty;   /* its centre, and where a move takes it (256ths of a pixel) */
+  int16_t w, h, gw, gh;   /* half its size, and what it grows to (16ths of a pixel) */
+  int16_t vx, vy, ax, ay; /* 256ths of a pixel a step; and a step each step */
+  int16_t rest;           /* thrown up: the y it comes down to (pixels) */
+  uint16_t ml, gl;        /* steps left of its move, of its growing */
+  uint8_t kind, f, ev, t; /* kind (and its turn, 90 degrees a step, in bits 4 and 5); flags; t: a spring's push */
 } obj_t;
-enum { S_WAIT, S_DELAY, S_GO, S_DONE };
-static obj_t ob[28];
-static int no;
+typedef struct {
+  uint16_t t;
+  uint8_t ev, cond, code, o, done;
+  int16_t a, b, c;
+} step_t;
+static obj_t ob[120];
+static step_t st[240];
+static struct {
+  uint8_t o, type;
+  int16_t p, q;
+} rule[12];
+static int no, ns, nr;
+static uint16_t gcol[33];
 
 static color_t strip[SCREEN_W * STRIP_H];
-static const uint8_t *room;
-static int level, rnum, tries, mode, scr, ov, sel, banner, dlo, dhi, full;
-static int32_t px, py, vx, vy; /* the runner: its box's top-left and its speed, in 256ths of a pixel */
-static int face = 1, ground, coyote, buffer, held_in, anim, dead, won, warped, curtain, sprung;
-static uint32_t found, seed, banner_t, now;
-static const obj_t *skip_ob; /* left out of collisions (a block pushing the runner) */
+static int level, rnum, ri, scr, ov, sel, banner, full, tries, modes, frame, shake, shake_n;
+static uint8_t cnt[EVENTS];
+static uint16_t at_[EVENTS];
+/* the runner: its box's corner and its speed (256ths of a pixel, a step), its size (pixels) */
+static int32_t hx, hy, vx, vy;
+static int hw, hh, hsx, hsy, tsx, tsy, hgl;
+static int run, jumpv, maxup, maxdown, back, downjump, dir, slide, pushx, gx, gy, keyev;
+static int face, ground, coyote, jumping, anim, dead, won, frozen, born, started, flapped, held_in, fade, waiting;
+static uint32_t seed, banner_t, now;
 static color_t bg, fg;
 static struct {
-  int16_t x, y;
-  int8_t vx, vy;
-} bits[14]; /* the runner, in pieces */
+  int32_t x, y;
+  int16_t vx, vy;
+} bits[8]; /* the runner, in pieces */
 enum { SC_HUB, SC_PLAY };
 enum { OV_NONE, OV_PAUSE, OV_HELP, OV_QUIT, OV_END };
-enum { I_LEFT = 1, I_RIGHT = 2, I_JUMP = 4 };
+enum { I_LEFT = 1, I_RIGHT = 2, I_UP = 4, I_DOWN = 8 };
 
 static uint32_t rnd(void) {
   seed ^= seed << 13;
@@ -140,12 +143,14 @@ static uint32_t rnd(void) {
 static int imin(int a, int b) { return a < b ? a : b; }
 static int imax(int a, int b) { return a > b ? a : b; }
 static int clampi(int v, int a, int b) { return v < a ? a : v > b ? b : v; }
-static char *cat(char *o, const char *s) { /* s at o; returns its end */
+static int iabs(int v) { return v < 0 ? -v : v; }
+static int rd16(int at) { return (int16_t)(data[at] | data[at + 1] << 8); }
+static char *cat(char *o, const char *s) {
   while (*s) *o++ = *s++;
   *o = 0;
   return o;
 }
-static char *num(char *o, uint32_t v) { /* v at o; returns its end */
+static char *num(char *o, uint32_t v) {
   char t[10];
   int n = 0;
   do t[n++] = (char)('0' + v % 10); while (v /= 10);
@@ -153,461 +158,642 @@ static char *num(char *o, uint32_t v) { /* v at o; returns its end */
   *o = 0;
   return o;
 }
-static char *label(char *o, const char *s, uint32_t v) { /* a text, then a number; returns o */
+static char *label(char *o, const char *s, uint32_t v) {
   num(cat(o, s), v);
   return o;
 }
+/* The save, and a copy of it in a Python script: installing apps from the NumWorks website keeps only
+   Python scripts, so the save comes back from the copy when the file itself is gone. The copy is a
+   comment line "#>leveldevil.sav:base64" (the way NumPlay and the big games keep theirs). */
+static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static const char copy_head[] = "# Level Devil keeps a copy of your progress here, so that\n"
+                                "# reinstalling it doesn't erase it. If you delete this\n"
+                                "# file, the game writes it again.\n#>" SAVE_NAME ":";
 static void save(void) {
+  static char copy[sizeof copy_head + 72];
+  const uint8_t *d = (const uint8_t *)&sv;
+  char *p = copy;
   sv.magic = 'L', sv.version = 1;
-  np_file_write(SAVE_NAME, &sv, sizeof sv);
+  ef_write(SAVE_NAME, &sv, sizeof sv);
+  *p++ = 0; /* (the script's status byte) */
+  for (const char *h = copy_head; *h;) *p++ = *h++;
+  for (unsigned i = 0; i < sizeof sv; i += 3) { /* (48 bytes: no padding) */
+    uint32_t v = (uint32_t)d[i] << 16 | d[i + 1] << 8 | d[i + 2];
+    for (int k = 18; k >= 0; k -= 6) *p++ = b64[v >> k & 63];
+  }
+  *p++ = '\n', *p++ = 0;
+  ef_write(COPY_NAME, copy, (uint32_t)(p - copy));
 }
+/* the save back from the copy, if only the copy is left */
+static void restore(void) {
+  uint32_t len, n = sizeof copy_head;
+  const uint8_t *c = ef_read(COPY_NAME, &len);
+  uint8_t out[sizeof sv];
+  if (ef_read(SAVE_NAME, &len) || !(c = ef_read(COPY_NAME, &len)) || len < n + 64) return;
+  for (uint32_t i = 0; i < n - 1; i++)
+    if (c[1 + i] != (uint8_t)copy_head[i]) return;
+  for (unsigned i = 0, j = n; i < sizeof sv; i += 3, j += 4) {
+    uint32_t v = 0;
+    for (int k = 0; k < 4; k++) {
+      int x = 0;
+      while (x < 64 && (uint8_t)b64[x] != c[j + k]) x++;
+      if (x == 64) return;
+      v = v << 6 | (uint32_t)x;
+    }
+    out[i] = (uint8_t)(v >> 16), out[i + 1] = (uint8_t)(v >> 8), out[i + 2] = (uint8_t)v;
+  }
+  ef_write(SAVE_NAME, out, sizeof out);
+}
+#define PS(v) ((v) * 64 / 15) /* pixels a second: 256ths of a pixel a step */
+#define PS2(v) ((v) * 64 / 900) /* pixels a second, each second: 256ths a step, each step */
 
 /* ------------------------------------------------------------ the room */
-static const uint8_t *next_room(const uint8_t *p) {
-  int n = p[3];
-  for (p += 4; n--;) p += *p & F_TRAP ? 10 : 5;
-  return p;
+static int cell(int tx, int ty) { return tx >= 0 && tx < 33 && ty >= 0 && ty < 15 && gcol[tx] >> ty & 1; }
+/* any ground in the pixels [x0, x1) x [y0, y1)? */
+static int ground_in(int x0, int y0, int x1, int y1) {
+  for (int tx = x0 >> 4; tx <= (x1 - 1) >> 4; tx++)
+    for (int ty = y0 >> 4; ty <= (y1 - 1) >> 4; ty++)
+      if (cell(tx, ty)) return 1;
+  return 0;
 }
-/* the box of an object, in pixels */
-static void box(const obj_t *o, int *b) {
-  const uint8_t *r = o->r;
-  int k = r[0] & 15;
-  b[0] = o->x >> 4, b[1] = o->y >> 4, b[2] = r[3], b[3] = r[4];
-  if (k == K_DOOR) b[2] = DW, b[3] = DH;
-  if (k == K_WARP) b[2] = 8, b[3] = 12;
+static void box(const obj_t *o, int *b) { /* its box in pixels: x0, y0, x1, y1 */
+  int w = o->w >> 4, h = o->h >> 4;
+  b[0] = (o->x >> 8) - w, b[1] = (o->y >> 8) - h, b[2] = (o->x >> 8) + w, b[3] = (o->y >> 8) + h;
 }
-static bool overlap(int x, int y, int w, int h, const int *b) {
-  return x < b[0] + b[2] && b[0] < x + w && y < b[1] + b[3] && b[1] < y + h;
-}
-static bool solid(const obj_t *o) {
-  int k = o->r[0] & 15;
-  return o->on && (k == K_SECRET || (k == K_BLOCK && !(o->r[0] & F_GHOST)));
-}
-/* What the runner's box would hit at (x, y): a solid object, the walls (ob itself), or nothing. */
-static const obj_t *blocked(int x, int y) {
+static int hit(const int *b, int x0, int y0, int x1, int y1) { return x0 < b[2] && b[0] < x1 && y0 < b[3] && b[1] < y1; }
+static int there(const obj_t *o) { return !(o->f & F_OFF); }
+static int solid(const obj_t *o) { return (o->kind & 15) == K_BLOCK && !(o->f & (F_GHOST | F_OFF)) && o->w >= 8 && o->h >= 8; }
+
+/* what the runner's box would hit at (x, y): the ground, a block, the top of a one-way tile it is
+   above (feet: where its feet were, or -1); 0 for nothing, 1 for the ground, else 2 + the object */
+static int blocked(int x, int y, int feet) {
   int b[4];
-  if (y < TOP || (!(mode & R_WRAP) && (x < WALL || x + PW > FW - WALL))) return ob;
+  if (ground_in(x, y, x + hw, y + hh)) return 1;
   for (int k = 0; k < no; k++) {
     obj_t *o = &ob[k];
-    if (o == skip_ob || !solid(o)) continue;
     box(o, b);
-    if (overlap(x, y, PW, PH, b)) {
-      found |= 1u << o->i; /* a secret block, found by bumping into it */
-      return o;
-    }
+    if (solid(o) || ((o->kind & 15) == K_THRU && there(o) && feet >= 0 && feet <= b[1]))
+      if (hit(b, x, y, x + hw, y + hh)) return 2 + k;
   }
   return 0;
 }
-/* Moves the runner along one axis, a pixel at a time; true when something stopped it. */
-static bool move(int32_t *p, int32_t d, int axis) {
-  int a = *p >> 8, b = (*p + d) >> 8, s = b > a ? 1 : -1;
-  for (; a != b; a += s)
-    if (axis ? blocked(px >> 8, a + s) : blocked(a + s, py >> 8)) {
+/* moves the runner d along an axis, a pixel at a time; what stopped it, or 0 */
+static int step_axis(int32_t *p, int32_t d, int axis) {
+  int a = *p >> 8, e = (*p + d) >> 8, s = e > a ? 1 : -1, w;
+  for (; a != e; a += s)
+    if ((w = axis ? blocked(hx >> 8, a + s, s > 0 ? a + hh : -1) : blocked(a + s, hy >> 8, -1))) {
       *p = a * 256 + (s > 0 ? 255 : 0);
-      return true;
+      return w;
     }
   *p += d;
-  return false;
+  return 0;
 }
-/* the runner's box, a pixel bigger all round, against an object */
-static bool touching(const obj_t *o) {
-  int b[4];
-  box(o, b);
-  return overlap((px >> 8) - 1, (py >> 8) - 1, PW + 2, PH + 2, b);
-}
-
-static void mark(int y, int h) { /* rows y to y + h (game pixels) to draw again */
-  dlo = imin(dlo, clampi(y * G - 2, 0, SCREEN_H)), dhi = imax(dhi, clampi((y + h) * G + 2, 0, SCREEN_H));
-}
-
-static void reset(void) { /* the room as it starts, the runner at the start */
-  const uint8_t *p = room;
-  mode = p[0], px = p[1] * 256, py = (p[2] - PH) * 256, vx = vy = 0;
-  ground = coyote = buffer = dead = won = warped = sprung = 0, face = 1;
-  int n = p[3];
-  no = 0, p += 4;
-  for (int i = 0; i < n; i++) {
-    const uint8_t *r = p;
-    p += *r & F_TRAP ? 10 : 5;
-    if (*r & F_TRAP) { /* there only after (or before) so many deaths */
-      int d = r[5] >> 3 & 7;
-      if ((d && d < 4 && tries < d) || (d > 4 && tries >= d - 4)) continue;
+/* out of what it is in, a pixel at a time, the nearest way; false when it cannot get out */
+static int unstick(void) {
+  for (int d = 0; d < 64; d++)
+    for (int i = 0; i < 4; i++) {
+      int x = (hx >> 8) + (i == 2 ? -d : i == 3 ? d : 0), y = (hy >> 8) + (i == 0 ? -d : i == 1 ? d : 0);
+      if (!blocked(x, y, -1)) {
+        hx = x * 256 + (hx & 255), hy = y * 256 + (hy & 255);
+        return 1;
+      }
     }
-    obj_t *o = &ob[no++];
-    o->r = r, o->i = (uint8_t)i, o->x = (int16_t)(r[1] << 4), o->y = (int16_t)(r[2] << 4), o->v = 0;
-    o->st = *r & F_TRAP ? S_WAIT : S_DONE, o->on = !(*r & F_HIDDEN), o->t = 0;
-  }
-  ground = blocked(px >> 8, (py >> 8) + 1) != 0, full = 1;
+  return 0;
 }
-static void enter(void) { /* the room rnum of the level */
-  room = rooms;
-  for (int i = level * ROOMS + rnum; i--;) room = next_room(room);
-  bg = colors[level][0], fg = colors[level][1];
-  found = 0, tries = 0;
+
+static void fire(int e) {
+  cnt[e]++, at_[e] = (uint16_t)frame;
+  for (int i = 0; i < ns; i++)
+    if (st[i].ev == e) st[i].done = 0;
+}
+
+static void size_hero(void) { /* its box from its scale, about its centre */
+  int w = imax(1, 5 * hsx / 100), h = imax(1, 13 * hsy / 100);
+  hx -= (w - hw) * 128, hy -= (h - hh) * 128, hw = w, hh = h;
+}
+
+static void reset(void) { /* the room as it starts */
+  int s0 = 0, r0 = 0;
+  for (int i = 0; i < ri; i++) s0 += data[D_NSPAN + i], r0 += data[D_NSTEP + i];
+  const uint8_t *h = data + ri * 5;
+  modes = h[0];
+  hsx = hsy = tsx = tsy = 100, hgl = 0, hw = 5, hh = 13;
+  hx = (rd16(ri * 5 + 1) + 5) * 256, hy = (rd16(ri * 5 + 3) + 3) * 256, vx = vy = 0;
+  for (int i = 0; i < 33; i++) gcol[i] = (uint16_t)rd16(D_GROUND + ri * 66 + 2 * i);
+  no = nr = 0;
+  for (int s = s0; s < s0 + data[D_NSPAN + ri]; s++) {
+    int k = data[D_KIND + s];
+    for (int i = 0; i < data[D_N + s]; i++) {
+      obj_t *o = &ob[no++], z = {0};
+      *o = z;
+      o->kind = (uint8_t)(k & 63), o->f = data[D_FLAG + s], o->ev = data[D_EV + s];
+      o->x = o->tx = (rd16(D_X + 2 * s) + (k & 64 ? 0 : 16 * i)) * 256;
+      o->y = o->ty = (rd16(D_Y + 2 * s) + (k & 64 ? 16 * i : 0)) * 256;
+      o->w = o->gw = (int16_t)(data[D_W + s] * 16), o->h = o->gh = (int16_t)(data[D_H + s] * 16);
+    }
+  }
+  ns = 0;
+  for (int r = r0; r < r0 + data[D_NSTEP + ri]; r++) {
+    int o0 = data[D_OBJ + r], k = rd16(D_K + 2 * r);
+    for (int i = 0; i < data[D_SN + r]; i++) {
+      step_t *p = &st[ns++];
+      p->ev = data[D_SEV + r], p->cond = data[D_COND + r], p->code = data[D_CODE + r];
+      p->o = (uint8_t)(o0 == 255 ? 255 : o0 + i), p->done = 1;
+      p->t = (uint16_t)(rd16(D_ST + 2 * r) + (k ? ((ob[o0 + i].x - ob[o0].x) >> 8) * k / 256 : 0));
+      p->a = (int16_t)rd16(D_A + 2 * r), p->b = (int16_t)rd16(D_B + 2 * r), p->c = (int16_t)rd16(D_C + 2 * r);
+    }
+  }
+  for (int e = 0; e < EVENTS; e++) cnt[e] = 0;
+  int fl = modes & R_FLAPPY;
+  run = PS(fl ? 70 : 80), jumpv = PS(fl ? 251 : 188), maxup = PS(fl ? 9999 : 300), maxdown = PS(fl ? 300 : 200);
+  gx = 0, gy = PS2(fl ? 1200 : 800), back = downjump = slide = pushx = 0, dir = 1, keyev = -1;
+  face = 1, ground = coyote = jumping = dead = won = frozen = started = flapped = waiting = 0, born = 18;
+  frame = 0, shake = 0, full = 1;
+  fire(0);
+}
+static void enter(void) { /* room rnum of the level */
+  ri = level * ROOMS + rnum;
+  bg = gfx_rgb(colors[level][0]), fg = gfx_rgb(colors[level][1]);
+  tries = 0;
   reset();
 }
 
 static void die(void) {
-  dead = 1;
+  if (dead || won) return;
+  dead = 1, shake = 5, shake_n = 30;
   sv.deaths++, sv.run++;
-  for (int i = 0; i < 14; i++) {
-    bits[i].x = (int16_t)((px >> 4) + 32), bits[i].y = (int16_t)((py >> 4) + 48);
-    bits[i].vx = (int8_t)((int)(rnd() % 41) - 20), bits[i].vy = (int8_t)(-(int)(rnd() % 36) - 6);
+  for (int i = 0; i < 8; i++) {
+    bits[i].x = hx + hw * 128, bits[i].y = hy + hh * 128;
+    bits[i].vx = (int16_t)PS((int)(rnd() % 361) - 180), bits[i].vy = (int16_t)-PS(300 + (int)(rnd() % 100));
   }
   save();
 }
 
-/* has the trap of o gone off? */
-static bool fired(const obj_t *o) {
-  const uint8_t *r = o->r;
-  int v = r[6], x = px >> 8, y = py >> 8, c;
-  switch (r[5] & 7) {
-    case T_START: return true;
-    case T_RIGHT: return x + PW > v;
-    case T_LEFT: return x < v;
-    case T_UP: return y < v;
-    case T_DOWN: return y + PH > v;
-    case T_TOUCH: return touching(o);
-    case T_AFTER:
-      for (int k = 0; k < no; k++)
-        if (ob[k].i == v) return ob[k].st >= S_GO;
-      return false;
-    default: /* T_NEAR */
-      c = (o->x >> 4) + r[3] / 2 - x - PW / 2;
-      return c < v && c > -v;
+/* a step of the script */
+static void exec(const step_t *p) {
+  obj_t *o = &ob[p->o == 255 ? 0 : p->o];
+  int a = p->a, b = p->b, c = p->c, big = o->f & F_BIG ? 2 : 1;
+  switch (p->code) {
+    case O_VEL: o->vx = (int16_t)PS(a), o->vy = (int16_t)PS(b), o->ml = 0; break;
+    case O_MOVE:
+      o->tx = o->x + a * 256, o->ty = o->y + b * 256, o->ml = (uint16_t)c;
+      if (!c) o->x = o->tx, o->y = o->ty;
+      break;
+    case O_SET:
+      if (c & 1) o->x = o->tx = a * 256;
+      if (c & 2) o->y = o->ty = b * 256;
+      break;
+    case O_GROW:
+      o->gw = (int16_t)(a * 16 * big), o->gh = (int16_t)(b * 16 * big), o->gl = (uint16_t)c;
+      if (!c) o->w = o->gw, o->h = o->gh;
+      break;
+    case O_FLAG:
+      if (a & ~o->f & F_BIG) o->w *= 2, o->h *= 2, o->gw *= 2, o->gh *= 2;
+      o->f = (uint8_t)((o->f | a) & ~b);
+      break;
+    case O_SPAWN:
+      o->f &= ~F_OFF;
+      if (a != 255) o->x = o->tx = ob[a].x + b * 256, o->y = o->ty = ob[a].y + c * 256;
+      break;
+    case O_WARP: hx = (a + 5) * 256, hy = (b + 3) * 256, vx = vy = 0, frozen = 45; break;
+    case O_HERO:
+      if (a == H_RUN) run = PS(b);
+      if (a == H_JUMP) jumpv = PS(b);
+      if (a == H_MAXUP) maxup = PS(b);
+      if (a == H_MAXDOWN) maxdown = PS(b);
+      if (a == H_BACK) back = b;
+      if (a == H_DOWNJUMP) downjump = b;
+      if (a == H_DIR) dir = b;
+      if (a == H_SLIDE) slide = b;
+      if (a == H_PUSHX) pushx = PS(b), run = PS(300);
+      break;
+    case O_GRAV: gx = PS2(a), gy = PS2(b); break;
+    case O_HGROW: tsx = a, tsy = b, hgl = c ? c : 1; break;
+    case O_SHAKE: shake = a, shake_n = b; break;
+    case O_FIRE: fire(a); break;
+    case O_REARM: o->f &= ~F_USED; break;
+    case O_TOWARD: o->vx = (int16_t)PS(hx < o->x ? -a : a); break;
+    case O_RULE:
+      if (a == U_NONE) {
+        for (int i = 0; i < nr; i++)
+          if (rule[i].o == p->o && (!b || rule[i].type == b)) rule[i] = rule[--nr], i--;
+      } else if (nr < 12) {
+        rule[nr].o = p->o, rule[nr].type = (uint8_t)a, rule[nr].p = (int16_t)b, rule[nr++].q = (int16_t)c;
+      }
+      break;
+    case O_ACCEL: o->ax = (int16_t)PS2(a), o->ay = (int16_t)PS2(b); break;
+    case O_HOP:
+      if (!(o->f & F_HOP)) o->f |= F_HOP, o->rest = (int16_t)(o->y >> 8), o->vy = (int16_t)-PS(a);
+      break;
+    default: keyev = a; /* O_KEY */
   }
 }
 
-/* Moves o to (x, y) (16ths), carrying the runner standing on it and pushing it when it runs
-   into it; the runner crushed against something else dies. */
-static void shift(obj_t *o, int x, int y) {
-  int b[4], g = mode & R_FLIP ? -1 : 1, rx = px >> 8, ry = py >> 8;
-  box(o, b);
-  int ox = b[0], oy = b[1];
-  bool on_it = solid(o) && (o->r[5] >> 6) != M_FALL && rx < b[0] + b[2] && b[0] < rx + PW &&
-               (g > 0 ? ry + PH == b[1] : ry == b[1] + b[3]);
-  mark(b[1], b[3]);
-  o->x = (int16_t)x, o->y = (int16_t)y;
-  box(o, b);
-  mark(b[1], b[3]);
-  int dx = b[0] - ox, dy = b[1] - oy;
-  if ((!dx && !dy) || dead) return;
-  skip_ob = o;
-  if (on_it) move(&px, dx * 256, 0), move(&py, dy * 256, 1);
-  if (solid(o) && overlap(px >> 8, py >> 8, PW, PH, b)) {
-    if (dx) move(&px, (dx > 0 ? b[0] + b[2] - (px >> 8) : b[0] - PW - (px >> 8)) * 256, 0);
-    if (dy) move(&py, (dy > 0 ? b[1] + b[3] - (py >> 8) : b[1] - PH - (py >> 8)) * 256, 1);
-    if (overlap(px >> 8, py >> 8, PW, PH, b)) die();
+static void script(void) {
+  for (int i = 0; i < ns; i++) {
+    step_t *p = &st[i];
+    int c = p->cond;
+    if (p->done || !cnt[p->ev] || (uint16_t)(frame - at_[p->ev]) < p->t) continue;
+    p->done = 1;
+    if (!c || (c < 16 ? cnt[p->ev] == c : c < 32 ? cnt[c & 15] : !cnt[c & 15])) exec(p);
   }
-  skip_ob = 0;
 }
 
-static const uint8_t speeds[16] = {0, 2, 4, 6, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128};
-static void traps(void) {
+/* the runner pushed out of the way of a block that moved by (dx, dy) pixels into it */
+static void shove(obj_t *o, int dx, int dy) {
+  int b[4];
+  box(o, b);
+  if (!hit(b, hx >> 8, hy >> 8, (hx >> 8) + hw, (hy >> 8) + hh)) return;
+  int32_t px = hx, py = hy;
+  o->f |= F_GHOST; /* (the block left out while the runner moves out of it) */
+  if (dy) step_axis(&hy, (dy < 0 ? b[1] - hh - (hy >> 8) : b[3] - (hy >> 8)) * 256, 1);
+  else if (dx) step_axis(&hx, (dx < 0 ? b[0] - hw - (hx >> 8) : b[2] - (hx >> 8)) * 256, 0);
+  o->f &= ~F_GHOST;
+  if (hit(b, hx >> 8, hy >> 8, (hx >> 8) + hw, (hy >> 8) + hh) || (px == hx && py == hy && !unstick())) die();
+}
+
+static void objects(void) {
+  int b[4];
   for (int k = 0; k < no; k++) {
     obj_t *o = &ob[k];
-    const uint8_t *r = o->r;
-    int kind = r[0] & 15, b[4];
-    if (kind == K_SAW || o->t > 200) mark((o->y >> 4) - 1, r[4] + 2); /* turning, springing */
-    if (kind == K_SPRING && o->t > 200) o->t++; /* (springing back, to 0) */
-    if (kind == K_BUTTON && o->st == S_DONE && !touching(o)) o->st = S_WAIT, mark(o->y >> 4, r[4]);
-    if (o->st == S_WAIT && !dead && !won && fired(o)) o->st = S_DELAY, o->t = (uint8_t)((r[9] >> 4) * 4);
-    if (o->st == S_DELAY && !(o->t && o->t--)) {
-      o->st = S_GO;
-      box(o, b);
-      mark(b[1], b[3]);
-      if (*r & F_HIDDEN) o->on = 1;
-      if (*r & F_VANISH) o->on = 0, o->st = S_DONE;
-      if (kind == K_SWITCH || kind == K_BUTTON) mode ^= r[7], o->st = S_DONE, full = 1;
-      if (o->on && solid(o) && overlap(px >> 8, py >> 8, PW, PH, b)) die(); /* a block appears on the runner */
-    }
-    if (o->st != S_GO) continue;
-    int m = r[5] >> 6, s = speeds[r[9] & 15], tx = (r[1] + (int8_t)r[7]) * 16, ty = (r[2] + (int8_t)r[8]) * 16;
-    if (!s) s = 4096;
-    if (m == M_FALL) {
-      o->v = (int16_t)imin(o->v + 4, 80);
-      shift(o, o->x, o->y + o->v);
-      if (o->y >> 4 > FH) o->on = 0, o->st = S_DONE;
-      continue;
-    }
-    if (m == M_CHASE) /* towards the runner, along the axes it moves on */
-      tx = r[7] ? (int)(px >> 4) + PW * 8 - r[3] * 8 : o->x, ty = r[8] ? (int)(py >> 4) + PH * 8 - r[4] * 8 : o->y;
-    if (m == M_LOOP && o->v) tx = r[1] << 4, ty = r[2] << 4; /* on the way back */
-    shift(o, o->x + clampi(tx - o->x, -s, s), o->y + clampi(ty - o->y, -s, s));
-    if (o->x == tx && o->y == ty && m != M_CHASE) {
-      if (m == M_LOOP) o->v = !o->v;
-      else o->st = S_DONE;
-    }
-  }
-}
-
-/* what the runner touches: springs, warps, the door, what kills */
-static void contacts(void) {
-  int x = px >> 8, y = py >> 8, b[4], g = mode & R_FLIP ? -1 : 1, in_warp = 0;
-  if (y > FH + 2 || y < -PH - 2) die();
-  for (int k = 0; k < no && !dead; k++) {
-    obj_t *o = &ob[k];
-    int kind = o->r[0] & 15;
-    if (!o->on) continue;
+    int kind = o->kind & 15;
+    if (!there(o)) continue;
+    int32_t ox = o->x, oy = o->y;
+    if (o->gl) o->w += (o->gw - o->w) / o->gl, o->h += (o->gh - o->h) / o->gl, o->gl--;
+    if (o->ml) o->x += (o->tx - o->x) / o->ml, o->y += (o->ty - o->y) / o->ml, o->ml--;
+    if (o->f & F_HOP || kind == K_GSPIKE) o->vy = (int16_t)clampi(o->vy + gy, -PS(300), PS(300));
+    o->vx += o->ax, o->vy += o->ay;
+    o->x += o->vx;
     box(o, b);
-    if (kind >= K_SPIKE_U && kind <= K_SPIKE_R) { /* the points, a little inside the teeth */
-      int vert = kind <= K_SPIKE_D, hb[4] = {b[0] + (vert ? 1 : 2 * (kind == K_SPIKE_L)),
-                                             b[1] + (vert ? 2 * (kind == K_SPIKE_U) : 1), b[2] - 2, b[3] - 2};
-      if (overlap(x, y, PW, PH, hb)) die();
-    } else if (kind == K_SAW) { /* the nearest point of the box to the middle of the saw */
-      int c = b[2] / 2, cx = b[0] + c, cy = b[1] + c, dx = cx - clampi(cx, x, x + PW - 1), dy = cy - clampi(cy, y, y + PH - 1);
-      if (dx * dx + dy * dy < (c - 1) * (c - 1)) die();
-    } else if (kind == K_SPRING) {
-      if (overlap(x, y + PH - 1, PW, 2, b) && vy * g >= 0) vy = -g * SPRING, o->t = 236, ground = 0, sprung = 1;
-    } else if (kind == K_WARP) {
-      int e[4] = {o->r[3], o->r[4], 8, 12}, a = overlap(x, y, PW, PH, b), z = overlap(x, y, PW, PH, e);
-      if ((a || z) && !warped) {
-        mark(y, PH);
-        px = ((z ? b[0] : e[0]) + 2) * 256, py = ((z ? b[1] : e[1]) + 12 - PH) * 256;
-        mark(py >> 8, PH);
-      }
-      in_warp |= a | z;
-    } else if (kind == K_DOOR && !(o->r[0] & F_GHOST)) {
-      int in[4] = {b[0] + 3, b[1] + 4, DW - 6, DH - 4};
-      if (overlap(x, y, PW, PH, in)) won = 1, mark(b[1], DH);
+    if ((o->ax || kind == K_GSPIKE) && ground_in(b[0], b[1], b[2], b[3])) o->x -= o->vx, o->vx = 0;
+    o->y += o->vy;
+    box(o, b);
+    if (kind == K_GSPIKE) { /* falling with gravity, onto the ground and the blocks */
+      int c[4], stop = ground_in(b[0], b[1], b[2], b[3]);
+      for (int j = 0; j < no; j++)
+        if (solid(&ob[j])) box(&ob[j], c), stop |= hit(c, b[0], b[1], b[2], b[3]);
+      if (stop) o->y -= o->vy, o->vy = 0;
+    }
+    if (o->f & F_HOP && o->y >> 8 >= o->rest) o->y = o->rest * 256, o->vy = 0, o->f &= ~F_HOP;
+    if (solid(o) && !dead) shove(o, (o->x >> 8) - (ox >> 8), (o->y >> 8) - (oy >> 8));
+    if (kind == K_SPRING && o->t) o->t--;
+  }
+  for (int i = 0; i < nr; i++) {
+    obj_t *o = &ob[rule[i].o];
+    int x = o->x >> 8, p = rule[i].p, q = rule[i].q;
+    switch (rule[i].type) {
+      case U_PATROL:
+        if (x <= p) o->vx = (int16_t)PS(70);
+        if (x >= q) o->vx = (int16_t)-PS(70);
+        break;
+      case U_FOLLOW: o->x = ob[p].x + q * 256; break;
+      case U_STOPX:
+        if ((o->vx > 0 && x >= p) || (o->vx < 0 && x <= p)) o->vx = 0, o->x = q * 256;
+        break;
+      case U_WRAPX:
+        if (o->vx < 0 && x < p) o->x = q * 256;
+        if (o->vx > 0 && x > q) o->x = p * 256;
     }
   }
-  warped = in_warp;
 }
 
-static void step(int in) {
-  anim++;
-  if (dead) {
-    for (int i = 0; i < 14; i++) {
-      mark(bits[i].y >> 4, 2);
-      bits[i].x += bits[i].vx, bits[i].y += bits[i].vy, bits[i].vy = (int8_t)imin(bits[i].vy + 3, 60);
-      mark(bits[i].y >> 4, 2);
+/* what the runner touches */
+static void contacts(void) {
+  int x = hx >> 8, y = hy >> 8, b[4];
+  for (int k = 0; k < no && !dead && !won; k++) {
+    obj_t *o = &ob[k];
+    int kind = o->kind & 15, t = o->kind >> 4 & 3, w = o->w >> 4, h = o->h >> 4;
+    if (!there(o)) continue;
+    box(o, b);
+    if (kind == K_SPIKE) { /* the teeth: the 5 pixels of 16 they stand in, turned with it */
+      if (t == 0) b[1] = b[3] - h * 5 / 8;
+      if (t == 2) b[3] = b[1] + h * 5 / 8;
+      if (t == 1) b[2] = b[0] + w * 5 / 8;
+      if (t == 3) b[0] = b[2] - w * 5 / 8;
     }
-    if (++dead > 42) tries++, reset();
+    if (kind == K_COIN || kind == K_BAD || kind == K_DEATH) b[0] += w / 3, b[1] += h / 3, b[2] -= w / 3, b[3] -= h / 3;
+    if (kind == K_SPRING) b[1] = b[3] - h * 3 / 8;
+    if (kind == K_DOOR) b[0] += w / 4, b[2] -= w / 4, b[1] += h / 4;
+    if (!hit(b, x, y, x + hw, y + hh)) continue;
+    if (kind == K_SAW) { /* round: the nearest point of the box to its middle */
+      int cx = o->x >> 8, cy = o->y >> 8, dx = cx - clampi(cx, x, x + hw - 1), dy = cy - clampi(cy, y, y + hh - 1);
+      if (dx * dx + dy * dy < (w - 1) * (w - 1)) die();
+    } else if (kind == K_SPIKE || kind == K_BAD || kind == K_GSPIKE || kind == K_DEATH) {
+      die();
+    } else if (kind == K_SPRING && !o->t) {
+      vy = -maxup, jumping = 1, o->t = 18;
+    } else if (kind == K_TRIG && !(o->f & F_USED)) {
+      o->f |= F_USED, fire(o->ev);
+    } else if (kind == K_COIN) {
+      o->f |= F_OFF;
+    } else if (kind == K_BUTTON) {
+      o->f |= F_USED;
+    } else if (kind == K_DOOR) {
+      won = 1;
+    }
+  }
+}
+
+static void hero(int in) {
+  int down = gy < 0 ? -1 : 1, b[4];
+  if (hgl) { /* growing or shrinking, out of what it grows into */
+    hsx += (tsx - hsx) / hgl, hsy += (tsy - hsy) / hgl, hgl--;
+    size_hero();
+    if (blocked(hx >> 8, hy >> 8, -1) && !unstick()) die();
+  }
+  int m = !!(in & I_RIGHT) - !!(in & I_LEFT), jump = (downjump ? I_DOWN : I_UP) & in & ~held_in;
+  if (back) m = -m;
+  if (m) face = m;
+  if (modes & R_FLAPPY) {
+    if (!started && in & ~held_in && frame > 30) started = 1;
+    if (started) vx = clampi(vx + dir * PS(52), -run, run);
+    if (started && in & I_UP & ~held_in) vy = -jumpv, flapped = 8;
+    if (vy > maxdown) vy = maxdown;
+  } else {
+    int under = blocked(hx >> 8, (hy >> 8) + down, down > 0 ? (hy >> 8) + hh - 1 : -1);
+    if (pushx) vx = pushx;
+    else if (m) vx = m * run;
+    else if (ground) {
+      obj_t *o = under > 1 ? &ob[under - 2] : 0;
+      if (o && (o->vx || o->vy)) vx = o->vx, vy = o->vy; /* carried by what it stands on */
+      else if (!(o && o->f & F_ICE)) vx = iabs(vx) <= iabs(gy) ? 0 : vx - (vx > 0 ? 1 : -1) * iabs(gy);
+    } else if (!slide) {
+      vx = iabs(vx) > PS(10) ? vx * 4 / 5 : 0;
+    }
+    if (modes & R_GRAVITY) {
+      if (in & I_UP & ~held_in && started && (ground || blocked(hx >> 8, (hy >> 8) - down, -1))) gy = -gy, ground = 0;
+    } else if (jump && (ground || (coyote < 5 && !jumping))) {
+      vy = -down * jumpv, jumping = 1;
+    }
+  }
+  vx += gx, vy += gy;
+  if (vy >= maxdown) vy = maxdown;
+  if (vy <= -maxup) vy = -maxup;
+  if (!pushx) vx = clampi(vx, -run, run);
+  if (step_axis(&hx, vx, 0)) vx = 0;
+  if (step_axis(&hy, vy, 1)) vy = 0;
+  /* where its picture is on the screen (the game's camera: x 50 to 477) */
+  int ax = (hx >> 8) - 55, ay = (hy >> 8) - 3;
+  if (modes & R_WRAP) { /* off one side of the screen, back in at the other */
+    if (ax < -6) hx += 424 * 256;
+    if (ax > 419) hx -= 424 * 256;
+    if (ay > 234) hy -= 242 * 256;
+    if (modes & R_WRAPY && ay < -9) hy += 239 * 256;
+    ax = (hx >> 8) - 55, ay = (hy >> 8) - 3;
+  }
+  if (ay < -16 || ay > 240 || ax < -8 || ax > 421) die();
+  ground = blocked(hx >> 8, (hy >> 8) + down, down > 0 ? (hy >> 8) + hh - 1 : -1) != 0;
+  if (ground) coyote = 0, jumping &= vy * down < 0;
+  else coyote++;
+  if (frame == 30) started = 1;
+  (void)b;
+  contacts();
+}
+
+static int sdx, sdy; /* the screen shaking (pixels of the screen) */
+static void step(int in) {
+  frame++, anim++;
+  if (shake_n) shake_n--;
+  sdx = shake_n ? ((int)(rnd() % 3) - 1) * (1 + shake / 4) : 0, sdy = shake_n ? ((int)(rnd() % 3) - 1) * (1 + shake / 4) : 0;
+  if (dead) {
+    for (int i = 0; i < 8; i++) bits[i].x += bits[i].vx, bits[i].y += bits[i].vy, bits[i].vy += PS2(800);
+    if (++dead == 30) waiting = 1;
     return;
   }
-  if (won) return;
-  int g = mode & R_FLIP ? -1 : 1;
-  mark((py >> 8) - 1, PH + 2);
-  traps();
-  if (dead) return;
-  int dir = !!(in & I_RIGHT) - !!(in & I_LEFT);
-  if (mode & R_BACK) dir = -dir;
-  if (in & I_JUMP & ~held_in) buffer = 7;
-  held_in = in;
-  int ice = mode & R_ICE && ground, acc = ground ? (ice ? 5 : 60) : 40, dec = ground ? (ice ? 3 : 90) : 20;
-  if (dir) vx = clampi(vx + dir * acc, -RUN, RUN), face = dir;
-  else vx = vx > dec ? vx - dec : vx < -dec ? vx + dec : 0;
-  if (buffer) { /* jump asked for a moment ago, on the ground or just off it (or anywhere in R_AIR) */
-    buffer--;
-    if (coyote || mode & R_AIR) vy = -g * JUMP, buffer = coyote = 0;
+  if (won) {
+    won++;
+    return;
   }
-  sprung &= vy * g < 0; /* (a spring's lift isn't cut short like a jump let go) */
-  vy += g * (vy * g < 0 && !(in & I_JUMP) && !sprung ? 3 * GRAV : GRAV);
-  if (vy * g > FALL) vy = g * FALL;
-  if (move(&px, vx, 0)) vx = 0;
-  if (move(&py, vy, 1)) vy = 0;
-  if (mode & R_WRAP) px = (px + (FW << 8) + (PW << 7)) % (FW << 8) - (PW << 7); /* out one side, in at the other */
-  ground = blocked(px >> 8, (py >> 8) + g) != 0;
-  coyote = ground ? 6 : coyote ? coyote - 1 : 0;
-  contacts();
-  mark((py >> 8) - 1, PH + 2);
+  script();
+  objects();
+  if (born) born--;
+  else if (frozen) frozen--;
+  else if (!dead) hero(in);
+  if ((in & (I_LEFT | I_RIGHT)) && !cnt[EV_MOVE]) fire(EV_MOVE);
+  if (keyev >= 0 && in & I_UP & ~held_in) fire(keyev);
+  held_in = in;
 }
 
 /* ------------------------------------------------------------ drawing */
-static void fillg(int x, int y, int w, int h, color_t c) { gfx_fill(x * G, y * G, w * G, h * G, c); }
-
-/* a picture of w x n pixels (a byte a row, its first pixel the top bit), s screen pixels each,
-   turned round left to right and upside down as asked */
-static void bitmap(const uint8_t *rows, int n, int w, int x, int y, int s, color_t c, int fx, int fy) {
-  for (int j = 0; j < n; j++)
-    for (int i = 0, v = rows[fy ? n - 1 - j : j]; i < w; i++)
-      if (v >> (7 - (fx ? w - 1 - i : i)) & 1) gfx_fill(x + i * s, y + j * s, s, s, c);
+static int sxp(int32_t x) { return (int)((x * 3 >> 10) - 38) + sdx; } /* 256ths of a scene pixel: the screen's */
+static int syp(int32_t y) { return (int)((y * 3 >> 10) + 30) + sdy; }
+static void put(int x, int y, color_t c) {
+  if (x >= 0 && x < SCREEN_W && y >= gfx_y0 && y < gfx_y1) gfx_buf[(y - gfx_y0) * SCREEN_W + x] = c;
 }
-/* the runner: standing, two steps running, jumping (6 x 7) */
-static const uint8_t runner[4][7] = {
-  {0x30, 0x30, 0x78, 0x78, 0x78, 0x48, 0x48},
-  {0x30, 0x30, 0x78, 0x78, 0xF8, 0x8C, 0x04},
-  {0x30, 0x30, 0x78, 0x78, 0x78, 0x30, 0x30},
-  {0x18, 0x18, 0x78, 0x7C, 0x78, 0xCC, 0x80},
+
+/* pictures: 16 rows of 16 bits (the first pixel the lowest) */
+static const uint16_t spike_px[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x318C, 0x318C, 0x7BDE, 0x7BDE, 0xFFFF};
+static const uint16_t button_px[2][16] = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x7E0, 0xFF0, 0xFF0, 0xFF0, 0xFF0, 0x1FF8},
+                                          {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF0, 0x1FF8}};
+/* the runner (columns 3 to 11, rows 2 to 15): standing, jumping, running (four) */
+static const uint16_t hero_px[6][14] = {
+  {0, 0x1C0, 0x1C0, 0x1C0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x360, 0x360, 0x360},
+  {0, 0x1C0, 0x1C0, 0x1C0, 0x7E0, 0x7E0, 0x7E0, 0x7E0, 0x3E0, 0x3F8, 0xFF8, 0xF18, 0, 0},
+  {0, 0, 0x1C0, 0x1C0, 0x1C0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3F0, 0x3F0, 0x330, 0x630},
+  {0x1C0, 0x1C0, 0x1C0, 0x7E0, 0x7E0, 0x7E0, 0x3E0, 0x3E0, 0xFE0, 0xFF8, 0xF18, 0, 0, 0},
+  {0, 0x1C0, 0x1C0, 0x1C0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x7E0, 0x7E0, 0x660, 0xC60},
+  {0x1C0, 0x1C0, 0x3F0, 0x3F0, 0x3F0, 0x3E0, 0x3E0, 0xFE0, 0xFF8, 0xF18, 0, 0, 0, 0},
 };
-static const uint8_t skull[5] = {0x70, 0xF8, 0xA8, 0xF8, 0x50};
-static const uint8_t horns[3] = {0x81, 0xC3, 0x66};
 
-static void draw_runner(int x, int y, int f, int flip) {
-  bitmap(runner[f], 7, 6, x - (face < 0) * G, y, G, BLACK, face < 0, flip);
-}
-
-/* a door, s screen pixels a pixel of the game; its window in w */
-static void door(int x, int y, int s, color_t frame, color_t w, int up) {
-  gfx_fill(x + s, y, 9 * s, s, frame);
-  gfx_fill(x, y + s, 11 * s, 19 * s, frame);
-  if (up) y += 10 * s; /* (hanging from the ceiling: the window at the bottom) */
-  gfx_fill(x + 2 * s, y + s, 7 * s, 9 * s, w);
-  gfx_fill(x + s, y + 2 * s, 9 * s, 7 * s, w);
-}
-
-static void spikes(int kind, int x, int y, int w, int h) {
-  int n = (kind < K_SPIKE_L ? w : h) / 5;
-  for (int t = 0; t < n; t++)
-    for (int j = 0; j < 3; j++) { /* the three steps of a tooth, from its point */
-      int a = 2 - j, l = 1 + 2 * j, d = j ? 2 * j - 1 : 0, e = j ? 2 : 1, u = t * 5 + a;
-      if (kind == K_SPIKE_U) fillg(x + u, y + d, l, e, fg);
-      if (kind == K_SPIKE_D) fillg(x + u, y + h - d - e, l, e, fg);
-      if (kind == K_SPIKE_L) fillg(x + d, y + u, e, l, fg);
-      if (kind == K_SPIKE_R) fillg(x + w - d - e, y + u, e, l, fg);
+/* a picture over the box (x0, y0)-(x1, y1) of the screen, turned t quarters, upside down if fy */
+static void picture(const uint16_t *px, int rows, int x0, int y0, int x1, int y1, int t, int fx, int fy, color_t c) {
+  int w = x1 - x0, h = y1 - y0;
+  if (w <= 0 || h <= 0 || y1 <= gfx_y0 || y0 >= gfx_y1) return;
+  for (int y = imax(y0, gfx_y0); y < imin(y1, gfx_y1); y++)
+    for (int x = x0; x < x1; x++) {
+      int u = (x - x0) * 16 / w, v = (y - y0) * 16 / h, s;
+      if (fx) u = 15 - u;
+      if (fy) v = 15 - v;
+      if (t & 1) s = u, u = v, v = 15 - s;
+      if (t & 2) u = 15 - u, v = 15 - v;
+      v -= 16 - rows;
+      if (v >= 0 && px[v] >> u & 1) put(x, y, c);
     }
 }
 
-static void draw_object(const obj_t *o, int blocks) {
-  const uint8_t *r = o->r;
-  int kind = r[0] & 15, b[4];
-  if (!o->on || (kind == K_BLOCK || kind == K_SECRET) != blocks) return;
+static void draw_hero(int32_t x, int32_t y, int w, int h, int flip, int f) {
+  /* its picture is 16 x 16 about the 5 x 13 box, the box at (5, 3) */
+  int32_t px = x - w * 256, py = y - h * 3 * 256 / 13, pw = w * 16 * 256 / 5, ph = h * 16 * 256 / 13;
+  if (flip) py = y + h * 256 - ph + h * 3 * 256 / 13; /* (upside down: the box at the picture's top) */
+  picture(hero_px[f], 14, sxp(px), syp(py), sxp(px + pw), syp(py + ph), 0, face < 0, flip, BLACK);
+}
+
+static void draw_door(int x0, int y0, int x1, int y1, int shut) {
+  int w = x1 - x0, h = y1 - y0, e = imax(1, w / 8);
+  gfx_rrect(x0, y0, w, h + e, e * 2, fg, 256);
+  gfx_fill(x0 + e, y0 + e, w - 2 * e, h - e, GREY);
+  if (shut) gfx_fill(x0 + e, y0 + e, w - 2 * e, (h - e) * imin(shut, 12) / 12, fg);
+}
+
+static void draw_object(obj_t *o) {
+  int kind = o->kind & 15, t = o->kind >> 4 & 3, b[4];
+  if (o->f & (F_HIDE | F_OFF) || kind == K_TRIG || o->w <= 0 || o->h <= 0) return;
   box(o, b);
-  if (b[1] * G >= gfx_y1 || (b[1] + b[3]) * G <= gfx_y0) {
-    if (kind != K_WARP) return;
-  }
-  int x = b[0], y = b[1], w = b[2], h = b[3];
-  if (kind == K_BLOCK) fillg(x, y, w, h, fg);
-  else if (kind == K_SECRET) {
-    if (found >> o->i & 1) fillg(x, y, w, h, fg);
-  } else if (kind <= K_SPIKE_R) spikes(kind, x, y, w, h);
-  else if (kind == K_DOOR) door(x * G, y * G, G, fg, won && !(r[0] & F_GHOST) ? fg : GREY, r[4] == 1);
-  else if (kind == K_SAW) { /* a disc with eight teeth, turning */
-    int c = w / 2, a = anim >> 1;
-    gfx_circle((x + c) * G, (y + c) * G, c * G - 2, fg, 256);
-    for (int t = 0; t < 8; t++) {
-      static const int8_t sx[8] = {0, 7, 10, 7, 0, -7, -10, -7};
-      int q = (t + a) & 7, z = c * G - 1;
-      gfx_fill((x + c) * G + sx[q] * z / 10 - 2, (y + c) * G + sx[(q + 6) & 7] * z / 10 - 2, 4, 4, fg);
+  int x0 = sxp(b[0] * 256), y0 = syp(b[1] * 256), x1 = sxp(b[2] * 256), y1 = syp(b[3] * 256), w = x1 - x0, h = y1 - y0;
+  if (y1 < gfx_y0 - 4 || y0 > gfx_y1 + 4) return;
+  if (kind == K_BLOCK && b[1] <= 0) y0 = 0, h = y1; /* (on through the margins, as the ground) */
+  if (kind == K_BLOCK && b[3] >= 240) h = SCREEN_H - y0;
+  if (kind == K_BLOCK || kind == K_GSPIKE) {
+    int s = kind == K_GSPIKE ? h * 5 / 26 : 0;
+    gfx_fill(x0, y0 + s, w, h - 2 * s, fg);
+    if (s) picture(spike_px, 5, x0, y0 - h * 11 / 26, x1, y0 + s, 0, 0, 0, fg), picture(spike_px, 5, x0, y1 - s, x1, y1 + h * 11 / 26, 2, 0, 0, fg);
+  } else if (kind == K_SPIKE) {
+    picture(spike_px, 5, x0, y0, x1, y1, t, 0, 0, fg);
+  } else if (kind == K_SAW) {
+    int r = w / 2;
+    gfx_circle(x0 + r, y0 + r, r, fg, 256);
+    gfx_fill(x0 + r - imax(1, r / 8), y0 + r - imax(1, r / 8), imax(2, r / 4), imax(2, r / 4), bg);
+  } else if (kind == K_SPRING) { /* its plate, up on its stem while it pushes */
+    int up = o->t ? 8 : 0;
+    gfx_fill(x0, y0 + h * (13 - up) / 16, w, imax(1, h / 16), fg);
+    gfx_fill(x0 + w * 6 / 16, y0 + h * (14 - up) / 16, w / 4, h * (2 + up) / 16, fg);
+  } else if (kind == K_DOOR) {
+    if (modes & R_SWAP) draw_hero(o->x - 5 * 128 + 256, o->y - 128, 5, 13, 0, 0);
+    else draw_door(x0, y0, x1, y1, won ? won : 0);
+  } else if (kind == K_COIN || kind == K_BAD) {
+    gfx_rrect(x0 + w * 5 / 16, y0 + h * 5 / 16, w * 6 / 16, h * 6 / 16, 1, fg, 256);
+  } else if (kind == K_WARP) { /* rings of squares, turning */
+    for (int i = (anim >> 3 & 1); i < 7; i += 2) {
+      int d = w * (i + 1) / 16;
+      gfx_fill(x0 + d, y0 + d, w - 2 * d, imax(1, w / 16), fg), gfx_fill(x0 + d, y1 - d - 1, w - 2 * d, imax(1, w / 16), fg);
+      gfx_fill(x0 + d, y0 + d, imax(1, w / 16), h - 2 * d, fg), gfx_fill(x1 - d - 1, y0 + d, imax(1, w / 16), h - 2 * d, fg);
     }
-    gfx_circle((x + c) * G, (y + c) * G, 3, bg, 256);
-  } else if (kind == K_SPRING) {
-    int up = o->t > 200 && o->t < 248 ? 1 : 2;
-    fillg(x, y + 2, w, 1, fg);
-    fillg(x + 1, y + 2 - up, 1, up, fg), fillg(x + w - 2, y + 2 - up, 1, up, fg);
-    fillg(x, y + 1 - up, w, 1, fg);
-  } else if (kind == K_WARP) { /* both of its ends: rings */
-    for (int e = 0; e < 2; e++) {
-      int ex = (e ? r[3] : x) * G + 8, ey = (e ? r[4] : y) * G + 12;
-      gfx_rrect(ex - 8, ey - 12, 16, 24, 8, WHITE, 256);
-      gfx_rrect(ex - 5, ey - 9, 10, 18, 5, bg, 256);
-    }
-  } else if (kind == K_BUTTON) { /* (a ghost one: on a ceiling) */
-    int down = touching(o), up = r[0] & F_GHOST;
-    fillg(x + 1, y + (up ? 0 : down), w - 2, h - down, RED);
-    fillg(x, up ? y : y + h - 1, w, 1, fg);
+  } else if (kind == K_BUTTON) {
+    picture(button_px[!!(o->f & F_USED)], 6, x0, y0, x1, y1, t, 0, 0, fg);
+  } else if (kind == K_THRU) {
+    for (int i = 0; i < 3; i++) gfx_fill(x0 + w * (1 + 5 * i) / 16, y0, w / 4, imax(1, h / 8), fg);
   }
 }
 
-static void say(const np_font_t *f, int cx, int base, const char *s, color_t c, color_t shade) {
-  gfx_text_center(f, cx + 1, base + 2, s, shade, 256);
-  gfx_text_center(f, cx, base, s, c, 256);
-}
-static void button(int y, const char *s, bool on, color_t a, color_t b) {
-  if (on) gfx_rrect(96, y, 128, 24, 12, a, 256);
-  gfx_text_center(&np_font_body, 160, y + 17, s, on ? b : a, 256);
+static void ground_draw(void) {
+  for (int ty = 0; ty < 15; ty++) {
+    int y0 = syp(ty * 4096), y1 = syp(ty * 4096 + 4096);
+    if (ty == 0) y0 = 0;
+    if (ty == 14) y1 = SCREEN_H;
+    if (y1 <= gfx_y0 || y0 >= gfx_y1) continue;
+    for (int tx = 3; tx < 30; tx++) {
+      if (!cell(tx, ty)) continue;
+      int e = tx;
+      while (e < 29 && cell(e + 1, ty)) e++;
+      gfx_fill(imax(0, sxp(tx * 4096)), y0, sxp(e * 4096 + 4096) - imax(0, sxp(tx * 4096)), y1 - y0, fg);
+      tx = e;
+    }
+  }
 }
 
-static const char *const pause_items[] = {T("Resume"), T("Restart"), T("Levels"), T("How to play"), T("Quit game")};
+static void say(int cx, int base, const char *s) {
+  gfx_text_center(&np_font_title, cx + 1, base + 2, s, BLACK, 256);
+  gfx_text_center(&np_font_title, cx, base, s, YELLOW, 256);
+}
+static void button(int y, const char *s, bool on) {
+  if (on) gfx_rrect(96, y, 128, 24, 12, YELLOW, 256);
+  gfx_text_center(&np_font_body, 160, y + 17, s, on ? DARK : WHITE, 256);
+}
+
+static const char *const pause_items[] = {T("Resume"), T("Restart"), T("Levels"), T("Quit game")};
 static void overlay(void) {
-  color_t a = scr == SC_HUB ? HUB_BG : bg, b = scr == SC_HUB ? HUB_FG : fg;
   char s[24];
   gfx_fill_alpha(0, 0, SCREEN_W, SCREEN_H, BLACK, 100);
+  gfx_rrect(56, 36, 208, 168, 12, DARK, 256);
   if (ov == OV_PAUSE) {
-    gfx_rrect(72, 28, 176, 190, 12, b, 256);
-    gfx_text_center(&np_font_title, 160, 60, T("Paused"), a, 256);
-    for (int i = 0; i < 5; i++) button(72 + 28 * i, pause_items[i], sel == i, a, b);
+    say(160, 68, T("Paused"));
+    for (int i = 0; i < 4; i++) button(84 + 28 * i, pause_items[i], sel == i);
   } else if (ov == OV_QUIT) {
-    gfx_rrect(72, 76, 176, 96, 12, b, 256);
-    gfx_text_center(&np_font_title, 160, 110, T("Quit game?"), a, 256);
+    say(160, 100, T("Quit game?"));
     for (int i = 0; i < 2; i++) {
-      if (sel == i) gfx_rrect(92 + 72 * i, 128, 64, 24, 12, a, 256);
-      gfx_text_center(&np_font_body, 124 + 72 * i, 145, i ? T("Yes") : T("No"), sel == i ? b : a, 256);
+      if (sel == i) gfx_rrect(92 + 72 * i, 128, 64, 24, 12, YELLOW, 256);
+      gfx_text_center(&np_font_body, 124 + 72 * i, 145, i ? T("Yes") : T("No"), sel == i ? DARK : WHITE, 256);
     }
   } else if (ov == OV_HELP) {
-    static const char *const keys[][2] = {{T("Left Right"), T("run")}, {T("Up, OK, EXE"), T("jump (hold: higher)")},
-                                          {T("Back"), T("pause")}};
-    gfx_rrect(40, 30, 240, 180, 12, b, 256);
-    gfx_text_center(&np_font_title, 160, 62, T("How to play"), a, 256);
-    gfx_paragraph(&np_font_body, 160, 86, 208, 15, T("Reach the door. The level has other plans: trust nothing."), a,
+    static const char *const keys[][2] = {{T("Left Right"), T("run")}, {T("Up, OK, EXE"), T("jump")}, {T("Back"), T("pause")}};
+    say(160, 66, T("How to play"));
+    gfx_paragraph(&np_font_body, 160, 88, 192, 15, T("Reach the door. The level has other plans: trust nothing."), WHITE,
                   256);
     for (int i = 0; i < 3; i++) {
-      gfx_text_right(&np_font_body, 136, 136 + 18 * i, keys[i][0], WHITE, 256);
-      gfx_text(&np_font_body, 146, 136 + 18 * i, keys[i][1], a, 256);
+      gfx_text_right(&np_font_body, 136, 136 + 16 * i, keys[i][0], YELLOW, 256);
+      gfx_text(&np_font_body, 146, 136 + 16 * i, keys[i][1], WHITE, 256);
     }
-    button(176, T("Play"), true, a, b);
+    button(172, T("Play"), true);
   } else { /* OV_END: the Devil beaten */
-    gfx_rrect(40, 40, 240, 160, 12, RED, 256);
-    say(&np_font_title, 160, 82, T("You beat the Devil!"), WHITE, DARK_RED);
-    gfx_paragraph(&np_font_body, 160, 108, 200, 15, T("Every door of Level Devil is open behind you."), WHITE, 256);
-    gfx_text_center(&np_font_body, 160, 152, label(s, T("Deaths in all: "), sv.deaths), WHITE, 256);
-    button(164, T("OK"), true, WHITE, RED);
+    say(160, 80, T("You beat the Devil!"));
+    gfx_paragraph(&np_font_body, 160, 106, 184, 15, T("Every door of Level Devil is open behind you."), WHITE, 256);
+    gfx_text_center(&np_font_body, 160, 150, label(s, T("Deaths in all: "), sv.deaths), WHITE, 256);
+    button(164, T("OK"), true);
   }
-}
-
-static void hud(void) {
-  char s[16];
-  fillg(0, 0, FW, TOP, fg);
-  gfx_text(&np_font_small, 10, 14, label(s, T("Level "), (uint32_t)level + 1), bg, 256);
-  for (int i = 0; i < ROOMS; i++) /* the rooms of the level: done, this one, still to come */
-    gfx_circle(136 + 12 * i, 10, i == rnum ? 4 : 3, i <= rnum ? bg : gfx_mix(fg, bg, 12), 256);
-  num(s, sv.run);
-  gfx_text_right(&np_font_small, 310, 14, s, bg, 256);
-  bitmap(skull, 5, 5, 298 - gfx_text_width(&np_font_small, s), 5, 2, bg, 0, 0);
 }
 
 static void play_scene(void *ctx) {
-  fillg(0, TOP, FW, FH - TOP, bg);
-  for (int pass = 0; pass < 2; pass++)
-    for (int k = 0; k < no; k++) draw_object(&ob[k], pass);
-  if (!(mode & R_WRAP)) fillg(0, 0, WALL, FH, fg), fillg(FW - WALL, 0, WALL, FH, fg);
-  if (dead)
-    for (int i = 0; i < 14; i++) gfx_fill((bits[i].x >> 4) * G, (bits[i].y >> 4) * G, G, G, BLACK);
-  else if (!won) {
-    int x = (px >> 8) * G, y = (py >> 8) * G, f = !ground ? 3 : vx ? 1 + (anim >> 3 & 1) : 0, flip = mode & R_FLIP;
-    draw_runner(x, y, f, flip);
-    if (mode & R_WRAP) draw_runner(x + (x < FW ? FW * G : -FW * G), y, f, flip);
+  char s[16];
+  gfx_fill(0, 0, SCREEN_W, SCREEN_H, bg);
+  for (int k = 0; k < no; k++) draw_object(&ob[k]);
+  ground_draw();
+  if (dead) {
+    for (int i = 0; i < 8; i++) gfx_fill(sxp(bits[i].x), syp(bits[i].y), 3, 2, BLACK);
+  } else if (!won && !born && !(frozen && frozen < 45)) {
+    int f = !ground && !(modes & R_FLAPPY) ? 1 : vx ? 2 + (anim >> 2 & 3) : 0;
+    if (modes & R_SWAP) {
+      int b[4] = {(hx >> 8) - 6, (hy >> 8) - 3, (hx >> 8) + 11, (hy >> 8) + 13};
+      draw_door(sxp(b[0] * 256), syp(b[1] * 256), sxp(b[2] * 256), syp(b[3] * 256), 0);
+    } else {
+      draw_hero(hx, hy, hw, hh, gy < 0, f);
+    }
   }
-  hud();
-  if (curtain) fillg(0, TOP, FW, (FH - TOP) * curtain / 16, fg);
+  if (born) /* coming together */
+    for (int i = 0; i < 8; i++) {
+      int d = born * born / 6;
+      gfx_fill(sxp(hx + hw * 128 + (i & 3) * d * 64 - d * 96), syp(hy + hh * 128 + (i >> 2) * d * 128 - d * 64), 3, 2, BLACK);
+    }
+  for (int i = 0; i < ROOMS; i++) { /* the rooms of the level, as the game shows them */
+    int x = 136 + 10 * i;
+    gfx_fill(x, 6, 9, 8, BLACK);
+    if (i > rnum || (i == rnum && frame < 45)) gfx_fill(x + 1, 7, 7, 6, gfx_mix(BLACK, fg, 20));
+  }
+  if (waiting) { /* the game's retry button */
+    gfx_rrect(134, 104, 52, 30, 4, DARK, 256);
+    gfx_circle(160, 119, 9, YELLOW, 256), gfx_circle(160, 119, 6, DARK, 256);
+    gfx_fill(146, 110, 14, 9, DARK), gfx_fill(152, 106, 4, 13, YELLOW);
+    gfx_text_center(&np_font_body, 160, 96, T("Press any key"), WHITE, 256);
+  }
+  (void)s;
+  if (fade) gfx_fill_alpha(0, 0, SCREEN_W, SCREEN_H, DARK, fade * 16);
   if (ov) overlay();
 }
-
 
 /* the doors to the levels: two rows of eight, on two floors */
 static void hub_door(int i, int *x, int *y) { *x = 13 + 38 * (i & 7), *y = 70 + 80 * (i >> 3); }
 static void hub_scene(void *ctx) {
   char s[48];
-  int sel_ = sv.sel, best = sv.best[sel_];
-  gfx_fill(0, 0, SCREEN_W, SCREEN_H, HUB_BG);
-  gfx_fill(0, 0, SCREEN_W, 44, RED);
-  if (banner) say(&np_font_title, 160, 32, label(s, T("Level cleared! Deaths: "), (uint32_t)banner - 1), WHITE, DARK_RED);
-  else say(&np_font_title, 160, 32, "LEVEL DEVIL", DARK_RED, HEX(0xA33219));
+  int sel_ = sv.sel;
+  bg = gfx_rgb(colors[0][0]);
+  gfx_fill(0, 0, SCREEN_W, SCREEN_H, bg);
+  gfx_fill(0, 0, SCREEN_W, 44, DARK);
+  if (banner) say(160, 32, label(s, T("Level cleared! Deaths: "), (uint32_t)banner - 1));
+  else say(160, 32, "LEVEL DEVIL");
   for (int i = 0; i < LEVELS; i++) {
     int x, y, open = i < sv.open;
     hub_door(i, &x, &y);
-    if (!(i & 7)) gfx_fill(0, y + 40, SCREEN_W, 8, HUB_FG);
-    color_t frame = i == 15 ? RED : open ? HUB_FG : gfx_mix(HUB_FG, HUB_BG, 18);
-    if (i == 15) bitmap(horns, 3, 8, x + 3, y - 5, 2, RED, 0, 0);
-    door(x, y, 2, frame, sv.done >> i & 1 ? colors[i][0] : open ? GREY : frame, 0);
+    fg = gfx_rgb(colors[i][1]);
+    if (!(i & 7)) gfx_fill(0, y + 40, SCREEN_W, 8, gfx_rgb(colors[0][1]));
+    if (!open) fg = gfx_mix(fg, bg, 20);
+    draw_door(x, y, x + 22, y + 40, sv.done >> i & 1 ? 12 : 0);
     num(s, (uint32_t)i + 1);
-    gfx_text_center(&np_font_small, x + 11, y - 7 - 5 * (i == 15), s, frame, 256);
-    if (i == sel_) draw_runner(x - 12, y + 26, 0, 0);
+    gfx_text_center(&np_font_small, x + 11, y - 6, s, fg, 256);
+    if (i == sel_) picture(hero_px[0], 14, x - 22, y + 8, x - 2, y + 40, 0, 0, 0, BLACK);
   }
-  gfx_fill(0, 214, SCREEN_W, 26, HUB_FG);
+  fg = gfx_rgb(colors[0][1]);
+  gfx_fill(0, 214, SCREEN_W, 26, fg);
   if (sel_ >= sv.open) cat(s, T("Locked"));
-  else if (sv.done >> sel_ & 1) label(s, T("Cleared. Fewest deaths: "), best);
+  else if (sv.done >> sel_ & 1) label(s, T("Cleared. Fewest deaths: "), sv.best[sel_]);
   else cat(s, T("Not cleared yet"));
-  gfx_text(&np_font_body, 8, 232, s, HUB_BG, 256);
-  gfx_text_right(&np_font_body, 312, 232, label(s, T("Deaths "), sv.deaths), HUB_BG, 256);
+  gfx_text(&np_font_body, 8, 232, s, bg, 256);
+  gfx_text_right(&np_font_body, 312, 232, label(s, T("Deaths "), sv.deaths), bg, 256);
   if (ov) overlay();
 }
 
 /* ------------------------------------------------------------ the levels */
-static void open_room(void) { /* the room rnum, behind a curtain that lifts */
+static void open_room(void) { /* room rnum, coming out of the game's dark red */
   enter();
-  curtain = 16;
+  fade = 15;
 }
 static void start_level(int l) {
   if (l != sv.level || sv.room >= ROOMS) sv.room = 0, sv.run = 0;
@@ -628,17 +814,18 @@ static void level_done(void) {
   save();
 }
 
-/* a step of the room: the curtain, the door reached, or the runner */
+/* a step of the room: the fade, the door reached (it shuts), or the runner */
 static void tick(int in) {
-  if (curtain && !won) {
-    curtain--, full = 1;
+  full = 1;
+  if (fade && !won) {
+    fade--;
     return;
   }
-  if (won && ++won > 10) curtain = imin(won - 10, 16), full = 1;
-  if (won > 28) {
-    won = 0;
+  if (won > 30) fade = imin(won - 30, 15);
+  if (won > 46) {
+    won = 0, fade = 15;
     if (++rnum == ROOMS) level_done();
-    else sv.room = (uint8_t)rnum, save(), open_room();
+    else sv.room = (uint8_t)rnum, save(), enter();
     return;
   }
   step(in);
@@ -646,7 +833,8 @@ static void tick(int in) {
 
 static void load(void) {
   uint32_t len = 0;
-  const uint8_t *d = np_file_read(SAVE_NAME, &len);
+  restore();
+  const uint8_t *d = ef_read(SAVE_NAME, &len);
   uint8_t *v = (uint8_t *)&sv;
   bool ok = d && len == sizeof sv && d[0] == 'L' && d[1] == 1;
   for (uint32_t i = 0; i < sizeof sv; i++) v[i] = ok ? d[i] : 0;
@@ -661,60 +849,58 @@ int main(void) {
   now = (uint32_t)eadk_timing_millis();
   seed = eadk_random() ^ now;
   if (!seed) seed = 1;
-  np_inflate(rooms, ROOM_BYTES, rooms_z, sizeof rooms_z, (np_inflate_tables_t *)(void *)strip);
   load();
   if (!(sv.flags & 1)) ov = OV_HELP;
-  full = 1, dlo = SCREEN_H;
+  full = 1;
   const uint64_t left = KEY(eadk_key_left) | KEY(eadk_key_four), right = KEY(eadk_key_right) | KEY(eadk_key_six);
   const uint64_t up = KEY(eadk_key_up) | KEY(eadk_key_eight), down = KEY(eadk_key_down) | KEY(eadk_key_two);
-  const uint64_t ok = KEY(eadk_key_ok) | KEY(eadk_key_exe) | KEY(eadk_key_five), back = KEY(eadk_key_back);
+  const uint64_t ok = KEY(eadk_key_ok) | KEY(eadk_key_exe) | KEY(eadk_key_five), back_k = KEY(eadk_key_back);
   uint64_t held = eadk_keyboard_scan(), stale = held; /* keys still down from the launcher wait to be let go */
   uint32_t last = now, acc = 0;
   for (;;) {
     now = (uint32_t)eadk_timing_millis();
-    uint64_t k = eadk_keyboard_scan(), hit = k & ~held;
-    stale &= k, held = k, k &= ~stale;
+    uint64_t k = eadk_keyboard_scan(), hitk = k & ~held;
+    stale &= k, held = k, k &= ~stale, hitk &= ~stale;
     if (k & (KEY(eadk_key_home) | KEY(eadk_key_on_off))) break;
-    int dx = !!(hit & right) - !!(hit & left), dy = !!(hit & down) - !!(hit & up), quit = 0;
-    if (hit) full |= scr == SC_HUB || ov;
+    int dx = !!(hitk & right) - !!(hitk & left), dy = !!(hitk & down) - !!(hitk & up), quit = 0;
+    if (hitk) full |= scr == SC_HUB || ov;
     if (ov) {
-      if (ov == OV_PAUSE) sel = (sel + dy + 5) % 5;
+      if (ov == OV_PAUSE) sel = (sel + dy + 4) % 4;
       if (ov == OV_QUIT) sel ^= dx != 0;
-      if (hit & ok) {
-        if (ov == OV_PAUSE && sel == 1) { /* Restart: the runner bursts, as when it dies */
-          ov = OV_NONE;
-          if (!dead && !won) die();
-        }
-        else if (ov == OV_PAUSE && sel) ov = sel == 2 ? (scr = SC_HUB, save(), OV_NONE) : sel == 3 ? OV_HELP : OV_QUIT, sel = 0;
+      if (hitk & ok) {
+        if (ov == OV_PAUSE && sel == 1) ov = OV_NONE, reset(); /* Restart */
+        else if (ov == OV_PAUSE && sel) ov = sel == 2 ? (scr = SC_HUB, save(), OV_NONE) : OV_QUIT, sel = 0;
         else if (ov == OV_QUIT && sel) quit = 1;
-        else ov = ov == OV_QUIT && scr == SC_PLAY ? (sel = 4, OV_PAUSE) : OV_NONE;
+        else ov = ov == OV_QUIT && scr == SC_PLAY ? (sel = 3, OV_PAUSE) : OV_NONE;
         if (!(sv.flags & 1)) sv.flags |= 1, save();
-      } else if (hit & back) {
-        ov = ov == OV_QUIT && scr == SC_PLAY ? (sel = 4, OV_PAUSE) : OV_NONE;
+      } else if (hitk & back_k) {
+        ov = ov == OV_QUIT && scr == SC_PLAY ? (sel = 3, OV_PAUSE) : OV_NONE;
       }
     } else if (scr == SC_HUB) {
       sv.sel = (uint16_t)clampi(sv.sel + dx + 8 * dy, 0, LEVELS - 1);
-      if (hit & ok && sv.sel < sv.open) start_level(sv.sel);
-      if (hit & back) ov = OV_QUIT, sel = 0;
-    } else if (hit & back) {
+      if (hitk & ok && sv.sel < sv.open) start_level(sv.sel);
+      if (hitk & back_k) ov = OV_QUIT, sel = 0;
+    } else if (hitk & back_k) {
       ov = OV_PAUSE, sel = 0, full = 1;
       save();
+    } else if (waiting && hitk) { /* the game's retry: any key */
+      tries++, reset();
+      hitk = 0;
     }
     if (quit) break;
     if (banner && now - banner_t > 2600) banner = 0, full = 1;
     acc += (now - last) * 3, last = now;
     if (scr == SC_PLAY && !ov) {
-      int in = (k & left ? I_LEFT : 0) | (k & right ? I_RIGHT : 0) | (k & (up | ok) ? I_JUMP : 0);
+      int in = (k & left ? I_LEFT : 0) | (k & right ? I_RIGHT : 0) | (k & (up | ok) ? I_UP : 0) | (k & down ? I_DOWN : 0);
       for (int n = 0; acc >= 50 && n < 4; acc -= 50, n++) tick(in);
       if (acc >= 50) acc = 0; /* (too far behind: let it go) */
     } else {
       acc = 0;
     }
-    if (full || dlo < dhi) {
+    if (full) {
       eadk_display_wait_for_vblank();
-      if (full) dlo = 0, dhi = SCREEN_H;
-      gfx_render(scr == SC_HUB ? hub_scene : play_scene, 0, dlo & ~1, dhi);
-      full = 0, dlo = SCREEN_H, dhi = 0;
+      gfx_render(scr == SC_HUB ? hub_scene : play_scene, 0, 0, SCREEN_H);
+      full = 0;
     } else {
       eadk_timing_msleep(8);
     }

@@ -86,8 +86,8 @@ GAMES = {
     # new game from the pause menu and its first square
     "minesweeper": ("Minesweeper.nwa", "mines.sav", presses((1500, "ok"), (2000, "ok"), (2400, "right")), 3000,
                     presses((1500, "ok"), (2000, "back"), (2300, "down"), (2600, "ok"), (3000, "ok")), 3600),
-    # past the keys, the first door: the runner runs right into the first trap, and again; next time the
-    # first door again (the keys not shown), and more deaths
+    # past the keys, the first door: the runner runs right into the first pit; next time (only the copy of the
+    # save left) the first door again, the keys not shown, and another death
     "leveldevil": ("LevelDevil.nwa", "leveldevil.sav", presses((1500, "ok"), (2000, "ok"), (3000, "right", 4000)), 8000,
                    presses((1500, "ok"), (2500, "right", 3000)), 6500),
     # Play, serve, a brick or more: the best is kept; next time, Settings, screen shake off, back
@@ -228,7 +228,7 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "numpowder": "numpowder_saves.py", "undertale": "undertale_saves.py", "subway": "subway_saves.py",
           "fnaf": "fnaf_saves.py", "doom": "doom_saves.py", "isaac": "isaac_saves.py",
           "hillclimb": "hillclimb_saves.py", "pvz": "pvz_saves.py", "sonic": "sonic_saves.py",
-          "cookieclicker": "cookieclicker_saves.py"}
+          "cookieclicker": "cookieclicker_saves.py", "leveldevil": "leveldevil_saves.py"}
 CHECKS = {
     # the island remembers where Lucky was; after the reinstall, from the copy
     "championisland": (lambda v: v[:3] == b"CI1" and b"PLAYER_LOC" in v,) * 2,
@@ -305,7 +305,7 @@ CHECKS = {
     "blockblast": (lambda v: len(v) == 92 and v[:3] == b"B\1\3" and struct.unpack_from("<I", v, 12)[0] >= 1
                    and struct.unpack_from("<I", v, 8)[0] >= struct.unpack_from("<I", v, 12)[0],
                    lambda v: v[2] & 1 and struct.unpack_from("<I", v, 12)[0] >= 2),
-    # the keys were shown and the runner died (the deaths at 8); then died again
+    # the keys were shown and the runner died (the deaths at 8); after the reinstall, from the copy, it died again
     "leveldevil": (lambda v: len(v) == 48 and v[:2] == b"L\1" and v[2] & 1 and struct.unpack_from("<I", v, 8)[0] >= 1,
                    lambda v: struct.unpack_from("<I", v, 8)[0] >= 2),
     # the best score ("I", version 1, the best at 4): some invaders shot; then kept, or beaten
