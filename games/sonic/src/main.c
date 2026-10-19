@@ -2,7 +2,6 @@
  * camera moves, the animated art and the HUD's numbers; then the picture and real time), the game
  * modes one after another as the original's main loop runs them, and Home, which saves and quits
  * from anywhere. */
-#include <setjmp.h>
 #include "s1.h"
 #include "game.h"
 #include "plat.h"
@@ -49,7 +48,8 @@ uint8_t CalcAngle(int16_t x, int16_t y) {
 }
 
 /* ------------------------------------------------------------------ the frame */
-static jmp_buf quit_jump;
+/* (the compiler's own jumps: the C library's would bring its unwinder along) */
+static void *quit_jump[5];
 static uint32_t next_frame;    /* when the next frame is due (ms * 60, to keep fractions) */
 static uint32_t frame_ms60;
 static int skipped;
@@ -123,8 +123,12 @@ static bool keep_up(void) {
   return (int32_t)(now - next_frame) > (int32_t)frame_ms60 && skipped < 3;
 }
 
+uint32_t perf_frames __attribute__((used));   /* read by tools/emu.py */
+uint32_t perf_updates __attribute__((used));
+
 void WaitForVBlank(void) {
   uint8_t r = V.vblank_routine;
+  perf_updates++;
   V.vblank_routine = 0;
   V.f_hblank_pal = 1;
   vblank(r);
@@ -133,6 +137,7 @@ void WaitForVBlank(void) {
   if (keep_up()) skipped++;
   else {
     skipped = 0;
+    perf_frames++;
     vdp_render();
     pause_overlay_draw();
   }
@@ -148,7 +153,7 @@ void WaitForVBlank(void) {
   }
 }
 
-void game_quit(void) { longjmp(quit_jump, 1); }
+void game_quit(void) { __builtin_longjmp(quit_jump, 1); }
 
 /* ------------------------------------------------------------------ the main loop */
 int main(void) {
@@ -158,7 +163,7 @@ int main(void) {
   next_frame = plat_millis() * 60;
   vdp_clear_planes();
   save_restore_copy();
-  if (!setjmp(quit_jump)) {
+  if (!__builtin_setjmp(quit_jump)) {
     game_init();
     for (;;) {
       switch (V.gamemode & 0x1C) {
