@@ -96,6 +96,13 @@ typedef struct {
 } Run;
 extern Run run;
 
+/* the sparkle of a coin picked up */
+typedef struct {
+  float x, y, z, t;    /* t: its age, from 0 */
+} Spark;
+#define NSPARKS 12
+extern Spark sparks[NSPARKS];
+
 void run_start(void);
 void run_step(uint32_t keys, uint32_t pressed);
 bool run_over(void);           /* caught or crashed, and not saved */

@@ -17,6 +17,8 @@
 Runner pl;
 Run run;
 Progress pg;
+Spark sparks[NSPARKS];
+static int next_spark;
 
 const char *const char_names[NCHARS] = {"Jake", "Tricky", "Fresh", "Spike"};
 const uint32_t char_price[NCHARS] = {0, 6000, 12000, 20000};
@@ -202,6 +204,7 @@ void missions_check(void) {
 void run_start(void) {
   memset(&run, 0, sizeof run);
   memset(&pl, 0, sizeof pl);
+  for (int i = 0; i < NSPARKS; i++) sparks[i].t = 1;
   pl.lane = pl.from_lane = 1;
   pl.speed = 13;
   pl.chase = 3.2f;   /* the Inspector and his dog, right behind from the start */
@@ -276,6 +279,8 @@ static void stumble(void) {
 }
 
 static void collect(Item *it) {
+  Spark *sp = &sparks[next_spark++ % NSPARKS];
+  sp->x = it->x, sp->y = it->y, sp->z = it->z, sp->t = 0;
   switch (it->kind) {
     case I_COIN:
       run.coins++;
@@ -357,6 +362,8 @@ static void collide(float prev_x) {
 void run_step(uint32_t keys, uint32_t pressed) {
   (void)keys;
   if (run.toast_t > 0) run.toast_t -= DT;
+  for (int i = 0; i < NSPARKS; i++)
+    if (sparks[i].t < 1) sparks[i].t += DT;
   if (pl.dead) {
     pl.crash_t += DT;
     if (pl.y > pl.ground) pl.y -= 4 * DT;
@@ -364,6 +371,9 @@ void run_step(uint32_t keys, uint32_t pressed) {
   }
   run.start_t += DT;
   pl.t += DT;
+#ifdef SS_GOD
+  pl.safe = 0.1f;   /* (a build for measuring speed: nothing hurts) */
+#endif
   /* faster and faster: from 13 m/s towards 26 */
   pl.speed = 13 + 13 * pl.t / (pl.t + 100);
   float speed = pl.speed;

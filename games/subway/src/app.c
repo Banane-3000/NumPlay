@@ -22,6 +22,7 @@ static int shop_tab, shop_sel, shop_top;
 static char note[40];           /* the shop's word on the last try */
 static float note_t;
 static float cam_x, cam_y;      /* the run's camera, smoothed */
+static bool drawn;              /* a screen that does not move is drawn once, then again when something changes */
 #define CAM_Y 6.0f              /* above the ground */
 #define CAM_BACK 7.6f           /* behind the runner */
 
@@ -62,6 +63,7 @@ static bool title_scene(void) {
 }
 
 static void go(int s) {
+  drawn = false;
   state = s;
   state_t = 0;
   sel = 0;
@@ -168,6 +170,7 @@ static void camera_follow(void) {
 }
 
 void app_step(uint32_t keys, uint32_t pressed) {
+  if (pressed) drawn = false;
   clock += DT;
   state_t += DT;
   if (note_t > 0) note_t -= DT;
@@ -330,6 +333,20 @@ static void draw_runner(void) {
   }
 }
 
+/* coins picked up: a star of light that grows and fades, carried along with the runner */
+static void draw_sparks(void) {
+  for (int i = 0; i < NSPARKS; i++) {
+    const Spark *s = &sparks[i];
+    if (s->t >= 0.3f) continue;
+    float k = s->t / 0.3f, r = 0.25f + 0.55f * k, x = pl.x + (s->x - pl.x) * 0.4f, y = s->y, z = pl.z + 0.4f;
+    int a = (int)(230 * (1 - k));
+    V3 h[4] = {{x - r, y + 0.07f, z}, {x + r, y + 0.07f, z}, {x + r, y - 0.07f, z}, {x - r, y - 0.07f, z}};
+    V3 v[4] = {{x - 0.07f, y + r, z}, {x + 0.07f, y + r, z}, {x + 0.07f, y - r, z}, {x - 0.07f, y - r, z}};
+    r_poly(h, 4, 0xFFF6B0, P_ALPHA | P_NOHAZE | P_TWOSIDED, a);
+    r_poly(v, 4, 0xFFF6B0, P_ALPHA | P_NOHAZE | P_TWOSIDED, a);
+  }
+}
+
 static void draw_world(void) {
   r_begin();
   bool title = title_scene();
@@ -338,10 +355,18 @@ static void draw_world(void) {
   else {
     /* the camera swings round from the title's view */
     float k = intro >= 1 ? 1 : intro * intro * (3 - 2 * intro), pitch = 0.34f + (pl.fly > 0 ? 0.05f : 0);
-    scene_camera(lerp(tx, cam_x, k), lerp(ty, cam_y, k), lerp(tz, pl.z - CAM_BACK, k), lerp(tp, pitch, k));
+    /* a shake when the runner crashes */
+    float shake = 0;
+    if (pl.dead && pl.crash_t < 0.35f) {
+      float s, c;
+      r_sincos(pl.crash_t * 70, &s, &c);
+      shake = s * 0.18f * (1 - pl.crash_t / 0.35f);
+    }
+    scene_camera(lerp(tx, cam_x, k) + shake, lerp(ty, cam_y, k) + shake * 0.5f, lerp(tz, pl.z - CAM_BACK, k), lerp(tp, pitch, k));
   }
   scene_draw(clock);
   draw_runner();
+  if (!title) draw_sparks();
 }
 
 /* ---------------------------------------------------------------- drawing: over the picture */
@@ -743,6 +768,10 @@ void app_draw(void) {
     draw_shop();
     return;
   }
+  /* the screens over a picture that stands still */
+  bool still = state == S_RESULTS || state == S_PAUSE || state == S_QUIT || state == S_MISSIONS || state == S_HELP;
+  if (still && drawn && state_t > 0.5f) return;
+  drawn = true;
   draw_world();
   perf_polys = (uint32_t)r_count();
   r_render(scene_background, overlay);

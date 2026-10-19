@@ -400,25 +400,27 @@ static void tunnel_block(float z0, float dist) {
     }
   if (first) {
     /* the way in: a big face of brick round the opening, with a frame */
-    uint32_t brick = 0x9A5A44, trim = 0x6E6A64, top = 0x7E4636;
-    front(z0, -60, -WALL_X, 0, 24, brick, 0);
-    front(z0, WALL_X, 60, 0, 24, brick, 0);
-    front(z0, -WALL_X, WALL_X, 7.2f, 24, brick, 0);
-    /* a band of darker brick on top, and a frame round the opening */
-    front(z0, -60, 60, 21, 24, top, P_DECAL);
+    uint32_t brick = 0x9A5A44, trim = 0x6E6A64, line = 0x84493A, top = 0x6E3E30;
+    front(z0, -60, -WALL_X, 0, 13, brick, 0);
+    front(z0, WALL_X, 60, 0, 13, brick, 0);
+    front(z0, -WALL_X, WALL_X, 7.2f, 13, brick, 0);
+    /* courses of brick, a darker band on top, a frame round the opening */
+    if (dist < 110) {
+      for (int i = 1; i <= 4; i++) {
+        float y = 1.5f * (float)i;
+        front(z0, -60, -WALL_X - 0.9f, y, y + 0.12f, line, P_DECAL);
+        front(z0, WALL_X + 0.9f, 60, y, y + 0.12f, line, P_DECAL);
+      }
+      front(z0, -60, 60, 10.9f, 11.02f, line, P_DECAL);
+    }
+    front(z0, -60, 60, 11.6f, 13, top, P_DECAL);
     front(z0, -WALL_X - 0.9f, -WALL_X, 0, 8.1f, trim, P_DECAL);
     front(z0, WALL_X, WALL_X + 0.9f, 0, 8.1f, trim, P_DECAL);
     front(z0, -WALL_X - 0.9f, WALL_X + 0.9f, 7.2f, 8.1f, trim, P_DECAL);
     /* the subway's sign over it */
-    front(z0, -3.0f, 3.0f, 10.0f, 12.4f, 0x1A1A22, P_DECAL);
-    front(z0, -2.8f, 2.8f, 10.2f, 12.2f, 0x2E5FA8, P_DECAL2);
-    for (int i = 0; i < 3; i++) front(z0, -2.2f + 1.6f * (float)i, -1.2f + 1.6f * (float)i, 10.7f, 11.7f, 0xF4F4F4, P_DECAL3);
-    if (dist < 100)
-      for (int i = 0; i < 6; i++) {
-        /* lamps along the top */
-        float x = -15 + 6 * (float)i;
-        front(z0, x - 0.4f, x + 0.4f, 18, 18.8f, 0xFFF2B0, P_DECAL | P_NOHAZE);
-      }
+    front(z0, -3.0f, 3.0f, 8.5f, 10.5f, 0x1A1A22, P_DECAL);
+    front(z0, -2.8f, 2.8f, 8.7f, 10.3f, 0x2E5FA8, P_DECAL2);
+    for (int i = 0; i < 3; i++) front(z0, -2.2f + 1.6f * (float)i, -1.2f + 1.6f * (float)i, 9.1f, 9.9f, 0xF4F4F4, P_DECAL3);
   }
 }
 
