@@ -588,7 +588,7 @@ void shots_tick(void) {
           break;
         }
       }
-      if (s->y < -80 || s->y > 650) gone = true;
+      if (s->y < -80 || s->y > 650 || s->x < -60 || s->x > 900) gone = true;
     } else {
       float old = s->x;
       s->x += s->vx;

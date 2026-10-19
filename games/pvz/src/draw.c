@@ -638,7 +638,7 @@ void draw_lawn(bool hud_mower) {
     if (B.mowers[r].state < 2) {
       float x = B.mowers[r].x;
       int img = B.env == ENV_ROOF ? I_ROOF_CLEANER : water_row(r) ? I_POOL_CLEANER : I_MOWER;
-      gfx_image(img, SX(x), SY(row_y(r, x) + 5));
+      gfx_image(img, SX(x + 14), SY(row_y(r, x) + 5));   /* (the picture's middle: all of it on the screen) */
     }
     for (int i = 0; i < B.nshots; i++)
       if (B.shots[i].row == r && B.shots[i].kind != S_STAR && B.shots[i].kind < S_CABBAGE) draw_shot(&B.shots[i]);

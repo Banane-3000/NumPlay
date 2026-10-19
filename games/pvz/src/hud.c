@@ -148,7 +148,7 @@ void hud_draw(bool cursor) {
     if (!hud.shovel) gfx_image(I_SHOVEL, x + 14, 17);
   }
   meter_draw();
-  gfx_text(F_SMALL, 248, 236, gfx_fmt("Level %d-%d", level_world(B.level), level_stage(B.level)), C_WHITE,
+  gfx_text(F_SMALL, B.has_boss ? 240 : B.mode == MODE_VASE ? 316 : 248, 236, gfx_fmt("Level %d-%d", level_world(B.level), level_stage(B.level)), C_WHITE,
            GFX_RIGHT | GFX_OUTLINE);
   if (B.has_boss) {
     /* Dr. Zomboss's health */

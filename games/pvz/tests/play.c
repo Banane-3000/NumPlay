@@ -77,18 +77,34 @@ static bool shot_now(int tick) {
 
 /* ---------------------------------------------------------------- the robot */
 
-static const int prefer[] = {P_SUNFLOWER, P_REPEATER, P_SNOWPEA, P_PEASHOOTER, P_THREEPEATER, P_MELONPULT, P_KERNELPULT,
-                             P_CABBAGEPULT, P_FUMESHROOM, P_STARFRUIT, P_TALLNUT, P_WALLNUT, P_CACTUS, P_PUMPKIN,
-                             P_PLANTERN, P_LILYPAD, P_FLOWERPOT, P_PUFFSHROOM, P_CHERRYBOMB, P_SQUASH, P_TORCHWOOD,
-                             P_SPIKEWEED, P_GRAVEBUSTER, P_UMBRELLA, P_MAGNETSHROOM, P_COFFEEBEAN, P_BLOVER, P_JALAPENO};
+static const int prefer[] = {P_SUNFLOWER, P_REPEATER, P_THREEPEATER, P_SNOWPEA, P_PEASHOOTER, P_MELONPULT, P_KERNELPULT,
+                             P_CABBAGEPULT, P_CHERRYBOMB, P_CACTUS, P_SPLITPEA, P_TALLNUT, P_WALLNUT, P_LILYPAD,
+                             P_FLOWERPOT, P_PLANTERN, P_PUMPKIN, P_STARFRUIT, P_FUMESHROOM, P_PUFFSHROOM, P_TORCHWOOD,
+                             P_SQUASH, P_SPIKEWEED, P_GRAVEBUSTER, P_UMBRELLA, P_MAGNETSHROOM, P_COFFEEBEAN, P_JALAPENO};
+
+static bool level_has(int kind) {
+  for (int w = 0; w < B.nwaves && w < 50; w++)
+    for (int i = 0; i < 24 && B.waves[w][i] != 0xFF; i++)
+      if (B.waves[w][i] == kind) return true;
+  return false;
+}
 
 static void robot_seeds(int level) {
   if (B.nseeds || level_defs[level - 1].nseeds) return;
   uint8_t s[10];
   int n = 0;
+  bool has_repeater = plant_unlocked(P_REPEATER), pult = plant_unlocked(P_CABBAGEPULT);
   for (unsigned i = 0; i < sizeof prefer / sizeof prefer[0] && n < 10; i++) {
     int k = prefer[i];
     if (!plant_unlocked(k)) continue;
+    if (k == P_PEASHOOTER && has_repeater) continue;
+    if ((k == P_REPEATER || k == P_THREEPEATER || k == P_SNOWPEA || k == P_PEASHOOTER || k == P_SPLITPEA ||
+         k == P_TORCHWOOD) && B.env == ENV_ROOF)
+      continue;
+    if (k == P_CACTUS && !level_has(Z_BALLOON)) continue;
+    if (k == P_SPLITPEA && !level_has(Z_DIGGER)) continue;
+    if (k == P_UMBRELLA && !level_has(Z_CATAPULT) && !level_has(Z_BUNGEE)) continue;
+    if ((k == P_FUMESHROOM || k == P_PUFFSHROOM) && (pult || !is_night())) continue;
     if ((k == P_LILYPAD) && !is_pool()) continue;
     if (k == P_FLOWERPOT && B.env != ENV_ROOF) continue;
     if (k == P_GRAVEBUSTER && !B.ngraves) continue;
@@ -107,7 +123,9 @@ static int want(int col, int row, int *kinds) {
   if (water_row(row)) kinds[n++] = P_LILYPAD;
   if (B.env == ENV_ROOF) kinds[n++] = P_FLOWERPOT;
   if (col == 0) kinds[n++] = P_SUNFLOWER, kinds[n++] = P_SUNSHROOM;
+  if (col == 1) kinds[n++] = P_SPLITPEA, kinds[n++] = P_CACTUS;
   if (col >= 1 && col <= 4) {
+    if (col == 4) kinds[n++] = P_CACTUS;
     if (shooter_ok) kinds[n++] = P_REPEATER, kinds[n++] = P_THREEPEATER, kinds[n++] = P_SNOWPEA, kinds[n++] = P_PEASHOOTER;
     kinds[n++] = P_MELONPULT, kinds[n++] = P_KERNELPULT, kinds[n++] = P_CABBAGEPULT;
     kinds[n++] = P_FUMESHROOM, kinds[n++] = P_STARFRUIT, kinds[n++] = P_CACTUS, kinds[n++] = P_PUFFSHROOM;
@@ -118,6 +136,58 @@ static int want(int col, int row, int *kinds) {
   if (col == 7) kinds[n++] = P_SPIKEWEED, kinds[n++] = P_GRAVEBUSTER;
   kinds[n++] = P_COFFEEBEAN, kinds[n++] = P_PUMPKIN;
   return n;
+}
+
+/* a seed from the conveyor belt, where it does the most */
+static bool robot_packet(int i) {
+  int kind = B.packets[i].kind;
+  if (B.mode == MODE_BOWLING) {
+    for (int r = 0; r < B.nrows; r++) {
+      int rr = (r + (int)(B.ticks / 25)) % B.nrows;
+      if (!plant_issue(kind, 2, rr) && board_plant(i, 2, rr)) return true;
+    }
+    return false;
+  }
+  /* Dr. Zomboss: ice for his fire ball (and his head), fire for his ice ball */
+  if (B.has_boss && (kind == P_ICESHROOM || kind == P_JALAPENO)) {
+    bool fire = boss.ball.on && boss.ball.kind == 0, ice = boss.ball.on && boss.ball.kind == 1;
+    if (kind == P_ICESHROOM && (fire || boss_vulnerable()))
+      for (int r = 0; r < B.nrows; r++)
+        for (int c = 0; c < 6; c++)
+          if (!plant_issue(kind, c, r) && board_plant(i, c, r)) return true;
+    if (kind == P_JALAPENO && ice)
+      for (int c = 0; c < 6; c++)
+        if (!plant_issue(kind, c, boss.ball.row) && board_plant(i, c, boss.ball.row)) return true;
+    /* (or on the zombies, when they are close) */
+    for (int k = 0; k < B.nzombies; k++) {
+      const Zombie *z = &B.zombies[k];
+      if (z->health > 0 && z->x < (kind == P_JALAPENO ? 400 : 250) && !plant_issue(kind, col_at(z->x), z->row))
+        return board_plant(i, col_at(z->x), z->row);
+    }
+    return false;
+  }
+  /* the instant ones: on the zombie nearest the house */
+  if (kind == P_CHERRYBOMB || kind == P_JALAPENO || kind == P_SQUASH || kind == P_TANGLEKELP || kind == P_ICESHROOM ||
+      kind == P_DOOMSHROOM) {
+    const Zombie *near = NULL;
+    for (int k = 0; k < B.nzombies; k++) {
+      const Zombie *z = &B.zombies[k];
+      if (z->health > 0 && !(z->flags & ZF_HYPNO) && z->x < 700 && (!near || z->x < near->x) &&
+          !plant_issue(kind, col_at(z->x), z->row))
+        near = z;
+    }
+    return near && board_plant(i, col_at(near->x), near->row);
+  }
+  /* the others where they'd go, the rows in turn */
+  for (int r = 0; r < B.nrows; r++) {
+    int rr = (r + (int)(B.ticks / 25)) % B.nrows;
+    for (int c = 0; c < COLS - 2; c++) {
+      int kinds[24], n = want(c, rr, kinds);
+      for (int k = 0; k < n; k++)
+        if (kinds[k] == kind && !plant_issue(kind, c, rr) && board_plant(i, c, rr)) return true;
+    }
+  }
+  return false;
 }
 
 static void robot(void) {
@@ -135,26 +205,43 @@ static void robot(void) {
     return;
   }
   if (B.mode == MODE_VASE) {
+    /* the seeds found: where a zombie is, or in the rows in turn */
     if (B.ndrops) {
-      for (int r = 0; r < B.nrows; r++)
+      int kind = B.drops[0].kind, row = -1;
+      for (int i = 0; i < B.nzombies; i++)
+        if (B.zombies[i].health > 0 && (row < 0 || B.zombies[i].x < B.zombies[row].x)) row = i;
+      row = row >= 0 ? B.zombies[row].row : (int)(B.ticks / 7) % B.nrows;
+      if (kind == P_SQUASH || kind == P_CHERRYBOMB) {
+        for (int i = 0; i < B.nzombies; i++)
+          if (B.zombies[i].health > 0 && !plant_issue(kind, col_at(B.zombies[i].x), B.zombies[i].row)) {
+            board_plant(0, col_at(B.zombies[i].x), B.zombies[i].row);
+            break;
+          }
+      } else
         for (int c = 0; c < 5 && B.ndrops; c++)
-          if (!plant_issue(B.drops[0].kind, c, r)) board_plant(0, c, r);
+          if (!plant_issue(kind, c, row) && board_plant(0, c, row)) break;
       if (B.ndrops && B.drops[0].left < 50) B.drops[0] = B.drops[--B.ndrops];
-    } else if (B.nvases && B.ticks % 120 == 0)
-      board_break_vase(B.vases[0].col, B.vases[0].row);
+    } else if (B.nvases && B.ticks % 150 == 0) {
+      /* a green one first, then from the far side, when the zombies out are few */
+      int alive = 0, pick = 0;
+      for (int i = 0; i < B.nzombies; i++) alive += B.zombies[i].health > 0;
+      for (int i = 1; i < B.nvases; i++)
+        if (B.vases[i].green > B.vases[pick].green ||
+            (B.vases[i].green == B.vases[pick].green && B.vases[i].col > B.vases[pick].col))
+          pick = i;
+      if (alive < 2 || B.vases[pick].green) board_break_vase(B.vases[pick].col, B.vases[pick].row);
+    }
     return;
   }
   if (has_conveyor()) {
     if (!B.npackets || B.ticks % 25) return;
-    int kind = B.packets[0].kind;
-    for (int r = 0; r < B.nrows; r++)
-      for (int c = 0; c < (B.mode == MODE_BOWLING ? 3 : COLS - 2); c++) {
-        int rr = (r + (int)(B.ticks / 25)) % B.nrows, cc = B.mode == MODE_BOWLING ? 2 : c;
-        if (!plant_issue(kind, cc, rr) && board_plant(0, cc, rr)) return;
-      }
-    /* nowhere: dropped */
-    memmove(&B.packets[0], &B.packets[1], (size_t)(B.npackets - 1) * sizeof B.packets[0]);
-    B.npackets--;
+    for (int i = 0; i < B.npackets; i++)
+      if (robot_packet(i)) return;
+    /* nowhere, the belt full: the first one dropped */
+    if (B.npackets >= 8) {
+      memmove(&B.packets[0], &B.packets[1], (size_t)(B.npackets - 1) * sizeof B.packets[0]);
+      B.npackets--;
+    }
     return;
   }
   /* plants: every cell, what it wants first */
@@ -202,6 +289,15 @@ static int sim(int level, int frames, const char *out, bool quiet) {
     board_tick();
     vis_ticks++;
     if (B.nzombies > most) most = B.nzombies;
+    if (getenv("PVZ_DEBUG") && t % 500 == 0) {
+      int lob = 0, other = 0;
+      for (int i = 0; i < B.nshots; i++) lob += B.shots[i].kind >= S_CABBAGE, other += B.shots[i].kind < S_CABBAGE;
+      printf("t %d plants %d shots %d/%d:", t, B.nplants, lob, other);
+      for (int i = 0; i < B.nzombies; i++)
+        printf(" [k%d r%d x%.0f h%d a%d f%x]", B.zombies[i].kind, B.zombies[i].row, B.zombies[i].x, B.zombies[i].health,
+               B.zombies[i].armor, B.zombies[i].flags);
+      printf("\n");
+    }
     if (shot_now(t)) {
       gfx_begin();
       draw_lawn(true);
@@ -217,6 +313,7 @@ static int sim(int level, int frames, const char *out, bool quiet) {
   if (!quiet || B.phase != PH_WON)
     printf("level %2d-%-2d %-10s ticks %6d waves %2d/%-2d kills %4d planted %3d most zombies %d\n", level_world(level),
            level_stage(level), how, t, B.wave, B.nwaves, B.kills, B.planted, most);
+  if (B.has_boss && (!quiet || B.phase != PH_WON)) printf("Dr. Zomboss: %d of %d\n", (int)boss.health, BOSS_HEALTH);
   return B.phase == PH_WON ? 0 : 1;
 }
 
