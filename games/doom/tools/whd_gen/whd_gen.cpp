@@ -2405,6 +2405,19 @@ std::vector<int> convert_sidedefs(wad &wad, const texture_index &tex_index, lump
     hash = hash * 31 + count;
     if (super_tiny) {
         std::vector<uint8_t> sides_z;
+        // the level's wall textures: its sides give them by their place in this table (in a byte), the table (after
+        // the sides, then its length) gives their numbers
+        std::vector<uint16_t> level_textures = {0};
+        std::map<int, int> level_texture_of;
+        auto level_texture = [&](int t) {
+            if (!t) return 0;
+            auto it = level_texture_of.find(t);
+            if (it != level_texture_of.end()) return it->second;
+            if (level_textures.size() == 256) fail("a level with more than 255 wall textures\n");
+            level_texture_of[t] = (int) level_textures.size();
+            level_textures.push_back((uint16_t) t);
+            return (int) level_textures.size() - 1;
+        };
         for (int i = 0; i < count; i++) {
             uint s0 = sides_z.size();
             auto msd = get_field_inc<mapsidedef_t>(lump.data, offset);
@@ -2417,6 +2430,9 @@ std::vector<int> convert_sidedefs(wad &wad, const texture_index &tex_index, lump
             if (toptexture < 0 || midtexture < 0 || bottomtexture < 0) {
                 fail("Missing sidedef texture");
             }
+            toptexture = level_texture(toptexture);
+            midtexture = level_texture(midtexture);
+            bottomtexture = level_texture(bottomtexture);
 
             // some textures may be 0, we consider the following combinations of none or the same textures...
             // we want to encode as few of A, B, C as possible.
@@ -2560,6 +2576,12 @@ std::vector<int> convert_sidedefs(wad &wad, const texture_index &tex_index, lump
             side_metaz.record(sides_z.size() - s0);
         }
         sides_z_of_level = sides_z;
+        for (uint16_t t : level_textures) {
+            sides_z.push_back(t & 0xff);
+            sides_z.push_back(t >> 8);
+        }
+        sides_z.push_back(level_textures.size() & 0xff);
+        sides_z.push_back(level_textures.size() >> 8);
         lump.data = sides_z;
     } else {
         std::vector<uint8_t> whd_sides;
@@ -2883,8 +2905,11 @@ std::vector<int> convert_segs(wad &wad, lump &lump, const std::vector<int>& line
             rc.push_back(newdata.size());
             auto ms = get_field_inc<mapseg_t>(lump.data, offset);
             uint16_t l = linedef_mapping[ms.linedef];
-            assert(ms.v1 < 2048);
-            assert(ms.v2 < 2048);
+            // (a big level's vertexes from 2048 on: the top bit of the line says their top bits follow the seg)
+            if (l >= 32768) fail("a level with more than 32767 bytes of lines\n");
+            if ((uint16_t) ms.v1 >= 32768 || (uint16_t) ms.v2 >= 32768) fail("a level with more than 32767 vertexes\n");
+            bool high = (uint16_t) ms.v1 >= 2048 || (uint16_t) ms.v2 >= 2048;
+            if (high) l |= 0x8000;
             assert(ms.side == 0 || ms.side == 1);
             newdata.push_back(ms.side << 7 | ((ms.offset != 0) << 6) | ((ms.v2 >> 5)&0x38) | ((ms.v1 >> 8)&0x7));
             newdata.push_back(ms.v1 & 0xff);
@@ -2906,18 +2931,20 @@ std::vector<int> convert_segs(wad &wad, lump &lump, const std::vector<int>& line
                 newdata.push_back(ms.angle & 0xff);
                 newdata.push_back((ms.angle >> 8) & 0xff);
             }
+            if (high) newdata.push_back((((uint16_t) ms.v1 >> 11) & 15) | ((((uint16_t) ms.v2 >> 11) & 15) << 4));
         }
         offset = 0;
         int pos = 0;
         for (int i = 0; i < count; i++) {
             auto ms = get_field_inc<mapseg_t>(lump.data, offset);
             uint16_t l = newdata[pos+3] + (newdata[pos+4] << 8);
+            bool high = l & 0x8000;
+            l &= 0x7fff;
             assert(l == linedef_mapping[ms.linedef]);
             assert((newdata[pos] >> 7) == ms.side);
             uint16_t v1 = newdata[pos+1] | ((newdata[pos]&7)<<8);
             uint16_t v2 = newdata[pos+2] | ((newdata[pos]&0x38)<<5);
-            assert(v1 == ms.v1);
-            assert(v2 == ms.v2);
+            int seg_start = pos;
             short soffset = 0;
             if (newdata[pos] & 64) {
                 if (newdata[pos+5] < 128) {
@@ -2935,6 +2962,14 @@ std::vector<int> convert_segs(wad &wad, lump &lump, const std::vector<int>& line
                 assert((short)(newdata[pos] | (newdata[pos + 1] << 8)) == ms.angle);
                 pos += 2;
             }
+            if (high) {
+                v1 |= (newdata[pos] & 15) << 11;
+                v2 |= (newdata[pos] >> 4) << 11;
+                pos++;
+            }
+            (void) seg_start;
+            assert(v1 == (uint16_t) ms.v1);
+            assert(v2 == (uint16_t) ms.v2);
         }
         rc.push_back(newdata.size()); // we need an end marker too
     }
@@ -3092,6 +3127,14 @@ void convert_nodes(wad &wad, lump &lump) {
                     h = 0;
                 } else {
                     h = (16 * (mnode.bbox[s][BOXTOP] - bdash) - 1) / (bbox[BOXTOP] - bdash);
+                }
+                // (a child with no height or width: the smallest box from its corner, not one of -1 sixteenths)
+                if (w < 0) {
+                    w = 0;
+                    rdash = ldash + (bbox[BOXRIGHT] - ldash) / 16;
+                }
+                if (h < 0) {
+                    h = 0;
                 }
                 int tdash = bdash + ((bbox[BOXTOP] - bdash) * (1 + h)) / 16;
                 if (l < 0 || l > 15 || b < 0 || b > 15 || w < 0 || w > 15 || h < 0 || h >> 15) {

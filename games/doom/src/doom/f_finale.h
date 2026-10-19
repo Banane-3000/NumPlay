@@ -61,5 +61,9 @@ void F_BunnyDrawPatches(void);
 #endif
 // return the sprite to to draw or -1-x to draw x flipped
 int F_CastSprite(void);
+#if NUMWORKS
+int F_NwBunnyScrolled(void);
+void F_NwBunnyPatches(void);
+#endif
 void	F_CastDrawer (void);
 #endif

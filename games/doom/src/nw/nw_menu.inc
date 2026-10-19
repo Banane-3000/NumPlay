@@ -102,15 +102,16 @@ static const char nw_power_codes[] = "vsiral";
 static const char *const nw_power_names[] = {"INVULNERABLE", "BERSERK", "INVISIBLE", "RADIATION SUIT",
                                              "COMPUTER MAP", "LIGHT GOGGLES"};
 
+boolean ST_Responder(event_t *ev);
+
 static void M_NwType(const char *code)
 {
+    // (straight to the status bar's cheat checks, as each key typed would go: the event queue holds 8)
     M_ClearMenus();
     for (; *code; code++)
     {
         event_t ev = {ev_keydown, *code, *code, 0, 0, 0};
-        D_PostEvent(&ev);
-        ev.type = ev_keyup;
-        D_PostEvent(&ev);
+        ST_Responder(&ev);
     }
 }
 

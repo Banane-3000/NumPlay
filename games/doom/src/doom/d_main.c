@@ -2211,8 +2211,9 @@ void D_DoomMain (void)
     {
         // (tests: straight into a level, on Ultra-Violence)
         autostart = true;
-        startepisode = nw_warp / 10;
-        startmap = nw_warp % 10;
+        // (EM: episode E, map M; Doom II: the map's number)
+        startepisode = gamemode == commercial ? 1 : nw_warp / 10;
+        startmap = gamemode == commercial ? nw_warp : nw_warp % 10;
         startskill = sk_hard;
     }
     if (nw_resume_ready())

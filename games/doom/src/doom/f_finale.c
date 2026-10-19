@@ -363,6 +363,28 @@ int		castonmelee;
 boolean		castattacking;
 
 
+#if NUMWORKS
+// (a build of chosen maps, tools/pick.py, has the pictures of the monsters in its maps: the cast goes past the
+// others, whose pictures are empty)
+static boolean F_NwCastMissing(void)
+{
+    const state_t *st = &states[mobjinfo[castorder[castnum].type].seestate];
+    spriteframeref_t f = sprite_frame(st->sprite, st->frame & FF_FRAMEMASK);
+    int lump = spriteframe_rotates(f) ? spriteframe_rotated_pic(f, 0) : spriteframe_unrotated_pic(f);
+    return sprite_width(lump) <= FRACUNIT;
+}
+
+static void F_NwCastNext(void)
+{
+    for (int i = 0; i < 20 && F_NwCastMissing(); i++)
+    {
+        castnum++;
+        if (castorder[castnum].name == NULL)
+            castnum = 0;
+    }
+}
+#endif
+
 //
 // F_StartCast
 //
@@ -371,6 +393,9 @@ void F_StartCast (void)
     if (finalestage == F_STAGE_CAST) return; // seems to be a bug in general, but seems easier for us to start the cast wipe multiple times
     wipegamestate = -1;		// force a screen wipe
     castnum = 0;
+#if NUMWORKS
+    F_NwCastNext();
+#endif
     caststate = &states[mobjinfo[castorder[castnum].type].seestate];
     casttics = state_tics(caststate);
     castdeath = false;
@@ -400,6 +425,9 @@ void F_CastTicker (void)
 	castdeath = false;
 	if (castorder[castnum].name == NULL)
 	    castnum = 0;
+#if NUMWORKS
+	F_NwCastNext();
+#endif
 	if (mobjinfo[castorder[castnum].type].seesound)
 	    S_StartSound (NULL, mobjinfo[castorder[castnum].type].seesound);
 	caststate = &states[mobjinfo[castorder[castnum].type].seestate];
@@ -604,6 +632,31 @@ void F_CastDrawer (void)
 #else
     F_CastPrint (DEH_String(castorder[castnum].name));
 #endif
+}
+#endif
+
+#if NUMWORKS
+// the calculator draws the screens band by band (nw/nw_back.inc): how far the third episode's ending has
+// scrolled from PFUB2 to PFUB1 (vanilla's F_BunnyScroll), and "THE END" over it
+int F_NwBunnyScrolled(void)
+{
+    int scrolled = (320 - ((signed int) finalecount - 230) / 2);
+    if (scrolled > 320)
+        scrolled = 320;
+    if (scrolled < 0)
+        scrolled = 0;
+    return scrolled;
+}
+
+void F_NwBunnyPatches(void)
+{
+    int stage;
+    if (finalecount < 1130)
+        return;
+    stage = finalecount < 1180 ? 0 : (finalecount - 1180) / 5;
+    if (stage > 6)
+        stage = 6;
+    V_DrawPatch((SCREENWIDTH - 13 * 8) / 2, (SCREENHEIGHT - 8 * 8) / 2, VPATCH_NAME(END0) + stage);
 }
 #endif
 

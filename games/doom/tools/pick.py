@@ -250,6 +250,29 @@ def unpack_sides(lumps):
     return [[n, bytes(lines) if n == "LINEDEFS" else bytes(out) if n == "SIDEDEFS" else v] for n, v in lumps]
 
 
+def renumber_tags(name, lumps):
+    """the map's tags numbered from 1 (the calculator's packed maps keep them in a byte), but for 666 and 667, which
+    the bosses' deaths look for"""
+    d = dict(lumps[1:])
+    lines, sectors = bytearray(d["LINEDEFS"]), bytearray(d["SECTORS"])
+    places = [(lines, i + 8) for i in range(0, len(lines) - 13, 14)]
+    places += [(sectors, i + 24) for i in range(0, len(sectors) - 25, 26)]
+    tags = {struct.unpack("<H", b[o:o + 2])[0] for b, o in places}
+    kept = {0, 666, 667}
+    new = {}
+    if not all(t < 254 or t in kept for t in tags):
+        others = sorted(tags - kept)
+        if len(others) > 253:
+            fail(f"{name} has {len(others)} tags: the calculator's build has room for 253")
+        new = {t: k + 1 for k, t in enumerate(others)}
+    for b, o in places:
+        t = struct.unpack("<H", b[o:o + 2])[0]
+        if b is lines and t in (666, 667):
+            t = t - 666 + 254  # (as whd_gen packs the sectors' 666 and 667, and the engine knows them)
+        struct.pack_into("<H", b, o, new.get(t, t))
+    return [[n, bytes(lines) if n == "LINEDEFS" else bytes(sectors) if n == "SECTORS" else v] for n, v in lumps]
+
+
 def renumber_bsp(lumps):
     """the map's BSP tree numbered as id's node builder numbers it (the calculator's packed nodes give their
     children as near numbers): each node after its children, a node child just before its parent (the left one
@@ -369,8 +392,6 @@ def main():
         for item in rest:
             if item[0] == tl:
                 item[1] = bytes(body)
-    if kept_textures > 255:
-        fail(f"{kept_textures} wall textures: the calculator's build has room for 255 (choose fewer maps)")
     sprites = needed_sprites(kept, maps)
     # (the markers inside, P1_START..., stay as they are)
     sections["S"] = [[n, d if n[:4] in sprites or n.endswith(("_START", "_END")) else EMPTY_PATCH]
@@ -382,11 +403,9 @@ def main():
     if len(sections["F"]) > 255:
         fail(f"{len(sections['F'])} flats: the calculator's build has room for 255")
 
-    # (a calculator has no sound: the music and sound effects are left out, and so are the demos of maps left
-    # out, or recorded by other versions of Doom than 1.9)
+    # (the demos of maps left out, or recorded by other versions of Doom than 1.9, are left out; the sounds and
+    # music are emptied by whd_gen -silent, which reuses their places)
     def keep_lump(name, d):
-        if re.fullmatch(r"D_\w+|DS\w+|DP\w+|GENMIDI|DMXGUS\w*", name):
-            return False
         if re.fullmatch(r"DEMO\d", name):
             if len(d) < 13 or d[0] != 109:
                 return False
@@ -394,9 +413,27 @@ def main():
             return demo_map in kept
         return True
     rest = [[n, d] for n, d in rest if keep_lump(n, d)]
+    # the screens of the episodes and maps left out become empty pictures: their intermission maps, animations,
+    # level names and endings (the pages the title and the menu show stay)
+    unused = set()
+    if mode != "commercial":
+        eps = {map_order(n)[0] for n in kept}
+        for e in range(1, 5):
+            if e not in eps:
+                unused |= {f"WIMAP{e - 1}", {2: "VICTORY2", 3: "PFUB1", 4: "ENDPIC"}.get(e, "")}
+                if e == 3:
+                    unused |= {"PFUB2"} | {f"END{i}" for i in range(7)}
+        unused |= {f"WILV{e - 1}{m - 1}" for e in range(1, 5) for m in range(1, 10) if f"E{e}M{m}" not in kept}
+        prefixes = tuple(f"WIA{e - 1}" for e in range(1, 4) if e not in eps)
+    else:
+        unused |= {f"CWILV{m - 1:02d}" for m in range(1, 33) if f"MAP{m:02d}" not in kept}
+        prefixes = ()
+    # (Read This! shows the calculator's keys, and the order page HELP2 before The Ultimate Doom)
+    unused |= {"HELP", "HELP1"} | ({"HELP2"} if mode in ("retail", "commercial") else set())
+    rest = [[n, EMPTY_PATCH if n in unused or (prefixes and n.startswith(prefixes)) else d] for n, d in rest]
     out = list(rest)
     for name in kept:
-        out += renumber_bsp(unpack_sides(maps[name]))
+        out += renumber_bsp(renumber_tags(name, unpack_sides(maps[name])))
     out.append(["NWMODE", mode.encode()])
     for k, (a_, b_) in SECTIONS.items():
         out.append([a_, b""])
@@ -405,6 +442,8 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     path = os.path.join(a.out, os.path.basename(a.wads[0]).lower())
     write_wad(path, out)
+    # (for tests/check.py --wad: the game and its maps)
+    open(os.path.join(a.out, "maps.txt"), "w").write(f"{mode} {' '.join(kept)}\n")
     print(f"pick.py: {path}: {mode}, maps {' '.join(kept)}; {kept_textures} wall textures, "
           f"{len(used_patches)} wall patches, {len(sections['F'])} flats, "
           f"{len({n[:4] for n, d in sections['S'] if d != EMPTY_PATCH})} sprites")

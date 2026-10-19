@@ -93,7 +93,6 @@
 #define NO_USE_BOUND_CONFIG 1
 #define USE_MEMORY_WAD 1
 #define NO_ZONE_DEBUG 1
-#define NO_USE_FINALE_CAST 1 /* Doom II's */
 #define NO_USE_ENDDOOM 1
 
 /* the renderer (pd_render.cpp), with room for this many runs of pixels in the view each frame */

@@ -87,6 +87,7 @@ line_t*		lines;
 uint8_t num_switched_sides = 0;
 #if WHD_SUPER_TINY
 const side_t*		sides_z;
+const uint8_t *nw_side_textures;
 uint16_t whd_sidemul;
 uint16_t whd_vmul;
 #else
@@ -667,6 +668,12 @@ void P_LoadSideDefs (int lump)
     printf("SIDEDEF LOAD map ? sides size = %08x\n", W_LumpLength(lump));
 #endif
     sides_z = (const side_t *) W_CacheLumpNum (lump,PU_LEVEL);
+    {
+        // (the level's wall textures, after its sides: whd_gen)
+        int len = W_LumpLength(lump);
+        int n = sides_z[len - 2] | sides_z[len - 1] << 8;
+        nw_side_textures = sides_z + len - 2 - 2 * n;
+    }
 #else
     static_assert(sizeof(side_t)==12, "");
     numsides = W_LumpLength (lump) / sizeof(side_t); // todo should really be packed?

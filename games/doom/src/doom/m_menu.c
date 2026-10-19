@@ -867,8 +867,12 @@ void M_SaveSelect(int choice)
     // (no letters to type on a calculator: the save is named after the level, OK saves it)
     {
         extern const constcharstar mapnames[];
+        extern const char * const mapnames_commercial[];
         if (gamemode != commercial && gameepisode >= 1 && gameepisode <= 4 && gamemap >= 1 && gamemap <= 9)
             M_StringCopy(savegamestrings[choice], mapnames[(gameepisode - 1) * 9 + gamemap - 1], SAVESTRINGSIZE);
+        else if (gamemode == commercial && gamemap >= 1 && gamemap <= 32)
+            M_StringCopy(savegamestrings[choice], mapnames_commercial[gamemap - 1
+                         + (gamemission == pack_plut ? 32 : gamemission == pack_tnt ? 64 : 0)], SAVESTRINGSIZE);
     }
 #endif
     if (!strcmp(savegamestrings[choice], EMPTYSTRING))
@@ -1040,7 +1044,7 @@ static const struct { const char *what; uint8_t actions[4]; } keys_page[] = {
 void M_DrawKeys(void)
 {
     static const char title[] = "THE CALCULATOR'S KEYS";
-    static const char weapons[] = "WEAPONS: THEIR NUMBERS. HOME KEEPS THE MOMENT.";
+    static const char weapons[] = "WEAPONS: THEIR NUMBERS. HOME: KEEP, QUIT.";
     static const char menus[] = "IN MENUS: ARROWS, OK, BACK. OPTIONS: KEYS.";
     int y = 20;
 
@@ -1078,7 +1082,8 @@ void M_DrawReadThis2(void)
     }
 #endif
 #if NUMWORKS
-    inhelpscreens = 2; // (the order page: HELP1's keys are a PC's)
+    // (the order page: HELP1's keys are a PC's; The Ultimate Doom has only this page: the calculator's keys)
+    inhelpscreens = gameversion >= exe_ultimate ? 4 : 2;
 #else
     inhelpscreens = 1;
 #endif
@@ -1099,7 +1104,11 @@ void M_DrawReadThisCommercial(void)
         return;
     }
 #endif
+#if NUMWORKS
+    inhelpscreens = 4; // (the calculator's keys, not HELP's)
+#else
     inhelpscreens = 3;
+#endif
 
 #if !USE_WHD
     V_DrawPatchDirect(0, 0, W_CacheLumpName(DEH_String("HELP"), PU_CACHE));
@@ -1197,6 +1206,20 @@ void M_NewGame(int choice)
 #if NET_MENU
     EpiDef.prevMenu = &MainDef;
     netgame_choice = -1;
+#endif
+#if NUMWORKS
+    // (a build of chosen maps: the cursor starts on an episode that has some)
+    if (gamemode != commercial && !G_NwNextMapIn(EpiDef.lastOn + 1, 1, 9))
+    {
+        for (int e = 0; e < EpiDef.numitems; e++)
+        {
+            if (G_NwNextMapIn(e + 1, 1, 9))
+            {
+                EpiDef.lastOn = e;
+                break;
+            }
+        }
+    }
 #endif
     if (gamemode == commercial || gameversion_is_chex(gameversion))
 	M_SetupNextMenu(&NewDef);

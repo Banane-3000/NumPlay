@@ -323,14 +323,15 @@ extern "C" void nw_masked_flush(void) {
 // ---------------------------------------------------------------------------------------------------------------
 // screens without the 3D view: their pictures for the band's columns
 
-// a 320 x 200 picture's columns x0 to x1 (each decoded top to bottom, once)
-static void nw_draw_splash(int patch_num, int x0, int x1) {
+// a 320 x 200 picture's columns x0 to x1 (each decoded top to bottom, once), those from x0 + shift to x1 + shift
+// for a picture scrolled shift columns to the left
+static void nw_draw_splash(int patch_num, int x0, int x1, int shift = 0) {
     patch_decode_info pdi;
     get_patch_decoder(patch_num, &pdi);
     const uint16_t *col_offsets = pdi.col_offsets;
     const uint8_t *patch_decoder_table = get_patch_decoder_table(patch_num, pdi.decoder);
     int h = patch_height(pdi.patch);
-    for (int col = x0; col < x1; col++) {
+    for (int col = x0 + shift; col < x1 + shift; col++) {
         uint16_t col_offset = col_offsets[col];
         if (0xff == (col_offset >> 8)) col_offset = col_offsets[col_offset & 0xff];
         th_bit_input bi;
@@ -339,7 +340,7 @@ static void nw_draw_splash(int patch_num, int x0, int x1) {
         } else {
             th_bit_input_init_bit_offset(&bi, pdi.patch + pdi.data_index, col_offset);
         }
-        uint8_t *dest = render_frame_buffer + col;
+        uint8_t *dest = render_frame_buffer + col - shift;
         uint8_t prev_pixel = 0;
         for (int y = 0; y < h && y < SCREENHEIGHT; y++, dest += NW_STRIDE) {
             uint16_t p = th_decode_table_special_16(pdi.decoder, patch_decoder_table, &bi);
@@ -388,7 +389,18 @@ static void nw_draw_background(int x0, int x1, int help) {
                     return;
                 } else if (finalestage == F_STAGE_ARTSCREEN) {
                     const char *ln = F_ArtScreenLumpName();
-                    if (ln) patch_num = W_GetNumForName(ln);
+                    if (ln) {
+                        patch_num = W_GetNumForName(ln);
+                    } else {
+                        // (the third episode's: PFUB2 scrolling away to PFUB1)
+                        int scrolled = F_NwBunnyScrolled();
+                        int split = 320 - scrolled;
+                        if (x0 < split) nw_draw_splash(W_GetNumForName("PFUB2"), x0, x1 < split ? x1 : split, scrolled);
+                        if (x1 > split) nw_draw_splash(W_GetNumForName("PFUB1"), x0 > split ? x0 : split, x1, -split);
+                        return;
+                    }
+                } else if (finalestage == F_STAGE_CAST) {
+                    patch_num = W_GetNumForName("BOSSBACK");
                 }
                 break;
             default: break;
@@ -558,6 +570,9 @@ static void nw_draw_band(uint8_t *band, int x0, int x1, bool view, int help, boo
             nw_direct = true;
             M_DrawKeys();
             nw_direct = false;
+        } else if (gamestate == GS_FINALE && finalestage == F_STAGE_CAST && !help) {
+            nw_scratch_base = render_col_count;
+            nw_draw_cast(F_CastSprite());
         }
     }
     V_DrawPatchListBand(nw_patches);
@@ -694,6 +709,15 @@ void pd_end_frame(int wipe_start) {
         else if (gamestate == GS_INTERMISSION) WI_Drawer();
     } else if (gamestate == GS_LEVEL) {
         ST_doPaletteStuff();
+    }
+    if (gamestate == GS_FINALE && !help) {
+        if (finalestage == F_STAGE_CAST) {
+            // (the monster's picture is drawn as the weapon is: the frame's pictures start again)
+            pd_begin_frame();
+            F_CastDrawer();
+        } else if (finalestage == F_STAGE_ARTSCREEN && !F_ArtScreenLumpName()) {
+            F_NwBunnyPatches();
+        }
     }
     ST_FpsDrawer(-1);
     if (gamestate == GS_LEVEL && gametic && !inhelpscreens) HU_Drawer();

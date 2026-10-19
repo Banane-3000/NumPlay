@@ -1461,6 +1461,32 @@ static void nw_draw_psprite(pspdef_t *psp, const int8_t *lights) {
     if (c0 <= b) nw_draw_vis_sprite(vis, c0, b);
 }
 
+// Doom II's cast (f_finale.c): the monster's picture as V_DrawPatch puts it at (160, 170), in the band
+void nw_draw_cast(int lump) {
+    boolean flip = lump < 0;
+    if (flip) lump = -1 - lump;
+    int ds = detailshift;
+    detailshift = 0;
+    vissprite_t avis, *vis = &avis;
+    vis->mobjflags = 0;
+    vis->x1 = SCREENWIDTH / 2 - (sprite_offset(lump) >> FRACBITS);
+    vis->x2 = vis->x1 + (sprite_width(lump) >> FRACBITS) - 1;
+    vis->scale = FRACUNIT;
+    vis->texturemid = centeryfrac - (170 << FRACBITS) + sprite_topoffset(lump);
+    vis->xiscale = flip ? -FRACUNIT : FRACUNIT;
+    vis->startfrac = flip ? sprite_width(lump) - 1 : 0;
+    vis->patch = lump;
+    vis->colormap = 0;
+    int a = vis->x1 > nw_band_x0 ? vis->x1 : nw_band_x0;
+    int b = vis->x2 < nw_band_x1 - 1 ? vis->x2 : nw_band_x1 - 1;
+    for (int x = a; x <= b; x++) {
+        nw_clipbot[x] = SCREENHEIGHT;
+        nw_cliptop[x] = -1;
+    }
+    if (a <= b) nw_draw_vis_sprite(vis, a, b);
+    detailshift = ds;
+}
+
 static void nw_draw_player_sprites(void) {
     int lightnum = (mobj_sector(viewplayer->mo)->lightlevel >> LIGHTSEGSHIFT) + extralight;
     const int8_t *lights = scalelight[lightnum < 0 ? 0 : lightnum >= LIGHTLEVELS ? LIGHTLEVELS - 1 : lightnum];

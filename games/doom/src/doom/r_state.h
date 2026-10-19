@@ -273,23 +273,32 @@ static inline uint side_sectornum(side_t *side) {
 }
 #define side_sector(side) (sectors + side_sectornum(side))
 
+// the level's wall textures: a side gives them by their place in this table (whd_gen)
+extern const uint8_t *nw_side_textures;
+static inline int side_texture(int k) {
+    return nw_side_textures[2 * k] | nw_side_textures[2 * k + 1] << 8;
+}
+
 static inline int side_toptexture(side_t *side) {
     if ((side[0] & 0xf) < 5) return 0;
-    return side[2] <= LAST_SWITCH_TEXTURE ? check_switch_texture(side, CST_TOP, side[2]) : side[2];
+    int t = side_texture(side[2]);
+    return t <= LAST_SWITCH_TEXTURE ? check_switch_texture(side, CST_TOP, t) : t;
 }
 
 static inline int side_midtexture(side_t *side) {
     static uint8_t posM[26] = { 0, 0, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 3, 3, 3, 3};
     uint enc = side[0] & 0xf;
     if (!posM[enc]) return 0;
-    return side[posM[enc]] <= LAST_SWITCH_TEXTURE ? check_switch_texture(side, CST_MID, side[posM[enc]]) : side[posM[enc]];
+    int t = side_texture(side[posM[enc]]);
+    return t <= LAST_SWITCH_TEXTURE ? check_switch_texture(side, CST_MID, t) : t;
 }
 
 static inline int side_bottomtexture(side_t *side) {
     static uint8_t posB[26] = { 0, 2, 0, 2, 3, 0, 2, 3, 0, 2, 3, 4, 0, 2, 3, 4};
     uint enc = side[0] & 0xf;
     if (!posB[enc]) return 0;
-    return side[posB[enc]] <= LAST_SWITCH_TEXTURE ? check_switch_texture(side, CST_BOTTOM, side[posB[enc]]) : side[posB[enc]];
+    int t = side_texture(side[posB[enc]]);
+    return t <= LAST_SWITCH_TEXTURE ? check_switch_texture(side, CST_BOTTOM, t) : t;
 }
 
 static inline int side_textureoffset16(side_t *side) {
@@ -558,10 +567,11 @@ static inline boolean line_validcount_update_check(should_be_const line_t *ld, i
 #define seg_offset(s) (((s)->offset) << FRACBITS)
 #define seg_next_step(s) 1
 #else
-#define seg_linedef(s) (&lines[(s)[3] + ((s)[4] << 8)])
+#define seg_linedef(s) (&lines[(s)[3] + (((s)[4] & 0x7f) << 8)])
 #define seg_side(s) ((s)[0] >> 7)
-#define seg_v1(s) (&vertexes[((s)[1] | (((s)[0]&0x07)<<8))])
-#define seg_v2(s) (&vertexes[((s)[2] | (((s)[0]&0x38)<<5))])
+static inline int seg_vertex_high(const seg_t *s);
+#define seg_v1(s) (&vertexes[((s)[1] | (((s)[0]&0x07)<<8)) | (seg_vertex_high(s) & 15) << 11])
+#define seg_v2(s) (&vertexes[((s)[2] | (((s)[0]&0x38)<<5)) | (seg_vertex_high(s) >> 4) << 11])
 static inline fixed_t seg_offset(const seg_t *s) {
     if (!(s[0] & 64)) {
         return 0;
@@ -573,20 +583,26 @@ static inline fixed_t seg_offset(const seg_t *s) {
     }
 }
 
+static inline int seg_offset_bytes(const seg_t *s) {
+    return s[0] & 64 ? (s[5] & 128 ? 2 : 1) : 0;
+}
+
 static inline int seg_next_step(const seg_t *s) {
-    int size = 5;
-    if (s[0]&64) {
-        size += s[5]&128 ? 2 : 1;
-    }
+    int size = 5 + seg_offset_bytes(s);
 #if WHD_SEG_ANGLES
     size += 2;
 #endif
-    return size;
+    return size + (s[4] >> 7);
+}
+
+// (a big level's vertexes from 2048 on: the line's top bit says their top bits are in a byte at the seg's end)
+static inline int seg_vertex_high(const seg_t *s) {
+    return s[4] & 128 ? s[seg_next_step(s) - 1] : 0;
 }
 #if WHD_SEG_ANGLES
-// the seg's angle as the WAD has it (the last two bytes of its record, whd_gen -lossless)
+// the seg's angle as the WAD has it (after its offset, whd_gen -lossless)
 static inline angle_t seg_angle_whd(const seg_t *s) {
-    int p = seg_next_step(s) - 2;
+    int p = 5 + seg_offset_bytes(s);
     return (angle_t)(s[p] | (s[p + 1] << 8)) << 16;
 }
 #endif

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Checks of Doom on a computer (make test): the host build, with AddressSanitizer and UBSan, through the
 title and its demos, the menus, every level of the episode, an intermission, the ending, the saves and the
-moment kept on Home.
+moment kept on Home; for a build from another WAD (--wad), its maps, an exit, the menus and the saves.
 
-    python3 tests/check.py build/play"""
+    python3 tests/check.py build/play [--wad]"""
 import os
 import re
 import shutil
@@ -48,6 +48,59 @@ def check(cond, what):
     if not cond:
         failures.append(what)
     print(("ok  " if cond else "FAIL"), what, flush=True)
+
+
+def report():
+    if failures:
+        print(f"\n{len(failures)} failed:")
+        for f in failures:
+            print(" ", f)
+        sys.exit(1)
+    print("\nall good")
+    sys.exit(0)
+
+
+# a build from another WAD (make test WAD=...): the title, each of its maps played, the first one's exit, a new
+# game from the menus, a save and its loading
+if "--wad" in sys.argv:
+    mode, *maps = open(os.path.join(os.path.dirname(PLAY), "wad", "maps.txt")).read().split()
+
+    def warp(name):
+        return name[3:].lstrip("0") if name.startswith("MAP") else name[1] + name[3]
+
+    def got(e):
+        return f"MAP{e['map']:02d}" if mode == "commercial" else f"E{e['episode']}M{e['map']}"
+
+    e = run(["--ms", "60000"], what="the title")
+    if e:
+        check(e["quit"] == 1, f"the title runs ({mode}, maps {' '.join(maps)}) and quits on Home")
+    walk = ",".join(f"{t}-{t + 900}:up,{t + 900}-{t + 1300}:right,{t + 300}-{t + 400}:ok" for t in range(1500, 20000, 1500))
+    for name in maps:
+        e = run(["--warp", warp(name), "--keys", walk, "--ms", "21000"], what=name)
+        if e:
+            check(e["state"] == GS_LEVEL and got(e) == name and e["leveltime"] > 500,
+                  f"{name}: played for {e['leveltime']} tics, health {e['health']}, {e['kills']} kills, "
+                  f"{e['columns']} columns at most, {e['zone'] // 1024} KB of the zone")
+    e = run(["--warp", warp(maps[0]), "--exit-at", "3000", "--keys", "9000:ok,11000:ok,13000:ok,15000:ok",
+             "--ms", "20000"], what="the first map's exit")
+    if e:
+        check(e["state"] in (GS_LEVEL, GS_FINALE) and (e["state"] == GS_FINALE or got(e) in maps[1:]),
+              f"{maps[0]}'s exit: {got(e) if e['state'] == GS_LEVEL else 'the ending'}")
+    # (the episode menu starts on the first episode the build has)
+    e = run(["--keys", "2000:ok,2700:ok,3400:ok,4100:ok,6000-8000:up", "--ms", "10000"], what="a new game")
+    if e:
+        check(e["state"] == GS_LEVEL and got(e) == maps[0], f"a new game from the menus starts in {got(e)}")
+    saves = tempfile.mkdtemp(prefix="doom_saves_")
+    e = run(["--warp", warp(maps[0]), "--keys", "1500:exe,2000:down,2300:down,2600:down,3100:ok,3700:ok,4300:ok",
+             "--ms", "7000"], saves=saves, what="a save in a slot")
+    if e:
+        check("doomsav0.dsg" in e["files"], "saved in the first slot")
+        e = run(["--keys", "2000:ok,2700:down,3000:down,3400:ok,4000:ok", "--ms", "7000"], saves=saves,
+                what="loading the slot")
+        if e:
+            check(e["state"] == GS_LEVEL and got(e) == maps[0], "the slot loads")
+    shutil.rmtree(saves, ignore_errors=True)
+    report()
 
 
 # the title, the credits and the three demos, which must play exactly as in Chocolate Doom 3.1.0 (vanilla Doom
@@ -118,10 +171,4 @@ if e:
         check(e["state"] == GS_LEVEL and e["map"] == 1 and "doomsav0.dsg" in e["files"],
               "after a reinstall, the slot comes back from doom_saves.py and loads")
 shutil.rmtree(saves, ignore_errors=True)
-
-if failures:
-    print(f"\n{len(failures)} failed:")
-    for f in failures:
-        print(" ", f)
-    sys.exit(1)
-print("\nall good")
+report()

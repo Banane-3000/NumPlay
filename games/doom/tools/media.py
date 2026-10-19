@@ -57,10 +57,11 @@ media = os.path.join(ROOT, "docs", "media")
 os.makedirs(docs, exist_ok=True)
 
 # the title screen and the first demo, Phobos Lab: imps down a corridor, then zombiemen around the yellow key
-IMPS, KEY = (9200, 12700), (35300, 38500)
-title_shots = {"title": 2000, "imps": 10058, "fight": 36058, "lab": 57058}
+# (the screen melts into the demo first, as in vanilla)
+IMPS, KEY = (10257, 13757), (36357, 39557)
+title_shots = {"title": 2000, "imps": 11115, "fight": 37115, "lab": 58114}
 gif_times = frames(*IMPS) + frames(*KEY)
-pics = play([], list(title_shots.values()) + gif_times + [1000], 58000)
+pics = play([], list(title_shots.values()) + gif_times + [1000], 59000)
 for name, t in title_shots.items():
     save_png(pics[t], os.path.join(docs, f"{name}.png"))
 
@@ -84,9 +85,28 @@ for name, t in hangar_shots.items():
     save_png(pics[t], os.path.join(docs, f"{name}.png"))
 
 # Read This!: the calculator's keys
-pics = play(["--keys", "2000:ok,2600:down,2900:down,3200:down,3500:down,4000:ok"], [5000], 6000)
-save_png(pics[5000], os.path.join(docs, "keys.png"))
+pics = play(["--keys", "2000:ok,2600:down,2900:down,3200:down,3500:down,4000:ok"], [6500], 7000)
+save_png(pics[6500], os.path.join(docs, "keys.png"))
 
 # E1M8's exit: the episode's ending
 pics = play(["--warp", "18", "--exit-at", "3000"], [44000], 45000)
 save_png(pics[44000], os.path.join(docs, "ending.png"))
+
+# the Options menu, the Cheats menu over the game, and a smaller screen with its border
+pics = play(["--warp", "11", "--keys", "1500:exe,1900:down,2300:ok"], [3200], 4000)
+save_png(pics[3200], os.path.join(docs, "options.png"))
+cheats = "1500:exe,1900:down,2300:ok,2700:down,2900:down,3100:down,3300:down,3500:down,3900:ok"
+pics = play(["--warp", "11", "--keys", cheats], [4800], 5500)
+save_png(pics[4800], os.path.join(docs, "cheats.png"))
+pics = play(["--warp", "11", "--keys", "1500:minus,1800:minus,2100:minus,2600-3300:up"], [3600], 4200)
+save_png(pics[3600], os.path.join(docs, "border.png"))
+
+# Freedoom: Phase 2 (its pictures are free, under the BSD license), from a build of its first two maps: the super
+# shotgun in MAP02 (make host WAD=freedoom2.wad MAPS=MAP01-MAP02, that build/play copied elsewhere, then
+# python3 tools/media.py build/play <its copy>)
+if len(sys.argv) > 2:
+    PLAY = os.path.abspath(sys.argv[2])
+    cheat = ("1500:exe,2200:down,2700:ok,3200:down,3500:down,3800:down,4100:down,4400:down,4900:ok,5600:down,6200:ok,"
+             "7000:3,9000-9600:up,9900-10100:right,10300-11300:up,11500:ok")
+    pics = play(["--warp", "2", "--keys", cheat], [11600], 12000)
+    save_png(pics[11600], os.path.join(docs, "freedoom.png"))

@@ -64,6 +64,7 @@ typedef struct {
 /* band time (r_things.c): sprites, masked walls and the weapon of the band, in vanilla's order */
 void nw_sort_vissprites(void);
 void nw_draw_masked(void);
+void nw_draw_cast(int lump); /* Doom II's cast of monsters */
 /* ... their columns go to the back end, a sprite or a masked wall at a time */
 void nw_masked_column(int x, int yl, int yh, int base_offset, int fuzz);
 void nw_masked_flush(void);
