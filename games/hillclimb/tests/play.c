@@ -88,6 +88,20 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--coins")) coins = atol(argv[++i]);
     else if (!strcmp(argv[i], "--auto")) autop = true;
     else if (!strcmp(argv[i], "--trace")) trace = atoi(argv[++i]);
+    else if (!strcmp(argv[i], "--slopes")) {   /* the steepest slope of each 100 m of a stage, in degrees */
+      stage_set(atoi(argv[++i]));
+      for (int s = 0; s < 4000; s += 100) {
+        float most = 0, lo = 1e9f, hi = -1e9f;
+        for (float x = (float)s; x < s + 100; x += 0.5f) {
+          float a = atanf((stage_floor(x + 0.5f) - stage_floor(x)) / 0.5f) * 57.3f, h = stage_floor(x);
+          if (fabsf(a) > fabsf(most)) most = a;
+          if (h < lo) lo = h;
+          if (h > hi) hi = h;
+        }
+        printf("%5d m: steepest %5.1f, heights %6.1f to %6.1f\n", s, most, lo, hi);
+      }
+      return 0;
+    }
   }
   mkdir("build", 0755);
   mkdir(out, 0755);

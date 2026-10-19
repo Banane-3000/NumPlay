@@ -8,7 +8,7 @@
 
 Run run;
 
-#define SX 118      /* where the camera's point is on the screen */
+#define SX 124      /* where the camera's point is on the screen */
 #define SY 138
 #define PI 3.14159265f
 #define FLIP_TURN (1.5f * PI)   /* a flip counts once upside down and the other wheel on top: 270 degrees */
@@ -53,7 +53,7 @@ void run_start(int vehicle, int stg) {
   run.fuel = run.fuel_max = car_fuel_seconds(vehicle, sv.level[vehicle]);
   run.start_x = run.car.ch.x;
   run.best = sv.best[stg][vehicle];
-  run.cam_x = run.car.ch.x, run.cam_y = run.car.ch.y + 0.4f, run.cam_s = 30;
+  run.cam_x = run.car.ch.x, run.cam_y = run.car.ch.y + 0.4f, run.cam_s = 22;
   rnd_state = 12345u + (uint32_t)stg;
 }
 
@@ -221,14 +221,14 @@ void run_frame(uint32_t keys) {
   /* dust from the wheels that spin on the ground, smoke from the exhaust */
   for (int i = 0; i < c->nw; i++) {
     float slip = fabsf(c->wh[i].w * c->wr[i] - (c->wh[i].vx)), sp = fabsf(c->wh[i].vx);
-    if (c->ground[i] && (slip > 2.5f || sp > 6) && (run.frame + (uint32_t)i) % 3 == 0)
+    if (c->ground[i] && (slip > 2.0f || (sp > 9 && run.frame % 2)) && (run.frame + (uint32_t)i) % 4 == 0)
       particle(c->wh[i].x - c->wr[i] * 0.6f, c->wh[i].y - c->wr[i] * 0.8f, -c->wh[i].vx * 0.2f - rndf() * 2,
                1 + rndf() * 2, 0.5f, 0.22f + rndf() * 0.12f, 0);
   }
-  if (run.gas > 0.5f && fuel && run.frame % 6 == 0) {
+  if (run.gas > 0.5f && fuel && run.frame % 9 == 0 && car_speed(c) < 6) {
     float ex, ey;
     car_point(c, -1.4f, 0.2f, &ex, &ey);
-    particle(ex, ey, -1.2f + c->ch.vx * 0.3f, 0.6f, 0.9f, 0.25f, 1);
+    particle(ex, ey, -1.0f + c->ch.vx * 0.5f, 0.5f, 0.6f, 0.16f, 1);
   }
   for (int i = 0; i < run.npart; i++) {
     Particle *p = &run.part[i];
@@ -241,13 +241,13 @@ void run_frame(uint32_t keys) {
   for (int i = 0; i < NPOPUPS; i++)
     if (run.pop[i].text[0] && ++run.pop[i].t > 110) run.pop[i].text[0] = 0;
   /* the camera: ahead of the vehicle as it goes, zooming out with speed */
-  float sp = car_speed(c), lead = c->ch.vx * 0.13f;
-  if (lead > 2.6f) lead = 2.6f;
+  float sp = car_speed(c), lead = c->ch.vx * 0.2f;
+  if (lead > 3.5f) lead = 3.5f;
   if (lead < -1.5f) lead = -1.5f;
   float tx = c->ch.x + lead, ty = c->ch.y + 0.4f;
   run.cam_x += (tx - run.cam_x) * 0.12f;
   run.cam_y += (ty - run.cam_y) * 0.12f;
-  float ts = 30 - (sp > 22 ? 22 : sp) * 0.42f;
+  float ts = 22 - (sp > 20 ? 20 : sp) * 0.3f;
   run.cam_s += (ts - run.cam_s) * 0.03f;
 }
 
@@ -286,7 +286,8 @@ static uint32_t hash2(uint32_t a) {
 
 static void draw_sky(void) {
   if (sky_of != run.stage) make_sky();
-  gfx_rows(sky_rows, 0, SCREEN_H);
+  if (run.stage == ST_ALIEN) gfx_vgrad(0, 0, SCREEN_W, SCREEN_H, 0x0B2A22, 0x5A8A5E);   /* (a green night) */
+  else gfx_rows(sky_rows, 0, SCREEN_H);
   if (stage->stars) {   /* the Moon's and the alien planet's night: stars, and the Earth or a planet */
     for (uint32_t i = 0; i < 46; i++) {
       uint32_t h = hash2(i * 77 + (uint32_t)run.stage);
@@ -390,9 +391,10 @@ static void draw_trees(void) {
     if (tx > x1w) break;
     float ty = stage_floor(tx), sc = s / (img(IMG_TREE_TOP)->ppm4 / 4.0f);
     if (stage_tree_standing(k)) {
+      /* a pine: the trunk, then three tiers of branches, each smaller */
       gfx_image(IMG_TREE_TRUNK, scr_x(tx), scr_y(ty) + 2, sc, 0, 255);
-      float th = img(IMG_TREE_TRUNK)->h * sc * 0.8f;
-      gfx_image(IMG_TREE_TOP, scr_x(tx), scr_y(ty) - th + 4, sc, 0, 255);
+      for (int i = 0; i < 3; i++)
+        gfx_image(IMG_TREE_TOP, scr_x(tx), scr_y(ty + 0.75f + 0.55f * (float)i), sc * (1 - 0.18f * (float)i), 0, 255);
     } else {   /* knocked down: lying ahead */
       gfx_image(IMG_TREE_TRUNK, scr_x(tx + 0.4f), scr_y(ty + 0.2f), sc, -1.35f, 255);
       gfx_image(IMG_TREE_TOP, scr_x(tx + 1.5f), scr_y(ty + 0.25f), sc, -1.45f, 255);
@@ -511,7 +513,7 @@ static void draw_particles(void) {
     if (a > 255) a = 255;
     int id = p->kind == 1 ? IMG_SMOKE : p->kind == 2 ? IMG_COIN_ICON : stage->particle;
     const Img *im = img(id);
-    gfx_image(id, scr_x(p->x), scr_y(p->y), p->size * s / (float)im->w * 2.0f, p->x * 3, p->kind == 1 ? a / 2 : a);
+    gfx_image(id, scr_x(p->x), scr_y(p->y), p->size * s / (float)im->w * 2.0f, p->x * 3, p->kind == 1 ? a / 3 : a);
   }
 }
 

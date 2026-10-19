@@ -85,9 +85,7 @@ static void end_draw(void) {
   run_draw(false);
   gfx_fill(0, 0, SCREEN_W, SCREEN_H, C_BLACK, 110);
   const char *title = run.end == END_DRIVER_DOWN ? "DRIVER DOWN" : "OUT OF FUEL";
-  int a = end_t * 24 > 255 ? 255 : end_t * 24;
-  gfx_text(FONT_XL, 160, 58, title, run.end == END_DRIVER_DOWN ? rgb565(0xFF5A3C) : rgb565(0xFFC21A), C_BLACK, 1);
-  (void)a;
+  gfx_text(FONT_XL, 160, 54, title, run.end == END_DRIVER_DOWN ? rgb565(0xFF5A3C) : rgb565(0xFFC21A), C_BLACK, 1);
   char t[48], n[20];
   gfx_rrect(64, 74, 192, 112, 10, rgb565(0x2A2D33), 235);
   snprintf(t, sizeof t, "%dm", (int)run.dist);
@@ -106,11 +104,10 @@ static void end_draw(void) {
   gfx_fill(80, 160, 160, 1, rgb565(0x6A6F77), 255);
   gfx_text(FONT_M, 80, 176, "Total", C_WHITE, C_BLACK, 0);
   draw_coins_counter(240, 176, run_total(), 2);
-  gfx_rrect(64, 196, 92, 28, 7, rgb565(0x3DAA3D), 255);
-  gfx_rrect(164, 196, 92, 28, 7, rgb565(0x4A4F57), 255);
-  gfx_text(FONT_M, 110, 216, "OK: RETRY", C_WHITE, C_BLACK, 1);
-  gfx_text(FONT_M, 210, 216, "BACK: GARAGE", C_WHITE, C_BLACK, 1);
-  draw_coins_counter(312, 20, sv.coins, 2);
+  gfx_rrect(58, 196, 100, 28, 7, rgb565(0x3DAA3D), 255);
+  gfx_rrect(162, 196, 100, 28, 7, rgb565(0x4A4F57), 255);
+  gfx_text(FONT_M, 108, 216, "OK: Retry", C_WHITE, C_BLACK, 1);
+  gfx_text(FONT_M, 212, 216, "Back: Garage", C_WHITE, C_BLACK, 1);
 }
 
 /* ------------------------------------------------------------------ the frame */

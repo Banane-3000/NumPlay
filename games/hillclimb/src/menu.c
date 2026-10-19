@@ -176,7 +176,7 @@ static void help_draw(void) {
   gfx_image(IMG_PEDAL_GAS, 272, 86, 1, 0, 255);
   gfx_text(FONT_M, 48, 132, "Left or 4", C_WHITE, C_BLACK, 1);
   gfx_text(FONT_S, 48, 146, "brake, reverse", rgb565(0xC8CDD4), C_BLACK, 1);
-  gfx_text(FONT_M, 272, 132, "Right, OK or 6", C_WHITE, C_BLACK, 1);
+  gfx_text(FONT_M, 272, 132, "Right or OK", C_WHITE, C_BLACK, 1);
   gfx_text(FONT_S, 272, 146, "gas", rgb565(0xC8CDD4), C_BLACK, 1);
   gfx_text(FONT_M, 160, 70, "In the air:", rgb565(0xFFE14A), C_BLACK, 1);
   gfx_text(FONT_S, 160, 86, "gas tilts you back,", C_WHITE, C_BLACK, 1);

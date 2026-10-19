@@ -14,6 +14,7 @@
 #define MAXC 64
 #define SEG 0.2f                    /* the ground is straight between points this far apart */
 #define HULL_R 0.05f
+#define REACT 0.4f                  /* how much of the engine's twist the chassis feels (Bill leans into it) */
 
 typedef struct {
   Body *b;
@@ -318,12 +319,12 @@ static void solve_joints(Car *c) {
     /* the engine (or brake) between chassis and wheel */
     if (J->mmax > 0) {
       float rel = B->w - A->w - J->speed;
-      float j = -rel / (A->ii + B->ii), old = J->jm;
+      float j = -rel / (REACT * A->ii + B->ii), old = J->jm;
       J->jm = old + j;
       if (J->jm > J->mmax) J->jm = J->mmax;
       if (J->jm < -J->mmax) J->jm = -J->mmax;
       j = J->jm - old;
-      A->w -= A->ii * j, B->w += B->ii * j;
+      A->w -= REACT * A->ii * j, B->w += B->ii * j;
     }
     /* across the axis: the wheel stays on it */
     float v = (B->vx - A->vx) * J->px + (B->vy - A->vy) * J->py - J->sAy * A->w;
