@@ -6,8 +6,9 @@
 #include "collide.h"
 
 static const uint16_t chunk0; /* (the original's blank chunk reads a word that is always 0) */
+uint16_t col_tile;            /* the block word FindNearestTile found last (the original's (a1)) */
 
-const uint16_t *FindNearestTile(Obj *o, int16_t y, int16_t x) {
+static const uint16_t *nearest(Obj *o, int16_t y, int16_t x) {
   int idx = (((uint16_t)y >> 1) & 0x380) + (((uint16_t)x >> 8) & 0x7F);
   uint8_t c = (&lvllayout[0][0][0])[idx];
   if (!c) return &chunk0;
@@ -22,6 +23,12 @@ const uint16_t *FindNearestTile(Obj *o, int16_t y, int16_t x) {
   extern int level_nchunks(void);
   if (n >= level_nchunks()) return &chunk0;
   return &chunks256[n * 256 + (((uint16_t)y >> 4) & 15) * 16 + (((uint16_t)x >> 4) & 15)];
+}
+
+const uint16_t *FindNearestTile(Obj *o, int16_t y, int16_t x) {
+  const uint16_t *p = nearest(o, y, x);
+  col_tile = *p;
+  return p;
 }
 
 static uint8_t col_index(uint16_t block) { return V.collindex[block]; }

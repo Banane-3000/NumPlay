@@ -241,7 +241,7 @@ void GiantRing(Obj *o) {
       o->routine += 2;
       o->priority = 2;
       o->coltype = col_16x32 | col_item;
-      V.gfxbigring = 1;
+      V.gfxbigring = (uint16_t)(DATAW(D_ARTS)[ART_Art_BigRing * 2 + 1] * 32);
     }
     break;
   case 4: {

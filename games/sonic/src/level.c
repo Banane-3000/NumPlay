@@ -253,13 +253,13 @@ static void draw_bg_top(const Cam *cam, uint8_t *flags) {
 }
 
 /* (Scrap Brain and Marble: which camera each row of 16 pixels of the background follows) */
-static const uint8_t scrollmap_sbz[0x22] = {0, 0, 0, 0, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 4, 4, 4, 4, 4, 4, 4,
+static const uint8_t scrollmap_sbz[0x40] = /* (zeros past the original's $22) */ {0, 0, 0, 0, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 4, 4, 4, 4, 4, 4, 4,
                                             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0};
-static const uint8_t scrollmap_mz[0x62] = {
+static const uint8_t scrollmap_mz[0x92] = { /* (zeros past the original's $62) */
   0, 0, 0, 0, 0, 0, 6, 6, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
   2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
   2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0};
-static const uint8_t scrollmap_ghz[16] = {0, 0, 0, 0, 6, 6, 6, 4, 4, 4, 0, 0, 0, 0, 0, 0};
+static const uint8_t scrollmap_ghz[32] = {0, 0, 0, 0, 6, 6, 6, 4, 4, 4, 0, 0, 0, 0, 0, 0};
 
 static const Cam *bg_cam(const Cam *cams, int sel) { return sel <= 2 ? &cams[1] : sel == 4 ? &cams[2] : &cams[3]; }
 

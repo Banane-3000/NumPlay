@@ -32,7 +32,10 @@ static int no_collision(Obj *o, Obj *a1) {
   return 0;
 }
 
+int16_t solid_d0; /* how far into the object's side Sonic went (the original's d0 after a collision) */
+
 static int solid_collision(Obj *o, Obj *a1, int16_t d0, int16_t d1, int16_t d2, int16_t d3, int16_t d4) {
+  solid_d0 = d0;
   if (V.f_playerctrl & 0x80) return no_collision(o, a1);
   if (player->routine >= 6 || V.debuguse) return 0;
   int16_t d5 = d0;
@@ -40,6 +43,7 @@ static int solid_collision(Obj *o, Obj *a1, int16_t d0, int16_t d1, int16_t d2, 
     d0 = (int16_t)(d0 - d1 * 2);
     d5 = (int16_t)-d0;
   }
+  solid_d0 = d0;
   int16_t e1 = d3;
   if ((uint16_t)d2 < (uint16_t)d3) {
     d3 = (int16_t)(d3 - 4 - d4);
@@ -119,6 +123,13 @@ static int solid_standing(Obj *o, int16_t d1, int16_t d3, int16_t d4) {
 
 int SolidObject(Obj *o, int16_t d1, int16_t d2, int16_t d3, int16_t d4) {
   if (o->routine2) return solid_standing(o, d1, d3, d4);
+  if (!(o->render & 0x80)) return no_collision(o, player);
+  return solid_check(o, d1, d2);
+}
+
+/* only the collision (not standing on it): its result, and solid_d0 */
+int Solid_ChkCollision(Obj *o, int16_t d1, int16_t d2) {
+  solid_d0 = 0;
   if (!(o->render & 0x80)) return no_collision(o, player);
   return solid_check(o, d1, d2);
 }

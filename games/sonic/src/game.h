@@ -39,6 +39,8 @@ extern uint16_t tracksonic[64][2];
 
 /* solid objects and platforms (solid.c) */
 int SolidObject(Obj *o, int16_t d1, int16_t d2, int16_t d3, int16_t d4);
+int Solid_ChkCollision(Obj *o, int16_t d1, int16_t d2);
+extern int16_t solid_d0;
 int SolidObject_NoRenderChk(Obj *o, int16_t d1, int16_t d2, int16_t d3, int16_t d4);
 int SolidObject_Heightmap(Obj *o, int16_t d1, int16_t d2, const uint8_t *heights);
 void PlatformObject(Obj *o, int16_t d1);

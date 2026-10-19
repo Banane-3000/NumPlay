@@ -6,6 +6,7 @@
 #define S1_COLLIDE_H
 #include "s1.h"
 const uint16_t *FindNearestTile(Obj *o, int16_t y, int16_t x);
+extern uint16_t col_tile;   /* the block word found last */
 int16_t FindFloor(Obj *o, int16_t y, int16_t x, int bit, uint16_t eor, int16_t step, uint8_t *angle, uint16_t *d4);
 int16_t FindWall(Obj *o, int16_t y, int16_t x, int bit, uint16_t eor, int16_t step, uint8_t *angle, uint16_t *d4);
 int16_t ObjFloorDist(Obj *o, uint8_t *angle);

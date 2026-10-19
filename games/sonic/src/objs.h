@@ -123,6 +123,26 @@ void BossGreenHill(Obj *o);
 void BossBall(Obj *o);
 void boss_hit_flash(Obj *o, uint8_t restore);
 
+/* obj_mz.c */
+void LavaMaker(Obj *o);
+void LavaBall(Obj *o);
+void LargeGrass(Obj *o);
+void GrassFire(Obj *o);
+void GlassBlock(Obj *o);
+void ChainStomp(Obj *o);
+void PushBlock(Obj *o);
+void MarbleBrick(Obj *o);
+void GeyserMaker(Obj *o);
+void LavaGeyser(Obj *o);
+void LavaWall(Obj *o);
+void SmashBlock(Obj *o);
+void MovingBlock(Obj *o);
+void LavaTag(Obj *o);
+void Basaran(Obj *o);
+void Caterkiller(Obj *o);
+void BossMarble(Obj *o);
+void BossFire(Obj *o);
+
 /* screens.c */
 void TitleSonic(Obj *o);
 void PSBTM(Obj *o);
