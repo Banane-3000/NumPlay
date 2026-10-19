@@ -12,6 +12,11 @@ To run:
     python tools/emu_live.py path/to/NumPlay.nwa
 
 The calculator skin does not depend on emu_live_skin.py; emu.py is still needed.
+V15 builds on V13's PC-key highlights and original framebuffer behavior.
+It reduces horizontal tears by presenting completed drawing bursts instead of
+publishing arbitrary partial screen writes; V14's LCD scanout is NOT included.
+V12 adds a Calculator / Screen only view toggle: a native 320x240, pixel-for-pixel LCD.
+V11 adds two clear file/live modes and runs the native Windows build watcher inside the app.
 V10 adds firmware text fallback and corrects off-screen display rectangle clipping.
 V9 keeps the V8 virtual-time SVC yields and optimizes full-width display transfers.
 An optional --profile-speed report distinguishes host CPU bottlenecks from pacing.
@@ -24,6 +29,9 @@ from __future__ import annotations
 import argparse
 import os
 import queue
+import subprocess
+import signal
+from collections import deque
 import shutil
 import struct
 import sys
@@ -54,9 +62,16 @@ except ImportError as exc:
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HOME_NWA = Path.home() / "Downloads" / "nwa"
 SAVE_DIR = Path.home() / ".numplay-emulator" / "saves"
+LIVE_NWA = REPO_ROOT / "dist" / "live" / "NumPlay.nwa"
+BUILD_SCRIPT = REPO_ROOT / "tools" / "build_windows.py"
+LCD_WIDTH = 320
+LCD_HEIGHT = 240
 FRAME_VIRTUAL_MS = 32
 STEP_VIRTUAL_MS = 2  # Bound application execution between worker checks.
-UI_POLL_MS = 45
+UI_POLL_MS = 20  # Keep the interface responsive to finished frames.
+LCD_UPDATE_INTERVAL_S = 1.0 / 40.0  # At most 40 displayed frames per second.
+LCD_QUIET_INTERVAL_S = 0.045  # Fallback: don't capture in the middle of a drawing burst.
+LCD_STALE_FRAME_S = 0.35  # Fallback for games with no obvious end-of-frame signal.
 WATCH_MS = 1000
 BG = "#151b24"
 PANEL = "#222c3b"
@@ -305,9 +320,48 @@ class TracedCalculator(emu.Calculator):
         self.fullwidth_bytes = 0
         self.complete_display_frames = 0
         self.fullwidth_copy_seconds = 0.0
+        # Keep a single CPU-visible framebuffer, just like V13. Unlike V13,
+        # publishing waits for a *frame boundary* instead of copying a random
+        # partial strip every 25 ms. No V14 LCD scanout or simulated tearing.
+        self.lcd_revision = 0
+        self.lcd_last_write_wall = time.monotonic()
+        self.lcd_last_published_revision = -1
+        self.on_lcd_write = None
+        self._next_lcd_notice_wall = 0.0
         super().__init__(*args, **kwargs)
         self.font = FidelityFont()
         self.clipped_display_rects = 0
+
+    def _lcd_changed(self, complete_frame: bool = False):
+        """Record a completed EADK write, but don't expose a partial redraw.
+
+        Full-width pixel strips reaching the bottom of the screen are the
+        launcher's natural frame boundary. For games with another drawing
+        scheme, event/sleep calls and the worker's quiet-period fallback
+        provide other opportunities to publish a complete screen.
+        """
+        self.lcd_revision += 1
+        self.lcd_last_write_wall = time.monotonic()
+        if complete_frame:
+            self.publish_lcd_if_ready()
+
+    def publish_lcd_if_ready(self, *, force: bool = False) -> bool:
+        """Publish at most one stable framebuffer copy per presentation tick.
+
+        This does not touch the app-facing framebuffer, keyboard, emulated time
+        or the physical LCD's imagined scan position. It only controls which
+        *completed snapshots* reach Tk. Must run on the emulator worker thread.
+        """
+        callback = self.on_lcd_write
+        if callback is None or self.lcd_last_published_revision == self.lcd_revision:
+            return False
+        now = time.monotonic()
+        if not force and now < self._next_lcd_notice_wall:
+            return False
+        self._next_lcd_notice_wall = now + LCD_UPDATE_INTERVAL_S
+        self.lcd_last_published_revision = self.lcd_revision
+        callback(self.screen, self.now_ms, self.lcd_revision)
+        return True
 
     def _fast_fullwidth_display(self, uc, svc: int) -> bool:
         """Byte-copy a whole screen-width strip in one operation.
@@ -347,6 +401,11 @@ class TracedCalculator(emu.Calculator):
         self.fullwidth_blits += 1
         self.fullwidth_bytes += length
         self.fullwidth_copy_seconds += time.perf_counter() - started
+        if svc in (19, 20):
+            # Drawing one final full-width image strip is an actual application
+            # frame boundary. A uniform color fill may be an initial clear,
+            # so don't publish a blank screen as a completed frame.
+            self._lcd_changed(complete_frame=(svc == 19 and y + h == LCD_HEIGHT))
         return True
 
     def _draw_string(self, uc, addr, size, data):
@@ -372,6 +431,7 @@ class TracedCalculator(emu.Calculator):
         self.font.draw(self.screen, text, point & 0xFFFF, point >> 16,
                        bool(large & 0xFF), fg & 0xFFFF, bg)
         uc.reg_write(emu.UC_ARM_REG_PC, uc.reg_read(emu.UC_ARM_REG_LR))
+        self._lcd_changed()
 
     def _clipped_display(self, uc, svc: int) -> bool:
         """Keep original input-buffer row stride when an EADK rect is clipped.
@@ -407,6 +467,9 @@ class TracedCalculator(emu.Calculator):
                 self.screen[dst:dst + length] = color.to_bytes(2, "little") * w
         self.svc_counts[svc] = self.svc_counts.get(svc, 0) + 1
         self.insns += w * h // 4
+        if svc in (19, 20) and w and h:
+            self._lcd_changed(complete_frame=(svc == 19 and x == 0 and
+                                              w == LCD_WIDTH and y + h == LCD_HEIGHT))
         return True
 
     def _intr(self, uc, intno, data):
@@ -434,6 +497,14 @@ class TracedCalculator(emu.Calculator):
         # Run the backend's real SVC implementation: preserves keyboard,
         # flash, display, register returns, and all other NumPlay semantics.
         result = super()._intr(uc, intno, data)
+        if svc in (19, 20):
+            # The backend handles ordinary partial-width display writes.
+            # Don't send Tk a half-drawn framebuffer at this SVC boundary.
+            self._lcd_changed()
+        elif svc in (23, 49, 50):
+            # Games commonly check events or sleep between complete frames.
+            # Prefer that natural boundary to a timer-driven partial snapshot.
+            self.publish_lcd_if_ready()
         delta_ms = float(self.now_ms) - start_ms
 
         if requested_ms is not None:
@@ -579,6 +650,21 @@ class EmulatorWorker(threading.Thread):
             clock_anchor = time.monotonic()
             last_frame_wall = clock_anchor
             last_frame_virtual = float(app.now_ms)
+            last_frame_revision = -1
+
+            def publish_lcd(pixels, virtual_ms, revision):
+                # Called synchronously from the ARM worker's display hook.
+                # The event carries a *copy*; the emulator can continue drawing
+                # while Tk consumes it asynchronously. No fabricated swipe.
+                nonlocal last_frame_wall, last_frame_virtual, last_frame_revision
+                if self.stop_requested.is_set():
+                    return
+                self.emit("frame", bytes(pixels), int(virtual_ms))
+                last_frame_wall = time.monotonic()
+                last_frame_virtual = float(virtual_ms)
+                last_frame_revision = revision
+
+            app.on_lcd_write = publish_lcd
             rate_wall = clock_anchor
             rate_virtual = float(app.now_ms)
             busy_wall = busy_virtual = 0.0
@@ -603,6 +689,9 @@ class EmulatorWorker(threading.Thread):
                     # Re-anchor; never run faster to pay back paused/late frames.
                     clock_anchor = time.monotonic()
                     last_auto_adjust = rate_wall = clock_anchor
+                    app._next_lcd_notice_wall = 0.0
+                    # Show the last completed image when resuming from pause.
+                    app.publish_lcd_if_ready(force=True)
                     rate_virtual = float(app.now_ms)
                     busy_wall = busy_virtual = 0.0
                     smoothed_load = None
@@ -646,14 +735,18 @@ class EmulatorWorker(threading.Thread):
                     busy_wall += work_seconds
                     busy_virtual += active_ms
 
-                # Present a frame BEFORE wall-clock pacing; a long sleep should
-                # not hide a screen update that the app already performed.
+                # Fallback for apps that paint isolated patches but don't
+                # sleep, request events or end with a full-width bottom strip.
+                # Avoid showing intermediate top-to-bottom redraw strips:
+                # require a quiet window after the most recent LCD write.
+                # The stale timeout guarantees that even unconventional games
+                # eventually show progress, at the cost of an occasional tear.
                 wall_now = time.monotonic()
-                if (float(app.now_ms) - last_frame_virtual >= FRAME_VIRTUAL_MS or
-                        wall_now - last_frame_wall >= 0.12):
-                    self.emit("frame", bytes(app.screen), int(app.now_ms))
-                    last_frame_wall = wall_now
-                    last_frame_virtual = float(app.now_ms)
+                if (app.lcd_revision != app.lcd_last_published_revision and
+                        wall_now - last_frame_wall >= LCD_UPDATE_INTERVAL_S and
+                        (wall_now - app.lcd_last_write_wall >= LCD_QUIET_INTERVAL_S or
+                         wall_now - last_frame_wall >= LCD_STALE_FRAME_S)):
+                    app.publish_lcd_if_ready()
 
                 # One simulated millisecond must never take *less* than one
                 # actual millisecond. Sleep overestimated virtual time, but
@@ -813,7 +906,7 @@ class LiveApp:
         self._watch_id = self.root.after(WATCH_MS, self.watch)
         if initial is not None:
             self.root.after(150, lambda: self.load(initial))
-        else:
+        elif not getattr(self, "_simple_mode_ui", False):
             latest = find_nwas()
             if latest:
                 self.root.after(150, lambda: self.load(latest[0]))
@@ -1053,6 +1146,8 @@ class LiveApp:
         if sym in self.pressed_pc:
             self.pressed_pc.pop(sym, None)
             self.refresh_pressed()
+            return "break"
+        return None
 
     def on_focus_out(self, event):
         # Releasing Alt, Shift or directions in another window does not produce
@@ -1124,8 +1219,8 @@ class LiveApp:
             "i=i       s=sin     c=cos      t=tan   p=π      q=√",
             "w=x²      r=^       n=×10ⁿ      a=ans", "",
             "Drag any .nwa into the window or click Open .nwa.",
-            "Watch changed .nwa reloads it when a build finishes.",
-            "Follow newest local build finds fresh .nwa files automatically.",
+            "Single file: no automatic builds or reloads.",
+            "Live development: compiles sources and reloads after a successful build.",
             "Emulated saves persist in ~/.numplay-emulator/saves/.",
         ]
         tk.Label(w, text="\n".join(lines), justify="left", bg=BG, fg=FG,
@@ -1304,9 +1399,15 @@ def installed_artwork() -> Path | None:
 
 
 class CalculatorSkinApp(LiveApp):
+    """NumWorks skin with mutually exclusive file and live-development modes.
+
+    Only this GUI runs the watcher; the existing Makefiles/build script and
+    emu.Calculator backend are deliberately untouched.
+    """
+
     def __init__(self, root, initial, nwlink, model, system, auto_follow,
                  art_path: Path, max_sleep_ms: int = 0,
-                 profile_speed: bool = False):
+                 profile_speed: bool = False, start_live: bool = False):
         self.art_path = art_path
         self.art = Image.open(art_path).convert("RGB")
         self.art_px = self.art.size
@@ -1318,28 +1419,48 @@ class CalculatorSkinApp(LiveApp):
         self._last_canvas_size = None
         self.fullscreen = False
         self.f11_down = False
-        self.rate_label = tk.StringVar(value="Measuring real-time speed…")
-        super().__init__(root, initial, nwlink, model, system, auto_follow,
+        self.rate_label = tk.StringVar(master=root, value="Emulator ready")
+        # Display choice and build choice are independent: neither view switch
+        # restarts Unicorn nor starts/stops the compiler.
+        self.view_var = tk.StringVar(master=root, value="calculator")
+        self._native_geometry = None
+        self.mode_var = tk.StringVar(master=root, value="live" if start_live else "file")
+        self.build_status = tk.StringVar(master=root, value="Choose a .nwa to play")
+        self.build_detail = tk.StringVar(master=root, value="No compiler process running")
+        self.build_process = None
+        self._builder_generation = 0
+        self._builder_events = queue.Queue()
+        self._builder_log = deque(maxlen=850)
+        self._build_log_window = None
+        self._build_log_text = None
+        self._builder_has_error = False
+        self._builder_ready = False
+        self._builder_busy = False
+        self._builder_stopping = False
+        self._simple_mode_ui = True
+        super().__init__(root, initial, nwlink, model, system, False,
                          max_sleep_ms=max_sleep_ms, profile_speed=profile_speed)
+        # Avoid the original fallback's ambiguous 'newest local file' behavior.
+        self.watch_var.set(False)
+        self.follow_var.set(False)
+        self._builder_poll_id = self.root.after(120, self._poll_builder)
+        if start_live:
+            self.root.after(260, self._start_builder)
 
     def _build_ui(self):
-        self.root.title("NumPlay · NumWorks Live Emulator V9")
-        self.root.geometry("1100x840")
-        self.root.minsize(790, 520)
-        # F11 has a conventional meaning in a desktop app. Square-root is
-        # still available as an on-screen key or by pressing Q.
+        self.root.title("NumPlay · Live Emulator")
+        self.root.geometry("1050x800")
+        self.root.minsize(770, 510)
 
         body = tk.Frame(self.root, bg=BG)
         body.pack(fill="both", expand=True, padx=8, pady=8)
-        sidebar = tk.Frame(body, bg=PANEL, width=312)
+        sidebar = tk.Frame(body, bg=PANEL, width=310)
         sidebar.pack(side="right", fill="y", padx=(8, 0))
         sidebar.pack_propagate(False)
         left = tk.Frame(body, bg=BG)
         left.pack(side="left", fill="both", expand=True)
-        self.canvas = tk.Canvas(left, bg=BG, bd=0, highlightthickness=0,
-                                takefocus=1)
+        self.canvas = tk.Canvas(left, bg=BG, bd=0, highlightthickness=0, takefocus=1)
         self.canvas.pack(fill="both", expand=True)
-        # Inherited LiveApp registers the screen label for drag and drop.
         self.screen_label = self.canvas
         self.canvas.bind("<Configure>", self._resize)
         self.canvas.bind("<ButtonPress-1>", self._mouse_press)
@@ -1347,119 +1468,449 @@ class CalculatorSkinApp(LiveApp):
         self.canvas.bind("<Leave>", self._mouse_leave)
 
         inner = tk.Frame(sidebar, bg=PANEL)
-        inner.pack(fill="both", expand=True, padx=13, pady=(16, 10))
-        tk.Label(inner, text="NUMWORKS  /  NUMPLAY", bg=PANEL,
-                 fg=FG, font=("Segoe UI", 14, "bold"),
-                 anchor="w").pack(fill="x")
-        tk.Label(inner, text="Live calculator emulator", bg=PANEL,
-                 fg=MUTED, font=("Segoe UI", 10),
-                 anchor="w").pack(fill="x", pady=(2, 14))
+        inner.pack(fill="both", expand=True, padx=14, pady=(15, 9))
+        titlebar = tk.Frame(inner, bg=PANEL)
+        titlebar.pack(fill="x")
+        tk.Label(titlebar, text="NUMPLAY", bg=PANEL, fg=FG,
+                 font=("Segoe UI", 15, "bold"), anchor="w").pack(side="left")
+        options_button = tk.Menubutton(titlebar, text="⋯", bg=PANEL_2, fg=FG,
+                                       relief="flat", bd=0, padx=10, pady=4,
+                                       font=("Segoe UI", 13, "bold"), cursor="hand2",
+                                       activebackground=ACCENT, activeforeground=BG)
+        options_button.pack(side="right")
+        self._options_menu = tk.Menu(options_button, tearoff=0)
+        options_button.configure(menu=self._options_menu)
+        self._options_menu.add_command(label="Screenshot", command=self._focus_after(self.screenshot))
+        self._options_menu.add_command(label="Keyboard shortcuts", command=self._focus_after(self.show_keymap))
+        self._options_menu.add_command(label="Fullscreen (F11)", command=self._focus_after(self.toggle_fullscreen))
+        self._options_menu.add_command(label="Focus calculator keyboard", command=self.refocus_input)
+        self._options_menu.add_separator()
+        self._options_menu.add_command(label="Build log…", command=self._show_build_log)
+        self._options_menu.add_command(label="Open compiled files folder", command=self._open_dist)
+        self._options_menu.add_separator()
+        self.auto_clock_var = tk.BooleanVar(master=self.root, value=True)
+        self.clock_option = tk.StringVar(master=self.root, value="216 MHz  (default)")
+        clock_submenu = tk.Menu(self._options_menu, tearoff=0)
+        clock_submenu.add_checkbutton(label="Automatic CPU clock", variable=self.auto_clock_var,
+                                      command=self.toggle_auto_clock)
+        clock_submenu.add_separator()
+        self._manual_clock_menu = tk.Menu(clock_submenu, tearoff=0)
+        for clock in ("216 MHz  (default)", "108 MHz", "54 MHz", "27 MHz"):
+            self._manual_clock_menu.add_radiobutton(label=clock, variable=self.clock_option,
+                                                    value=clock, command=lambda value=clock: self.change_clock(value))
+        clock_submenu.add_cascade(label="Manual clock", menu=self._manual_clock_menu, state="disabled")
+        self._clock_submenu = clock_submenu
+        self._options_menu.add_cascade(label="CPU settings", menu=clock_submenu)
+        self._options_menu.add_command(label="Calculator artwork license ↗",
+                                       command=lambda: webbrowser.open(ART_LICENSE))
 
-        tk.Label(inner, text="LOADED APP", bg=PANEL, fg=ACCENT,
-                 font=("Segoe UI", 9, "bold"), anchor="w").pack(fill="x")
-        self.file_title = tk.Label(inner, text="No .nwa selected", bg=PANEL,
-                                   fg=FG, font=("Segoe UI", 10, "bold"),
+        # The viewing mode lives on the right, above the independent source
+        # selection. Native view has no canvas image scaling or skin overlay.
+        tk.Label(inner, text="DISPLAY VIEW", bg=PANEL, fg=MUTED,
+                 font=("Segoe UI", 9, "bold"), anchor="w").pack(fill="x", pady=(11, 6))
+        view_panel = tk.Frame(inner, bg=PANEL_2)
+        view_panel.pack(fill="x", pady=(0, 3))
+        for idx, (name, value) in enumerate((("Calculator", "calculator"),
+                                            ("Screen only", "screen"))):
+            view_panel.grid_columnconfigure(idx, weight=1)
+            tk.Radiobutton(view_panel, text=name, variable=self.view_var, value=value,
+                           command=self._switch_view, indicatoron=False,
+                           bg=PANEL_2, fg=FG, selectcolor="#376b72",
+                           activebackground="#376b72", activeforeground=FG,
+                           font=("Segoe UI", 9, "bold"), relief="flat", bd=0,
+                           padx=5, pady=9).grid(row=0, column=idx, sticky="ew", padx=2, pady=2)
+        self.view_detail = tk.Label(inner,
+                                    text="Calculator artwork + clickable keypad",
+                                    bg=PANEL, fg=MUTED, font=("Segoe UI", 8),
+                                    anchor="w")
+        self.view_detail.pack(fill="x", pady=(1, 10))
+
+        tk.Label(inner, text="Choose how to run", bg=PANEL, fg=MUTED,
+                 font=("Segoe UI", 9), anchor="w").pack(fill="x", pady=(4, 10))
+        mode_panel = tk.Frame(inner, bg=PANEL_2)
+        mode_panel.pack(fill="x", pady=(0, 12))
+        for idx, (name, value) in enumerate((("Single file", "file"), ("Live development", "live"))):
+            mode_panel.grid_columnconfigure(idx, weight=1)
+            tk.Radiobutton(mode_panel, text=name, variable=self.mode_var, value=value,
+                           command=self._switch_mode, indicatoron=False,
+                           bg=PANEL_2, fg=FG, selectcolor="#376b72",
+                           activebackground="#376b72", activeforeground=FG,
+                           font=("Segoe UI", 9, "bold"), relief="flat", bd=0,
+                           padx=5, pady=10).grid(row=0, column=idx, sticky="ew", padx=2, pady=2)
+
+        # The two mode panels are never visible at the same time. There is no
+        # 'follow newest' toggle or competing source picker.
+        self.file_panel = tk.Frame(inner, bg=PANEL)
+        self.file_panel.pack(fill="x")
+        self.pick_button = self._button(self.file_panel, "Choose .nwa file…", self.open_file)
+        self.pick_button.pack(fill="x", pady=(0, 7))
+        tk.Label(self.file_panel, text="Runs only the selected file. No automatic build or reload.",
+                 bg=PANEL, fg=MUTED, font=("Segoe UI", 9), wraplength=270,
+                 anchor="w", justify="left").pack(fill="x", pady=(0, 10))
+
+        self.live_panel = tk.Frame(inner, bg=PANEL)
+        self.live_button = self._button(self.live_panel, "Start live build", self._toggle_builder)
+        self.live_button.pack(fill="x", pady=(0, 7))
+        tk.Label(self.live_panel, text="Builds on this PC when you save code; reloads the emulator after success.",
+                 bg=PANEL, fg=MUTED, font=("Segoe UI", 9), wraplength=270,
+                 anchor="w", justify="left").pack(fill="x", pady=(0, 8))
+
+        self.build_info = tk.Frame(inner, bg=PANEL_2, padx=10, pady=9)
+        self.build_info.pack(fill="x", pady=(0, 12))
+        tk.Label(self.build_info, textvariable=self.build_status,
+                 bg=PANEL_2, fg=ACCENT, font=("Segoe UI", 10, "bold"),
+                 anchor="w", justify="left", wraplength=260).pack(fill="x")
+        tk.Label(self.build_info, textvariable=self.build_detail,
+                 bg=PANEL_2, fg=MUTED, font=("Segoe UI", 8),
+                 anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(3, 0))
+        self.progress = ttk.Progressbar(self.build_info, mode="indeterminate")
+
+        self.running_header = tk.Label(inner, text="RUNNING", bg=PANEL, fg=ACCENT,
+                                       font=("Segoe UI", 9, "bold"), anchor="w")
+        self.running_header.pack(fill="x")
+        self.file_title = tk.Label(inner, text="No file loaded", bg=PANEL, fg=FG,
+                                   font=("Segoe UI", 10, "bold"),
                                    anchor="w", wraplength=270, justify="left")
-        self.file_title.pack(fill="x", pady=(3, 4))
-        tk.Label(inner, textvariable=self.file_label, bg=PANEL,
-                 fg=MUTED, font=("Segoe UI", 8), anchor="w",
-                 wraplength=270, justify="left").pack(fill="x", pady=(0, 13))
-
-        controls = tk.Frame(inner, bg=PANEL)
-        controls.pack(fill="x")
+        self.file_title.pack(fill="x", pady=(4, 2))
+        tk.Label(inner, textvariable=self.file_label, bg=PANEL, fg=MUTED,
+                 font=("Segoe UI", 8), anchor="w", wraplength=270,
+                 justify="left").pack(fill="x", pady=(0, 12))
+        action_panel = tk.Frame(inner, bg=PANEL)
+        action_panel.pack(fill="x")
         for col in (0, 1):
-            controls.grid_columnconfigure(col, weight=1, uniform="actions")
-        actions = (
-            ("Open .nwa", self.open_file), ("Newest build", self.find_latest),
-            ("Reload", self.reset), ("Pause", self.toggle_pause),
-            ("Screenshot", self.screenshot), ("Keymap", self.show_keymap),
-            ("Fullscreen  F11", self.toggle_fullscreen),
-            ("Focus keyboard", self.refocus_input),
-        )
-        for idx, (label, command) in enumerate(actions):
-            # GUI button focus is transient; restore calculator key focus once
-            # dialogs (Open .nwa, Keymap) or actions finish.
-            def command_then_focus(action=command):
-                try:
-                    action()
-                finally:
-                    self.root.after(60, self.refocus_input)
-            button = tk.Button(controls, text=label, command=command_then_focus,
-                               bg=PANEL_2, fg=FG, bd=0, relief="flat",
-                               activebackground=ACCENT, activeforeground=BG,
-                               font=("Segoe UI", 9), padx=4, pady=9)
-            row, col = divmod(idx, 2)
-            button.grid(row=row, column=col, sticky="ew", padx=3, pady=3,
-                        columnspan=1)
-            if label == "Pause":
-                self.pause_button = button
-
-        tk.Frame(inner, height=1, bg=PANEL_2).pack(fill="x", pady=(17, 13))
-        for var, label in ((self.watch_var, "Auto-reload changed .nwa"),
-                           (self.follow_var, "Follow newest local build")):
-            tk.Checkbutton(inner, text=label, variable=var,
-                           bg=PANEL, fg=FG,
-                           selectcolor=PANEL_2,
-                           activebackground=PANEL,
-                           activeforeground=ACCENT,
-                           font=("Segoe UI", 9), anchor="w").pack(fill="x", pady=3)
-
-        tk.Frame(inner, height=1, bg=PANEL_2).pack(fill="x", pady=(14, 12))
-        tk.Label(inner, text="EMULATED CPU CLOCK", bg=PANEL, fg=ACCENT,
-                 font=("Segoe UI", 9, "bold"), anchor="w").pack(fill="x")
-        self.auto_clock_var = tk.BooleanVar(value=True)
-        tk.Checkbutton(inner, text="Automatic clock (recommended)",
-                       variable=self.auto_clock_var, command=self.toggle_auto_clock,
-                       bg=PANEL, fg=FG,
-                       selectcolor=PANEL_2, activebackground=PANEL,
-                       activeforeground=ACCENT,
-                       font=("Segoe UI", 9), anchor="w").pack(fill="x", pady=(8, 2))
-        self.clock_option = tk.StringVar(value="216 MHz  (default)")
-        choices = ("216 MHz  (default)", "108 MHz", "54 MHz", "27 MHz")
-        self.clock_menu = tk.OptionMenu(inner, self.clock_option, *choices, command=self.change_clock)
-        self.clock_menu.configure(bg=PANEL_2, fg=FG,
-                       activebackground=ACCENT, activeforeground=BG,
-                       bd=0, highlightthickness=0, font=("Segoe UI", 10),
-                       state="disabled")
-        self.clock_menu["menu"].configure(bg=PANEL_2, fg=FG)
-        self.clock_menu.pack(fill="x", pady=(6, 3))
-        tk.Label(inner,
-                 text="Auto adjusts gradually to CPU-heavy scenes; no frame "
-                      "catch-up bursts. Disable Auto to set a manual clock. "
-                      "Some games may still differ from real hardware.",
-                 bg=PANEL, fg=MUTED, font=("Segoe UI", 9),
-                 wraplength=270, justify="left", anchor="w").pack(fill="x", pady=(4, 9))
+            action_panel.grid_columnconfigure(col, weight=1)
+        self.reload_button = self._button(action_panel, "Restart app", self.reset)
+        self.reload_button.grid(row=0, column=0, sticky="ew", padx=(0, 4))
+        self.pause_button = self._button(action_panel, "Pause", self.toggle_pause)
+        self.pause_button.grid(row=0, column=1, sticky="ew", padx=(4, 0))
+        tk.Frame(inner, height=1, bg=PANEL_2).pack(fill="x", pady=(15, 10))
         tk.Label(inner, textvariable=self.rate_label, bg=PANEL, fg=ACCENT,
-                 font=("Segoe UI", 10, "bold"), anchor="w").pack(fill="x")
+                 font=("Segoe UI", 9, "bold"), anchor="w").pack(fill="x")
         tk.Label(inner, textvariable=self.input_status, bg=PANEL, fg=MUTED,
+                 font=("Segoe UI", 9), anchor="w").pack(fill="x", pady=(5, 0))
+        tk.Label(inner, textvariable=self.time_label, bg=PANEL, fg=MUTED,
                  font=("Segoe UI", 9), anchor="w").pack(fill="x", pady=(3, 0))
-        tk.Label(inner, textvariable=self.time_label, bg=PANEL,
-                 fg=MUTED, font=("Segoe UI", 9), anchor="w").pack(fill="x", pady=(3, 0))
 
-        spacer = tk.Frame(inner, bg=PANEL)
-        spacer.pack(fill="both", expand=True)
-        self.drop_line = tk.Label(inner,
-                                  text="Drop any .nwa onto the calculator\n"
-                                       "Use its buttons or your PC keyboard",
-                                  bg=PANEL, fg=MUTED,
-                                  font=("Segoe UI", 9), justify="center",
-                                  pady=9)
+        tk.Frame(inner, bg=PANEL).pack(fill="both", expand=True)
+        self.drop_line = tk.Label(inner, text="Drag a .nwa here to open it as a single file",
+                                  bg=PANEL, fg=MUTED, font=("Segoe UI", 8),
+                                  wraplength=270, justify="center", pady=9)
         self.drop_line.pack(fill="x")
-        credits = tk.Label(inner,
-                           text="Calculator skin: Upsilon / k-kuroguro\n"
-                                "CC BY-NC-SA · View asset license ↗",
-                           bg=PANEL, fg=MUTED, cursor="hand2",
-                           font=("Segoe UI", 8), justify="center")
-        credits.pack(fill="x", pady=(4, 7))
-        credits.bind("<Button-1>", lambda e: webbrowser.open(ART_LICENSE))
-        tk.Label(sidebar, textvariable=self.status, bg=PANEL_2,
-                 fg=ACCENT, anchor="w", justify="left",
-                 wraplength=282, padx=12, pady=10,
-                 font=("Segoe UI", 9)).pack(fill="x", side="bottom")
-        # Startup is user-initiated; focus once, as in the earlier working GUI.
-        # On later Alt-Tab reactivation use non-stealing focus_set() instead.
+        tk.Label(sidebar, textvariable=self.status, bg=PANEL_2, fg=ACCENT,
+                 anchor="w", justify="left", wraplength=282,
+                 padx=12, pady=10, font=("Segoe UI", 9)).pack(fill="x", side="bottom")
+        self._configure_mode_panel()
         self.root.focus_force()
         self.root.after(150, self.refocus_input)
+
+    def _button(self, parent, label, callback):
+        return tk.Button(parent, text=label, command=self._focus_after(callback),
+                         bg=PANEL_2, fg=FG, relief="flat", bd=0,
+                         activebackground=ACCENT, activeforeground=BG,
+                         font=("Segoe UI", 9, "bold"), padx=8, pady=10)
+
+    def _focus_after(self, action):
+        def call():
+            try:
+                action()
+            finally:
+                self.root.after(75, self.refocus_input)
+        return call
+
+    def _configure_mode_panel(self):
+        if self.mode_var.get() == "live":
+            self.file_panel.pack_forget()
+            self.build_info.pack(before=self.running_header, fill="x", pady=(0, 12))
+            self.live_panel.pack(before=self.build_info, fill="x")
+            self.drop_line.configure(text="Live mode: save your code to rebuild.\nDrop a .nwa to switch to Single file.")
+        else:
+            self.live_panel.pack_forget()
+            self.build_info.pack_forget()
+            self.file_panel.pack(before=self.running_header, fill="x")
+            self.drop_line.configure(text="Drop a .nwa onto the calculator to open it")
+
+    def _switch_mode(self):
+        self._configure_mode_panel()
+        self.watch_candidate = None
+        self.follow_var.set(False)
+        if self.mode_var.get() == "live":
+            self.watch_var.set(True)
+            self._start_builder()
+        else:
+            self.watch_var.set(False)
+            self._stop_builder()
+            self._set_build_state("Single file mode", "No background compile or auto-reload")
+        self.root.after(75, self.refocus_input)
+
+    def open_file(self):
+        if self.mode_var.get() != "file":
+            self.mode_var.set("file")
+            self._switch_mode()
+        # Calling the existing picker preserves file handling and focus.
+        super().open_file()
+
+    def on_drop(self, event):
+        if self.mode_var.get() != "file":
+            self.mode_var.set("file")
+            self._switch_mode()
+        super().on_drop(event)
+
+    def watch(self):
+        """Never search for a vague newest build or reload single-file mode."""
+        if self._closing:
+            return
+        if (self.mode_var.get() == "live" and self.watch_var.get() and
+                self._builder_ready and self.current == LIVE_NWA):
+            try:
+                self._maybe_reload(LIVE_NWA)
+            except OSError as exc:
+                self.build_status.set("Live reload check failed")
+                self.build_detail.set(str(exc)[:140])
+        self._watch_id = self.root.after(WATCH_MS, self.watch)
+
+    def _set_build_state(self, status, detail="", *, busy=False, error=False):
+        self.build_status.set(status)
+        self.build_detail.set(detail)
+        if error:
+            self.build_info.configure(bg="#45313b")
+            for child in self.build_info.winfo_children():
+                if isinstance(child, tk.Label):
+                    child.configure(bg="#45313b")
+        else:
+            self.build_info.configure(bg=PANEL_2)
+            for child in self.build_info.winfo_children():
+                if isinstance(child, tk.Label):
+                    child.configure(bg=PANEL_2)
+        if busy != self._builder_busy:
+            self._builder_busy = busy
+            if busy:
+                self.progress.pack(fill="x", pady=(9, 1))
+                self.progress.start(11)
+            else:
+                self.progress.stop()
+                self.progress.pack_forget()
+
+    def _toggle_builder(self):
+        if self.build_process and self.build_process.poll() is None:
+            self._stop_builder()
+            self._set_build_state("Watcher stopped", "Click Start live build to resume")
+        else:
+            self._start_builder()
+
+    def _start_builder(self):
+        if self._closing or self.mode_var.get() != "live":
+            return
+        if self.build_process is not None and self.build_process.poll() is None:
+            return
+        if not BUILD_SCRIPT.is_file():
+            self._set_build_state("Builder not found", "Expected tools/build_windows.py", error=True)
+            messagebox.showerror("Live build", f"Missing build script:\n{BUILD_SCRIPT}\n\n"
+                                 "Put the working Windows build helper V7 in tools/build_windows.py.")
+            return
+        # A previous process may still be shutting down. Never run concurrent
+        # builds of the same directory.
+        if self._builder_stopping:
+            self.root.after(200, self._start_builder)
+            return
+        self._builder_generation += 1
+        generation = self._builder_generation
+        self._builder_ready = False
+        self._builder_has_error = False
+        self._builder_log.clear()
+        self.watch_candidate = None
+        self.watch_var.set(True)
+        cmd = [sys.executable, "-u", str(BUILD_SCRIPT), "--watch",
+               "--launcher-only", "--skip-languages", "-j2"]
+        flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+        try:
+            self.build_process = subprocess.Popen(cmd, cwd=str(REPO_ROOT),
+                                                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                                  text=True, encoding="utf-8", errors="replace",
+                                                  bufsize=1, creationflags=flags,
+                                                  start_new_session=(os.name != "nt"))
+        except OSError as exc:
+            self._set_build_state("Cannot start compiler", str(exc), error=True)
+            self.build_process = None
+            return
+        self.live_button.configure(text="Stop live build")
+        self._set_build_state("Starting Windows compiler…", "Checking dependencies", busy=True)
+        thread = threading.Thread(target=self._read_builder_output,
+                                  args=(generation, self.build_process), daemon=True)
+        thread.start()
+
+    def _read_builder_output(self, generation, process):
+        """Read compiler output off Tk's thread; never block the calculator UI."""
+        try:
+            if process.stdout is not None:
+                for line in process.stdout:
+                    self._builder_events.put((generation, "line", line.rstrip("\r\n")))
+        except (OSError, ValueError) as exc:
+            self._builder_events.put((generation, "line", f"Compiler output error: {exc}"))
+        finally:
+            rc = process.wait()
+            self._builder_events.put((generation, "ended", rc))
+
+    def _stop_builder(self):
+        process = self.build_process
+        self._builder_generation += 1  # Ignore stale lines from a stopped watch.
+        self._builder_ready = False
+        self.watch_var.set(False)
+        self.watch_candidate = None
+        self.build_process = None
+        if hasattr(self, "live_button"):
+            self.live_button.configure(text="Start live build")
+        self._set_build_state("Watcher stopped" if self.mode_var.get() == "live" else "Single file mode",
+                              "No background compilation", busy=False)
+        if process is None or process.poll() is not None:
+            return
+        self._builder_stopping = True
+        # Start terminating the process tree *before* closing Tk. If shutdown
+        # were deferred entirely to a daemon thread, the Python process could
+        # exit first and leave an orphaned Windows watcher running.
+        try:
+            if os.name == "nt":
+                subprocess.Popen(["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            else:
+                os.killpg(process.pid, signal.SIGTERM)
+        except OSError:
+            try:
+                process.terminate()
+            except OSError:
+                pass
+        def wait_for_stopped():
+            try:
+                process.wait(timeout=7)
+            except subprocess.TimeoutExpired:
+                try:
+                    process.kill()
+                    process.wait(timeout=2)
+                except (OSError, subprocess.TimeoutExpired):
+                    pass
+            finally:
+                self._builder_events.put((None, "stopped", None))
+        threading.Thread(target=wait_for_stopped, daemon=True).start()
+
+    def _poll_builder(self):
+        if self._closing:
+            return
+        count = 0
+        while count < 240:
+            try:
+                generation, kind, value = self._builder_events.get_nowait()
+            except queue.Empty:
+                break
+            count += 1
+            if kind == "stopped":
+                self._builder_stopping = False
+                continue
+            if generation != self._builder_generation:
+                continue
+            if kind == "ended":
+                self.live_button.configure(text="Start live build")
+                self.build_process = None
+                self.watch_var.set(False)
+                if value != 0:
+                    self._set_build_state("Compiler stopped unexpectedly",
+                                          f"Exit code {value} · See ⋯ → Build log", error=True)
+                else:
+                    self._set_build_state("Watcher stopped", "No longer monitoring edits")
+                continue
+            line = value
+            self._builder_log.append(line)
+            self._append_log(line)
+            if "Detected edits (" in line:
+                self._builder_has_error = False
+                self._set_build_state("Changes detected", "Rebuilding NumPlay…", busy=True)
+            elif "Building:" in line:
+                self._set_build_state("Compiling NumPlay…", "Source files and game modules", busy=True)
+            elif "Preparing temporary Windows nwlink" in line:
+                self._set_build_state("Preparing compiler…", "Rust and ARM tools", busy=True)
+            elif "SUCCESS: organized" in line:
+                self._set_build_state("Publishing compiled app…", "Finishing the live .nwa", busy=True)
+            elif "Stable live-emulator input:" in line:
+                self._builder_has_error = False
+                self._builder_ready = True
+                self._set_build_state("Build successful ✓", "Reloading dist/live/NumPlay.nwa", busy=False)
+                if self.mode_var.get() == "live" and LIVE_NWA.is_file():
+                    # Emulation runs in its own thread and will stop gracefully
+                    # before loading the atomically replaced file.
+                    self.load(LIVE_NWA)
+            elif ("Build failed;" in line or "Initial build failed" in line or
+                  "Windows build failed:" in line):
+                self._builder_has_error = True
+                self._set_build_state("Build failed", "Last good app preserved · See ⋯ → Build log",
+                                      busy=False, error=True)
+            elif "Watching for the next edit" in line or "Watching NumPlay source files" in line:
+                if self._builder_has_error:
+                    self._set_build_state("Build failed · watching", "Fix and save code to retry",
+                                          busy=False, error=True)
+                else:
+                    self._set_build_state("Watching for changes", "Edit and save a game to rebuild",
+                                          busy=False)
+        self._builder_poll_id = self.root.after(120, self._poll_builder)
+
+    def _append_log(self, line):
+        box = self._build_log_text
+        if box is not None:
+            try:
+                box.configure(state="normal")
+                box.insert("end", line + "\n")
+                # Trim long-running logs to avoid unbounded Tk memory usage.
+                if int(box.index("end-1c").split(".")[0]) > 870:
+                    box.delete("1.0", "120.0")
+                box.see("end")
+                box.configure(state="disabled")
+            except tk.TclError:
+                self._build_log_text = None
+
+    def _show_build_log(self):
+        if self._build_log_window is not None:
+            try:
+                self._build_log_window.lift()
+                self._build_log_window.focus_set()
+                return
+            except tk.TclError:
+                self._build_log_window = None
+        win = tk.Toplevel(self.root)
+        win.title("NumPlay · Build log")
+        win.geometry("790x480")
+        win.configure(bg=BG)
+        frame = tk.Frame(win, bg=BG)
+        frame.pack(fill="both", expand=True, padx=8, pady=8)
+        scroll = tk.Scrollbar(frame)
+        scroll.pack(side="right", fill="y")
+        box = tk.Text(frame, bg="#0c131d", fg=FG, relief="flat", bd=0,
+                      font=("Consolas", 9), padx=10, pady=10, wrap="none",
+                      yscrollcommand=scroll.set)
+        box.pack(side="left", fill="both", expand=True)
+        scroll.configure(command=box.yview)
+        box.insert("end", "\n".join(self._builder_log) or "No compilation output yet.")
+        box.configure(state="disabled")
+        self._build_log_window = win
+        self._build_log_text = box
+        def close():
+            self._build_log_window = None
+            self._build_log_text = None
+            win.destroy()
+        win.protocol("WM_DELETE_WINDOW", close)
+
+    def _open_dist(self):
+        path = REPO_ROOT / "dist"
+        path.mkdir(parents=True, exist_ok=True)
+        if os.name == "nt":
+            os.startfile(str(path))
+        else:
+            self.set_status(f"Compiled files: {path}")
+
+    def on_close(self):
+        self._stop_builder()
+        try:
+            self.root.after_cancel(self._builder_poll_id)
+        except (tk.TclError, AttributeError):
+            pass
+        super().on_close()
 
     def toggle_fullscreen(self):
         self.fullscreen = not self.fullscreen
@@ -1483,7 +1934,7 @@ class CalculatorSkinApp(LiveApp):
 
     def toggle_auto_clock(self):
         self.auto_clock[0] = bool(self.auto_clock_var.get())
-        self.clock_menu.configure(state="disabled" if self.auto_clock[0] else "normal")
+        self._clock_submenu.entryconfigure("Manual clock", state="disabled" if self.auto_clock[0] else "normal")
         if self.auto_clock[0]:
             self.set_status("Automatic CPU clock enabled; adjusts gradually.")
         else:
@@ -1497,15 +1948,51 @@ class CalculatorSkinApp(LiveApp):
         self.rate_label.set("Measuring real-time speed…")
         self.set_status(f"Manual CPU clock set to {self.clock_mhz[0]} MHz")
 
+    def _switch_view(self):
+        """Switch the viewport only; the running game/keyboard/build are untouched."""
+        screen_only = self.view_var.get() == "screen"
+        self.view_detail.configure(text=("320 × 240 physical pixels · 1:1 · no scaling"
+                                         if screen_only else
+                                         "Calculator artwork + clickable keypad"))
+        self._hover = None
+        # A held mouse key was pressed on a key that disappears in screen view.
+        # Release it to avoid a stuck calculator button.
+        self.on_mouse_up()
+        self.canvas.configure(cursor="arrow")
+        self._native_geometry = None
+        self._art_geometry = (0, 0, 0, 0)
+        self._canvas_screen = None
+        self._canvas_image = None
+        self._bg_photo = None
+        self.canvas.delete("all")
+        self._resize()
+        self.refocus_input()
+
     def present_screen(self):
         self._display_screen()
 
     def _resize(self, event=None):
-        # Preserve calculator proportions and center it in the available space.
         ww = self.canvas.winfo_width()
         hh = self.canvas.winfo_height()
         if ww < 20 or hh < 20:
             return
+        if self.view_var.get() == "screen":
+            # A native 320x240 LCD. Its bitmap is NEVER resized, even if the
+            # window is larger, smaller, or maximized. Only its position moves.
+            x = (ww - LCD_WIDTH) // 2
+            y = (hh - LCD_HEIGHT) // 2
+            geom = (x, y)
+            if geom != self._native_geometry:
+                self._native_geometry = geom
+                # A one-pixel surround is outside the image; the image itself
+                # contains exactly 320x240 framebuffer pixels.
+                self.canvas.delete("native-border")
+                self.canvas.create_rectangle(x-1, y-1, x+LCD_WIDTH, y+LCD_HEIGHT,
+                                             outline="#506477", width=1,
+                                             tags="native-border")
+                self._display_screen()
+            return
+        # Calculator POV: preserve the existing artwork proportions.
         ratio = self.art_px[0] / self.art_px[1]
         art_w = max(1, int(min(ww - 8, (hh - 8) * ratio)))
         art_h = max(1, int(art_w / ratio))
@@ -1518,6 +2005,7 @@ class CalculatorSkinApp(LiveApp):
         self._bg_photo = ImageTk.PhotoImage(self.art.resize((art_w, art_h), Image.Resampling.LANCZOS))
         self.canvas.delete("all")
         self._canvas_image = self.canvas.create_image(x0, y0, image=self._bg_photo, anchor="nw", tags="art")
+        self._canvas_screen = None
         self._display_screen()
         self._draw_highlight()
 
@@ -1530,8 +2018,18 @@ class CalculatorSkinApp(LiveApp):
     def _display_screen(self):
         if self._screen_rgb is None:
             return
-        x, y, w, h = self._rect(SCREEN)
-        photo = ImageTk.PhotoImage(self._screen_rgb.resize((w, h), Image.Resampling.NEAREST))
+        if self.view_var.get() == "screen":
+            # No PIL resize (not even NEAREST): one bitmap pixel maps to one
+            # Tk image pixel. The native framebuffer must be exactly 320x240.
+            if self._screen_rgb.size != (LCD_WIDTH, LCD_HEIGHT):
+                raise ValueError(f"Expected 320x240 LCD; got {self._screen_rgb.size}")
+            if self._native_geometry is None:
+                return
+            x, y = self._native_geometry
+            photo = ImageTk.PhotoImage(self._screen_rgb)
+        else:
+            x, y, w, h = self._rect(SCREEN)
+            photo = ImageTk.PhotoImage(self._screen_rgb.resize((w, h), Image.Resampling.NEAREST))
         self._photo = photo
         if self._canvas_screen is None or not self.canvas.find_withtag("screen"):
             self._canvas_screen = self.canvas.create_image(x, y, image=photo, anchor="nw", tags="screen")
@@ -1540,7 +2038,7 @@ class CalculatorSkinApp(LiveApp):
             self.canvas.coords(self._canvas_screen, x, y)
 
     def _key_at(self, x, y) -> str | None:
-        if self._art_geometry[2] == 0:
+        if self.view_var.get() == "screen" or self._art_geometry[2] == 0:
             return None
         # A few nav keys' rectangular touch regions overlap: choose the closest
         # *center* of a containing key, consistent with the visible button art.
@@ -1554,14 +2052,26 @@ class CalculatorSkinApp(LiveApp):
 
     def _draw_highlight(self):
         self.canvas.delete("key-light")
-        key = self.mouse_pressed or self._hover
-        if not key:
+        if self.view_var.get() == "screen" or not self._art_geometry[2]:
             return
-        x, y, w, h = self._rect(HOTSPOTS[key])
-        held = key == self.mouse_pressed or key in self.pressed_pc.values()
-        self.canvas.create_oval(x + 2, y + 2, x + w - 2, y + h - 2,
-                                outline=ACCENT if held else "#ffffff",
-                                width=2, tags="key-light")
+        # V12 only drew the hovered/mouse-clicked key, so PC arrow presses
+        # were invisible unless the mouse happened to hover over that button.
+        # Paint *all* held keyboard/mouse buttons; combinations are supported.
+        held = set(self.pressed_pc.values())
+        if self.mouse_pressed:
+            held.add(self.mouse_pressed)
+        for key in sorted(held):
+            if key not in HOTSPOTS:
+                continue
+            x, y, w, h = self._rect(HOTSPOTS[key])
+            self.canvas.create_oval(x + 2, y + 2, x + w - 2, y + h - 2,
+                                    outline=ACCENT, width=3, tags="key-light")
+        # Hover is a subtle white outline only when the key is not held.
+        if self._hover and self._hover in HOTSPOTS and self._hover not in held:
+            x, y, w, h = self._rect(HOTSPOTS[self._hover])
+            self.canvas.create_oval(x + 2, y + 2, x + w - 2, y + h - 2,
+                                    outline="#ffffff", width=2, tags="key-light")
+        self.canvas.tag_raise("key-light")
 
     def _mouse_press(self, event):
         # Crucial on Windows: clicking the calculator after using a sidebar
@@ -1678,13 +2188,14 @@ class CalculatorSkinApp(LiveApp):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="NumWorks-shaped live .nwa emulator for Windows")
+    ap = argparse.ArgumentParser(description="NumWorks-shaped .nwa emulator: single-file and live-build modes for Windows")
     ap.add_argument("nwa", nargs="?", type=Path, help="optional .nwa path, or drop it after launching")
     ap.add_argument("--nwlink", default=nwlink_command())
     ap.add_argument("--skin-image", type=Path, help="path to extension's resources/webview/background.png")
     ap.add_argument("--model", choices=("n0120", "n0110"), default="n0120")
     ap.add_argument("--system", choices=("epsilon", "upsilon"), default="epsilon")
-    ap.add_argument("--follow-newest", action="store_true")
+    ap.add_argument("--live", action="store_true", help="open Live development mode and start the Windows build watcher inside the GUI")
+    ap.add_argument("--follow-newest", action="store_true", help="legacy alias for --live (no ambiguous newest-file scanning)")
     ap.add_argument("--profile-speed", action="store_true",
                     help="print a measured ARM/render/pacing speed report every 5 seconds")
     ap.add_argument("--max-sleep-ms", type=int, default=0, metavar="MS",
@@ -1704,14 +2215,30 @@ def main():
         ap.error("NumWorks skin not found. Install k-kuroguro's Numworks Simulator in VS Code, "
                  "or pass --skin-image PATH pointing to resources/webview/background.png.\n"
                  f"Image source: {ART_SOURCE}")
+    if os.name == "nt":
+        # Avoid Windows silently bitmap-scaling the *whole* Tk window at 125%/
+        # 150% display scale, which would defeat the native 1:1 LCD view.
+        # Call before Tk creates its first window; keep a safe fallback.
+        try:
+            import ctypes
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)  # per-monitor aware
+        except (AttributeError, OSError):
+            try:
+                ctypes.windll.user32.SetProcessDPIAware()
+            except (AttributeError, OSError):
+                pass
     if TkinterDnD:
         root = TkinterDnD.Tk()
     else:
         root = tk.Tk()
         print("Tip: pip install tkinterdnd2 for .nwa drag-and-drop.")
-    CalculatorSkinApp(root, args.nwa, args.nwlink, args.model, args.system,
-                      args.follow_newest, art, max_sleep_ms=args.max_sleep_ms,
-                      profile_speed=args.profile_speed)
+    start_live = args.live or args.follow_newest
+    if start_live and args.nwa:
+        print("[NumPlay] --live uses dist/live/NumPlay.nwa; ignoring the supplied single-file path.")
+    CalculatorSkinApp(root, None if start_live else args.nwa, args.nwlink,
+                      args.model, args.system, False, art,
+                      max_sleep_ms=args.max_sleep_ms, profile_speed=args.profile_speed,
+                      start_live=start_live)
     root.mainloop()
 
 
