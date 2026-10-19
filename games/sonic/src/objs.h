@@ -143,6 +143,17 @@ void Caterkiller(Obj *o);
 void BossMarble(Obj *o);
 void BossFire(Obj *o);
 
+/* obj_syz.c */
+void SpinningLight(Obj *o);
+void Roller(Obj *o);
+void Bumper(Obj *o);
+void Yadrin(Obj *o);
+void FloatingBlock(Obj *o);
+void SpikeBall(Obj *o);
+void BigSpikeBall(Obj *o);
+void BossSpringYard(Obj *o);
+void BossBlock(Obj *o);
+
 /* screens.c */
 void TitleSonic(Obj *o);
 void PSBTM(Obj *o);
