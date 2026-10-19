@@ -51,20 +51,32 @@ void gfx_frame_rect(int x, int y, int w, int h, uint16_t c) {
   gfx_fill(x + w - 1, y, 1, h, c);
 }
 
+/* static: grey noise, spread out for gfx_mix (made once) */
+static uint32_t noise[2048];
+
 void gfx_static(int x, int y, int w, int h, int a, uint32_t seed) {
   int x0, x1, r0, r1;
   if (!clip(x, y, w, h, &x0, &x1, &r0, &r1) || a <= 0) return;
+  if (!noise[0]) {
+    uint32_t s = 0x2545F491u;
+    for (int i = 0; i < 2048; i++) {
+      s ^= s << 13, s ^= s >> 17, s ^= s << 5;
+      uint32_t g = (s >> 24) * 3 / 4;
+      uint32_t c = (g & 0xF8) << 8 | (g & 0xFC) << 3 | g >> 3;
+      noise[i] = ((c | c << 16) & 0x07E0F81F) | 1u << 31;   /* (the top bit: made) */
+    }
+  }
   for (int r = r0; r < r1; r++) {
     uint32_t s = seed ^ (uint32_t)(gfx_y0 + r) * 0x9E3779B1u;
     s ^= s >> 15, s *= 0x2C1B3C6Du, s ^= s >> 12;
     /* a line now and then is brighter, as the game's static has */
-    int la = (s & 31) == 0 ? a + 6 : a;
+    uint32_t la = (s & 31) == 0 ? (uint32_t)a + 6 : (uint32_t)a;
     if (la > 32) la = 32;
+    const uint32_t *nz = noise + (s >> 16 & 1023);
     for (uint16_t *p = gfx_band + r * SCREEN_W + x0, *e = gfx_band + r * SCREEN_W + x1; p < e; p++) {
-      s ^= s << 13, s ^= s >> 17, s ^= s << 5;
-      uint32_t g = (s >> 24) * 3 / 4;
-      uint16_t n = (uint16_t)((g & 0xF8) << 8 | (g & 0xFC) << 3 | g >> 3);
-      *p = gfx_mix(n, *p, la);
+      uint32_t n = *nz++ & 0x07E0F81F, b = (*p | (uint32_t)*p << 16) & 0x07E0F81F;
+      b = (b + ((n - b) * la >> 5)) & 0x07E0F81F;
+      *p = (uint16_t)(b | b >> 16);
     }
   }
 }
@@ -75,7 +87,7 @@ void gfx_dim(int x, int y, int w, int h, int a) {
   for (int r = r0; r < r1; r++)
     for (uint16_t *p = gfx_band + r * SCREEN_W + x0, *e = gfx_band + r * SCREEN_W + x1; p < e; p++) {
       if (a <= 32) {
-        *p = gfx_mix(*p, BLACK, 32 - a);
+        *p = gfx_mix(*p, BLACK, a);
       } else {   /* brighter: each channel times a / 32, up to 2 */
         uint32_t v = *p, R = (v >> 11) * (uint32_t)a >> 5, G = (v >> 5 & 63) * (uint32_t)a >> 5, B = (v & 31) * (uint32_t)a >> 5;
         *p = (uint16_t)((R > 31 ? 31 : R) << 11 | (G > 63 ? 63 : G) << 5 | (B > 31 ? 31 : B));

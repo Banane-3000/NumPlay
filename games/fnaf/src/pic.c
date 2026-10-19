@@ -155,10 +155,18 @@ static void block(Bits *b, const Huff *dc, const Huff *ac, int *pred, const uint
 }
 
 /* ------------------------------------------------------------------ one square */
-static const uint8_t bayer[16] = {0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5};
+#if defined(__ARM_FEATURE_SAT)
+#include <arm_acle.h>
+#define SAT8(v) __usat(v, 8)
+#else
+#define SAT8(v) ((v) < 0 ? 0 : (v) > 255 ? 255 : (v))
+#endif
+/* a 4 x 4 ordered dither: what is added to red and blue (0 to 7) and green (0 to 3) before they lose bits */
+static const uint8_t dither_rb[4][4] = {{0, 4, 1, 5}, {6, 2, 7, 3}, {1, 5, 0, 4}, {7, 3, 6, 2}};
+static const uint8_t dither_g[4][4] = {{0, 2, 0, 2}, {3, 1, 3, 1}, {0, 2, 0, 2}, {3, 1, 3, 1}};
 
-/* decodes the square at data into px (16 x 16, stride 16) */
-static void square(const uint8_t *data, int qset, uint16_t *px) {
+/* decodes the square at data into dst (16 x 16, rows stride apart) */
+static void square(const uint8_t *data, int qset, uint16_t *dst, int stride) {
   static Huff h[4];
   static const uint8_t *loaded;
   if (loaded != fnaf_bin) {
@@ -174,22 +182,25 @@ static void square(const uint8_t *data, int qset, uint16_t *px) {
   block(&b, &h[2], &h[3], &pred, qc, cb);
   pred = 0;
   block(&b, &h[2], &h[3], &pred, qc, cr);
-  for (int r = 0; r < 16; r += 2)
-    for (int c = 0; c < 16; c += 2) {
-      int ci = (r >> 1) * 8 + (c >> 1), u = cb[ci] - 128, v = cr[ci] - 128;
-      int dr = (91881 * v + 32768) >> 16, dg = (-22554 * u - 46802 * v + 32768) >> 16, db = (116130 * u + 32768) >> 16;
-      for (int i = 0; i < 2; i++)
-        for (int j = 0; j < 2; j++) {
-          int rr = r + i, cc = c + j;
-          int l = y[(rr >> 3) * 2 + (cc >> 3)][(rr & 7) * 8 + (cc & 7)];
-          int d = bayer[(rr & 3) * 4 + (cc & 3)];
-          int R = l + dr + (d >> 1), G = l + dg + (d >> 2), B = l + db + (d >> 1);
-          R = R < 0 ? 0 : R > 255 ? 255 : R;
-          G = G < 0 ? 0 : G > 255 ? 255 : G;
-          B = B < 0 ? 0 : B > 255 ? 255 : B;
-          px[rr * 16 + cc] = (uint16_t)((R & 0xF8) << 8 | (G & 0xFC) << 3 | B >> 3);
-        }
+  for (int rp = 0; rp < 8; rp++) {   /* two rows at a time, sharing their colours */
+    int dr[8], dg[8], db[8];
+    for (int c = 0; c < 8; c++) {
+      int u = cb[rp * 8 + c] - 128, v = cr[rp * 8 + c] - 128;
+      dr[c] = (91881 * v + 32768) >> 16;
+      dg[c] = (-22554 * u - 46802 * v + 32768) >> 16;
+      db[c] = (116130 * u + 32768) >> 16;
     }
+    for (int r = 2 * rp; r < 2 * rp + 2; r++) {
+      const uint8_t *yl = y[(r >> 3) * 2] + (r & 7) * 8, *drb = dither_rb[r & 3], *dgg = dither_g[r & 3];
+      uint16_t *o = dst + r * stride;
+      for (int c = 0; c < 16; c++) {
+        if (c == 8) yl = y[(r >> 3) * 2 + 1] + (r & 7) * 8;
+        int l = yl[c & 7], k = c >> 1;
+        int R = SAT8(l + dr[k] + drb[c & 3]), G = SAT8(l + dg[k] + dgg[c & 3]), B = SAT8(l + db[k] + drb[(c + 2) & 3]);
+        o[c] = (uint16_t)((R & 0xF8) << 8 | (G & 0xFC) << 3 | B >> 3);
+      }
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ pictures */
@@ -234,9 +245,14 @@ void pic_part(int id, int x, int y, int sx, int sy, int w, int h) {
   int pr0 = y0 - y + sy, pr1 = y1 - y + sy, pc0 = x0 - x + sx, pc1 = x1 - x + sx;
   for (int my = pr0 >> 4; my <= (pr1 - 1) >> 4 && my < in.mh; my++)
     for (int mx = pc0 >> 4; mx <= (pc1 - 1) >> 4 && mx < in.mw; mx++) {
-      square(bank + square_at(&in, my * in.mw + mx), in.q, px);
+      const uint8_t *data = bank + square_at(&in, my * in.mw + mx);
       int r0 = my * 16 > pr0 ? my * 16 : pr0, r1 = my * 16 + 16 < pr1 ? my * 16 + 16 : pr1;
       int c0 = mx * 16 > pc0 ? mx * 16 : pc0, c1 = mx * 16 + 16 < pc1 ? mx * 16 + 16 : pc1;
+      if (r1 - r0 == 16 && c1 - c0 == 16) {   /* all of it shows: straight into the band */
+        square(data, in.q, gfx_band + (r0 - sy + y - gfx_y0) * SCREEN_W + (c0 - sx + x), SCREEN_W);
+        continue;
+      }
+      square(data, in.q, px, 16);
       for (int r = r0; r < r1; r++) {
         uint16_t *d = gfx_band + (r - sy + y - gfx_y0) * SCREEN_W + (c0 - sx + x);
         const uint16_t *s = px + (r - my * 16) * 16 + (c0 - mx * 16);

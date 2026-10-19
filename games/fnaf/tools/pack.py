@@ -320,7 +320,7 @@ def golden_office(office):
     lum = a.mean(axis=2)
     eyes = (lum > 150) & (a.max(axis=2) - a.min(axis=2) < 60)
     alpha = np.clip((lum - 6) / 18, 0, 1)
-    gold = np.stack([lum * 1.35, lum * 1.05, lum * 0.32], axis=2)
+    gold = np.stack([lum * 1.55, lum * 1.22, lum * 0.22], axis=2)
     gold[eyes] = 0
     rgba = np.dstack([np.clip(gold, 0, 255), alpha * 255]).astype(np.uint8)
     sprite = Image.fromarray(rgba, "RGBA").rotate(-24, resample=Image.BICUBIC, expand=True)
@@ -331,7 +331,7 @@ def golden_office(office):
     x0, y0 = 266 - sprite.width // 2, OH - h + 30
     base = Image.fromarray(office.astype(np.uint8))
     dim = sprite.copy()
-    dim.putdata([(int(r * 0.55), int(g * 0.55), int(b * 0.55), al) for r, g, b, al in sprite.getdata()])
+    dim.putdata([(int(r * 0.72), int(g * 0.72), int(b * 0.72), al) for r, g, b, al in sprite.getdata()])
     base.paste(dim, (x0, y0), dim)
     gx0, gy0 = x0 // 16 * 16, y0 // 16 * 16
     gx1 = min(OW, -(-(x0 + sprite.width) // 16) * 16)

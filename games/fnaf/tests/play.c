@@ -58,8 +58,10 @@ static uint32_t bot(int f) {
   static int next_look, look_until;
   bool up = n->flip >= 1;
   bool bonnie = n->pos[BONNIE] == AT_DOOR, chica = n->pos[CHICA] == AT_DOOR;
-  bool foxy = n->foxy >= 2, freddy = n->pos[FREDDY] == CAM_4B || n->pos[FREDDY] == CAM_4A;
-  bool want_l = bonnie || foxy, want_r = chica || freddy;
+  /* the left door for Bonnie at it or Foxy gone from his cove; the right one for Chica, or for Freddy at
+     4B while the monitor is up (he only comes in then) */
+  bool want_l = bonnie || n->foxy == 3;
+  bool want_r = chica || (n->pos[FREDDY] == CAM_4B && (n->monitor || f >= next_look - 40));
   if (n->monitor) {   /* on the cameras: look at Pirate Cove, then come down */
     if (up && n->cam != CAM_1C && !(f & 1)) return K_DIGIT(1);
     if (up && f >= look_until && !(f & 1)) return K_OK;
@@ -68,16 +70,17 @@ static uint32_t bot(int f) {
   if (n->flip > 0 || (f & 1)) return 0;
   if (n->door[LEFT] != want_l) return K_DIGIT(7);
   if (n->door[RIGHT] != want_r) return K_DIGIT(9);
-  if (f >= next_look && !n->dark) {
-    next_look = f + 300 + (int)(rnd() % 400);
-    look_until = f + 70;
+  if (f >= next_look && !n->dark) {   /* a look at Pirate Cove: more often once Foxy peeks out */
+    next_look = f + (n->foxy >= 1 ? 200 : 360) + (int)(rnd() % 200);
+    look_until = f + 50;
     return K_OK;
   }
   return k;
 }
 
 int main(int argc, char **argv) {
-  int frames = 600, night = 0, power = -1, hour = -1, ai[4] = {-1, -1, -1, -1};
+  int frames = 600, night = 0, power = -1, hour = -1, ai[4] = {-1, -1, -1, -1}, gold = 0, stars = -1;
+  int pos[3] = {-1, -1, -1};
   bool use_bot = false, all = false;
   int every = 0;
   const char *out = "build/shots", *saves = "build/host-saves";
@@ -103,6 +106,9 @@ int main(int argc, char **argv) {
       unsigned s = (unsigned)atoi(argv[++i]);
       for (unsigned k = 0; k < s % 1000; k++) rnd();
     } else if (!strcmp(a, "--bot")) use_bot = true;
+    else if (!strcmp(a, "--gold")) gold = 1;
+    else if (!strcmp(a, "--pos")) sscanf(argv[++i], "%d,%d,%d", &pos[0], &pos[1], &pos[2]);
+    else if (!strcmp(a, "--stars")) stars = atoi(argv[++i]);
     else {
       fprintf(stderr, "unknown argument %s\n", a);
       return 2;
@@ -116,6 +122,7 @@ int main(int argc, char **argv) {
   fnaf_bin = fnaf_data;
   host_time = 1000;
   game_init();
+  if (stars >= 0) g.stars = (uint8_t)stars;
   if (night) {
     if (night == 7)
       for (int k = 0; k < 4; k++) g.custom[k] = (int8_t)(ai[k] >= 0 ? ai[k] : 0);
@@ -130,6 +137,9 @@ int main(int argc, char **argv) {
         if (ai[k] >= 0) g.n.ai[k] = (int8_t)ai[k];
       if (power >= 0) g.n.power = (int16_t)power;
       if (hour >= 0) g.n.hour = (uint8_t)hour, g.n.t = hour * 89.0f + 1;
+      if (gold) g.n.gold = 1;
+      for (int k = 0; k < 3; k++)
+        if (pos[k] >= 0) g.n.pos[k] = (uint8_t)pos[k];
     }
     uint32_t k = 0;
     for (int i = 0; i < nholds; i++)
@@ -155,8 +165,9 @@ int main(int argc, char **argv) {
     }
   }
   printf("END scene %d night %d hour %d power %d t %.1f frames %d running %d paused %d reached %d stars %d "
-         "pos %d,%d,%d foxy %d gold %d dark %d\n",
+         "pos %d,%d,%d foxy %d gold %d dark %d muted %d ai %d,%d,%d,%d doors %d,%d cam %d keys_seen %d pounds %d\n",
          g.scene, g.n.night, g.n.hour, g.n.power, g.n.t, f, g.running, g.paused, g.reached, g.stars, g.n.pos[0],
-         g.n.pos[1], g.n.pos[2], g.n.foxy, g.n.gold, g.n.dark);
+         g.n.pos[1], g.n.pos[2], g.n.foxy, g.n.gold, g.n.dark, g.n.call_muted, g.n.ai[0], g.n.ai[1], g.n.ai[2],
+         g.n.ai[3], g.n.door[0], g.n.door[1], g.n.cam, g.keys_seen, g.n.foxy_pounds);
   return 0;
 }

@@ -64,7 +64,7 @@ static void title_step(void) {
   /* Freddy's face twitches, and its light wavers */
   face_t += DT, light_t += DT;
   if (face_t >= 0.08f) face_t = 0, face = rnd() % 100 < 4 ? 1 + (int)(rnd() % 3) : 0;
-  if (light_t >= 0.3f) light_t = 0, face_light = 14 + (int)(rnd() % 19);
+  if (light_t >= 0.3f) light_t = 0, face_light = 22 + (int)(rnd() % 17);
   g.menu_n = (uint8_t)(2 + (g.stars & 1) + ((g.stars >> 1) & 1));
   if (pressed(K_UP | K_DIGIT(8))) g.menu = (uint8_t)((g.menu + g.menu_n - 1) % g.menu_n);
   if (pressed(K_DOWN | K_DIGIT(2))) g.menu = (uint8_t)((g.menu + 1) % g.menu_n);
@@ -87,7 +87,7 @@ static void title_draw(void) {
   gfx_fill(0, gfx_y0, SCREEN_W, BAND_H, BLACK);
   pic_draw(PIC_TITLE0 + face, 0, 0);
   gfx_dim(0, gfx_y0, SCREEN_W, BAND_H, face_light);
-  gfx_static(0, gfx_y0, SCREEN_W, BAND_H, 9, rnd());
+  gfx_static(0, gfx_y0, SCREEN_W, BAND_H, 7, rnd());
   /* the slow white band going down, and lines that flash */
   int sy = (int)(g.t / 20 * (SCREEN_H + 10)) % (SCREEN_H + 10) - 10;
   gfx_blend(0, sy, SCREEN_W, 10, WHITE, 3);
@@ -264,7 +264,7 @@ static void six_draw(void) {
     gfx_fill(110, cy + dh, 30, dh, BLACK);
   }
   gfx_text(FONT_HUGE, 148, cy, "AM", WHITE);
-  if (g.t > 6.2f) gfx_text_c(FONT_TEXT, 160, 170, "*children cheering*", RGB(0xA0A0A0));
+  gfx_text_c(FONT_TEXT, 160, 170, g.t > 6.2f ? "*children cheering*" : "*chimes*", RGB(0xA0A0A0));
   gfx_dim(0, gfx_y0, SCREEN_W, BAND_H, fade_in_out(g.t, 1, 10.5f, 1));
 }
 
