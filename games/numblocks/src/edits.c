@@ -290,6 +290,41 @@ int edits_top(int x, int z, int top) {
   return top;
 }
 
+#if NB_DIMS
+/* Teleporter.placeInExistingPortal: of the blocks b0 and b1 changed within r of (x, z) (portals: only made
+ * by changes), the nearest to (x, y, z) of those with neither below; false if none. Records only: the
+ * journal is flushed first */
+bool edits_find(int x, int y, int z, int rad, int b0, int b1, int *out) {
+  int64_t best = -1;
+  for (int rz = floordiv(z - rad, 64); rz <= floordiv(z + rad, 64); rz++)
+    for (int rx = floordiv(x - rad, 64); rx <= floordiv(x + rad, 64); rx++) {
+      int n;
+      const uint8_t *rec = region(rx, rz, &n);
+      const uint8_t *r_ = rec;
+#define RR(i) rd32(r_ + 4 * (i))
+      for (int i = n; i-- > 0 && (RR(i) & HI);) {
+        uint32_t e = RR(i);
+        int b = BLOCK_OF(e);
+        if (b != b0 && b != b1) continue;
+        uint32_t k = KEY(e) & ~HI;
+        /* (a plain entry of the spot wins over it: NumPlay's NumBlocks changed it since) */
+        const uint8_t *r = rec;
+        int j = rlower(r, n, k);
+        if (j < n && KEY(R(j)) == k) continue;
+        if ((e & 127) && i > 0 && KEY(RR(i - 1)) == KEY(e) - 1 && (BLOCK_OF(RR(i - 1)) == b0 || BLOCK_OF(RR(i - 1)) == b1))
+          continue;   /* (one below: the lowest of a column counts) */
+        int chunk = (int)(e >> 15) & 15, xz = (int)(e >> 7) & 255;
+        int bx = (rx * 4 + (chunk & 3)) * 16 + (xz & 15), bz = (rz * 4 + (chunk >> 2)) * 16 + (xz >> 4), by = (int)(e & 127);
+        if (bx < x - rad || bx > x + rad || bz < z - rad || bz > z + rad) continue;
+        int64_t d = (int64_t)(bx - x) * (bx - x) + (int64_t)(by - y) * (by - y) + (int64_t)(bz - z) * (bz - z);
+        if (best < 0 || d < best) best = d, out[0] = bx, out[1] = by, out[2] = bz;
+      }
+#undef RR
+    }
+  return best >= 0;
+}
+#endif
+
 int edits_count(void) { return nj; }
 
 /* the merge buffer, lent out between merges (n bytes at most) */

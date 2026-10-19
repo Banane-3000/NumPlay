@@ -20,6 +20,9 @@ typedef struct {
 #define N_PENDING 160
 static Pending pend[N_PENDING];
 static int npend;
+#if NB_DIMS
+void tick_forget(void) { npend = 0; }
+#endif
 
 void fluid_schedule(int x, int y, int z) {
   int b = world_get(x, y, z);
@@ -228,6 +231,9 @@ static void fire_schedule(int x, int y, int z, int age) {
   pend[npend++] = (Pending){(int16_t)x, (int16_t)z, (uint8_t)y, (uint8_t)age, (uint16_t)(ticks_run + 30 + rnd(10))};
 }
 void fire_set(int x, int y, int z, int age) {
+#if NB_DIMS
+  if (dims_portal_light(x, y, z)) return;   /* (BlockFire.onBlockAdded) */
+#endif
   world_set(x, y, z, B_FIRE);
   fire_schedule(x, y, z, age);
 }

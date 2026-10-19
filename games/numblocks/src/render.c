@@ -106,7 +106,26 @@ static inline int texel_rgb(int b, int tex, int u, int v, int col, int *r, int *
 }
 
 /* ---------------------------------------------------------------- the sky */
+#if NB_DIMS
+#define CLOUDS (opt.clouds && dim == DIM_OVERWORLD)
+/* RenderGlobal.renderSkyEnd: the End's sky, end_sky on the six sides of a box (16 times across each),
+ * dimmed to 0x28 */
+static uint16_t end_sky(float dx, float dy, float dz) {
+  float ax = fabsf(dx), ay = fabsf(dy), az = fabsf(dz), u, v, m;
+  if (ax >= ay && ax >= az) m = ax, u = dz, v = dy;
+  else if (ay >= az) m = ay, u = dx, v = dz;
+  else m = az, u = dx, v = dy;
+  int tu = (int)((u / m + 1) * 128) & 15, tv = (int)((v / m + 1) * 128) & 15;
+  uint16_t c = tex_pal[TX_END_SKY][texel(TX_END_SKY, tu, tv)];
+  return pack(r5(c) * 40 >> 8, g6(c) * 40 >> 8, b5(c) * 40 >> 8);
+}
+#else
+#define CLOUDS opt.clouds
+#endif
 static __attribute__((noinline)) uint16_t sky(float dx, float dy, float dz, float len) {
+#if NB_DIMS
+  if (dim == DIM_END) return end_sky(dx, dy, dz);
+#endif
   float e = dy / len;   /* elevation, -1..1 */
   /* horizon (fog colour) to the sky's colour above; below the horizon, fog */
   uint32_t gc = sky_grad[e <= 0 ? 0 : e >= 0.4f ? 128 : (int)(e * 320)];
@@ -154,7 +173,7 @@ static __attribute__((noinline)) uint16_t sky(float dx, float dy, float dz, floa
     }
   }
   /* clouds: Minecraft's 12-block cells at y = 128.33 */
-  if (dy > 0.01f && opt.clouds) {
+  if (dy > 0.01f && CLOUDS) {
     float t = (128.33f - (oy + vc_y0)) / dy;
     float cx = (ox + vc_x0) + dx * t + cloud_off, cz = (oz + vc_z0) + dz * t;
     float dist = t * len;
@@ -178,7 +197,11 @@ static __attribute__((noinline)) uint16_t sky(float dx, float dy, float dz, floa
 typedef struct {
   float dy, len2, sd0, sds, tx0, txs, cx0, cxs, cz0, czs, ct;
 } SkyRow;
+#if NB_DIMS
+static bool sky_fast(void) { return ss_a <= 0 && star_k <= 0 && dim != DIM_END; }
+#else
 static bool sky_fast(void) { return ss_a <= 0 && star_k <= 0; }
+#endif
 static void sky_row(SkyRow *k, const float *row) {
   k->dy = row[1];
   k->len2 = row[0] * row[0] + row[1] * row[1] + row[2] * row[2];   /* (+ su^2: rg is square to the row) */
@@ -214,7 +237,7 @@ static inline __attribute__((always_inline)) uint16_t sky_px(const SkyRow *k, fl
       }
     }
   }
-  if (dy > 0.01f && k->ct > 0 && opt.clouds && k->ct * k->ct * l2 < 200 * 200) {
+  if (dy > 0.01f && k->ct > 0 && CLOUDS && k->ct * k->ct * l2 < 200 * 200) {
     int ix = (int)floorf((k->cx0 + k->cxs * su) / 12) & 255, iz = (int)floorf((k->cz0 + k->czs * su) / 12) & 255;
     extern const uint8_t clouds[256 * 256 / 8];
     if (clouds[(iz * 256 + ix) >> 3] & (1 << (ix & 7))) {
@@ -1869,6 +1892,35 @@ static void ents_strip(int py0, int rows, uint16_t (*cb)[RW], float (*zb)[RW]) {
 }
 
 /* ---------------------------------------------------------------- the frame */
+#if NB_DIMS
+/* The Nether and the End: WorldProviderHell's light table (never under 0.1), the End's light (0.22 and
+ * more, EntityRenderer.updateLightmap); the fog's colour (WorldProvider*.getFogColor, mixed with the black
+ * of their sky as updateFogColor does) dimmed where the eyes are dark (fogColor1, eased); no sun, moon,
+ * stars or clouds; the Nether's fog close (doesXZShowFog: from 5% to half of 32 blocks) */
+static float eye_bri = 1;
+static void dims_light(void) {
+  static const float face_shade[4] = {1.0f, 0.8f, 0.6f, 0.5f};
+  float table[16];
+  for (int l = 0; l < 16; l++) {
+    float f = 1 - l / 15.0f, t = (1 - f) / (f * 3 + 1);
+    table[l] = dim == DIM_NETHER ? t * 0.9f + 0.1f : t;
+    float bri = dim == DIM_NETHER ? table[l] * 0.96f + 0.03f : 0.25f + 0.75f * t;
+    for (int s = 0; s < 4; s++) shade[s][l] = shade_blk[s][l] = (int)(bri * face_shade[s] * 32 + 0.5f);
+  }
+  int lb = cam_i >= 0 ? vl[cam_i] : 0, l = (lb & 15) > (lb >> 4) ? lb & 15 : lb >> 4;
+  float want = table[l] * (1 - 2 / 32.0f) + 2 / 32.0f;
+  eye_bri += (want - eye_bri) * 0.1f;
+  float fr, fg, fb;
+  if (dim == DIM_NETHER) fr = 0.2f, fg = 0.03f, fb = 0.03f;
+  else fr = 160 / 255.0f * 0.15f, fg = 128 / 255.0f * 0.15f, fb = 160 / 255.0f * 0.15f;
+  float k = (1 - 0.26f) * eye_bri;
+  fog_r = (int)(fr * k * 255), fog_g = (int)(fg * k * 255), fog_b = (int)(fb * k * 255);
+  sky_r = fog_r, sky_g = fog_g, sky_b = fog_b;
+  sun_a = 0, star_k = 0, ss_a = 0;
+  if (dim == DIM_NETHER) fog0 = 1.6f, fog1 = 16;
+}
+#endif
+
 static void setup_light(float sun) {
   /* Minecraft's light table (gamma "Moody"): (1 - f) / (3f + 1), f = 1 - level / 15,
    * sky light scaled by the sun, then brightened to at least 0.03 */
@@ -2084,6 +2136,9 @@ void render_frame(const Camera *c, uint32_t tod) {
   cam_fr[0][0] = cam_x - ox, cam_fr[0][1] = cam_x + 1 - ox;
   cam_fr[1][0] = cam_y - oy, cam_fr[1][1] = cam_y + 1 - oy;
   cam_fr[2][0] = cam_z - oz, cam_fr[2][1] = cam_z + 1 - oz;
+#if NB_DIMS
+  if (dim != DIM_OVERWORLD) dims_light();
+#endif
   under_water = is_water(cam_b);
   if (under_water) {
     fog_r = 10, fog_g = 30, fog_b = 110;

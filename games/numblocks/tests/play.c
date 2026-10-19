@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
   const char *out = "build/play", *shots = "";
   int give = 0, showcase = 0, title_screen = 0, mobs = 0, animals = 0, start_time = -1, torches = 0, water = 0, creative = 0, build = 0, rain = 0;
   float hurt = 0;
-  int frames = 60, mspf = 50;
+  int frames = 60, mspf = 50, go_dim = 0, portal = 0;
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "--frames") && i + 1 < argc) frames = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--ms-per-frame") && i + 1 < argc) mspf = atoi(argv[++i]);
@@ -54,6 +54,9 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--creative")) creative = 1;
     else if (!strcmp(argv[i], "--build")) build = 1;
     else if (!strcmp(argv[i], "--rain")) rain = 1;
+    else if (!strcmp(argv[i], "--nether")) go_dim = 1;
+    else if (!strcmp(argv[i], "--end")) go_dim = 2;
+    else if (!strcmp(argv[i], "--portal")) portal = 1;
     else if (!strcmp(argv[i], "--storm")) rain = 2;
     else if (!strcmp(argv[i], "--time") && i + 1 < argc) start_time = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--seed") && i + 1 < argc) {
@@ -72,6 +75,14 @@ int main(int argc, char **argv) {
     }
   }
   mkdir(out, 0755);
+  {
+    /* the saves (the edit records portals are looked for in) next to the pictures */
+    extern void host_save_dir(const char *d);
+    static char sd[600];
+    snprintf(sd, sizeof sd, "%s/saves", out);
+    mkdir(sd, 0755);
+    host_save_dir(sd);
+  }
   clock_t c0 = clock();
   extern bool start_in_world;
   start_in_world = !title_screen;
@@ -102,6 +113,19 @@ int main(int argc, char **argv) {
     game_time = (uint32_t)start_time;
   }
   if (creative) pl.mode = 1;
+  if (portal) {
+    /* an obsidian frame ahead (along x), lit with flint and steel; the player walks in with --keys */
+    int fy = (int)pl.y, px = (int)floorf(pl.x), pz = (int)floorf(pl.z) + 3;
+    for (int z = pz - 2; z <= pz + 2; z++)
+      for (int x = px - 3; x <= px + 3; x++)
+        for (int y = fy - 1; y < fy + 6; y++) world_set(x, y, z, y == fy - 1 ? B_STONE : B_AIR);
+    for (int x = px - 1; x <= px + 2; x++)
+      for (int y = fy - 1; y <= fy + 3; y++)
+        if (x == px - 1 || x == px + 2 || y == fy - 1 || y == fy + 3) world_set(x, y, pz, B_OBSIDIAN);
+    fire_set(px, fy, pz, 0);
+  }
+  if (go_dim) dims_go(go_dim);
+  if (go_dim) printf("at %.2f %.2f %.2f: feet %d head %d below %d (cache y %d)\n", pl.x, pl.y, pl.z, world_get((int)floorf(pl.x), (int)floorf(pl.y), (int)floorf(pl.z)), world_get((int)floorf(pl.x), (int)floorf(pl.y) + 1, (int)floorf(pl.z)), world_get((int)floorf(pl.x), (int)floorf(pl.y) - 1, (int)floorf(pl.z)), vc_y0);
   if (rain) {
     /* raining (and storming) from the start, for long enough */
     weather.raining = 1, weather.rain_time = 24000, rain_str = 1;

@@ -386,7 +386,42 @@ void world_new(int64_t seed, const char *name) {
   vc_valid = false;
   npend = 0;
   PEND_CLEAR();
+#if NB_DIMS
+  gen_dim(dim);
+  edits_dim(dim);
+#endif
 }
+
+#if NB_DIMS
+/* the player into another dimension: its generator and records; the cache is made again where the
+ * player is next followed (all of it at once). false: the changes made here did not fit in storage */
+bool world_dim(int d) {
+  if (!edits_flush()) return false;
+  dim = d;
+  gen_init(world_seed);
+  gen_dim(d);
+  edits_dim(d);
+  edits_clear();
+  tick_forget();
+  vc_valid = false;
+  npend = 0;
+  PEND_CLEAR();
+  return true;
+}
+
+/* the cache around (x, y, z), every chunk of it made now (a dimension's first frame, or blocks to set
+ * there) */
+void world_finish(float x, float y, float z) {
+  world_follow(x, y, z);
+  while (npend) {
+    int x0 = pend[0].cx * 16 - vc_x0, z0 = pend[0].cz * 16 - vc_z0;
+    fill_pending(0);
+    light_mark(x0 - 4, 0, z0 - 4, x0 + 20, VCY, z0 + 20);
+    mac_box(x0 < 0 ? 0 : x0, 0, z0 < 0 ? 0 : z0, x0 + 16 > VCX ? VCX : x0 + 16, VCY, z0 + 16 > VCZ ? VCZ : z0 + 16);
+  }
+  world_light_flush();
+}
+#endif
 
 /* Near a side of the cache the next move is coming: the chunks it will make there (one row of
  * them, 8 blocks in) need the terrain of the chunks around them, which takes most of making a

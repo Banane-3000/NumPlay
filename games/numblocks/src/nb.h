@@ -117,16 +117,14 @@ int world_rain_top(int x, int z);               /* the first y above what rain l
 void *world_scratch(uint32_t n);                /* n bytes free while a frame is drawn, or NULL */
 #if NB_DIMS
 /* ---------------------------------------------------------------- the dimensions (dims.c): NumBlocks.nwa only */
-enum { DIM_OVERWORLD = 0, DIM_NETHER = 1, DIM_END = 2 };
-extern int dim;   /* where the player is */
-/* the generators' bytes: codes 67..82 (wool, which no generator makes) stand for the blocks past 255 */
-#define GEN_CODE(k) (B_WOOL_WHITE + (k))
-enum { GC_NETHERRACK, GC_SOUL_SAND, GC_QUARTZ_ORE, GC_NETHER_BRICK, GC_FENCE, GC_STAIRS_E, GC_STAIRS_W, GC_STAIRS_S,
-       GC_STAIRS_N, GC_WART, GC_END_STONE, GC_FRAME, GC_FRAME_EYE, GC_N };
-extern const uint16_t gen_code_block[GC_N];
-void dims_slab(int cx, int cz, int y0, int h, uint8_t *out);   /* gen_slab, for the dimension the player is in */
-int dims_biome(int x, int z);
-int dims_top(int x, int z);
+#include "dims.h"
+extern int dim;   /* where the player is (DIM_*) */
+bool world_dim(int d);   /* (world.c) there: false if the changes made here could not be kept */
+void world_finish(float x, float y, float z);   /* the cache around there, all of it made now */
+void tick_forget(void);  /* (tick.c) the liquids' and fires' waiting updates dropped */
+#define dims_slab gen_slab   /* (gen.c runs the dimension's generator: gen_dim) */
+#define dims_biome gen_biome
+#define dims_top gen_top
 #endif
 
 /* ---------------------------------------------------------------- items (inv.c) */

@@ -234,6 +234,10 @@ static bool near_water(int x, int y, int z) {
 static bool can_stay(int b, int x, int y, int z) {
   int below = world_get(x, y - 1, z);
   int m = blk_model[b];
+#if NB_DIMS
+  int d = dims_can_stay(b, x, y, z);
+  if (d >= 0) return d;
+#endif
   if (b >= B_WHEAT_0 && b <= B_WHEAT_7) return below == B_FARMLAND || below == B_FARMLAND_WET;
   if ((b >= B_CARROTS_0 && b <= B_CARROTS_3) || (b >= B_POTATOES_0 && b <= B_POTATOES_3))
     return below == B_FARMLAND || below == B_FARMLAND_WET;
@@ -758,6 +762,9 @@ void player_spawn(void) {
 }
 
 void player_respawn(void) {
+#if NB_DIMS
+  dims_respawn();
+#endif
   pl.x = pl.spawn_x + 0.5f, pl.y = (float)pl.spawn_y, pl.z = pl.spawn_z + 0.5f;
   pl.vx = pl.vy = pl.vz = 0;
   pl.health = 20, pl.food = 20, pl.sat = 5, pl.exhaustion = 0, pl.air = 300, pl.fall = 0, pl.fire = 0;
@@ -930,6 +937,9 @@ void player_tick(uint32_t keys, uint32_t pressed) {
   pl.bob += (want - pl.bob) * 0.4f;
   if (pl.mode == 0) exhaust(moved * (pl.in_water ? 0.015f : pl.sprinting ? 0.1f : 0.0f));
   hazards(y0);
+#if NB_DIMS
+  dims_player_tick();
+#endif
   effects_tick();
   if (pl.mode == 0) food_tick();
   if (pl.dead) return;

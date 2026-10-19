@@ -17,5 +17,6 @@ void *edits_scratch(uint32_t n);   /* in the journal */
 #if NB_DIMS
 void edits_apply9(int cx, int cz, int y0, int h, uint8_t *slab, uint8_t *hb);   /* NumBlocks.nwa: 9-bit blocks */
 void edits_dim(int d);   /* the dimension whose records are used */
+bool edits_find(int x, int y, int z, int r, int b0, int b1, int *out);   /* the nearest changed b0 or b1 */
 #endif
 #endif
