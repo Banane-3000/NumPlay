@@ -23,7 +23,8 @@
 ## Highlights
 
 * **Three tracks in real 3D:** trains standing on them and trains coming at you with their lights on, ramps up onto the roofs, low barriers to jump, high ones to roll under and big ones to go round. Running along the roofs and jumping from one train to the next is often the way through.
-* **The yard as it should be:** walls covered in graffiti, signal gantries over the tracks, stations with their platforms, pillars and posters, the town's buildings behind, and tunnels into the dark.
+* **The classic yard:** the orange viaduct with its arches and the bushy trees over it, the overhead wires on their gantries, blue steel bridges over the water, stretches of concrete wall with graffiti and houses behind, stations with their platforms, and tunnels into the dark. The trains wear the game's liveries: the orange and lime commuter train, the silver one, the red, white and blue one, the blue open wagons and the green box cars.
+* **The game's own people:** Jake, Tricky, Fresh (with his boombox) and Spike, and the Inspector and his dog, built on the game's own 3D models and wearing their textures, with smooth shading. They run, jump, roll, stumble, surf and fly with keyframed animations, and Jake's vest has the Sub Surf graffiti on its back.
 * **The Inspector and his dog:** they chase you off at the start. Hit the side of a train or a barrier's edge and you stumble: they're right behind you, and if you stumble again before they give up, you're caught. Run into anything head-on and it's over.
 * **Faster and faster:** the longer you run, the faster it goes, and the harder the tracks get.
 * **Coins everywhere:** in lines down the tracks, in arcs over the barriers, up the ramps and along the roofs, and high in the sky for the jetpack.
@@ -38,16 +39,16 @@
 
 <table>
   <tr>
-    <td align="center" width="50%"><img src="docs/title.png" width="100%" alt="The title: Jake between two trains"></td>
-    <td align="center" width="50%"><img src="docs/run.png" width="100%" alt="Running between trains, coins down the free track"></td>
+    <td align="center" width="50%"><img src="docs/title.png" width="100%" alt="The title: Jake between two of the classic orange and lime trains"></td>
+    <td align="center" width="50%"><img src="docs/run.png" width="100%" alt="Running between trains under the orange viaduct, coins down the free track"></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/roofs.png" width="100%" alt="Up the ramp and along the roofs"></td>
-    <td align="center"><img src="docs/jetpack.png" width="100%" alt="Flying with the jetpack over the tracks"></td>
+    <td align="center"><img src="docs/bridge.png" width="100%" alt="Over the blue steel bridge"></td>
+    <td align="center"><img src="docs/jetpack.png" width="100%" alt="Flying with the jetpack over the tracks and the trees"></td>
   </tr>
   <tr>
     <td align="center"><img src="docs/tunnel.png" width="100%" alt="Into a tunnel"></td>
-    <td align="center"><img src="docs/shop.png" width="100%" alt="The shop's characters, turning on their stand"></td>
+    <td align="center"><img src="docs/shop.png" width="100%" alt="The shop: Fresh with his boombox, turning on his stand"></td>
   </tr>
 </table>
 
@@ -71,18 +72,19 @@ On the title, OK plays, and Down goes to the **Shop**, the **Missions** and **He
 * **One app at a time:** Subway Surfers is too big to sit next to NumPlay or the other big games. Installing it from the NumWorks website swaps them out, and installing them again swaps it out. Your saves in each one are kept.
 * **No clock, no daily rewards:** the calculator has no clock, so there are no daily challenges or word hunts.
 * **No music or sound:** the calculator has no speaker.
-* **Drawn from scratch:** the trains, the yard and the people are made of 3D shapes in the game's colours; nothing is taken from the game itself.
+* **Where the pictures come from:** the people are fitted to the game's own 3D models as the Subway Surfers Wiki shows them from the front, and wear those pictures as their textures; the logo and the icons of coins, keys, power-ups and items are the wiki's. The yard, the trains, the barriers and the dog are drawn after the game.
 
 ## Credits
 
 Inspired by Subway Surfers by SYBO and Kiloo, not affiliated with them.
 
+* The people's looks (Jake, Tricky, Fresh, Spike and the Inspector: their outlines and textures), the logo and the icons of coins, keys, power-ups and items come from the [Subway Surfers Wiki](https://subwaysurf.fandom.com): its pictures of the game's 3D models, its logo and its item icons.
 * The lettering is the **Lilita One** font by Juan Montoreano, under the SIL Open Font License ([license](../../LICENSES/OFL-1.1-LilitaOne.txt)).
 
 Made by Mason Chen as part of NumPlay.
 
-Build: `make` (needs `arm-none-eabi-gcc` and Node.js for nwlink); `make test` plays it on a computer.
+Build: `make` (needs `arm-none-eabi-gcc` and Node.js for nwlink); `make test` plays it on a computer. `make data` gathers the wiki's pictures (`tools/fetch.py`) and turns them into `src/data.c` (`tools/pack.py`, with `tools/models.py` for the people and `tools/scenery.py` for the yard); the result is committed, so building needs no network.
 
 ## License
 
-The game's code is licensed under the GNU General Public License v3.0: see the `LICENSE` file at the root of the repository. The font keeps its own license (see Credits).
+The game's code is licensed under the GNU General Public License v3.0: see the `LICENSE` file at the root of the repository. The game's pictures and the font keep their own terms (see Credits).

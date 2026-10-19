@@ -749,7 +749,7 @@ static void draw_shop(void) {
   r_begin();
   if (shop_tab == TAB_CHARS || shop_tab == TAB_BOARDS) {
     /* a turning preview, on the right */
-    r_camera(0, 1.25f, -3.6f, 0.08f, 220, 258, 132);
+    r_camera(0, 1.05f, -3.1f, 0.04f, 230, 258, 136);
     float yaw = 3.14159f + clock * 0.9f;
     /* the stand */
     V3 st[8];

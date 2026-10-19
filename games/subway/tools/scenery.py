@@ -169,6 +169,61 @@ def boxcar_side():
     return done(im, w, h)
 
 
+def wagon_side():
+    """The blue open wagon of the classic yard: steel ribs and rivets, a lighter rail along the top."""
+    w, h = 128, 32
+    blue = (54, 118, 196)
+    im, d = canvas(w, h, blue + (255,))
+    R(d, (0, 0, w, 2.5), shade(blue, 1.3) + (255,))
+    R(d, (0, 2.5, w, 3.2), shade(blue, 0.7) + (255,))
+    for i in range(11):
+        x = 3 + i * 12
+        R(d, (x, 3, x + 2, 29), shade(blue, 0.75) + (255,))
+        R(d, (x + 2, 3, x + 2.8, 29), shade(blue, 1.2) + (255,))
+    for i in range(32):
+        x = 1.5 + i * 4
+        for y in (5, 26):
+            d.ellipse([(x - 0.5) * UP, (y - 0.5) * UP, (x + 0.5) * UP, (y + 0.5) * UP], fill=shade(blue, 1.35) + (255,))
+    R(d, (0, 29, w, h), (44, 44, 50, 255))
+    rnd = random.Random(9)
+    blots(im, [(rnd.uniform(0, w), rnd.uniform(8, 28), rnd.uniform(1, 4), rnd.uniform(1, 3), (120, 70, 40, 50)) for _ in range(25)])
+    return done(im, w, h)
+
+
+def wagon_end():
+    w = h = 64
+    blue = (54, 118, 196)
+    im, d = canvas(w, h, blue + (255,))
+    R(d, (0, 0, w, 4), shade(blue, 1.3) + (255,))
+    for i in range(4):
+        y = 10 + i * 11
+        R(d, (2, y, w - 2, y + 2), shade(blue, 0.72) + (255,))
+        R(d, (2, y + 2, w - 2, y + 3), shade(blue, 1.2) + (255,))
+    R(d, (0, 0, 3, h), shade(blue, 0.7) + (255,))
+    R(d, (61, 0, 64, h), shade(blue, 0.7) + (255,))
+    R(d, (0, 56, w, h), (44, 44, 48, 255))
+    for i in range(-2, 12):
+        x = i * 6
+        d.polygon([(x * UP, 58 * UP), ((x + 3) * UP, 58 * UP), ((x + 7) * UP, 63 * UP), ((x + 4) * UP, 63 * UP)],
+                  fill=(250, 200, 30, 255))
+    return done(im, w, h)
+
+
+def cargo():
+    """What the open wagon carries: a heap of brown earth and stones, 32 x 64."""
+    w, h = 32, 64
+    brown = (156, 112, 70)
+    im, d = canvas(w, h, brown + (255,))
+    rnd = random.Random(13)
+    spots = []
+    for _ in range(70):
+        x, y, r = rnd.uniform(0, w), rnd.uniform(0, h), rnd.uniform(0.8, 2.5)
+        c = (196, 150, 100, 150) if rnd.random() < 0.5 else (100, 70, 44, 150)
+        spots.append((x, y, r, r, c))
+    blots(im, spots)
+    return done(im, w, h)
+
+
 def boxcar_end():
     w = h = 64
     green = (40, 128, 92)
@@ -220,7 +275,7 @@ def arch_wall():
     # the arches: dark inside, a lit edge on one side
     for i in range(3):
         cx = 21.3 + i * 42.7
-        rw, top = 13.5, 22
+        rw, top = 15.5, 21
         inner = (128, 34, 14)
         d.rectangle([(cx - rw) * UP, top * UP, (cx + rw) * UP, h * UP], fill=(214, 76, 24, 255))
         d.ellipse([(cx - rw) * UP, (top - rw) * UP, (cx + rw) * UP, (top + rw) * UP], fill=(214, 76, 24, 255))
@@ -377,7 +432,7 @@ def tunnel_mouth():
 ALL = {
     "train_a_side": lambda: train_side("a"), "train_b_side": lambda: train_side("b"), "train_c_side": lambda: train_side("c"),
     "train_a_front": lambda: train_front("a"), "train_b_front": lambda: train_front("b"), "train_c_front": lambda: train_front("c"),
-    "boxcar_side": boxcar_side, "boxcar_end": boxcar_end,
+    "boxcar_side": boxcar_side, "boxcar_end": boxcar_end, "wagon_side": wagon_side, "wagon_end": wagon_end, "cargo": cargo,
     "roof_a": lambda: roof("a"), "roof_b": lambda: roof("b"), "roof_c": lambda: roof("c"), "roof_box": lambda: roof("box"),
     "arch_wall": arch_wall, "concrete": concrete_wall, "tree": tree,
     "graffiti_0": lambda: graffiti("SURF", 1), "graffiti_1": lambda: graffiti("JAKE", 2), "graffiti_2": lambda: graffiti("YO!", 3),

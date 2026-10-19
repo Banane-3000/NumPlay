@@ -181,8 +181,8 @@ def main():
     # pickups in the world
     for key, f in (("coin", "Coin.png"), ("key", "Key.png"), ("magnet", "Coin_Magnet.png"), ("jetpack", "Jetpack.png"),
                    ("double", "2x_Multiplier.png"), ("mystery", "Mystery_Box.png")):
-        o.texture(f"tx_{key}", icon(REF / f, 32), clear=True, colors=48)
-    o.texture("tx_sneakers", sneaker_icon(32), clear=True, colors=32)
+        o.texture(f"tx_{key}", icon(REF / f, 64), clear=True, colors=64)
+    o.texture("tx_sneakers", sneaker_icon(64), clear=True, colors=48)
     # the world (tools/scenery.py)
     see_through = {"tree", "graffiti_0", "graffiti_1", "graffiti_2", "graffiti_3", "tunnel"}
     for name, draw in scenery.ALL.items():

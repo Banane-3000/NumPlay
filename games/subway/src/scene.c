@@ -326,7 +326,7 @@ static void viaduct(int dir, float z0, float dist, uint32_t hs) {
     uint32_t g = world_hash(hs + (uint32_t)k * 977u);
     float tz = z0 + 2.0f + (float)k * 4.8f + (float)(g & 7) * 0.2f;
     float far = (float)((g >> 3) & 1);
-    float tx = (8.2f + far * 4.0f + (float)((g >> 4) & 3) * 0.5f) * (dir > 0 ? -1.0f : 1.0f);
+    float tx = (7.6f + far * 4.0f + (float)((g >> 4) & 3) * 0.5f) * (dir > 0 ? -1.0f : 1.0f);
     float size = 7.0f + (float)((g >> 6) & 3) * 0.9f + far * 1.5f;
     billboard(tx, VIADUCT_H - 2.8f + far * 0.6f, tz, size * 0.55f, size, TX_TREE, 64);
   }
@@ -456,17 +456,40 @@ static void tunnel_block(float z0, float dist) {
 /* ---------------------------------------------------------------- trains, barriers, coins */
 /* the trains' looks: the classic commuter train (most), the silver one, the red, white and blue one,
  * the green box car */
-enum { TR_CLASSIC, TR_SILVER, TR_RWB, TR_BOX };
-static const uint8_t train_kind[8] = {TR_CLASSIC, TR_CLASSIC, TR_SILVER, TR_RWB, TR_CLASSIC, TR_SILVER, TR_BOX, TR_RWB};
+enum { TR_CLASSIC, TR_SILVER, TR_RWB, TR_BOX, TR_OPEN };
+static const uint8_t train_kind[8] = {TR_CLASSIC, TR_CLASSIC, TR_OPEN, TR_CLASSIC, TR_SILVER, TR_CLASSIC, TR_BOX, TR_RWB};
 static const uint32_t train_top[4] = {0xCEDE2C, 0xC8CED4, 0xD62C26, 0x288064};
+
+/* the blue open wagon: its load of earth a little below its rim */
+static void wagon(float lx, float z0, float z1) {
+  float x0 = lx - TRAIN_W, x1 = lx + TRAIN_W, t = 0.14f;
+  side_tex(x0, -1, z0, z1, 0.55f, TRAIN_H, TX_WAGON_SIDE, 0, 128, 0, 32, 0);
+  side_tex(x1, 1, z0, z1, 0.55f, TRAIN_H, TX_WAGON_SIDE, 0, 128, 0, 32, 0);
+  front_tex(z0, x0, x1, 0.55f, TRAIN_H, TX_WAGON_END, 0, 64, 0, 64, 0);
+  float y = TRAIN_H - 0.25f;
+  tquad((V3){x0 + t, y, z1 - t}, (V3){x1 - t, y, z1 - t}, (V3){x1 - t, y, z0 + t}, (V3){x0 + t, y, z0 + t}, TX_CARGO, 0, 64, 32, 0, 0);
+  /* the rim: its top, and the inside of the walls over the load */
+  uint32_t rim = L(0x5C8ED0), in = L(0x2A4E80);
+  quad((V3){x0, TRAIN_H, z1}, (V3){x0 + t, TRAIN_H, z1}, (V3){x0 + t, TRAIN_H, z0}, (V3){x0, TRAIN_H, z0}, rim, 0);
+  quad((V3){x1 - t, TRAIN_H, z1}, (V3){x1, TRAIN_H, z1}, (V3){x1, TRAIN_H, z0}, (V3){x1 - t, TRAIN_H, z0}, rim, 0);
+  quad((V3){x0, TRAIN_H, z0 + t}, (V3){x1, TRAIN_H, z0 + t}, (V3){x1, TRAIN_H, z0}, (V3){x0, TRAIN_H, z0}, rim, 0);
+  side(x0 + t, 1, z0, z1, y, TRAIN_H, in, 0);
+  side(x1 - t, -1, z0, z1, y, TRAIN_H, in, 0);
+  front(z1 - t, x0, x1, y, TRAIN_H, in, 0);
+}
 
 static void car(float lx, float z0, float z1, int look, bool head, bool moving, float dist) {
   int kind = train_kind[look & 7];
+  if (moving && head && kind >= TR_BOX) kind = TR_CLASSIC;   /* (what comes at you has a cab) */
   float x0 = lx - TRAIN_W, x1 = lx + TRAIN_W, bt = kind == TR_BOX ? 3.4f : 3.3f;
   /* underneath: the frame and two bogies */
   cube(lx - 0.95f, 0.3f, z0 + 0.4f, lx + 0.95f, 0.55f, z1 - 0.4f, 0x2B2B30, 1 | 2);
   cube(lx - 1.0f, 0.0f, z0 + 1.0f, lx + 1.0f, 0.5f, z0 + 3.2f, 0x232327, 1 | 2);
   cube(lx - 1.0f, 0.0f, z1 - 3.2f, lx + 1.0f, 0.5f, z1 - 1.0f, 0x232327, 1 | 2);
+  if (kind == TR_OPEN) {
+    wagon(lx, z0, z1);
+    return;
+  }
   /* the sides */
   int side_t = kind == TR_BOX ? TX_BOXCAR_SIDE : TX_TRAIN_A_SIDE + kind, front_t = kind == TR_BOX ? TX_BOXCAR_END : TX_TRAIN_A_FRONT + kind;
   side_tex(x0, -1, z0, z1, 0.55f, bt, side_t, 0, 128, 0, 32, 0);
@@ -546,7 +569,7 @@ static void coin(const Item *it, float t) {
     float hw = r * (c < 0 ? -c : c);
     if (hw < 0.05f) hw = 0.05f;
     tquad((V3){it->x - hw, it->y + r, it->z}, (V3){it->x + hw, it->y + r, it->z}, (V3){it->x + hw, it->y - r, it->z},
-          (V3){it->x - hw, it->y - r, it->z}, TX_COIN, c < 0 ? 32 : 0, 0, c < 0 ? 0 : 32, 32, P_TWOSIDED | P_NOHAZE);
+          (V3){it->x - hw, it->y - r, it->z}, TX_COIN, c < 0 ? 64 : 0, 0, c < 0 ? 0 : 64, 64, P_TWOSIDED | P_NOHAZE);
     return;
   }
   static const float k[8][2] = {{0, 1}, {0.707f, 0.707f}, {1, 0}, {0.707f, -0.707f}, {0, -1}, {-0.707f, -0.707f}, {-1, 0}, {-0.707f, 0.707f}};

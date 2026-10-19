@@ -422,7 +422,7 @@ static void spinner(V3 c, float w, float h, float turn, int tex, float lt) {
   float hw = w * co;
   if (hw > -0.04f && hw < 0.04f) hw = hw < 0 ? -0.04f : 0.04f;
   V3 q[4] = {{c.x - hw, c.y + h, c.z}, {c.x + hw, c.y + h, c.z}, {c.x + hw, c.y - h, c.z}, {c.x - hw, c.y - h, c.z}};
-  float uv[8] = {0, 0, 32, 0, 32, 32, 0, 32};
+  float uv[8] = {0, 0, 64, 0, 64, 64, 0, 64};
   int l = (int)(lt * 256 * (0.82f + 0.18f * (co < 0 ? -co : co)));
   r_poly_tex(q, uv, 4, tex, l, P_TWOSIDED | P_NOHAZE);
 }
