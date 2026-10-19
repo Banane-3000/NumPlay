@@ -1,358 +1,400 @@
-/* The people, the dog, the power-ups and the boards (actors.h): boxes on a skeleton.
+/* The people, the dog, the power-ups and the boards (actors.h).
  *
- * A body faces +z (the camera mostly sees its back). Its parts hang from joints: the legs from the hips,
- * the shins from the knees, the arms from the shoulders; the chest leans forward from the waist and
- * carries the arms and the head. Each part is a box turned by the rotations above it. */
+ * The people are meshes fitted to the game's own models (data.c, from tools/models.py), on a skeleton:
+ * each corner follows a bone, or two at a joint (blended, so knees and elbows bend smoothly). A pose turns
+ * each bone from where it is at rest, the T pose; the animations are keyframes of poses played in a loop
+ * (running, standing, on the board, flying) or once over a move (a jump, a roll, a fall), blended softly
+ * from key to key. The dog has a skeleton of its own. */
 #include "actors.h"
+#include "data.h"
 #include "scene.h"
 
+/* ---------------------------------------------------------------- 3x4 matrices */
 typedef struct {
-  float m[9];
-} M3;
+  float m[12];   /* x' = m0 x + m1 y + m2 z + m3, y' = m4 x ..., z' = m8 x ... */
+} M34;
 
-static M3 mul(M3 a, M3 b) {
-  M3 r;
-  for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) r.m[3 * i + j] = a.m[3 * i] * b.m[j] + a.m[3 * i + 1] * b.m[3 + j] + a.m[3 * i + 2] * b.m[6 + j];
+static M34 mul(const M34 *a, const M34 *b) {
+  M34 r;
+  for (int i = 0; i < 3; i++) {
+    const float *A = a->m + 4 * i;
+    for (int j = 0; j < 4; j++) r.m[4 * i + j] = A[0] * b->m[j] + A[1] * b->m[4 + j] + A[2] * b->m[8 + j] + (j == 3 ? A[3] : 0);
+  }
   return r;
 }
-static V3 ap(M3 a, V3 v) {
-  return (V3){a.m[0] * v.x + a.m[1] * v.y + a.m[2] * v.z, a.m[3] * v.x + a.m[4] * v.y + a.m[5] * v.z,
-              a.m[6] * v.x + a.m[7] * v.y + a.m[8] * v.z};
+static V3 ap(const M34 *a, V3 v) {
+  const float *m = a->m;
+  return (V3){m[0] * v.x + m[1] * v.y + m[2] * v.z + m[3], m[4] * v.x + m[5] * v.y + m[6] * v.z + m[7],
+              m[8] * v.x + m[9] * v.y + m[10] * v.z + m[11]};
 }
-static M3 rx(float a) {
-  float s, c;
-  r_sincos(a, &s, &c);
-  return (M3){{1, 0, 0, 0, c, -s, 0, s, c}};
-}
-static M3 ry(float a) {
-  float s, c;
-  r_sincos(a, &s, &c);
-  return (M3){{c, 0, s, 0, 1, 0, -s, 0, c}};
-}
-static M3 rz(float a) {
-  float s, c;
-  r_sincos(a, &s, &c);
-  return (M3){{c, -s, 0, s, c, 0, 0, 0, 1}};
-}
-static const M3 ident = {{1, 0, 0, 0, 1, 0, 0, 0, 1}};
-static V3 vadd(V3 a, V3 b) { return (V3){a.x + b.x, a.y + b.y, a.z + b.z}; }
-static V3 vsub(V3 a, V3 b) { return (V3){a.x - b.x, a.y - b.y, a.z - b.z}; }
-static V3 vscale(V3 a, float k) { return (V3){a.x * k, a.y * k, a.z * k}; }
-
-/* the body being drawn: where its feet are, its turn, the point it turns about, its size, its light */
-static V3 at, pivot;
-static M3 root;
-static float size, light;
-
-static uint32_t shade(uint32_t c) {
-  if (light >= 1) return c;
-  return r_mix888(r_mix888(c, 0, (int)((1 - light) * 256)), 0x10203A, 24);
-}
-/* a part: the frame R at the joint j (body coordinates), its box centred at off in that frame */
-static void part(M3 R, V3 j, V3 off, float hx, float hy, float hz, uint32_t col) {
-  M3 W = mul(root, R);
-  V3 c = vadd(j, ap(R, off));
-  c = vadd(at, vadd(ap(root, vsub(vscale(c, size), pivot)), pivot));
-  uint32_t k = shade(col), k6[6] = {k, k, k, k, k, k};
-  r_box(c, ap(W, (V3){hx * size, 0, 0}), ap(W, (V3){0, hy * size, 0}), ap(W, (V3){0, 0, hz * size}), k6, 0);
-}
-
-/* ---------------------------------------------------------------- poses */
 static float fsin(float a) {
   float s, c;
   r_sincos(a, &s, &c);
   return s;
 }
 static float fcos(float a) { return fsin(a + 1.5707963f); }
-static float pos(float v) { return v > 0 ? v : 0; }
 
-static void clear(Pose *p) {
-  for (int i = 0; i < 2; i++) p->hip[i] = p->knee[i] = p->arm[i] = p->elbow[i] = p->out[i] = 0;
-  p->lean = p->bob = p->spin = p->tilt = p->yaw = 0;
-  p->squash = 1;
+/* turned about x, then y, then z (R = Rx Ry Rz), about the point j */
+static M34 rot_about(const float *a, V3 j) {
+  float sx, cx, sy, cy, sz, cz;
+  r_sincos(a[0], &sx, &cx);
+  r_sincos(a[1], &sy, &cy);
+  r_sincos(a[2], &sz, &cz);
+  /* Ry Rz */
+  float b0 = cy * cz, b1 = -cy * sz, b2 = sy;
+  float b4 = sz, b5 = cz, b6 = 0;
+  float b8 = -sy * cz, b9 = sy * sz, b10 = cy;
+  M34 r = {{b0, b1, b2, 0, cx * b4 - sx * b8, cx * b5 - sx * b9, cx * b6 - sx * b10, 0, sx * b4 + cx * b8,
+            sx * b5 + cx * b9, sx * b6 + cx * b10, 0}};
+  /* about j: R (p - j) + j */
+  r.m[3] = j.x - (r.m[0] * j.x + r.m[1] * j.y + r.m[2] * j.z);
+  r.m[7] = j.y - (r.m[4] * j.x + r.m[5] * j.y + r.m[6] * j.z);
+  r.m[11] = j.z - (r.m[8] * j.x + r.m[9] * j.y + r.m[10] * j.z);
+  return r;
+}
+static M34 translate(float x, float y, float z) { return (M34){{1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z}}; }
+static M34 rot_y(float a) {
+  float s, c;
+  r_sincos(a, &s, &c);
+  return (M34){{c, 0, s, 0, 0, 1, 0, 0, -s, 0, c, 0}};
 }
 
-void pose_run(Pose *p, float ph) {
-  clear(p);
-  float s = fsin(ph), c = fcos(ph);
-  p->hip[0] = 0.85f * s, p->hip[1] = -0.85f * s;
-  p->knee[0] = 0.2f + 1.3f * pos(c), p->knee[1] = 0.2f + 1.3f * pos(-c);
-  p->arm[0] = -0.75f * s, p->arm[1] = 0.75f * s;
-  p->elbow[0] = p->elbow[1] = 1.35f;
-  p->out[0] = p->out[1] = 0.12f;
-  p->lean = 0.24f;
-  p->bob = 0.07f * (c < 0 ? -c : c);
+/* the camera as a matrix: world to camera space (r_view) */
+static M34 view(void) {
+  return (M34){{1, 0, 0, -cam.x, 0, cam.cp, cam.sp, -cam.y * cam.cp - cam.z * cam.sp, 0, -cam.sp, cam.cp,
+                cam.y * cam.sp - cam.z * cam.cp}};
 }
 
-void pose_stand(Pose *p, float t) {
-  clear(p);
-  p->arm[0] = p->arm[1] = 0.08f;
-  p->elbow[0] = p->elbow[1] = 0.25f;
-  p->out[0] = p->out[1] = 0.1f;
-  p->bob = 0.012f * fsin(t * 2.4f);
-  p->knee[0] = p->knee[1] = 0.05f;
+/* ---------------------------------------------------------------- drawing a model */
+#define MAXB 12
+static M34 bone_w[MAXB];   /* the bones of the model just drawn, in the world */
+
+/* where the light comes from (in the world): above, to the left, from the camera's side */
+static const V3 sun = {-0.42f, 0.78f, -0.47f};
+
+static void draw_model(const Model *m, const float (*a)[3], const M34 *root, float light) {
+  int nb = m->nbones;
+  M34 cm[MAXB], vw = view();
+  V3 lb[MAXB];
+  for (int i = 0; i < nb; i++) {
+    V3 j = {m->joints[i][0] * 0.001f, m->joints[i][1] * 0.001f, m->joints[i][2] * 0.001f};
+    M34 local = rot_about(a[i], j);
+    bone_w[i] = m->parent[i] < 0 ? mul(root, &local) : mul(&bone_w[(int)m->parent[i]], &local);
+    cm[i] = mul(&vw, &bone_w[i]);
+    /* the light in the bone's own frame (normals are kept at rest): the rotation's transpose */
+    const float *w = bone_w[i].m;
+    lb[i] = (V3){(w[0] * sun.x + w[4] * sun.y + w[8] * sun.z) * (1 / 127.0f),
+                 (w[1] * sun.x + w[5] * sun.y + w[9] * sun.z) * (1 / 127.0f),
+                 (w[2] * sun.x + w[6] * sun.y + w[10] * sun.z) * (1 / 127.0f)};
+  }
+  /* (nothing to do far away or behind) */
+  V3 c = ap(&cm[0], (V3){m->joints[0][0] * 0.001f, m->joints[0][1] * 0.001f, m->joints[0][2] * 0.001f});
+  if (c.z < -2.5f || c.z > 140) return;
+  float amb = 0.6f * light * 255, dif = 0.45f * light * 255;
+  RV rv[256];
+  for (int pi = 0; pi < m->nparts; pi++) {
+    const MPart *p = &m->parts[pi];
+    const MV *q = m->v + p->v0;
+    for (int k = 0; k < p->nv; k++, q++) {
+      V3 r = {q->x * 0.001f, q->y * 0.001f, q->z * 0.001f};
+      const M34 *A = &cm[q->b0];
+      V3 v = ap(A, r);
+      V3 L = lb[q->b0];
+      float d = q->nx * L.x + q->ny * L.y + q->nz * L.z;
+      if (q->w) {
+        float t = q->w * (1 / 256.0f);
+        V3 v2 = ap(&cm[q->b1], r);
+        V3 L2 = lb[q->b1];
+        float d2 = q->nx * L2.x + q->ny * L2.y + q->nz * L2.z;
+        v.x += (v2.x - v.x) * t, v.y += (v2.y - v.y) * t, v.z += (v2.z - v.z) * t;
+        d += (d2 - d) * t;
+      }
+      float s = amb + dif * (d > 0 ? d : 0);
+      rv[k] = (RV){v.x, v.y, v.z, q->u, q->v, (uint8_t)(s > 255 ? 255 : s), {0, 0, 0}};
+    }
+    r_mesh(rv, p->nv, m->t + p->t0, p->nt, m->pal, p->tex);
+  }
 }
 
-void pose_jump(Pose *p, float t) {
-  clear(p);
-  p->hip[0] = 1.0f, p->knee[0] = 1.5f;
-  p->hip[1] = -0.35f, p->knee[1] = 1.0f;
-  p->arm[0] = -0.8f, p->arm[1] = 1.4f + 0.2f * fsin(t * 6);
-  p->elbow[0] = 0.9f, p->elbow[1] = 0.6f;
-  p->out[0] = p->out[1] = 0.35f;
-  p->lean = 0.12f;
+/* ---------------------------------------------------------------- keyframes */
+/* a key: each bone's angles (degrees) and the body raised (cm) */
+typedef struct {
+  int8_t a[NBONES][3];
+  int8_t y;
+} Key;
+typedef struct {
+  const Key *k;
+  uint8_t n, loop;
+} Anim;
+
+/* (the arms are lowered from the T pose about z, the left one with +, the right with -; an elbow bends
+ * forward about y, the same way; a leg swings forward with - and spreads with its own sign) */
+#define AL(sw, dn, tw) {sw, tw, dn}
+#define AR(sw, dn, tw) {sw, -(tw), -(dn)}
+#define FL(b) {0, b, 0}
+#define FR(b) {0, -(b), 0}
+#define LL(sw, out) {sw, 0, -(out)}
+#define LR(sw, out) {sw, 0, out}
+#define SH(b) {b, 0, 0}
+
+/* bones: hips, chest, head, upper arm, forearm (left, right), thigh, shin (left, right) */
+static const Key k_run[4] = {
+  /* the left foot lands ahead, the right one pushes off behind, the arms the other way round */
+  {{{0, 8, 0}, {14, -10, 0}, {-8, 6, 0}, AL(38, 72, 0), FL(80), AR(-48, 72, 0), FR(105), LL(-50, 3), SH(18), LR(32, 3), SH(58)}, -2},
+  /* passing: the right knee comes through high */
+  {{{0, 0, 0}, {16, 0, 0}, {-8, 0, 0}, AL(4, 72, 0), FL(95), AR(-6, 72, 0), FR(95), LL(12, 3), SH(16), LR(-58, 3), SH(112)}, 6},
+  {{{0, -8, 0}, {14, 10, 0}, {-8, -6, 0}, AL(-48, 72, 0), FL(105), AR(38, 72, 0), FR(80), LL(32, 3), SH(58), LR(-50, 3), SH(18)}, -2},
+  {{{0, 0, 0}, {16, 0, 0}, {-8, 0, 0}, AL(-6, 72, 0), FL(95), AR(4, 72, 0), FR(95), LL(-58, 3), SH(112), LR(12, 3), SH(16)}, 6},
+};
+static const Key k_stand[2] = {
+  {{{0, 0, 0}, {2, 0, 0}, {0, 0, 0}, AL(4, 77, 0), FL(14), AR(4, 77, 0), FR(14), LL(0, 4), SH(2), LR(0, 4), SH(2)}, 0},
+  {{{0, 4, 0}, {4, 3, 0}, {3, -5, 0}, AL(7, 75, 0), FL(18), AR(2, 79, 0), FR(10), LL(-2, 4), SH(4), LR(1, 4), SH(2)}, -1},
+};
+static const Key k_jump[3] = {
+  /* off the ground, arms swinging up, then tucked up high, then reaching down to land */
+  {{{0, 0, 0}, {10, 0, 0}, {-6, 0, 0}, AL(-40, 50, 0), FL(60), AR(-60, 40, 0), FR(50), LL(-20, 4), SH(30), LR(25, 4), SH(40)}, 0},
+  {{{0, 0, 0}, {6, 0, 0}, {-4, 0, 0}, AL(-20, 15, 0), FL(40), AR(-105, 45, 0), FR(30), LL(-82, 6), SH(115), LR(-32, 6), SH(122)}, 8},
+  {{{0, 0, 0}, {14, 0, 0}, {-6, 0, 0}, AL(10, 55, 0), FL(50), AR(-22, 50, 0), FR(60), LL(-36, 4), SH(36), LR(-10, 4), SH(46)}, 0},
+};
+static const Key k_roll[3] = {
+  /* down into a ball, round once, and up again into the run */
+  {{{0, 0, 0}, {48, 0, 0}, {28, 0, 0}, AL(-60, 60, 0), FL(100), AR(-60, 60, 0), FR(100), LL(-98, 8), SH(125), LR(-98, 8), SH(125)}, -30},
+  {{{0, 0, 0}, {62, 0, 0}, {40, 0, 0}, AL(-70, 62, 0), FL(115), AR(-70, 62, 0), FR(115), LL(-118, 6), SH(145), LR(-118, 6), SH(145)}, -38},
+  {{{0, 0, 0}, {20, 0, 0}, {0, 0, 0}, AL(10, 72, 0), FL(90), AR(-30, 72, 0), FR(90), LL(-40, 3), SH(40), LR(20, 3), SH(60)}, 0},
+};
+static const Key k_hover[2] = {
+  /* on the board: side on, knees bent, arms out for balance */
+  {{{0, 28, 0}, {12, -10, 0}, {-5, -22, 0}, AL(0, 35, 0), FL(30), AR(10, 42, 0), FR(25), LL(-25, 12), SH(45), LR(15, 12), SH(40)}, -8},
+  {{{0, 28, 0}, {15, -8, 0}, {-5, -18, 0}, AL(6, 28, 0), FL(36), AR(4, 48, 0), FR(30), LL(-28, 12), SH(50), LR(18, 12), SH(46)}, -10},
+};
+static const Key k_fly[2] = {
+  /* the jetpack: arms forward, legs trailing */
+  {{{0, 0, 0}, {10, 0, 0}, {-28, 0, 0}, AL(-32, 45, 0), FL(70), AR(-32, 45, 0), FR(70), LL(14, 6), SH(40), LR(30, 6), SH(62)}, 0},
+  {{{0, 0, 0}, {10, 4, 0}, {-26, 0, 0}, AL(-26, 50, 0), FL(64), AR(-38, 40, 0), FR(76), LL(26, 6), SH(56), LR(16, 6), SH(40)}, 0},
+};
+static const Key k_fall[3] = {
+  /* hit: thrown back, arms up; falling; flat on the ground */
+  {{{0, 0, 0}, {-16, 0, 0}, {-22, 0, 0}, AL(-30, 22, 0), FL(20), AR(-35, 18, 0), FR(20), LL(-22, 10), SH(20), LR(10, 10), SH(22)}, 0},
+  {{{0, 0, 0}, {-10, 0, 0}, {-12, 0, 0}, AL(-60, 30, 0), FL(30), AR(-72, 20, 0), FR(30), LL(-50, 15), SH(40), LR(-30, 15), SH(30)}, 0},
+  {{{0, 0, 0}, {0, 0, 0}, {12, 0, 0}, AL(0, 5, 0), FL(10), AR(0, -8, 0), FR(10), LL(-10, 15), SH(12), LR(0, 15), SH(22)}, 0},
+};
+static const Key k_spray[2] = {
+  /* the can up at the train, shaken */
+  {{{0, 0, 0}, {4, 10, 0}, {-4, 15, 0}, AL(4, 75, 0), FL(20), AR(-95, 20, 0), FR(8), LL(-4, 6), SH(4), LR(6, 6), SH(6)}, 0},
+  {{{0, 0, 0}, {5, 12, 0}, {-6, 12, 0}, AL(6, 74, 0), FL(24), AR(-105, 26, 0), FR(16), LL(-4, 6), SH(4), LR(6, 6), SH(6)}, 0},
+};
+static const Key k_catch[2] = {
+  {{{0, 0, 0}, {8, 0, 0}, {6, 0, 0}, AL(-70, 30, 0), FL(30), AR(-80, 25, 0), FR(25), LL(-10, 6), SH(8), LR(8, 6), SH(10)}, 0},
+  {{{0, 0, 0}, {10, 0, 0}, {10, 0, 0}, AL(-85, 32, 0), FL(40), AR(-70, 28, 0), FR(30), LL(-10, 6), SH(8), LR(8, 6), SH(10)}, 0},
+};
+static const Key k_trip = {
+  /* a stumble: arms flung up, the body twisted */
+  {{0, 0, 0}, {-12, 22, 14}, {-16, -20, 10}, AL(-70, 15, 0), FL(30), AR(-30, 5, 0), FR(25), LL(-30, 6), SH(40), LR(20, 6), SH(50)}, 0};
+
+#define DEG 0.0174533f
+static float smooth(float t) { return t * t * (3 - 2 * t); }
+
+static void set_key(Pose *p, const Key *a, const Key *b, float t) {
+  t = smooth(t);
+  for (int i = 0; i < NBONES; i++)
+    for (int k = 0; k < 3; k++) p->a[i][k] = ((float)a->a[i][k] + (float)(b->a[i][k] - a->a[i][k]) * t) * DEG;
+  p->y = ((float)a->y + (float)(b->y - a->y) * t) * 0.01f;
+  p->lean = p->tilt = p->yaw = p->spin = 0;
 }
+
+/* plays an animation: a loop over t (one round per 1), or once from t = 0 to 1 */
+static void play(Pose *p, const Key *k, int n, bool loop, float t) {
+  if (loop) {
+    t -= (float)(int)t;
+    if (t < 0) t += 1;
+    float f = t * (float)n;
+    int i = (int)f;
+    if (i >= n) i = n - 1;
+    set_key(p, &k[i], &k[(i + 1) % n], f - (float)i);
+  } else {
+    if (t < 0) t = 0;
+    if (t > 1) t = 1;
+    float f = t * (float)(n - 1);
+    int i = (int)f;
+    if (i >= n - 1) i = n - 2;
+    set_key(p, &k[i], &k[i + 1], f - (float)i);
+  }
+}
+
+void pose_run(Pose *p, float ph) { play(p, k_run, 4, true, ph * (1 / 6.2831853f)); }
+void pose_stand(Pose *p, float t) { play(p, k_stand, 2, true, t * 0.3f); }
+void pose_jump(Pose *p, float t) { play(p, k_jump, 3, false, t); }
+void pose_hover(Pose *p, float t) { play(p, k_hover, 2, true, t * 0.6f); }
+void pose_spray(Pose *p, float t) { play(p, k_spray, 2, true, t * 3.0f); }
+void pose_catch(Pose *p, float t) { play(p, k_catch, 2, true, t * 1.2f); }
 
 void pose_roll(Pose *p, float t) {
-  clear(p);
-  p->hip[0] = p->hip[1] = 1.7f;
-  p->knee[0] = p->knee[1] = 2.4f;
-  p->arm[0] = p->arm[1] = 1.3f;
-  p->elbow[0] = p->elbow[1] = 1.7f;
-  p->lean = 0.7f;
-  p->spin = 6.2831853f * t;
-  p->squash = 0.78f;
-  p->bob = -0.15f;
-}
-
-void pose_hover(Pose *p, float t) {
-  clear(p);
-  p->hip[0] = 0.4f, p->hip[1] = -0.35f;
-  p->knee[0] = 0.55f, p->knee[1] = 0.6f;
-  p->arm[0] = 0.3f, p->arm[1] = -0.2f;
-  p->elbow[0] = p->elbow[1] = 0.5f;
-  p->out[0] = p->out[1] = 0.9f + 0.1f * fsin(t * 3);
-  p->lean = 0.18f;
-  p->yaw = 0.3f;
-  p->bob = 0.03f * fsin(t * 4);
+  play(p, k_roll, 3, false, t < 0.2f ? t * 2.5f : t < 0.75f ? 0.5f : 0.5f + (t - 0.75f) * 2);
+  /* round once, head over heels */
+  float s = (t - 0.08f) / 0.75f;
+  p->spin = 6.2831853f * smooth(s < 0 ? 0 : s > 1 ? 1 : s);
 }
 
 void pose_fly(Pose *p, float t) {
-  clear(p);
-  p->hip[0] = 0.2f, p->hip[1] = -0.3f;
-  p->knee[0] = 0.7f, p->knee[1] = 1.0f;
-  p->arm[0] = p->arm[1] = -0.5f;
-  p->elbow[0] = p->elbow[1] = 0.3f;
-  p->out[0] = p->out[1] = 0.4f;
+  play(p, k_fly, 2, true, t * 0.5f);
   p->lean = 0.55f + 0.05f * fsin(t * 5);
 }
 
-void pose_spray(Pose *p, float t) {
-  clear(p);
-  p->arm[1] = 2.0f + 0.25f * fsin(t * 9), p->elbow[1] = 0.25f;
-  p->out[1] = 0.2f;
-  p->arm[0] = 0.1f, p->elbow[0] = 0.3f;
-  p->yaw = 1.1f;
-  p->knee[0] = p->knee[1] = 0.1f;
-  p->hip[0] = 0.15f;
+void pose_fall(Pose *p, float t) {
+  play(p, k_fall, 3, false, t);
+  float k = t > 1 ? 1 : t < 0 ? 0 : t;
+  /* backwards onto the ground (about the feet) */
+  p->lean = -1.5f * smooth(k);
 }
 
-void pose_fall(Pose *p, float t) {
-  clear(p);
-  float k = t > 1 ? 1 : t;
-  p->spin = -1.35f * k;
-  p->arm[0] = p->arm[1] = 2.4f * k;
-  p->out[0] = p->out[1] = 0.6f;
-  p->hip[0] = 0.5f * k, p->hip[1] = 0.2f * k;
-  p->knee[0] = 0.6f * k, p->knee[1] = 0.3f;
+void pose_stumble(Pose *p, float k) {
+  if (k <= 0) return;
+  if (k > 1) k = 1;
+  k = smooth(k);
+  for (int i = 1; i < NBONES; i++)
+    for (int j = 0; j < 3; j++) p->a[i][j] += ((float)k_trip.a[i][j] * DEG - p->a[i][j]) * k * (i == BN_LEG_L || i >= BN_SHIN_L ? 0.4f : 1);
 }
 
 /* ---------------------------------------------------------------- the people */
-typedef struct {
-  uint32_t skin, hair, hat, hat2, top, vest, sleeve, legs, shoes, sole;
-  uint8_t head;       /* 0 a cap, 1 a beanie and a ponytail, 2 a flat top and headphones, 3 a mohawk, 4 the Inspector's cap */
-  float width;        /* of the chest */
-} Look;
-
-static const Look looks[5] = {
-  /* Jake: the white cap with its red peak, a white hoodie under a denim vest, light jeans, green shoes */
-  {0xF1C7A3, 0x6B3E1F, 0xF4F4F4, 0xD8302A, 0xF2F2F2, 0x5E95CF, 0xF2F2F2, 0x86AEDB, 0x4CAF50, 0xD8302A, 0, 1.0f},
-  /* Tricky: red hair in a ponytail under a red beanie, a pink jacket, dark trousers */
-  {0xF5D0B5, 0xD9502B, 0xD8302A, 0xF4F4F4, 0xE5476A, 0xE5476A, 0xF4F4F4, 0x2E3440, 0xF4F4F4, 0xE5476A, 1, 0.95f},
-  /* Fresh: a flat top, big yellow headphones, a red tracksuit */
-  {0x8D5524, 0x161616, 0x161616, 0xF2C230, 0xD8302A, 0xD8302A, 0xD8302A, 0x2A2A30, 0xF4F4F4, 0x2A2A30, 2, 1.0f},
-  /* Spike: a green mohawk, a black leather jacket, tartan trousers, boots */
-  {0xF1C7A3, 0x3BD16F, 0x3BD16F, 0x3BD16F, 0x3A3A40, 0x26262B, 0x26262B, 0x8E2433, 0x1E1E22, 0x55555C, 3, 1.02f},
-  /* the Inspector: a navy uniform and cap with a gold band, a round belly */
-  {0xF0B48C, 0xB5B5B5, 0x23375E, 0xE0B13A, 0x23375E, 0x23375E, 0x23375E, 0x1F2D4D, 0x141414, 0x141414, 4, 1.45f},
+static const Model *const people[2][5] = {
+  {&model_jake, &model_tricky, &model_fresh, &model_spike, &model_inspector},
+  /* (with fewer corners, for when they are small on the screen) */
+  {&model_jake_lo, &model_tricky_lo, &model_fresh_lo, &model_spike_lo, &model_inspector_lo},
 };
+static const Model *drawn;   /* the person just drawn (for the jetpack) */
 
-static void head(const Look *k, M3 T, V3 neck) {
-  part(T, neck, (V3){0, 0.15f, 0}, 0.15f, 0.15f, 0.15f, k->skin);
-  V3 h = vadd(neck, ap(T, (V3){0, 0.15f, 0}));
-  /* the face: eyes, brows, a smile (only seen from the front) */
-  for (int s = -1; s <= 1; s += 2) {
-    part(T, h, (V3){0.065f * (float)s, 0.01f, 0.152f}, 0.03f, 0.04f, 0.004f, 0xFFFFFF);
-    part(T, h, (V3){0.06f * (float)s, 0.0f, 0.156f}, 0.018f, 0.026f, 0.004f, 0x1D1D2B);
-    part(T, h, (V3){0.065f * (float)s, 0.07f, 0.152f}, 0.04f, 0.012f, 0.006f, k->head == 4 ? 0x9A9A9A : k->hair);
-  }
-  if (k->head == 4) part(T, h, (V3){0, -0.1f, 0.14f}, 0.14f, 0.07f, 0.03f, 0xC8C8C8);   /* the Inspector's beard */
-  else part(T, h, (V3){0, -0.075f, 0.152f}, 0.045f, 0.012f, 0.004f, 0x8A2A2A);
-  switch (k->head) {
-    case 0:
-      part(T, h, (V3){0, 0.03f, -0.12f}, 0.155f, 0.1f, 0.04f, k->hair);
-      part(T, h, (V3){0, 0.13f, 0}, 0.165f, 0.065f, 0.165f, k->hat);
-      part(T, h, (V3){0, 0.08f, 0.21f}, 0.15f, 0.015f, 0.08f, k->hat2);
-      part(T, h, (V3){0, 0.1f, -0.166f}, 0.1f, 0.03f, 0.005f, k->hat2);
-      break;
-    case 1:
-      part(T, h, (V3){0, 0.15f, -0.01f}, 0.168f, 0.08f, 0.168f, k->hat);
-      part(T, h, (V3){0, 0.08f, -0.01f}, 0.17f, 0.025f, 0.17f, k->hat2);
-      part(T, h, (V3){0, -0.04f, -0.2f}, 0.06f, 0.13f, 0.06f, k->hair);
-      part(T, h, (V3){0, 0.02f, -0.13f}, 0.158f, 0.08f, 0.03f, k->hair);
-      break;
-    case 2:
-      part(T, h, (V3){0, 0.2f, 0}, 0.15f, 0.07f, 0.15f, k->hair);
-      part(T, h, (V3){0, 0.03f, -0.125f}, 0.152f, 0.1f, 0.03f, k->hair);
-      part(T, h, (V3){-0.175f, 0, 0}, 0.04f, 0.08f, 0.07f, k->hat2);
-      part(T, h, (V3){0.175f, 0, 0}, 0.04f, 0.08f, 0.07f, k->hat2);
-      part(T, h, (V3){0, 0.29f, 0}, 0.19f, 0.02f, 0.03f, 0x2A2A30);
-      break;
-    case 3:
-      part(T, h, (V3){0, 0.25f, 0}, 0.035f, 0.13f, 0.16f, k->hair);
-      part(T, h, (V3){0, 0.1f, -0.13f}, 0.035f, 0.18f, 0.03f, k->hair);
-      break;
-    default:
-      part(T, h, (V3){0, 0.14f, 0}, 0.175f, 0.06f, 0.19f, k->hat);
-      part(T, h, (V3){0, 0.09f, 0}, 0.18f, 0.025f, 0.195f, k->hat2);
-      part(T, h, (V3){0, 0.07f, 0.24f}, 0.16f, 0.015f, 0.07f, 0x141414);
-      part(T, h, (V3){0, -0.05f, -0.1f}, 0.15f, 0.06f, 0.06f, k->hair);
-      break;
-  }
+static M34 body_root(const Model *m, V3 at, const Pose *p) {
+  /* the hips: where the body turns, and the middle of a roll */
+  float hy = m->joints[0][1] * 0.001f;
+  M34 r = translate(at.x, at.y + p->y, at.z), y = rot_y(p->yaw);
+  r = mul(&r, &y);
+  float a[3] = {p->lean + p->spin, 0, p->tilt};
+  M34 lt = rot_about(a, (V3){0, p->spin != 0 ? hy - 0.12f : p->lean < 0 ? 0.05f : hy, 0});
+  return mul(&r, &lt);
 }
 
-void actor_draw(int who, V3 where, const Pose *p, float lt) {
-  const Look *k = &looks[who];
-  bool big = who == WHO_INSPECTOR;
-  at = where, light = lt, size = big ? 1.14f : 1.0f;
-  pivot = (V3){0, 0.75f * size, 0};
-  root = mul(ry(p->yaw), mul(rz(p->tilt), rx(p->spin)));
-  if (p->squash != 1) {
-    /* a roll: smaller, about the middle */
-    size *= p->squash;
-    pivot.y *= p->squash;
-  }
-  float w = k->width;
-  V3 hip = {0, 0.86f + p->bob, 0};
-  /* legs */
-  for (int s = 0; s < 2; s++) {
-    float sx = s ? 0.105f : -0.105f;
-    M3 up = rx(-p->hip[s]), lo = mul(up, rx(p->knee[s]));
-    V3 j = {sx * (big ? 1.25f : 1), hip.y, 0};
-    float th = big ? 0.095f : 0.078f;
-    part(up, j, (V3){0, -0.2f, 0}, th, 0.2f, th + 0.005f, k->legs);
-    V3 knee = vadd(j, ap(up, (V3){0, -0.4f, 0}));
-    part(lo, knee, (V3){0, -0.19f, 0}, th - 0.008f, 0.19f, th - 0.005f, k->legs);
-    V3 ankle = vadd(knee, ap(lo, (V3){0, -0.38f, 0}));
-    part(lo, ankle, (V3){0, -0.025f, 0.05f}, 0.08f, 0.055f, 0.15f, k->shoes);
-    part(lo, ankle, (V3){0, -0.07f, 0.05f}, 0.082f, 0.015f, 0.152f, k->sole);
-  }
-  /* the hips, then the chest leaning from the waist */
-  part(ident, hip, (V3){0, 0.04f, 0}, 0.18f * (big ? 1.3f : 1), 0.08f, 0.11f * (big ? 1.4f : 1), k->legs);
-  M3 T = rx(p->lean);
-  V3 waist = {0, hip.y + 0.08f, 0};
-  float cw = 0.21f * w, cd = big ? 0.22f : 0.125f;
-  part(T, waist, (V3){0, 0.27f, big ? 0.04f : 0}, cw, 0.27f, cd, k->top);
-  if (k->vest != k->top) part(T, waist, (V3){0, 0.29f, 0}, cw + 0.012f, 0.22f, cd + 0.012f, k->vest);
-  if (who == WHO_JAKE) part(T, waist, (V3){0, 0.5f, -0.13f}, 0.13f, 0.07f, 0.04f, k->sleeve);   /* the hood */
-  if (who == WHO_SPIKE) part(T, waist, (V3){0, 0.3f, -0.14f}, 0.12f, 0.12f, 0.01f, 0xC8C8D0);  /* a patch */
-  /* arms */
-  for (int s = 0; s < 2; s++) {
-    float sgn = s ? 1.0f : -1.0f;
-    M3 up = mul(T, mul(rz(sgn * p->out[s]), rx(-p->arm[s]))), lo = mul(up, rx(-p->elbow[s]));
-    V3 sh = vadd(waist, ap(T, (V3){sgn * (cw + 0.07f), 0.47f, 0}));
-    float th = big ? 0.075f : 0.062f;
-    part(up, sh, (V3){0, -0.14f, 0}, th, 0.15f, th, k->sleeve);
-    V3 el = vadd(sh, ap(up, (V3){0, -0.29f, 0}));
-    part(lo, el, (V3){0, -0.13f, 0}, th - 0.006f, 0.14f, th - 0.006f, k->sleeve);
-    part(lo, el, (V3){0, -0.3f, 0}, 0.05f, 0.05f, 0.05f, k->skin);
-  }
-  V3 neck = vadd(waist, ap(T, (V3){0, 0.56f, 0}));
-  head(k, T, neck);
+void actor_draw(int who, V3 at, const Pose *p, float lt) {
+  V3 v = r_view(at);
+  const Model *m = people[v.z > 4.5f][who];
+  drawn = m;
+  M34 root = body_root(m, at, p);
+  float a[NBONES][3];
+  for (int i = 0; i < NBONES; i++) a[i][0] = p->a[i][0], a[i][1] = p->a[i][1], a[i][2] = p->a[i][2];
+  draw_model(m, (const float(*)[3])a, &root, lt);
 }
 
 /* ---------------------------------------------------------------- the dog */
-void dog_draw(V3 where, float ph, float lt) {
-  at = where, light = lt, size = 1, pivot = (V3){0, 0, 0}, root = ident;
-  uint32_t fur = 0xA0612B, dark = 0x6E3F18, light_fur = 0xD9A066;
-  float s = fsin(ph), bob = 0.04f * (s < 0 ? -s : s);
-  part(ident, (V3){0, 0.44f + bob, 0}, (V3){0, 0, 0}, 0.13f, 0.12f, 0.3f, fur);
-  part(ident, (V3){0, 0.38f + bob, 0}, (V3){0, 0, 0.02f}, 0.11f, 0.07f, 0.24f, light_fur);
-  M3 H = rx(-0.15f);
-  V3 neck = {0, 0.56f + bob, 0.3f};
-  part(H, neck, (V3){0, 0.04f, 0.04f}, 0.11f, 0.1f, 0.11f, fur);
-  part(H, neck, (V3){0, -0.01f, 0.18f}, 0.06f, 0.05f, 0.06f, light_fur);
-  part(H, neck, (V3){-0.09f, 0.14f, 0.0f}, 0.03f, 0.06f, 0.035f, dark);
-  part(H, neck, (V3){0.09f, 0.14f, 0.0f}, 0.03f, 0.06f, 0.035f, dark);
-  for (int i = 0; i < 4; i++) {
-    float lx = i & 1 ? 0.08f : -0.08f, lz = i < 2 ? 0.2f : -0.2f;
-    float a = 0.7f * fsin(ph + (i < 2 ? 0 : 3.14159f) + (i & 1 ? 0.5f : 0));
-    part(rx(-a), (V3){lx, 0.38f + bob, lz}, (V3){0, -0.17f, 0}, 0.035f, 0.17f, 0.035f, i < 2 ? fur : dark);
-  }
-  part(rx(-0.9f + 0.3f * s), (V3){0, 0.5f + bob, -0.3f}, (V3){0, 0, -0.1f}, 0.025f, 0.025f, 0.12f, fur);
+void dog_draw(V3 at, float ph, float lt) { dog_draw_turned(at, ph, lt, 0); }
+
+void dog_draw_turned(V3 at, float ph, float lt, float yaw) {
+  const Model *m = &model_dog;
+  /* a gallop: the front legs together, then the back ones; the body rocks */
+  float s = fsin(ph), c = fcos(ph);
+  float a[7][3] = {{0}};
+  a[0][0] = 0.12f * c;               /* the body */
+  a[1][0] = -0.1f * c - 0.1f;        /* the head, steady */
+  a[2][0] = a[3][0] = -0.75f * s;    /* front legs */
+  a[3][0] += 0.2f;
+  a[4][0] = a[5][0] = 0.75f * s;     /* back legs */
+  a[5][0] -= 0.2f;
+  a[6][0] = -0.5f + 0.3f * s;        /* the tail */
+  M34 root = translate(at.x, at.y + 0.05f * (s < 0 ? -s : s), at.z), ry = rot_y(yaw);
+  root = mul(&root, &ry);
+  draw_model(m, (const float(*)[3])a, &root, lt);
 }
 
 /* ---------------------------------------------------------------- boards, the jetpack, shadows */
+static uint32_t lit(uint32_t c, float light) {
+  if (light >= 1) return c;
+  return r_mix888(r_mix888(c, 0, (int)((1 - light) * 256)), 0x10203A, 24);
+}
+
 static const uint32_t board_cols[3][3] = {
-  {0x2E7BE0, 0xF2C230, 0x173E73},   /* the Hoverboard */
-  {0xF07F2D, 0x3BD16F, 0x7A3A10},   /* the Bouncer */
-  {0xD8302A, 0xF2C230, 0x5A1010},   /* the Daredevil */
+  {0xE8402A, 0xF6B24A, 0x8A1A12},   /* the Hoverboard: red, its stripes orange */
+  {0x3C9BE8, 0xF2E24A, 0x174A78},   /* the Bouncer */
+  {0x7A3FD8, 0x58E0F0, 0x2E1460},   /* the Daredevil */
 };
 
 void board_draw(V3 p, int kind, float yaw, float t, float lt) {
   const uint32_t *c = board_cols[kind % 3];
-  light = lt;
   float sy, cy;
   r_sincos(yaw, &sy, &cy);
-  float hw = 0.3f, hl = 0.82f, y = p.y + 0.16f + 0.03f * fsin(t * 6);
-  /* its outline: pointed at both ends, as the game's boards */
-  static const float o[8][2] = {{0, 1}, {0.8f, 0.8f}, {1, 0.25f}, {1, -0.25f}, {0.8f, -0.8f}, {0, -1}, {-0.8f, -0.8f}, {-1, -0.25f}};
-  static const float o8[2] = {-1, 0.25f};
+  float hw = 0.3f, hl = 0.85f, y = p.y + 0.16f + 0.03f * fsin(t * 6);
+  /* a rounded deck, longer than wide, as the game's boards */
+  static const float o[8][2] = {{0, 1}, {0.75f, 0.9f}, {1, 0.45f}, {1, -0.45f}, {0.75f, -0.9f}, {0, -1}, {-0.75f, -0.9f}, {-1, -0.45f}};
+  static const float o8[2] = {-1, 0.45f};
   V3 top8[9], bot8[9];
   for (int i = 0; i < 9; i++) {
     const float *q = i < 8 ? o[i] : o8;
     float ox = q[0] * hw, oz = q[1] * hl, rx = ox * cy + oz * sy, rz = -ox * sy + oz * cy;
     top8[i] = (V3){p.x + rx, y + 0.07f, p.z + rz};
-    bot8[i] = (V3){p.x + rx * 0.92f, y, p.z + rz * 0.92f};
+    bot8[i] = (V3){p.x + rx * 0.9f, y, p.z + rz * 0.9f};
   }
-  /* (nine corners in all; r_poly takes eight at most, so the top is two halves) */
   V3 a[5] = {top8[0], top8[1], top8[2], top8[3], top8[4]}, b[6] = {top8[4], top8[5], top8[6], top8[7], top8[8], top8[0]};
-  uint32_t face = shade(r_shade(c[0], (V3){0, 1, 0}));
+  uint32_t face = lit(r_shade(c[0], (V3){0, 1, 0}), lt);
   r_poly(a, 5, face, 0, 0);
   r_poly(b, 6, face, 0, 0);
-  /* the stripe down the middle */
-  float sx = 0.07f * cy, sz = -0.07f * sy, lx = hl * 0.8f * sy, lz = hl * 0.8f * cy;
-  V3 st[4] = {{p.x - sx + lx, y + 0.071f, p.z - sz + lz}, {p.x + sx + lx, y + 0.071f, p.z + sz + lz},
-              {p.x + sx - lx, y + 0.071f, p.z + sz - lz}, {p.x - sx - lx, y + 0.071f, p.z - sz - lz}};
-  r_poly(st, 4, shade(c[1]), P_DECAL | P_TWOSIDED, 0);
+  /* stripes across */
+  for (int i = -2; i <= 2; i++) {
+    float zc = (float)i * 0.26f, w = 0.05f, x0 = -hw * 0.75f, x1 = hw * 0.75f;
+    V3 st[4];
+    float px[4] = {x0, x1, x1, x0}, pz[4] = {zc + w, zc + w, zc - w, zc - w};
+    for (int k = 0; k < 4; k++) st[k] = (V3){p.x + px[k] * cy + pz[k] * sy, y + 0.071f, p.z - px[k] * sy + pz[k] * cy};
+    r_poly(st, 4, lit(c[1], lt), P_DECAL | P_TWOSIDED, 0);
+  }
   /* the rim, all round */
   for (int i = 0; i < 8; i++) {
     V3 r[4] = {top8[i + 1], top8[i], bot8[i], bot8[i + 1]};
-    r_poly(r, 4, shade(c[2]), P_TWOSIDED, 0);
+    r_poly(r, 4, lit(0xF2C230, lt * 0.85f), P_TWOSIDED, 0);
   }
+  (void)c[2];
   /* the glow under it */
   V3 g[4] = {{p.x - 0.55f, p.y + 0.03f, p.z + 0.95f}, {p.x + 0.55f, p.y + 0.03f, p.z + 0.95f},
              {p.x + 0.55f, p.y + 0.03f, p.z - 0.95f}, {p.x - 0.55f, p.y + 0.03f, p.z - 0.95f}};
   r_poly(g, 4, 0x7FE8FF, P_ALPHA | P_NOHAZE, 90);
 }
 
-void jetpack_draw(V3 p, const Pose *ps, float t, float lt) {
-  at = p, light = lt, size = 1, pivot = (V3){0, 0.75f, 0};
-  root = mul(ry(ps->yaw), mul(rz(ps->tilt), rx(ps->spin)));
-  M3 T = rx(ps->lean);
-  V3 waist = {0, 0.94f + ps->bob, 0};
+/* a cylinder along the matrix's y from y0 to y1 (the jetpack's tanks) */
+static void cylinder(const M34 *w, float x, float z, float r, float y0, float y1, uint32_t col, float lt) {
+  V3 ring0[8], ring1[8];
+  for (int i = 0; i < 8; i++) {
+    float s, c;
+    r_sincos((float)i * 0.785398f, &s, &c);
+    ring0[i] = ap(w, (V3){x + r * s, y0, z + r * c});
+    ring1[i] = ap(w, (V3){x + r * s, y1, z + r * c});
+  }
+  for (int i = 0; i < 8; i++) {
+    int j = (i + 1) & 7;
+    V3 q[4] = {ring1[i], ring1[j], ring0[j], ring0[i]};
+    float s, c;
+    r_sincos(((float)i + 0.5f) * 0.785398f, &s, &c);
+    V3 n = ap(w, (V3){s, 0, c});
+    V3 o = ap(w, (V3){0, 0, 0});
+    n = (V3){n.x - o.x, n.y - o.y, n.z - o.z};
+    r_poly(q, 4, lit(r_shade(col, n), lt), P_TWOSIDED, 0);
+  }
+  V3 cap[8];
+  for (int i = 0; i < 8; i++) cap[i] = ring1[7 - i];
+  r_poly(cap, 8, lit(col, lt), P_TWOSIDED, 0);
+}
+
+void jetpack_draw(V3 at, const Pose *ps, float t, float lt) {
+  (void)at, (void)ps;
+  /* on the chest's back (the bones of the person just drawn) */
+  const M34 *w = &bone_w[BN_CHEST];
+  const Model *m = drawn ? drawn : &model_jake;
+  float y0 = m->joints[BN_CHEST][1] * 0.001f;
   for (int s = -1; s <= 1; s += 2) {
-    part(T, waist, (V3){0.11f * (float)s, 0.3f, -0.24f}, 0.085f, 0.2f, 0.085f, 0xC9CFD6);
-    part(T, waist, (V3){0.11f * (float)s, 0.48f, -0.24f}, 0.07f, 0.03f, 0.07f, 0xD8302A);
-    part(T, waist, (V3){0.11f * (float)s, 0.08f, -0.24f}, 0.06f, 0.03f, 0.06f, 0x3A3A40);
+    float x = 0.1f * (float)s;
+    cylinder(w, x, -0.2f, 0.085f, y0 + 0.02f, y0 + 0.36f, 0x5BBF2A, lt);
+    cylinder(w, x, -0.2f, 0.07f, y0 + 0.36f, y0 + 0.46f, 0xE8582A, lt);
+    cylinder(w, x, -0.2f, 0.06f, y0 - 0.04f, y0 + 0.02f, 0x6A6E74, lt);
     /* the flame */
-    float len = 0.35f + 0.12f * fsin(t * 37 + (float)s);
-    V3 n = vadd(at, ap(root, vsub(vadd(waist, ap(T, (V3){0.11f * (float)s, 0.05f, -0.24f})), pivot)));
-    n = vadd(n, pivot);
-    V3 f[3] = {{n.x - 0.07f, n.y, n.z - 0.02f}, {n.x + 0.07f, n.y, n.z - 0.02f}, {n.x, n.y - len, n.z - 0.12f}};
-    r_poly(f, 3, 0xFFB020, P_ALPHA | P_NOHAZE | P_TWOSIDED, 220);
-    V3 f2[3] = {{n.x - 0.035f, n.y, n.z - 0.03f}, {n.x + 0.035f, n.y, n.z - 0.03f}, {n.x, n.y - len * 0.6f, n.z - 0.1f}};
+    float len = 0.4f + 0.14f * fsin(t * 37 + (float)s);
+    V3 n = ap(w, (V3){x, y0 - 0.05f, -0.2f});
+    V3 f[3] = {{n.x - 0.08f, n.y, n.z - 0.02f}, {n.x + 0.08f, n.y, n.z - 0.02f}, {n.x, n.y - len, n.z - 0.15f}};
+    r_poly(f, 3, 0xFF9A1A, P_ALPHA | P_NOHAZE | P_TWOSIDED, 220);
+    V3 f2[3] = {{n.x - 0.04f, n.y, n.z - 0.03f}, {n.x + 0.04f, n.y, n.z - 0.03f}, {n.x, n.y - len * 0.6f, n.z - 0.12f}};
     r_poly(f2, 3, 0xFFF4B0, P_ALPHA | P_NOHAZE | P_TWOSIDED, 230);
   }
 }
@@ -367,84 +409,30 @@ void shadow_draw(float x, float z, float ground, float h) {
 }
 
 /* ---------------------------------------------------------------- the things to pick up */
+/* the game's picture of it, turning round (as wide as the cosine of its turn) */
+static void spinner(V3 c, float w, float h, float turn, int tex, float lt) {
+  float s, co;
+  r_sincos(turn, &s, &co);
+  float hw = w * co;
+  if (hw > -0.04f && hw < 0.04f) hw = hw < 0 ? -0.04f : 0.04f;
+  V3 q[4] = {{c.x - hw, c.y + h, c.z}, {c.x + hw, c.y + h, c.z}, {c.x + hw, c.y - h, c.z}, {c.x - hw, c.y - h, c.z}};
+  float uv[8] = {0, 0, 32, 0, 32, 32, 0, 32};
+  int l = (int)(lt * 256 * (0.82f + 0.18f * (co < 0 ? -co : co)));
+  r_poly_tex(q, uv, 4, tex, l, P_TWOSIDED | P_NOHAZE);
+}
+
 void actors_pickup(const Item *it, float t) {
   float bobv = 0.12f * fsin(t * 3 + it->z);
-  at = (V3){it->x, it->y + bobv, it->z}, light = scene_light(it->z), size = 1, pivot = (V3){0, 0, 0};
-  root = ry(t * 2.2f + it->z);
-  M3 I = ident;
-  V3 o = {0, 0, 0};
+  float lt = scene_light(it->z);
+  V3 c = {it->x, it->y + bobv, it->z};
+  float turn = t * 2.2f + it->z;
   switch (it->kind) {
-    case I_MAGNET:
-      part(I, o, (V3){-0.22f, 0.05f, 0}, 0.09f, 0.25f, 0.09f, 0xE0302A);
-      part(I, o, (V3){0.22f, 0.05f, 0}, 0.09f, 0.25f, 0.09f, 0xE0302A);
-      part(I, o, (V3){0, -0.25f, 0}, 0.31f, 0.09f, 0.09f, 0xE0302A);
-      part(I, o, (V3){-0.22f, 0.36f, 0}, 0.092f, 0.07f, 0.092f, 0xE8ECF0);
-      part(I, o, (V3){0.22f, 0.36f, 0}, 0.092f, 0.07f, 0.092f, 0xE8ECF0);
-      break;
-    case I_JETPACK:
-      part(I, o, (V3){-0.13f, 0, 0}, 0.11f, 0.28f, 0.11f, 0xC9CFD6);
-      part(I, o, (V3){0.13f, 0, 0}, 0.11f, 0.28f, 0.11f, 0xC9CFD6);
-      part(I, o, (V3){-0.13f, 0.3f, 0}, 0.09f, 0.04f, 0.09f, 0xD8302A);
-      part(I, o, (V3){0.13f, 0.3f, 0}, 0.09f, 0.04f, 0.09f, 0xD8302A);
-      part(I, o, (V3){0, 0.05f, 0.08f}, 0.06f, 0.2f, 0.04f, 0x3A3A40);
-      part(I, o, (V3){-0.13f, -0.32f, 0}, 0.07f, 0.05f, 0.07f, 0xF2C230);
-      part(I, o, (V3){0.13f, -0.32f, 0}, 0.07f, 0.05f, 0.07f, 0xF2C230);
-      break;
-    case I_SNEAKERS:
-      for (int s = -1; s <= 1; s += 2) {
-        float x = 0.15f * (float)s;
-        part(I, o, (V3){x, -0.15f, 0.05f}, 0.1f, 0.04f, 0.26f, 0xF4F4F4);
-        part(I, o, (V3){x, -0.03f, -0.02f}, 0.095f, 0.09f, 0.19f, 0x3BD16F);
-        part(I, o, (V3){x, 0.1f, -0.1f}, 0.09f, 0.08f, 0.09f, 0x3BD16F);
-        part(I, o, (V3){x, -0.02f, 0.18f}, 0.06f, 0.06f, 0.05f, 0xF2C230);
-      }
-      break;
-    case I_DOUBLE: {
-      /* a purple star, 2x */
-      V3 c = at;
-      float s, co;
-      r_sincos(t * 2.2f + it->z, &s, &co);
-      for (int i = 0; i < 5; i++) {
-        float a0 = (float)i * 1.2566f, a1 = a0 + 0.6283f, a2 = a0 - 0.6283f;
-        float x0 = fsin(a0) * 0.45f, y0 = fcos(a0) * 0.45f, x1 = fsin(a1) * 0.2f, y1 = fcos(a1) * 0.2f, x2 = fsin(a2) * 0.2f,
-              y2 = fcos(a2) * 0.2f;
-        V3 tri[3] = {{c.x + co * x2, c.y + y2, c.z + s * x2}, {c.x + co * x0, c.y + y0, c.z + s * x0}, {c.x + co * x1, c.y + y1, c.z + s * x1}};
-        r_poly(tri, 3, shade(0xA855F7), P_TWOSIDED, 0);
-      }
-      V3 pent[5];
-      for (int i = 0; i < 5; i++) {
-        float a = (float)i * 1.2566f + 0.6283f, x = fsin(a) * 0.205f, y = fcos(a) * 0.205f;
-        pent[i] = (V3){c.x + co * x, c.y + y, c.z + s * x};
-      }
-      r_poly(pent, 5, shade(0xA855F7), P_TWOSIDED, 0);
-      /* "2": two bars and a step, in yellow */
-      float bars[3][4] = {{-0.09f, 0.08f, 0.09f, 0.12f}, {-0.09f, -0.12f, 0.09f, -0.08f}, {-0.04f, -0.1f, 0.05f, 0.1f}};
-      for (int i = 0; i < 3; i++) {
-        float x0 = bars[i][0], y0 = bars[i][1], x1 = bars[i][2], y1 = bars[i][3];
-        if (i == 2) x0 = -0.02f, x1 = 0.02f;
-        V3 q[4] = {{c.x + co * x0, c.y + y1, c.z + s * x0 - 0.01f}, {c.x + co * x1, c.y + y1, c.z + s * x1 - 0.01f},
-                   {c.x + co * x1, c.y + y0, c.z + s * x1 - 0.01f}, {c.x + co * x0, c.y + y0, c.z + s * x0 - 0.01f}};
-        r_poly(q, 4, shade(0xFFE040), P_TWOSIDED | P_DECAL, 0);
-      }
-      break;
-    }
-    case I_MYSTERY:
-      part(I, o, (V3){0, 0, 0}, 0.3f, 0.3f, 0.3f, 0x7B3FE4);
-      part(I, o, (V3){0, 0.31f, 0}, 0.31f, 0.02f, 0.06f, 0xF2C230);
-      part(I, o, (V3){0, 0.31f, 0}, 0.06f, 0.02f, 0.31f, 0xF2C230);
-      part(I, o, (V3){0, 0, -0.31f}, 0.06f, 0.3f, 0.01f, 0xF2C230);
-      part(I, o, (V3){0, 0, 0.31f}, 0.06f, 0.3f, 0.01f, 0xF2C230);
-      part(I, o, (V3){0, 0.36f, 0}, 0.1f, 0.05f, 0.04f, 0xF2C230);
-      break;
-    case I_KEY:
-      part(I, o, (V3){0, 0.22f, 0}, 0.16f, 0.04f, 0.04f, 0x3FA9F5);
-      part(I, o, (V3){0, 0.06f, 0}, 0.16f, 0.04f, 0.04f, 0x3FA9F5);
-      part(I, o, (V3){-0.14f, 0.14f, 0}, 0.04f, 0.12f, 0.04f, 0x3FA9F5);
-      part(I, o, (V3){0.14f, 0.14f, 0}, 0.04f, 0.12f, 0.04f, 0x3FA9F5);
-      part(I, o, (V3){0, -0.2f, 0}, 0.04f, 0.24f, 0.04f, 0x3FA9F5);
-      part(I, o, (V3){0.08f, -0.3f, 0}, 0.06f, 0.03f, 0.035f, 0x3FA9F5);
-      part(I, o, (V3){0.07f, -0.4f, 0}, 0.05f, 0.03f, 0.035f, 0x3FA9F5);
-      break;
+    case I_MAGNET: spinner(c, 0.45f, 0.48f, turn, TX_MAGNET, lt); break;
+    case I_JETPACK: spinner(c, 0.45f, 0.5f, turn, TX_JETPACK, lt); break;
+    case I_SNEAKERS: spinner(c, 0.45f, 0.45f, turn, TX_SNEAKERS, lt); break;
+    case I_DOUBLE: spinner(c, 0.5f, 0.5f, turn, TX_DOUBLE, lt); break;
+    case I_MYSTERY: spinner(c, 0.5f, 0.5f, turn * 0.5f, TX_MYSTERY, lt); break;
+    case I_KEY: spinner(c, 0.36f, 0.45f, turn, TX_KEY, lt); break;
   }
   /* a soft glow on the ground under it */
   float gy = world_ground(it->x, it->z, it->y) + 0.02f;

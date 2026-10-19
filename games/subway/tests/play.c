@@ -2,6 +2,7 @@
  *
  *   play [--frames N] [--keys "10-40:right,50:ok,..."] [--shots 30,60|all] [--out DIR] [--saves DIR]
  *        [--seed N] [--bot FROM] [--coins N] [--keys-owned N] [--draw-every N] [--power FRAME:KIND] [--god] [--when roof|tunnel] [--stats]
+ *   play --view WHO,ANIM,T,YAW,DIST[,HEIGHT] --out DIR   (one person, or the dog (5), alone: DIR/view.ppm)
  *
  * Keys: left right up down ok back one three home. "a-b:key" holds the key from frame a to b, "a:key" for one
  * frame (frames are the game's steps, 60 a second). --bot plays the run from frame FROM on: it reads the
@@ -12,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include "../src/actors.h"
 #include "../src/app.h"
 #include "../src/game.h"
 #include "../src/r3d.h"
@@ -131,6 +133,43 @@ static uint32_t bot(void) {
   return best < pl.lane ? K_LEFT : K_RIGHT;
 }
 
+/* ---------------------------------------------------------------- one person, alone */
+static void view_bg(void) {
+  for (int y = r_y0; y < r_y1; y++)
+    for (int x = 0; x < SCREEN_W; x++) r_col[(y - r_y0) * SCREEN_W + x] = (uint16_t)(0x8C51 + (y >> 4) * 0x0020);
+}
+
+static void view(const char *spec, const char *out) {
+  int who = 0;
+  char anim[16] = "stand";
+  float t = 0, yaw = 3.14159f, dist = 3.2f, height = 0.95f;
+  sscanf(spec, "%d,%15[a-z],%f,%f,%f,%f", &who, anim, &t, &yaw, &dist, &height);
+  static uint16_t band[SCREEN_W * BAND_H];
+  r_set_band_memory(band);
+  r_begin();
+  r_camera(0, height, -dist, 0.05f, 300, 160, 120);
+  Pose p;
+  if (!strcmp(anim, "run")) pose_run(&p, t * 6.2831853f);
+  else if (!strcmp(anim, "jump")) pose_jump(&p, t);
+  else if (!strcmp(anim, "roll")) pose_roll(&p, t);
+  else if (!strcmp(anim, "hover")) pose_hover(&p, t);
+  else if (!strcmp(anim, "fly")) pose_fly(&p, t);
+  else if (!strcmp(anim, "fall")) pose_fall(&p, t);
+  else if (!strcmp(anim, "spray")) pose_spray(&p, t);
+  else if (!strcmp(anim, "catch")) pose_catch(&p, t);
+  else if (!strcmp(anim, "trip")) pose_run(&p, 0), pose_stumble(&p, t);
+  else if (!strcmp(anim, "tpose")) memset(&p, 0, sizeof p);
+  else pose_stand(&p, t);
+  p.yaw += yaw;
+  if (who == 5) dog_draw_turned((V3){0, 0, 0}, t * 6.2831853f, 1, p.yaw);
+  else actor_draw(who, (V3){0, 0, 0}, &p, 1);
+  r_render(view_bg, NULL);
+  char path[512];
+  snprintf(path, sizeof path, "%s/view.ppm", out);
+  host_shot(path);
+  printf("polys %d\n", r_count());
+}
+
 int main(int argc, char **argv) {
   int frames = 600, draw_every = 1, bot_from = -1;
   const char *out = "build/shots", *shots = "", *saves = "build/host-saves";
@@ -139,6 +178,7 @@ int main(int argc, char **argv) {
   const char *raw = NULL, *when = NULL;   /* when: a screenshot the first time the runner is on a roof, in a tunnel */
   int when_n = 0;
   int raw_from = 0, raw_to = -1;   /* god: nothing hurts (long runs for tests) */
+  const char *view_spec = NULL;
   for (int i = 1; i < argc; i++) {
     const char *a = argv[i], *v = i + 1 < argc ? argv[i + 1] : "";
     if (!strcmp(a, "--frames")) frames = atoi(v), i++;
@@ -154,6 +194,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(a, "--stats")) stats = true;
     else if (!strcmp(a, "--god")) god = true;
     else if (!strcmp(a, "--when")) when = v, i++;
+    else if (!strcmp(a, "--view")) view_spec = v, i++;
     else if (!strcmp(a, "--raw")) {
       static char dir[256];
       snprintf(dir, sizeof dir, "%s", v);
@@ -172,6 +213,10 @@ int main(int argc, char **argv) {
   }
   mkdir("build", 0755);
   mkdir(out, 0755);
+  if (view_spec) {
+    view(view_spec, out);
+    return 0;
+  }
   mkdir(saves, 0755);
   host_save_dir(saves);
   static uint16_t band[SCREEN_W * BAND_H];

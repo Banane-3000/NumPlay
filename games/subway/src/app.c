@@ -302,13 +302,17 @@ static void draw_runner(void) {
   else if (pl.fly > 0) pose_fly(&p, clock);
   else if (pl.roll > 0) pose_roll(&p, 1 - pl.roll / 0.6f);
   else if (pl.hover > 0 && pl.state != ST_AIR) pose_hover(&p, clock);
-  else if (pl.state == ST_AIR) pose_jump(&p, clock);
+  else if (pl.state == ST_AIR) {
+    /* from leaving the ground to landing, by the speed up (a jump off a ramp or a fall starts halfway) */
+    float v0 = pl.power[PW_SNEAKERS] > 0 ? 19.0f : 11.7f, t = 0.5f - pl.vy / (2 * v0);
+    pose_jump(&p, t);
+  }
   else pose_run(&p, pl.phase);
   if (!title) {
     /* turning round to run, at the start */
     if (run.start_t < 0.35f && !pl.dead) p.yaw += 3.14159f * (1 - run.start_t / 0.35f);
     p.tilt -= pl.lean;
-    if (pl.stumble > 0) p.tilt += 0.5f * pl.stumble, p.lean -= 0.4f * pl.stumble;
+    if (pl.stumble > 0) pose_stumble(&p, pl.stumble / 0.45f), p.tilt += 0.3f * pl.stumble;
   }
   V3 at = {pl.x, pl.y, pl.z};
   bool blink = pl.safe > 0.15f && ((int)(clock * 12) & 1);
@@ -328,7 +332,7 @@ static void draw_runner(void) {
     if (run.start_t < 1) back = 2.6f + (1 - run.start_t) * 3;
     Pose ip;
     pose_run(&ip, pl.phase * 0.85f);
-    if (pl.dead && pl.crash_t > 0.8f) pose_stand(&ip, clock), ip.arm[1] = 1.6f, ip.arm[0] = 1.5f;
+    if (pl.dead && pl.crash_t > 0.8f) pose_catch(&ip, clock);
     float ix = pl.x + 0.85f, dx = pl.x - 0.95f;
     actor_draw(WHO_INSPECTOR, (V3){ix, 0, pl.z - back}, &ip, lt);
     dog_draw((V3){dx, 0, pl.z - back + 0.8f}, pl.phase * 1.3f, lt);

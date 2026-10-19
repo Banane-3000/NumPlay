@@ -4,9 +4,9 @@
 #define NEAR 0.35f
 #define FAR 190.0f
 #define ZK 22000.0f      /* depths are ZK / z: 62857 at the near plane, larger is nearer */
-#define MAXP 2300        /* polygons a frame */
-#define MAXV 7400        /* their corners */
-#define MAXA 3800        /* corners with a light level and a place in a picture */
+#define MAXP 1800        /* polygons a frame */
+#define MAXV 6000        /* their corners */
+#define MAXA 3300        /* corners with a light level and a place in a picture */
 #define MAXT 200         /* textured faces in perspective */
 #define MAXN 14          /* corners of a polygon once cut */
 #define SUB 8.0f         /* corners are kept in 1/8 pixels */
@@ -26,9 +26,7 @@ typedef struct {
 typedef struct {
   int16_t x, y;
 } Pos;
-typedef struct {
-  uint8_t s, u, v, pad;
-} Attr;
+typedef uint32_t Attr;   /* light (8 bits), u and v (12 bits each, 1/4 texels) */
 typedef struct {
   float ua, ub, uc, va, vb, vc;   /* u and v (in texels) times ZK / z, as planes like the depth */
 } UV;
@@ -238,8 +236,10 @@ static void emit(CV *p, int n, int kind, uint16_t color, int flags, int alpha) {
   for (int i = 0; i < n; i++) pos[nverts + i] = (Pos){(int16_t)(sx[i] * SUB + 0.5f), (int16_t)(sy[i] * SUB + 0.5f)};
   if (kind == K_SHADE || kind == K_TEX) {
     q->at = (uint16_t)nattr;
-    for (int i = 0; i < n; i++)
-      attr[nattr + i] = (Attr){(uint8_t)(p[i].s + 0.5f), (uint8_t)(p[i].u + 0.5f), (uint8_t)(p[i].v + 0.5f), 0};
+    for (int i = 0; i < n; i++) {
+      uint32_t l = (uint32_t)(p[i].s + 0.5f), u = (uint32_t)(p[i].u + 0.5f), v = (uint32_t)(p[i].v + 0.5f);
+      attr[nattr + i] = (l > 255 ? 255 : l) | (u > 4095 ? 4095 : u) << 8 | (v > 4095 ? 4095 : v) << 20;
+    }
     nattr += n;
   }
   int iy0 = y0 < 0 ? 0 : (int)(y0 + 0.5f), iy1 = y1 >= SCREEN_H ? SCREEN_H : (int)(y1 + 0.5f);
@@ -364,9 +364,12 @@ static void raster(const Poly *q) {
     E->y0 = ay, E->y1 = by;
     E->dx = (xb - xa) * h, E->x = xa - ay * E->dx;
     if (at) {
-      E->ds = ((float)at[kb].s - at[ka].s) * h, E->s = at[ka].s - ay * E->ds;
-      E->du = ((float)at[kb].u - at[ka].u) * h, E->u = at[ka].u - ay * E->du;
-      E->dv = ((float)at[kb].v - at[ka].v) * h, E->v = at[ka].v - ay * E->dv;
+      float sa = (float)(at[ka] & 255), sb = (float)(at[kb] & 255);
+      float ua = (float)(at[ka] >> 8 & 4095), ub = (float)(at[kb] >> 8 & 4095);
+      float va = (float)(at[ka] >> 20), vb = (float)(at[kb] >> 20);
+      E->ds = (sb - sa) * h, E->s = sa - ay * E->ds;
+      E->du = (ub - ua) * h, E->u = ua - ay * E->du;
+      E->dv = (vb - va) * h, E->v = va - ay * E->dv;
     }
   }
   if (ne < 2) return;

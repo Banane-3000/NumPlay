@@ -72,11 +72,12 @@ void r_poly(const V3 *v, int n, uint32_t rgb, int flags, int alpha);
 void r_poly_tex(const V3 *v, const float *uv, int n, int tex, int light, int flags);
 
 /* meshes (people, the dog): corners in camera space with a light level (0..255) and a place in a
- * picture (1/4 texels), triangles of three corners and a colour (an index into pal; TEX_COL: the
- * picture tex) */
+ * picture (1/4 texels, below 4096), triangles of three corners and a colour (an index into pal; TEX_COL:
+ * the picture tex) */
 typedef struct {
   float x, y, z;
-  uint8_t s, u, v, pad;
+  uint16_t u, v;
+  uint8_t s, pad[3];
 } RV;
 typedef struct {
   uint8_t a, b, c, col;

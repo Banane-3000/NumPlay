@@ -90,7 +90,7 @@ def long_runs(d):
                   "--bot", "100", "--power", "2000:0", "--power", "5000:1", "--power", "9000:2", "--power", "12000:3",
                   "--draw-every", "9")
         assert st["dist"] > 6000 and not st["dead"], (seed, st)
-        assert st["polys"] < 1500, st
+        assert st["polys"] < 1750, st   # (the renderer keeps 1800)
         assert st["mset"] >= 1, st   # (missions done along the way)
 
 
