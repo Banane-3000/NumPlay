@@ -3,12 +3,15 @@
  *   play [--frames N] [--keys "10-40:right,50:ok,..."] [--shots 30,60|every:N] [--out DIR] [--saves DIR]
  *        [--progress L] [--money M]
  *   play --sim L [--frames N] [--shots ...] [--out DIR] [--quiet]
+ *   ... [--raw DIR --raw-from T --raw-to T] [--sun-from T]
  *
  * Keys: left right up down ok back shovel home almanac 0-9. "a-b:key" holds the key from tick a to b, "a:key" for
  * one tick (ticks are hundredths of a second; a frame is drawn every 3).
  * --progress L sets the adventure at level L with what it has found by then (then the menus play as scripted).
  * --sim L plays level L straight away, a robot planting (with all the sun it wants, so that every level's zombies
- * come and go): it prints how the level went and fails if it isn't won. Screenshots are DIR/shot_<tick>.ppm. */
+ * come and go): it prints how the level went and fails if it isn't won. Screenshots are DIR/shot_<tick>.ppm.
+ * --raw saves every frame drawn from tick T to T as RGB565 (DIR/frame_<ms>.raw, for NumPlay's tools/record.py
+ * --frames); --sun-from T: from then on the robot has the sun it collects (a level as it looks). */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,6 +62,18 @@ static void parse_keys(const char *spec) {
 }
 
 static int shots[1024], nshots_at, every;
+static const char *raw_dir;
+static int raw_from, raw_to = -1, sun_from = 1 << 30;
+
+static void raw_frame(int tick) {
+  char p[512];
+  snprintf(p, sizeof p, "%s/frame_%06d.raw", raw_dir, tick * 10);
+  FILE *f = fopen(p, "wb");
+  if (!f) return;
+  fwrite(host_fb, 2, SCREEN_W * SCREEN_H, f);
+  fclose(f);
+}
+static bool raw_now(int tick) { return raw_dir && tick >= raw_from && tick <= raw_to && tick % 3 == 0; }
 static void parse_shots(const char *s) {
   if (!strncmp(s, "every:", 6)) {
     every = atoi(s + 6);
@@ -192,7 +207,8 @@ static bool robot_packet(int i) {
 
 static void robot(void) {
   if (B.phase != PH_PLAY) return;
-  B.sun = 5000;
+  if ((int)B.ticks < sun_from) B.sun = 5000;
+  else if ((int)B.ticks == sun_from) B.sun = 325;
   /* sun and coins: picked up */
   board_collect(400, 300, 5000);
   if (B.mode == MODE_WHACK) {
@@ -279,11 +295,10 @@ static int sim(int level, int frames, const char *out, bool quiet) {
   robot_seeds(level);
   B.phase = PH_PLAY;
   cam_x = 0;
-  int bg = B.env == ENV_NIGHT ? BG_NIGHT : B.env == ENV_POOL ? BG_POOL : B.env == ENV_FOG ? BG_FOG
-         : B.env == ENV_ROOF ? BG_ROOF : BG_LAWN;
-  gfx_load_back(bg, 88);
+  show_lawn(-1);
   int t;
-  int most = 0;
+  int most = 0, planted = B.nplants;
+  hud.col = -10;
   for (t = 0; t < frames && B.phase == PH_PLAY; t++) {
     robot();
     board_tick();
@@ -298,15 +313,23 @@ static int sim(int level, int frames, const char *out, bool quiet) {
                B.zombies[i].armor, B.zombies[i].flags);
       printf("\n");
     }
-    if (shot_now(t)) {
+    if (B.nplants > planted) {
+      /* (the cursor where the robot planted last) */
+      hud.col = B.plants[B.nplants - 1].col, hud.row = B.plants[B.nplants - 1].row;
+      hud.selected = -1, hud.shovel = false;
+    }
+    planted = B.nplants;
+    if (shot_now(t) || raw_now(t)) {
       gfx_begin();
       draw_lawn(true);
-      hud.col = -10;
-      hud_draw(false);
+      hud_draw(raw_dir != NULL);
       gfx_end();
-      char p[512];
-      snprintf(p, sizeof p, "%s/shot_%06d.ppm", out, t);
-      host_shot(p);
+      if (raw_now(t)) raw_frame(t);
+      if (shot_now(t)) {
+        char p[512];
+        snprintf(p, sizeof p, "%s/shot_%06d.ppm", out, t);
+        host_shot(p);
+      }
     }
   }
   const char *how = B.phase == PH_WON ? "won" : B.phase == PH_LOST ? "LOST" : "UNFINISHED";
@@ -332,6 +355,10 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--progress") && i + 1 < argc) prog = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--money") && i + 1 < argc) money = atol(argv[++i]);
     else if (!strcmp(argv[i], "--quiet")) quiet = true;
+    else if (!strcmp(argv[i], "--raw") && i + 1 < argc) raw_dir = argv[++i];
+    else if (!strcmp(argv[i], "--raw-from") && i + 1 < argc) raw_from = atoi(argv[++i]);
+    else if (!strcmp(argv[i], "--raw-to") && i + 1 < argc) raw_to = atoi(argv[++i]);
+    else if (!strcmp(argv[i], "--sun-from") && i + 1 < argc) sun_from = atoi(argv[++i]);
   }
   mkdir(out, 0755);
   mkdir(saves, 0755);
@@ -351,7 +378,7 @@ int main(int argc, char **argv) {
   }
   game_init();
   if (prog) {
-    progress.level = (uint8_t)prog, progress.slots = 6;
+    progress.level = (uint8_t)prog, progress.slots = 6, progress.keys_seen = 1;
     for (int l = 1; l < prog; l++) {
       int r = level_defs[l - 1].reward;
       if (r == REWARD_SHOVEL) progress.items |= ITEM_SHOVEL;
@@ -368,13 +395,15 @@ int main(int argc, char **argv) {
     game_frame(host_keys);
     host_time += 10;
     if (t % 3 == 0 || shot_now(t)) game_draw();
+    if (raw_now(t)) raw_frame(t);
     if (shot_now(t)) {
       char p[512];
       snprintf(p, sizeof p, "%s/shot_%06d.ppm", out, t);
       host_shot(p);
     }
   }
-  printf("state %d level %d phase %d sun %d zombies %d plants %d wave %d/%d\n", g_state, B.level, B.phase, (int)B.sun,
-         B.nzombies, B.nplants, B.wave, B.nwaves);
+  printf("state %d level %d phase %d sun %d zombies %d plants %d wave %d/%d progress %d money %u slots %d items %d "
+         "running %d\n", g_state, B.level, B.phase, (int)B.sun, B.nzombies, B.nplants, B.wave, B.nwaves, progress.level,
+         (unsigned)progress.money, progress.slots, progress.items, g_running);
   return 0;
 }

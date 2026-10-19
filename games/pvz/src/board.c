@@ -297,6 +297,8 @@ void board_start(int level) {
     for (int i = 0; i < d->nseeds; i++) B.seeds[i] = d->seeds[i];
   }
   generate_waves();
+  /* (the zombies wait for the first plant, the first time through the Adventure) */
+  if (progress.finished) B.started = 1;
   if (B.mode == MODE_BOWLING) {
     B.npackets = 1, B.packets[0].kind = P_WALLNUT, B.packets[0].x = 0;
     B.started = 1, B.wave_in = 200;

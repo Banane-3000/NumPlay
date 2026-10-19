@@ -65,12 +65,11 @@ static int lawn_back(void) {
   }
 }
 
-/* the lawn as the camera sees it; sod: how far the sod rows are rolled out (-1 all) */
-static void show_lawn(int sod) {
+void show_lawn(int sod) {
   int bg = lawn_back(), sx = 88 + (int)(cam_x * 0.4f + (cam_x < 0 ? -0.5f : 0.5f));
   if (B.level > 3 || B.env != ENV_DAY) sod = 0;
   else if (sod < 0) sod = 1000;
-  if (loaded_bg == bg && loaded_x == sx && loaded_sod == sod) return;
+  if (loaded_bg == bg + (B.level == 50) * 100 && loaded_x == sx && loaded_sod == sod) return;
   gfx_load_back(bg, sx);
   if (B.level == 50)
     /* the roof by night: Dr. Zomboss comes in the dark */
@@ -85,7 +84,7 @@ static void show_lawn(int sod) {
     if (x1 > SCREEN_W) x1 = SCREEN_W;
     if (x1 > 0) gfx_load_back_rows(BG_LAWN, sx, y0, y1, 0, x1);
   }
-  loaded_bg = bg, loaded_x = sx, loaded_sod = sod;
+  loaded_bg = bg + (B.level == 50) * 100, loaded_x = sx, loaded_sod = sod;
 }
 
 /* ---------------------------------------------------------------- Crazy Dave */
@@ -246,7 +245,7 @@ static void begin_level(int level) {
 
 static void start_play(void) {
   B.phase = PH_PLAY;
-  if (B.level == 1) B.tutorial = 1;
+  if (B.level == 1 && !progress.finished) B.tutorial = 1;
   if (B.level == 2 && !progress.finished) B.tutorial = 2, B.wave_in = 5000;
   if (B.mode != MODE_WHACK && (progress.rakes > 0) && B.mode != MODE_VASE && !B.has_boss) {
     /* the rake waits in a lane */
@@ -382,7 +381,8 @@ void game_frame(uint32_t keys) {
   }
   switch (g_state) {
   case ST_TITLE:
-    if (state_t > 30 && hit(K_OK | (K_ANY & ~K_BACK))) go(ST_MENU);
+    /* (the keys, the first time) */
+    if (state_t > 30 && hit(K_OK | (K_ANY & ~K_BACK))) go(progress.keys_seen ? ST_MENU : ST_HELP);
     if (hit(K_BACK)) g_running = false;
     break;
 
@@ -716,7 +716,10 @@ void game_frame(uint32_t keys) {
   }
 
   case ST_HELP:
-    if (hit(K_OK | K_BACK)) go(ST_MENU);
+    if (hit(K_OK | K_BACK)) {
+      if (!progress.keys_seen) progress.keys_seen = 1, progress_save();
+      go(ST_MENU);
+    }
     break;
   }
 }
@@ -1056,7 +1059,7 @@ static void draw_help(void) {
     gfx_text(F_HEAD, 116, y, keys[i][0], rgb565(0x7A2010), GFX_RIGHT);
     gfx_text(F_BODY, 126, y, keys[i][1], rgb565(0x3A2410), 0);
   }
-  gfx_text(F_SMALL, 160, 226, "OK: back", rgb565(0x5A3A1E), GFX_CENTER);
+  gfx_text(F_SMALL, 160, 226, progress.keys_seen ? "OK: back" : "OK: on to the game", rgb565(0x5A3A1E), GFX_CENTER);
 }
 
 void game_draw(void) {

@@ -9,6 +9,8 @@ void game_frame(uint32_t keys);   /* a hundredth of a second */
 void game_draw(void);
 extern bool g_running;
 extern int g_state;
+/* the lawn as the camera sees it; sod: how far the sod rows are rolled out (-1 all) */
+void show_lawn(int sod);
 enum {
   ST_TITLE, ST_MENU, ST_LEVELS, ST_DAVE, ST_PAN, ST_CHOOSE, ST_READY, ST_PLAY, ST_PAUSE, ST_WON, ST_AWARD, ST_LOST,
   ST_ALMANAC, ST_SHOP, ST_HELP
