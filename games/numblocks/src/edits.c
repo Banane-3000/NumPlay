@@ -291,6 +291,20 @@ int edits_top(int x, int z, int top) {
 }
 
 #if NB_DIMS
+/* was the block there changed (else it is as the world was made)? */
+bool edits_changed(int x, int y, int z) {
+  int rx = floordiv(x, 64), rz = floordiv(z, 64), n;
+  uint32_t key = entry_key(x, y, z);
+  const uint8_t *r = region(rx, rz, &n);
+  for (int pass = 0; pass < 2; pass++, key |= HI) {
+    int i = jlower(rx, rz, key);
+    if (i < nj && jcmp(rx, rz, key, &jn[i]) == 0) return true;
+    int k = rlower(r, n, key);
+    if (k < n && KEY(R(k)) == key) return true;
+  }
+  return false;
+}
+
 /* Teleporter.placeInExistingPortal: of the blocks b0 and b1 changed within r of (x, z) (portals: only made
  * by changes), the nearest to (x, y, z) of those with neither below; false if none. Records only: the
  * journal is flushed first */

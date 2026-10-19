@@ -426,27 +426,41 @@ void *tiles_data(uint32_t *len) {
 }
 static Chest *chest;
 static Furnace *furnace;
+#if NB_DIMS
+/* NumBlocks.nwa: a chest's or furnace's used is 1 + its dimension (NumPlay's NumBlocks only gets the
+ * Overworld's: save.c) */
+#define USED(t) ((t).used == 1 + dim)
+#define USE_TAG ((uint8_t)(1 + dim))
+#include "edits.h"
+static void chest_loot(Chest *c);
+#else
+#define USED(t) ((t).used)
+#define USE_TAG 1
+#endif
 
 static Chest *chest_at(int x, int y, int z, bool make) {
   for (int i = 0; i < N_CHESTS; i++)
-    if (chests[i].used && chests[i].x == x && chests[i].y == y && chests[i].z == z) return &chests[i];
+    if (USED(chests[i]) && chests[i].x == x && chests[i].y == y && chests[i].z == z) return &chests[i];
   if (!make) return NULL;
   for (int i = 0; i < N_CHESTS; i++)
     if (!chests[i].used) {
       memset(&chests[i], 0, sizeof chests[i]);
-      chests[i].used = 1, chests[i].x = (int16_t)x, chests[i].y = (uint8_t)y, chests[i].z = (int16_t)z;
+      chests[i].used = USE_TAG, chests[i].x = (int16_t)x, chests[i].y = (uint8_t)y, chests[i].z = (int16_t)z;
+#if NB_DIMS
+      if (dim == DIM_NETHER && !edits_changed(x, y, z)) chest_loot(&chests[i]);
+#endif
       return &chests[i];
     }
   return NULL;
 }
 static Furnace *furnace_at(int x, int y, int z, bool make) {
   for (int i = 0; i < N_FURNACES; i++)
-    if (furnaces[i].used && furnaces[i].x == x && furnaces[i].y == y && furnaces[i].z == z) return &furnaces[i];
+    if (USED(furnaces[i]) && furnaces[i].x == x && furnaces[i].y == y && furnaces[i].z == z) return &furnaces[i];
   if (!make) return NULL;
   for (int i = 0; i < N_FURNACES; i++)
     if (!furnaces[i].used) {
       memset(&furnaces[i], 0, sizeof furnaces[i]);
-      furnaces[i].used = 1, furnaces[i].x = (int16_t)x, furnaces[i].y = (uint8_t)y, furnaces[i].z = (int16_t)z;
+      furnaces[i].used = USE_TAG, furnaces[i].x = (int16_t)x, furnaces[i].y = (uint8_t)y, furnaces[i].z = (int16_t)z;
       return &furnaces[i];
     }
   return NULL;
@@ -462,6 +476,54 @@ void tiles_removed(int x, int y, int z) {
   for (int i = 0; i < n; i++)
     if (s[i].id) ent_drop(s[i].id, item_count(&s[i]), s[i].aux, x + 0.5f, y + 0.5f, z + 0.5f, false);
 }
+
+#if NB_DIMS
+/* the tiles as NumPlay's NumBlocks gets them (in t, a copy): the Overworld's, without what it does not know */
+static void stack_known(Stack *s, int n) {
+  for (int i = 0; i < n; i++)
+    if (s[i].id >= I_END) s[i].id = 0, s[i].aux = 0;
+}
+void tiles_for_numplay(void *t) {
+  Chest *c = (Chest *)t;
+  Furnace *f = (Furnace *)(c + N_CHESTS);
+  for (int i = 0; i < N_CHESTS; i++)
+    if (c[i].used != 1) memset(&c[i], 0, sizeof c[i]);
+    else stack_known(c[i].s, 27);
+  for (int i = 0; i < N_FURNACES; i++)
+    if (f[i].used != 1) memset(&f[i], 0, sizeof f[i]);
+    else stack_known(f[i].s, 3);
+}
+/* the tiles of the Nether and the End (in t, a copy of all) back into free places of these */
+void tiles_merge(const void *t) {
+  const Chest *c = (const Chest *)t;
+  const Furnace *f = (const Furnace *)(c + N_CHESTS);
+  for (int i = 0, j = 0; i < N_CHESTS; i++) {
+    if (c[i].used <= 1) continue;
+    while (j < N_CHESTS && chests[j].used) j++;
+    if (j < N_CHESTS) chests[j] = c[i];
+  }
+  for (int i = 0, j = 0; i < N_FURNACES; i++) {
+    if (f[i].used <= 1) continue;
+    while (j < N_FURNACES && furnaces[j].used) j++;
+    if (j < N_FURNACES) furnaces[j] = f[i];
+  }
+}
+/* a chest the world made (a fortress's): its loot, when first opened (StructureNetherBridgePieces's list;
+ * horse armour and saddles are not in NumBlocks: those draws leave nothing) */
+static void chest_loot(Chest *c) {
+  static const struct { uint16_t id; uint8_t lo, hi, w; } L[] = {
+      {I_DIAMOND, 1, 3, 5}, {I_IRON_INGOT, 1, 5, 5}, {I_GOLD_INGOT, 1, 3, 15}, {I_GOLDEN_SWORD, 1, 1, 5},
+      {I_GOLDEN_CHESTPLATE, 1, 1, 5}, {I_FLINT_AND_STEEL, 1, 1, 5}, {I_NETHER_WART, 3, 7, 5}, {0, 1, 1, 10},
+      {0, 1, 1, 8}, {0, 1, 1, 5}, {0, 1, 1, 3}, {B_OBSIDIAN, 2, 4, 2}};
+  int n = 2 + rnd(4);
+  for (int k = 0; k < n; k++) {
+    int w = rnd(75), i = 0;
+    while (w >= L[i].w) w -= L[i++].w;
+    int count = L[i].lo + rnd(L[i].hi - L[i].lo + 1), slot = rnd(27);
+    if (L[i].id) c->s[slot] = (Stack){L[i].id, (uint16_t)(item_dur(L[i].id) ? 0 : count)};
+  }
+}
+#endif
 
 void tiles_forget(int x, int y, int z) {
   Chest *c = chest_at(x, y, z, false);
@@ -486,7 +548,7 @@ void gui_tick(void) {
       if (chat_age(i) > 1000) chat[i + 1] = (char)((chat_clock - 1000) & 255), chat[i + 2] = (char)((chat_clock - 1000) >> 8);
   for (int i = 0; i < N_FURNACES; i++) {
     Furnace *f = &furnaces[i];
-    if (!f->used) continue;
+    if (!USED(*f)) continue;
     bool was = f->burn > 0;
     if (f->burn > 0) f->burn--;
     if ((f->burn > 0 || f->s[1].id) && f->s[0].id) {

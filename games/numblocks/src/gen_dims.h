@@ -77,15 +77,17 @@ static void gd_octaves(const Octave *oc, int n, float *out, i64 bx, i64 by, i64 
 /* The Nether: ChunkProviderHell                                             */
 /* ======================================================================== */
 
-#define NG 6   /* density grids kept */
+#define NGC 12   /* the decorations' grids kept (rounded to 1/32: they only look) */
 typedef struct {
     Octave oc[48];   /* netherNoiseGen1 (16), netherNoiseGen2 (16), netherNoiseGen3 (8), slowsandGravel (4),
                         netherrackExculsivity (4) */
     float bias[17];  /* the density's offset by height (initializeNoiseField's adouble) */
-    int gx[NG], gz[NG];
-    uint32_t gage[NG], gclock;
-    uint8_t gok[NG];
-    float grid[NG][425];   /* (x * 5 + z) * 17 + y */
+    int fx, fz, fok;
+    float grid[425];   /* the terrain's grid, of chunk (fx, fz): (x * 5 + z) * 17 + y */
+    int gx[NGC], gz[NGC];
+    uint32_t gage[NGC], gclock;
+    uint8_t gok[NGC];
+    int16_t cgrid[NGC][425];
 } NetherMem;
 _Static_assert(sizeof(NetherMem) <= GEN_CACHE_BYTES, "the Nether's state fits in the summary cache");
 #define NM ((NetherMem *)(void *)sumc)
@@ -113,22 +115,10 @@ static void nether_init(void) {
     }
 }
 
-/* initializeNoiseField: chunk (cx, cz)'s 5 x 17 x 5 densities */
-static const float *nether_grid(int cx, int cz) {
+static void nether_cgrid_put(int cx, int cz, const float *g);
+/* initializeNoiseField: chunk (cx, cz)'s 5 x 17 x 5 densities, into g */
+static void nether_noise(int cx, int cz, float *g) {
     NetherMem *m = NM;
-    int k = 0;
-    for (int i = 0; i < NG; i++) {
-        if (m->gok[i] && m->gx[i] == cx && m->gz[i] == cz) {
-            m->gage[i] = ++m->gclock;
-            return m->grid[i];
-        }
-        if (!m->gok[i] || m->gage[i] < m->gage[k]) k = m->gok[k] ? i : k;
-    }
-    for (int i = 0; i < NG; i++)
-        if (!m->gok[i]) {
-            k = i;
-            break;
-        }
     float n1[425], n2[425], n3[425];
     memset(n1, 0, sizeof n1);
     memset(n2, 0, sizeof n2);
@@ -136,7 +126,6 @@ static const float *nether_grid(int cx, int cz) {
     gd_octaves(m->oc + 32, 8, n3, cx * 4, 0, cz * 4, 5, 17, 5, SC_N3XZ, SC_N3Y, SC_N3XZ);
     gd_octaves(m->oc, 16, n1, cx * 4, 0, cz * 4, 5, 17, 5, SC_N1XZ, SC_N1Y, SC_N1XZ);
     gd_octaves(m->oc + 16, 16, n2, cx * 4, 0, cz * 4, 5, 17, 5, SC_N1XZ, SC_N1Y, SC_N1XZ);
-    float *g = m->grid[k];
     for (int i = 0; i < 425; i++) {
         int y = i % 17;
         float d6 = n1[i] / 512.0f, d7 = n2[i] / 512.0f, d8 = (n3[i] / 10.0f + 1.0f) / 2.0f, d4;
@@ -150,8 +139,47 @@ static const float *nether_grid(int cx, int cz) {
         }
         g[i] = d4;
     }
+    nether_cgrid_put(cx, cz, g);
+}
+/* the terrain's grid of chunk (cx, cz) (the last one kept) */
+static const float *nether_grid(int cx, int cz) {
+    NetherMem *m = NM;
+    if (!m->fok || m->fx != cx || m->fz != cz) {
+        nether_noise(cx, cz, m->grid);
+        m->fx = cx, m->fz = cz, m->fok = 1;
+    }
+    return m->grid;
+}
+/* the decorations' grids: the latest used kept, rounded */
+static void nether_cgrid_put(int cx, int cz, const float *g) {
+    NetherMem *m = NM;
+    int k = 0;
+    for (int i = 0; i < NGC; i++) {
+        if (m->gok[i] && m->gx[i] == cx && m->gz[i] == cz) return;
+        if (!m->gok[i]) {
+            k = i;
+            break;
+        }
+        if (m->gage[i] < m->gage[k]) k = i;
+    }
+    for (int i = 0; i < 425; i++) {
+        float v = g[i] * 32.0f;
+        m->cgrid[k][i] = (int16_t)(v > 32767 ? 32767 : v < -32768 ? -32768 : v);
+    }
     m->gx[k] = cx, m->gz[k] = cz, m->gok[k] = 1, m->gage[k] = ++m->gclock;
-    return g;
+}
+static const int16_t *nether_cgrid(int cx, int cz) {
+    NetherMem *m = NM;
+    for (int pass = 0; pass < 2; pass++) {
+        for (int i = 0; i < NGC; i++)
+            if (m->gok[i] && m->gx[i] == cx && m->gz[i] == cz) {
+                m->gage[i] = ++m->gclock;
+                return m->cgrid[i];
+            }
+        float g[425];
+        nether_noise(cx, cz, g);
+    }
+    return m->cgrid[0];
 }
 
 /* func_180515_a: the terrain of a column (netherrack where the density is above 0, lava under y 32),
@@ -230,9 +258,11 @@ typedef struct {
 
 static int hc_lava(const HellCaves *c, int x, int y, int z) { return c->lava[(x * 16 + z) * 4 + (y >> 5)] >> (y & 31) & 1; }
 
-static void hell_tunnel(HellCaves *c, i64 seed, double px, double py, double pz, float w, float yaw, float pitch, int k,
-                        int len, double vy) {
-    double d0 = (double)(c->cx * 16 + 8), d1 = (double)(c->cz * 16 + 8);
+/* MapGenCavesHell.func_180702_a. As gen.c's caves: the place exact in fixed point (Java's doubles only ever
+ * add floats to it), the carving's tests in float */
+static void hell_tunnel(HellCaves *c, i64 seed, Q32 px, Q32 py, Q32 pz, float w, float yaw, float pitch, int k,
+                        int len, int half) {
+    Q32 d0 = SHL(c->cx * 16 + 8, 32), d1 = SHL(c->cz * 16 + 8, 32);
     float f = 0.0f, f1 = 0.0f;
     JRand rnd;
     jr_seed(&rnd, seed);
@@ -247,12 +277,12 @@ static void hell_tunnel(HellCaves *c, i64 seed, double px, double py, double pz,
     }
     int j = jr_int(&rnd, len / 2) + len / 4;
     for (int flag = jr_int(&rnd, 6) == 0; k < len; ++k) {
-        double d2 = 1.5 + (double)(mh_sin((float)k * 3.1415927f / (float)len) * w * 1.0f);
-        double d3 = d2 * vy;
+        float sv = mh_sin((float)k * 3.1415927f / (float)len) * w * 1.0f;
+        Q32 r2 = (Q32)(3LL << 31) + q32_of_float(sv), r3 = half ? r2 / 2 : r2;   /* d2 = 1.5 + ..., d3 = d2 x 0.5 or 1 */
         float f2 = mh_cos(pitch), f3 = mh_sin(pitch);
-        px += (double)(mh_cos(yaw) * f2);
-        py += (double)f3;
-        pz += (double)(mh_sin(yaw) * f2);
+        px += q32_of_float(mh_cos(yaw) * f2);
+        py += q32_of_float(f3);
+        pz += q32_of_float(mh_sin(yaw) * f2);
         pitch = flag ? pitch * 0.92f : pitch * 0.7f;
         pitch += f1 * 0.1f;
         yaw += f * 0.1f;
@@ -266,20 +296,19 @@ static void hell_tunnel(HellCaves *c, i64 seed, double px, double py, double pz,
         if (!flag1 && k == j && w > 1.0f) {
             i64 s1 = jr_long(&rnd);
             float a = jr_float(&rnd) * 0.5f + 0.5f;
-            hell_tunnel(c, s1, px, py, pz, a, yaw - 1.5707964f, pitch / 3.0f, k, len, 1.0);
+            hell_tunnel(c, s1, px, py, pz, a, yaw - 1.5707964f, pitch / 3.0f, k, len, 0);
             i64 s2 = jr_long(&rnd);
             float b2 = jr_float(&rnd) * 0.5f + 0.5f;
-            hell_tunnel(c, s2, px, py, pz, b2, yaw + 1.5707964f, pitch / 3.0f, k, len, 1.0);
+            hell_tunnel(c, s2, px, py, pz, b2, yaw + 1.5707964f, pitch / 3.0f, k, len, 0);
             return;
         }
         if (flag1 || jr_int(&rnd, 4) != 0) {
-            double d4 = px - d0, d5 = pz - d1, d6 = (double)(len - k), d7 = (double)(w + 2.0f + 16.0f);
-            if (d4 * d4 + d5 * d5 - d6 * d6 > d7 * d7) return;
-            if (px >= d0 - 16.0 - d2 * 2.0 && pz >= d1 - 16.0 - d2 * 2.0 && px <= d0 + 16.0 + d2 * 2.0 &&
-                pz <= d1 + 16.0 + d2 * 2.0) {
-                int k2 = (int)floor(px - d2) - c->cx * 16 - 1, kk = (int)floor(px + d2) - c->cx * 16 + 1;
-                int l2 = (int)floor(py - d3) - 1, l = (int)floor(py + d3) + 1;
-                int i3 = (int)floor(pz - d2) - c->cz * 16 - 1, i1 = (int)floor(pz + d2) - c->cz * 16 + 1;
+            if (cave_too_far(px - d0, pz - d1, len - k, w + 2.0f + 16.0f)) return;
+            Q32 reach = SHL(16, 32) + r2 * 2;
+            if (px >= d0 - reach && pz >= d1 - reach && px <= d0 + reach && pz <= d1 + reach) {
+                int k2 = q32_floor(px - r2) - c->cx * 16 - 1, kk = q32_floor(px + r2) - c->cx * 16 + 1;
+                int l2 = q32_floor(py - r3) - 1, l = q32_floor(py + r3) + 1;
+                int i3 = q32_floor(pz - r2) - c->cz * 16 - 1, i1 = q32_floor(pz + r2) - c->cz * 16 + 1;
                 if (k2 < 0) k2 = 0;
                 if (kk > 16) kk = 16;
                 if (l2 < 1) l2 = 1;
@@ -295,16 +324,18 @@ static void hell_tunnel(HellCaves *c, i64 seed, double px, double py, double pz,
                                 if (l1 != l2 - 1 && j1 != k2 && j1 != kk - 1 && k1 != i3 && k1 != i1 - 1) l1 = l2;
                             }
                 if (!flag2) {
+                    float d2 = q32_to_float(r2), d3 = q32_to_float(r3);
+                    int ylo = l2 + 1 > c->y0 ? l2 + 1 : c->y0, yhi = l < c->y0 + c->h - 1 ? l : c->y0 + c->h - 1;
                     for (int j3 = k2; j3 < kk; ++j3) {
-                        double d10 = ((double)(j3 + c->cx * 16) + 0.5 - px) / d2;
+                        float d10 = q32_to_float(SHL(j3 + c->cx * 16, 32) + (Q32_ONE >> 1) - px) / d2;
                         for (int i2 = i3; i2 < i1; ++i2) {
-                            double d8 = ((double)(i2 + c->cz * 16) + 0.5 - pz) / d2;
-                            for (int j2 = l; j2 > l2; --j2) {
-                                double d9 = ((double)(j2 - 1) + 0.5 - py) / d3;
-                                if (d9 > -0.7 && d10 * d10 + d9 * d9 + d8 * d8 < 1.0) {
-                                    int y = j2 - c->y0;
-                                    if (y < 0 || y >= c->h) continue;
-                                    uint8_t *b = &c->out[(y * 16 + i2) * 16 + j3];
+                            float d8 = q32_to_float(SHL(i2 + c->cz * 16, 32) + (Q32_ONE >> 1) - pz) / d2;
+                            float h2 = d10 * d10 + d8 * d8;
+                            if (h2 >= 1.0f) continue;
+                            for (int y = yhi; y >= ylo; --y) {
+                                float d9 = q32_to_float(SHL(y - 1, 32) + (Q32_ONE >> 1) - py) / d3;
+                                if (d9 > -0.7f && h2 + d9 * d9 < 1.0f) {
+                                    uint8_t *b = &c->out[((y - c->y0) * 16 + i2) * 16 + j3];
                                     if (*b == GEN_CODE(GC_NETHERRACK) || *b == B_DIRT || *b == B_GRASS) *b = B_AIR;
                                 }
                             }
@@ -328,21 +359,21 @@ static void hell_caves(HellCaves *c) {
             int i = jr_int(&r, jr_int(&r, jr_int(&r, 10) + 1) + 1);
             if (jr_int(&r, 5) != 0) i = 0;
             for (int n = 0; n < i; ++n) {
-                double d0 = (double)(l * 16 + jr_int(&r, 16)), d1 = (double)jr_int(&r, 128),
-                       d2 = (double)(i1 * 16 + jr_int(&r, 16));
+                int x0 = l * 16 + jr_int(&r, 16), y0 = jr_int(&r, 128), z0 = i1 * 16 + jr_int(&r, 16);
+                Q32 d0 = SHL(x0, 32), d1 = SHL(y0, 32), d2 = SHL(z0, 32);
                 int kk = 1;
                 if (jr_int(&r, 4) == 0) {
                     i64 s = jr_long(&r);
                     /* func_180705_a: a room */
                     float w = 1.0f + jr_float(&r) * 6.0f;
-                    hell_tunnel(c, s, d0, d1, d2, w, 0.0f, 0.0f, -1, -1, 0.5);
+                    hell_tunnel(c, s, d0, d1, d2, w, 0.0f, 0.0f, -1, -1, 1);
                     kk += jr_int(&r, 4);
                 }
                 for (int m = 0; m < kk; ++m) {
                     float f = jr_float(&r) * 3.1415927f * 2.0f;
                     float f1 = (jr_float(&r) - 0.5f) * 2.0f / 8.0f;
                     float f2 = jr_float(&r) * 2.0f + jr_float(&r);
-                    hell_tunnel(c, jr_long(&r), d0, d1, d2, f2 * 2.0f, f, f1, 0, 0, 0.5);
+                    hell_tunnel(c, jr_long(&r), d0, d1, d2, f2 * 2.0f, f, f1, 0, 0, 1);
                 }
             }
         }
@@ -380,7 +411,184 @@ static void nether_slab(int cx, int cz, int y0, int h, uint8_t *out) {
     nether_decorate(cx, cz, y0, h, out);
 }
 
-static void nether_decorate(int cx, int cz, int y0, int h, uint8_t *out) { (void)cx, (void)cz, (void)y0, (void)h, (void)out; }
+#include "gen_fortress.h"
+
+/* ---- ChunkProviderHell.populate
+ * A chunk is decorated by the populations of the four chunks whose areas (offset by 8) cover it, replayed
+ * each time its rows are made. What their features look at is the terrain without the caves (nq: the
+ * same for every row of the chunk, so the rows agree) and what they placed before (a small set of
+ * blocks); what they place lands in the rows where it fits (glowstone, fire and mushrooms in air, lava in
+ * air or netherrack, quartz in netherrack). */
+static int nq(int x, int y, int z) {
+    if (y <= 0 || y == 127) return B_BEDROCK;
+    if (y > 127) return B_AIR;
+    const int16_t *g = nether_cgrid(x >> 4, z >> 4);
+    int lx = x & 15, lz = z & 15, j1 = lx >> 2, k1 = lz >> 2, l1 = y >> 3;
+#define G(i) ((float)g[i] * (1.0f / 32.0f))
+    float d1 = G(((j1 + 0) * 5 + k1 + 0) * 17 + l1), d2 = G(((j1 + 0) * 5 + k1 + 1) * 17 + l1);
+    float d3 = G(((j1 + 1) * 5 + k1 + 0) * 17 + l1), d4 = G(((j1 + 1) * 5 + k1 + 1) * 17 + l1);
+    float f = (float)(y & 7) * 0.125f;
+    d1 += (G(((j1 + 0) * 5 + k1 + 0) * 17 + l1 + 1) - d1) * f;
+    d2 += (G(((j1 + 0) * 5 + k1 + 1) * 17 + l1 + 1) - d2) * f;
+    d3 += (G(((j1 + 1) * 5 + k1 + 0) * 17 + l1 + 1) - d3) * f;
+    d4 += (G(((j1 + 1) * 5 + k1 + 1) * 17 + l1 + 1) - d4) * f;
+#undef G
+    float fx = (float)(lx & 3) * 0.25f, a = d1 + (d3 - d1) * fx, b = d2 + (d4 - d2) * fx;
+    float d = a + (b - a) * (float)(lz & 3) * 0.25f;
+    return d > 0.0f ? GEN_CODE(GC_NETHERRACK) : y < 32 ? B_LAVA : B_AIR;
+}
+
+/* the blocks placed by the populations replayed, in the rest of U (open addressing on the place) */
+#define WS_N ((int)((sizeof U - sizeof(Fort)) / 4))
+#define WSET ((uint32_t *)(void *)((uint8_t *)&U + sizeof(Fort)))
+static struct {
+    int cx, cz, y0, h;
+    uint8_t *out;
+} nd;
+static uint32_t ws_key(int x, int y, int z) {
+    int rx = x - nd.cx * 16 + 48, rz = z - nd.cz * 16 + 48;
+    if ((unsigned)rx > 127 || (unsigned)rz > 127 || (unsigned)y > 127) return 0;
+    return (uint32_t)(rx << 14 | rz << 7 | y) + 1;
+}
+static uint32_t *ws_find(uint32_t k) {
+    uint32_t *w = WSET;
+    for (uint32_t i = k * 2654435761u % (uint32_t)WS_N, n = 0; n < (uint32_t)WS_N; n++, i = i + 1 == (uint32_t)WS_N ? 0 : i + 1)
+        if (!w[i] || w[i] >> 8 == k) return &w[i];
+    return NULL;
+}
+static int wget(int x, int y, int z) {
+    uint32_t k = ws_key(x, y, z), *e = k ? ws_find(k) : NULL;
+    return e && *e ? (int)(*e & 255) : nq(x, y, z);
+}
+static void wput(int x, int y, int z, int b) {
+    uint32_t k = ws_key(x, y, z), *e = k ? ws_find(k) : NULL;
+    if (e) *e = k << 8 | (uint32_t)b;
+    int lx = x - nd.cx * 16, lz = z - nd.cz * 16, ly = y - nd.y0;
+    if ((unsigned)lx > 15 || (unsigned)lz > 15 || ly < 0 || ly >= nd.h) return;
+    uint8_t *c = &nd.out[(ly * 16 + lz) * 16 + lx];
+    if (*c == B_AIR || (b == B_LAVA && *c == GEN_CODE(GC_NETHERRACK))) *c = (uint8_t)b;
+}
+#define RACK GEN_CODE(GC_NETHERRACK)
+
+/* WorldGenGlowStone1 (and 2, the same): from under netherrack, 1500 tries to hang one by just one other */
+static void feat_glow(JRand *r, int x, int y, int z) {
+    if (wget(x, y, z) != B_AIR || wget(x, y + 1, z) != RACK) return;
+    wput(x, y, z, B_GLOWSTONE);
+    for (int i = 0; i < 1500; i++) {
+        int a = jr_int(r, 8), b = jr_int(r, 8), dy = -jr_int(r, 12), c = jr_int(r, 8), d = jr_int(r, 8);
+        int bx = x + a - b, by = y + dy, bz = z + c - d;
+        if (wget(bx, by, bz) != B_AIR) continue;
+        static const int8_t D[6][3] = {{0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}};
+        int j = 0;
+        for (int f = 0; f < 6 && j <= 1; f++) j += wget(bx + D[f][0], by + D[f][1], bz + D[f][2]) == B_GLOWSTONE;
+        if (j == 1) wput(bx, by, bz, B_GLOWSTONE);
+    }
+}
+/* WorldGenHellLava: under netherrack, in air or netherrack: walled on all five sides, or (not inside the
+ * rock) on four with air on the fifth (it pours out there) */
+static void feat_lava(int x, int y, int z, int inside) {
+    if (wget(x, y + 1, z) != RACK) return;
+    int b = wget(x, y, z);
+    if (b != B_AIR && b != RACK) return;
+    static const int8_t D[5][3] = {{-1, 0, 0}, {1, 0, 0}, {0, 0, -1}, {0, 0, 1}, {0, -1, 0}};
+    int i = 0, j = 0, open = 0;
+    for (int f = 0; f < 5; f++) i += wget(x + D[f][0], y + D[f][1], z + D[f][2]) == RACK;
+    for (int f = 0; f < 5; f++)
+        if (wget(x + D[f][0], y + D[f][1], z + D[f][2]) == B_AIR) j++, open = f;
+    if ((!inside && i == 4 && j == 1) || i == 5) {
+        wput(x, y, z, B_LAVA);
+        if (i == 4) wput(x + D[open][0], y + D[open][1], z + D[open][2], B_FLOWING_LAVA);
+    }
+}
+/* WorldGenFire and WorldGenBush: 64 tries about the place */
+static void feat_scatter(JRand *r, int x, int y, int z, int b) {
+    for (int i = 0; i < 64; i++) {
+        int a = jr_int(r, 8), c = jr_int(r, 8), e = jr_int(r, 4), f = jr_int(r, 4), g = jr_int(r, 8), k = jr_int(r, 8);
+        int bx = x + a - c, by = y + e - f, bz = z + g - k;
+        if (wget(bx, by, bz) != B_AIR) continue;
+        int below = wget(bx, by - 1, bz);
+        if (b == B_FIRE ? below == RACK : (below == RACK || below == B_GLOWSTONE || below == GEN_CODE(GC_SOUL_SAND)))
+            wput(bx, by, bz, b);
+    }
+}
+/* WorldGenMinable(quartz ore, 14), in netherrack: only the rows made matter */
+static void feat_quartz(JRand *r, int x, int y, int z) {
+    const int n = 14;
+    float f = jr_float(r) * 3.1415927f;
+    float d0 = (float)(x + 8) + mh_sin(f) * (float)n / 8.0f, d1 = (float)(x + 8) - mh_sin(f) * (float)n / 8.0f;
+    float d2 = (float)(z + 8) + mh_cos(f) * (float)n / 8.0f, d3 = (float)(z + 8) - mh_cos(f) * (float)n / 8.0f;
+    float d4 = (float)(y + jr_int(r, 3) - 2), d5 = (float)(y + jr_int(r, 3) - 2);
+    for (int i = 0; i < n; i++) {
+        float f1 = (float)i / (float)n;
+        float d6 = d0 + (d1 - d0) * f1, d7 = d4 + (d5 - d4) * f1, d8 = d2 + (d3 - d2) * f1;
+        float d9 = jr_doublef(r) * (float)n / 16.0f;
+        float d10 = (mh_sin(3.1415927f * f1) + 1.0f) * d9 + 1.0f;
+        int j = (int)floorf(d6 - d10 / 2), k = (int)floorf(d7 - d10 / 2), l = (int)floorf(d8 - d10 / 2);
+        int i1 = (int)floorf(d6 + d10 / 2), j1 = (int)floorf(d7 + d10 / 2), k1 = (int)floorf(d8 + d10 / 2);
+        if (i1 < nd.cx * 16 || j > nd.cx * 16 + 15 || k1 < nd.cz * 16 || l > nd.cz * 16 + 15 || j1 < nd.y0 || k >= nd.y0 + nd.h)
+            continue;
+        for (int bx = j; bx <= i1; bx++) {
+            float d12 = ((float)bx + 0.5f - d6) / (d10 / 2);
+            if (d12 * d12 >= 1) continue;
+            for (int by = k; by <= j1; by++) {
+                float d13 = ((float)by + 0.5f - d7) / (d10 / 2);
+                if (d12 * d12 + d13 * d13 >= 1) continue;
+                for (int bz = l; bz <= k1; bz++) {
+                    float d14 = ((float)bz + 0.5f - d8) / (d10 / 2);
+                    if (d12 * d12 + d13 * d13 + d14 * d14 >= 1) continue;
+                    int lx = bx - nd.cx * 16, lz = bz - nd.cz * 16, ly = by - nd.y0;
+                    if ((unsigned)lx > 15 || (unsigned)lz > 15 || ly < 0 || ly >= nd.h) continue;
+                    uint8_t *c = &nd.out[(ly * 16 + lz) * 16 + lx];
+                    if (*c == RACK) *c = GEN_CODE(GC_QUARTZ_ORE);
+                }
+            }
+        }
+    }
+}
+
+static void nether_populate(int px, int pz) {
+    JRand r;
+    jr_seed(&r, ((i64)px * 341873128712LL + (i64)pz * 132897987541LL) ^ g_seed);
+    int bx = px * 16, bz = pz * 16;
+    for (int i = 0; i < 8; i++) {
+        int x = jr_int(&r, 16) + 8, y = jr_int(&r, 120) + 4, z = jr_int(&r, 16) + 8;
+        feat_lava(bx + x, y, bz + z, 0);
+    }
+    for (int j = 0; j < jr_int(&r, jr_int(&r, 10) + 1) + 1; j++) {
+        int x = jr_int(&r, 16) + 8, y = jr_int(&r, 120) + 4, z = jr_int(&r, 16) + 8;
+        feat_scatter(&r, bx + x, y, bz + z, B_FIRE);
+    }
+    for (int k = 0; k < jr_int(&r, jr_int(&r, 10) + 1); k++) {
+        int x = jr_int(&r, 16) + 8, y = jr_int(&r, 120) + 4, z = jr_int(&r, 16) + 8;
+        feat_glow(&r, bx + x, y, bz + z);
+    }
+    for (int l = 0; l < 10; l++) {
+        int x = jr_int(&r, 16) + 8, y = jr_int(&r, 128), z = jr_int(&r, 16) + 8;
+        feat_glow(&r, bx + x, y, bz + z);
+    }
+    for (int m = 0; m < 2; m++)
+        if (jr_bool(&r)) {
+            int x = jr_int(&r, 16) + 8, y = jr_int(&r, 128), z = jr_int(&r, 16) + 8;
+            feat_scatter(&r, bx + x, y, bz + z, m ? B_RED_MUSHROOM : B_BROWN_MUSHROOM);
+        }
+    for (int i = 0; i < 16; i++) {
+        int x = jr_int(&r, 16), y = jr_int(&r, 108) + 10, z = jr_int(&r, 16);
+        feat_quartz(&r, bx + x, y, bz + z);
+    }
+    for (int i = 0; i < 16; i++) {
+        int x = jr_int(&r, 16), y = jr_int(&r, 108) + 10, z = jr_int(&r, 16);
+        feat_lava(bx + x, y, bz + z, 1);
+    }
+}
+
+static void nether_decorate(int cx, int cz, int y0, int h, uint8_t *out) {
+    fort_build(cx, cz, y0, h, out);
+    nd.cx = cx, nd.cz = cz, nd.y0 = y0, nd.h = h, nd.out = out;
+    memset(WSET, 0, (size_t)WS_N * 4);
+    for (int pz = cz - 1; pz <= cz; pz++)
+        for (int px = cx - 1; px <= cx; px++) nether_populate(px, pz);
+}
+#undef RACK
 
 /* ======================================================================== */
 /* The End: ChunkProviderEnd                                                 */
@@ -489,6 +697,7 @@ static void end_decorate(int cx, int cz, int y0, int h, uint8_t *out) { (void)cx
 
 void gen_dim(int d) {
     gd_dim = d;
+    memset(&U, 0, sizeof U);   /* (the fortress kept there, the Overworld's flags) */
     if (d == DIM_NETHER) nether_init();
     else if (d == DIM_END) end_init();
 }

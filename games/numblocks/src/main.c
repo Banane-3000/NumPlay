@@ -105,6 +105,9 @@ void game_init(void) {
     pl.mode = 1, pl.y += BENCH_FALL;   /* (timing a fall from that high, in Creative: no harm) */
 #endif
     loading();
+#if defined(BENCH_DIM) && NB_DIMS
+    dims_go(BENCH_DIM);   /* (timing the Nether or the End: through a portal at once) */
+#endif
     return;
   }
   title();

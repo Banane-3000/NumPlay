@@ -16,10 +16,15 @@ extern const uint16_t gen_code_block[GC_N];
 
 /* gen.c, past the Overworld (gen_dims.h): the generator of each dimension */
 void gen_dim(int d);   /* which one gen_slab, gen_biome and gen_top run (after gen_init) */
+int gen_fortress_at(int x, int y, int z);
+int gen_fortress_find(int x, int z, int *out);   /* (tests) the nearest fortress: x, y, z, pieces */   /* 2: in a piece of a fortress, 1: in its box, 0: neither */
 
 /* dims.c: what is kept of the dimensions with the world (save.c) */
 typedef struct {
-  float ow_x, ow_y, ow_z;   /* where the player was last in the Overworld */
+  float ow_x, ow_y, ow_z;      /* where the player was last in the Overworld */
+  uint8_t dragon_dead, pad[3];
+  float dragon_hp;             /* the dragon's health while it lives (0: not met yet, full) */
+  uint32_t crystals_gone[2];   /* the End's crystals destroyed, by pillar */
 } DimsState;
 extern DimsState dst;
 extern float portal_time;   /* 0..1: the portal's swirl over the picture */

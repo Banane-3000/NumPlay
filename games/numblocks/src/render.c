@@ -1902,9 +1902,13 @@ static void dims_light(void) {
   static const float face_shade[4] = {1.0f, 0.8f, 0.6f, 0.5f};
   float table[16];
   for (int l = 0; l < 16; l++) {
+    /* (the green of the lightmap: no sky light, the sun's brightness 0.2 in the Nether; block light x 1.5) */
     float f = 1 - l / 15.0f, t = (1 - f) / (f * 3 + 1);
     table[l] = dim == DIM_NETHER ? t * 0.9f + 0.1f : t;
-    float bri = dim == DIM_NETHER ? table[l] * 0.96f + 0.03f : 0.25f + 0.75f * t;
+    float b = table[l] * 1.5f, g = b * ((b * 0.6f + 0.4f) * 0.6f + 0.4f), bri;
+    if (dim == DIM_NETHER) bri = table[0] * 0.24f * 0.48f + g, bri = (bri > 1 ? 1 : bri) * 0.96f + 0.03f;
+    else bri = 0.28f + g * 0.75f;   /* (the End's, after the first rounding) */
+    bri = (bri > 1 ? 1 : bri) * 0.96f + 0.03f;
     for (int s = 0; s < 4; s++) shade[s][l] = shade_blk[s][l] = (int)(bri * face_shade[s] * 32 + 0.5f);
   }
   int lb = cam_i >= 0 ? vl[cam_i] : 0, l = (lb & 15) > (lb >> 4) ? lb & 15 : lb >> 4;
