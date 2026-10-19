@@ -16,8 +16,12 @@ extern const uint16_t gen_code_block[GC_N];
 
 /* gen.c, past the Overworld (gen_dims.h): the generator of each dimension */
 void gen_dim(int d);   /* which one gen_slab, gen_biome and gen_top run (after gen_init) */
-int gen_fortress_at(int x, int y, int z);
-int gen_fortress_find(int x, int z, int *out);   /* (tests) the nearest fortress: x, y, z, pieces */   /* 2: in a piece of a fortress, 1: in its box, 0: neither */
+int gen_fortress_at(int x, int y, int z);        /* 2: in a piece of a fortress, 1: in its box, 0: neither */
+int gen_fortress_find(int x, int z, int *out);   /* (tests) the nearest fortress: x, y, z, pieces */
+
+typedef struct { int16_t x, z; uint8_t y, h, r, pad; } EndSpike;   /* a pillar: its foot, height, radius */
+const EndSpike *gen_spikes(int *n);   /* the End's pillars */
+int gen_end_block(int x, int y, int z);   /* the End's block there, as made */
 
 /* dims.c: what is kept of the dimensions with the world (save.c) */
 typedef struct {
@@ -28,12 +32,21 @@ typedef struct {
 } DimsState;
 extern DimsState dst;
 extern float portal_time;   /* 0..1: the portal's swirl over the picture */
+extern int wither_ticks;     /* the wither effect on the player (a wither skeleton's hit) */
+bool dims_punch(void);       /* (mob.c) the player's swing sends a fireball back */
 bool dims_portal_light(int x, int y, int z);   /* fire there lights a portal? (then it is made) */
 int dims_can_stay(int b, int x, int y, int z);   /* -1: not one of the dimensions' blocks */
 void dims_player_tick(void);                   /* portals */
 void dims_respawn(void);                       /* (before the player respawns) */
 void player_to_spawn(void);
 void dims_go(int to);   /* (tests) there, as through a portal */
-void dragon_enter(void);
+void dragon_enter(void);   /* (end.c) */
+void end_tick(void);
+float dragon_bar(void);
+bool dragon_beam(float *from, float *to);
+void dragon_offsets(int i, float pt, float *yaw, float *y);
+float dragon_anim(float pt);
+void throw_eye(int tx, int ty, int tz);   /* (mob.c) an eye of ender towards there */
+enum { SKIN_CRYSTAL = 16, SKIN_DRAGON = 17 };   /* (the big skins: data.h's skin_crystal_px, skin_dragon_px) */
 void dims_credits(void);
 #endif

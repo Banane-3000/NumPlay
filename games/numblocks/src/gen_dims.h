@@ -653,6 +653,80 @@ static void end_grid(int cx, int cz, float *g) {
 
 static void end_decorate(int cx, int cz, int y0, int h, uint8_t *out);
 
+/* the density at one place of the grid g of its chunk, summed as func_180520_a sums it: end stone or not */
+static int end_point(const float *g, int lx, int lz, int y) {
+    int j1 = lx >> 3, k1 = lz >> 3, l1 = y >> 2;
+    float d1 = g[((j1 + 0) * 3 + k1 + 0) * 33 + l1], d2 = g[((j1 + 0) * 3 + k1 + 1) * 33 + l1];
+    float d3 = g[((j1 + 1) * 3 + k1 + 0) * 33 + l1], d4 = g[((j1 + 1) * 3 + k1 + 1) * 33 + l1];
+    float d5 = (g[((j1 + 0) * 3 + k1 + 0) * 33 + l1 + 1] - d1) * 0.25f;
+    float d6 = (g[((j1 + 0) * 3 + k1 + 1) * 33 + l1 + 1] - d2) * 0.25f;
+    float d7 = (g[((j1 + 1) * 3 + k1 + 0) * 33 + l1 + 1] - d3) * 0.25f;
+    float d8 = (g[((j1 + 1) * 3 + k1 + 1) * 33 + l1 + 1] - d4) * 0.25f;
+    for (int i2 = 0; i2 < (y & 3); i2++) d1 += d5, d2 += d6, d3 += d7, d4 += d8;
+    float d10 = d1, d11 = d2, d12 = (d3 - d1) * 0.125f, d13 = (d4 - d2) * 0.125f;
+    for (int j2 = 0; j2 < (lx & 7); j2++) d10 += d12, d11 += d13;
+    float d15 = d10, d16 = (d11 - d10) * 0.125f;
+    for (int k2 = 0; k2 < (lz & 7); k2++) d15 += d16;
+    return d15 > 0.0f;
+}
+/* the End's terrain at one place (a grid kept for its chunk in g, gx, gz) */
+static int end_solid(float *g, int *gc, int x, int y, int z) {
+    if (y < 0 || y >= 128) return 0;
+    int cx = x >> 4, cz = z >> 4;
+    if (cx * cx + cz * cz > 30 * 30) return 0;
+    if (gc[2] != 1 || gc[0] != cx || gc[1] != cz) end_grid(cx, cz, g), gc[0] = cx, gc[1] = cz, gc[2] = 1;
+    return end_point(g, x & 15, z & 15, y);
+}
+
+/* BiomeEndDecorator: a chunk in five has an obsidian pillar (WorldGenSpikes) where its decoration lands on
+ * end stone: 6 to 37 high, 1 to 4 across, bedrock on top (its crystal: end.c). 1.8.8 decorates the End with
+ * the world's random; here each chunk's is its own, so the pillars are the same every time: listed once,
+ * in U (the End has no other use for it) */
+typedef struct {
+    int n, ok;
+    EndSpike s[64];
+} SpikeList;
+#define SPK ((SpikeList *)(void *)&U)
+const EndSpike *gen_spikes(int *n) {
+    SpikeList *l = SPK;
+    if (!l->ok) {
+        l->ok = 1, l->n = 0;
+        float g[297];
+        int gc[3] = {0, 0, 0};
+        for (int cz = -8; cz <= 8; cz++)
+            for (int cx = -8; cx <= 8; cx++) {
+                JRand r;
+                jr_seed(&r, ((i64)cx * 341873128712LL + (i64)cz * 132897987541LL) ^ g_seed);
+                if (jr_int(&r, 5) != 0) continue;
+                int x = cx * 16 + jr_int(&r, 16) + 8, z = cz * 16 + jr_int(&r, 16) + 8, y = 127;
+                while (y >= 0 && !end_solid(g, gc, x, y, z)) y--;
+                if (y < 0 || ++y >= 127) continue;
+                int h = jr_int(&r, 32) + 6, rad = jr_int(&r, 4) + 1, ok = 1;
+                for (int k = x - rad; k <= x + rad && ok; k++)
+                    for (int l = z - rad; l <= z + rad && ok; l++)
+                        if ((k - x) * (k - x) + (l - z) * (l - z) <= rad * rad + 1 && !end_solid(g, gc, k, y - 1, l)) ok = 0;
+                if (!ok || l->n >= 64) continue;
+                if (y + h > 127) h = 127 - y;
+                l->s[l->n++] = (EndSpike){(int16_t)x, (int16_t)z, (uint8_t)y, (uint8_t)h, (uint8_t)rad, 0};
+            }
+    }
+    *n = l->n;
+    return l->s;
+}
+/* what the End has there as made (end stone, a pillar, air) */
+int gen_end_block(int x, int y, int z) {
+    int n;
+    const EndSpike *s = gen_spikes(&n);
+    for (int i = 0; i < n; i++) {
+        int dx = x - s[i].x, dz = z - s[i].z;
+        if (dx * dx + dz * dz <= s[i].r * s[i].r + 1 && y >= s[i].y && y <= s[i].y + s[i].h)
+            return y == s[i].y + s[i].h ? B_BEDROCK : B_OBSIDIAN;
+    }
+    float g[297];
+    int gc[3] = {0, 0, 0};
+    return end_solid(g, gc, x, y, z) ? B_END_STONE : B_AIR;
+}
+
 /* func_180520_a: end stone where the density is above 0 (the surface pass changes nothing there) */
 static void end_slab(int cx, int cz, int y0, int h, uint8_t *out) {
     float g[297];
@@ -689,7 +763,24 @@ static void end_slab(int cx, int cz, int y0, int h, uint8_t *out) {
     end_decorate(cx, cz, y0, h, out);
 }
 
-static void end_decorate(int cx, int cz, int y0, int h, uint8_t *out) { (void)cx, (void)cz, (void)y0, (void)h, (void)out; }
+static void end_decorate(int cx, int cz, int y0, int h, uint8_t *out) {
+    int n;
+    const EndSpike *s = gen_spikes(&n);
+    for (int i = 0; i < n; i++) {
+        const EndSpike *p = &s[i];
+        if (p->x + p->r < cx * 16 || p->x - p->r > cx * 16 + 15 || p->z + p->r < cz * 16 || p->z - p->r > cz * 16 + 15) continue;
+        for (int y = p->y; y <= p->y + p->h; y++) {
+            if (y < y0 || y >= y0 + h) continue;
+            for (int z = p->z - p->r; z <= p->z + p->r; z++)
+                for (int x = p->x - p->r; x <= p->x + p->r; x++) {
+                    int lx = x - cx * 16, lz = z - cz * 16;
+                    if ((unsigned)lx > 15 || (unsigned)lz > 15) continue;
+                    if ((x - p->x) * (x - p->x) + (z - p->z) * (z - p->z) > p->r * p->r + 1) continue;
+                    out[((y - y0) * 16 + lz) * 16 + lx] = y == p->y + p->h ? B_BEDROCK : B_OBSIDIAN;
+                }
+        }
+    }
+}
 
 /* ======================================================================== */
 /* which generator runs                                                      */

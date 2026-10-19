@@ -1196,13 +1196,22 @@ static void ents_frame(void) {
           ez = e->pz + (e->z - e->pz) * t - vc_z0;
     float dx = ex - ox, dy = ey - oy, dz = ez - oz;
     float dist = sqrtf(dx * dx + dy * dy + dz * dz);
+#if NB_DIMS
+    if (dist > MAX_T + (e->type == E_DRAGON ? 12 : 1)) continue;
+#else
     if (dist > MAX_T + 1) continue;
+#endif
     float w, h;
+#if NB_DIMS
+    if (e->type == E_FIREBALL || e->type == E_EYE) w = h = 1.2f, ey -= 0.4f;
+    else if (e->type == E_DRAGON) w = 24, h = 14, ey -= 4;
+    else
+#endif
     if (e->type == E_ITEM) w = 0.5f, h = 0.6f;
     else if (e->type == E_TNT) w = 1.2f, h = 1.1f;
     else if (e->type == E_ARROW || e->type == E_BOBBER) w = 0.6f, h = 0.6f, ey -= 0.3f;
     else w = mob_width(e->type) * 2.2f, h = mob_height(e->type) * 1.2f;
-    if (e->type >= E_ZOMBIE && e->type <= E_CHICKEN && e->state == 255) w = h = 2.4f;   /* dying: lying down */
+    if (IS_MOB(e->type) && e->state == 255) w = h = 2.4f;   /* dying: lying down */
     float c[8][3];
     for (int k = 0; k < 8; k++)
       c[k][0] = ex + ((k & 1) ? w : -w) / 2, c[k][1] = ey + ((k & 2) ? h : 0), c[k][2] = ez + ((k & 4) ? w : -w) / 2;
@@ -1238,9 +1247,14 @@ static void rot(float *m, int axis, float a) {   /* m = rotation about the axis 
 }
 
 /* M: model frame to world (Ry (180 - yaw) . death turn . S(-1,-1,1) . scale) */
+#if NB_DIMS
+static int make_boxes_in(const Draw *dr, Box *bx, Part *parts) {
+  const Entity *e = dr->e;
+#else
 static int make_boxes(const Draw *dr, Box *bx) {
   const Entity *e = dr->e;
   Part parts[MAX_PARTS];
+#endif
   int n = mob_parts(e, tick_frac, parts);
   float yaw = e->yaw * 0.017453292f;
   float M[9], R[9], Z[9];
@@ -1310,6 +1324,12 @@ static int make_boxes(const Draw *dr, Box *bx) {
   (void)light_sh;
   return n;
 }
+#if NB_DIMS
+static int make_boxes(const Draw *dr, Box *bx) {
+  Part parts[MAX_PARTS];
+  return make_boxes_in(dr, bx, parts);
+}
+#endif
 
 /* the skin texel the ray meets on a box face (ModelBox's layout), -1 if see-through */
 static int box_texel(const Box *b, int face, float x, float y, float z) {
@@ -1335,6 +1355,21 @@ static int box_texel(const Box *b, int face, float x, float y, float z) {
     case 4: u = U + d + lx, v = V + d + ly; break;                  /* z0 (the front) */
     default: u = U + d + w + d + (w - 1 - lx), v = V + d + ly; break;   /* z1 (the back) */
   }
+#if NB_DIMS
+  if (b->skin == SKIN_DRAGON) {   /* (256 x 256; its wings' skin starts at u -56: wrapped) */
+    u &= 255;
+    if ((unsigned)v >= 256) return -1;
+    uint8_t q = skin_dragon_px[(v * 256 + u) >> 1];
+    int k = (u & 1) ? q >> 4 : q & 15;
+    return k ? skin_dragon_pal[k] : -1;
+  }
+  if (b->skin == SKIN_CRYSTAL) {   /* (its 64 x 32 drawn at 128 x 64) */
+    if ((unsigned)u >= 64 || (unsigned)v >= 32) return -1;
+    uint8_t q = skin_crystal_px[(v * 2 * 128 + u * 2) >> 1];
+    int k = q & 15;
+    return k ? skin_crystal_pal[k] : -1;
+  }
+#endif
   if ((unsigned)u >= 64 || (unsigned)v >= 32) return -1;
   uint8_t p = skin_px[b->skin][(v * 64 + u) >> 1];
   int i = (u & 1) ? p >> 4 : p & 15;
@@ -1441,12 +1476,19 @@ static bool item_hit(const Draw *dr, const float *d, float *best_t, uint16_t *co
   /* a flat picture half a block wide, facing the camera */
   int ic = e->type == E_BOBBER ? SP_BOBBER : item_icon(id);
   if (ic < 0) return false;
+#if NB_DIMS
+  /* RenderFireball: the fire charge, 2 across (a ghast's) or a half (a blaze's); the eye of ender as an item */
+  float half = e->type == E_FIREBALL ? (e->item.aux ? 0.125f : 0.5f) : 0.25f;
+  if (e->type == E_FIREBALL) cy = dr->ey;
+#else
+  const float half = 0.25f;
+#endif
   float rel[3] = {cx - ox, cy + 0.125f - oy, cz - oz};
   float den = d[0] * fwx + d[1] * fwy + d[2] * fwz;
   float t = (rel[0] * fwx + rel[1] * fwy + rel[2] * fwz) / den;
   if (!(t > 0) || t >= *best_t) return false;
   float hx = d[0] * t - rel[0], hy = d[1] * t - rel[1], hz = d[2] * t - rel[2];
-  float u = (hx * rgx + hz * rgz) / 0.5f + 0.5f, v = 0.5f - (hx * upx + hy * upy + hz * upz) / 0.5f;
+  float u = (hx * rgx + hz * rgz) / (2 * half) + 0.5f, v = 0.5f - (hx * upx + hy * upy + hz * upz) / (2 * half);
   if (u < 0 || u >= 1 || v < 0 || v >= 1) return false;
   int w = spr_w[ic], hh = spr_h[ic], pxu = (int)(u * w), pyv = (int)(v * hh);
   const uint8_t *px = spr_px + spr_off[ic] + pyv * ((w + 1) / 2);
@@ -1851,14 +1893,31 @@ static void select_strip(int py0, int rows, uint16_t (*cb)[RW], float (*zb)[RW])
 }
 
 static void ents_strip(int py0, int rows, uint16_t (*cb)[RW], float (*zb)[RW]) {
+#if NB_DIMS
+  Box bxs[MAX_PARTS];
+#else
   Box bx[MAX_PARTS];
+#endif
   particles_strip(py0, rows, cb, zb);
   for (int k = 0; k < ndraws; k++) {
     const Draw *dr = &draws[k];
     if (dr->y1 <= py0 || dr->y0 >= py0 + rows) continue;
     const Entity *e = dr->e;
-    bool mob = e->type >= E_ZOMBIE && e->type <= E_CHICKEN;
+    bool mob = IS_MOB(e->type);
+#if NB_DIMS
+    /* the dragon's many parts: in the room the rain has (none falls in the End) */
+    Box *bx = bxs;
+    int n = 0;
+    if (e->type == E_DRAGON) {
+      Part *parts = (Part *)world_scratch(MAX_PARTS_DRAGON * (sizeof(Part) + sizeof(Box)));
+      if (!parts) continue;
+      bx = (Box *)(parts + MAX_PARTS_DRAGON);
+      n = make_boxes_in(dr, bx, parts);
+    } else if (mob)
+      n = make_boxes(dr, bx);
+#else
     int n = mob ? make_boxes(dr, bx) : 0;
+#endif
     /* hurt (and dying): a red tint; a creeper about to blow flashes white */
     int red = mob && (e->hurt > 0 || e->state == 255) ? 10 : 0;
     int white = e->type == E_CREEPER && e->delay > 0 && ((e->delay / 3) & 1) ? 16 : 0;

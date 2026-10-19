@@ -192,6 +192,17 @@ int main(int argc, char **argv) {
       Entity *e = ent_new(E_ZOMBIE + k, x, (float)fy, z);
       if (e) e->health = 20, e->yaw = 180, e->gx = e->x, e->gz = e->z;
     }
+    if (dim) {
+      /* the Nether's and the End's instead */
+      memset(ents, 0, sizeof ents);
+      static const int8_t t[6] = {E_PIGMAN, E_WSKELETON, E_BLAZE, E_MAGMA, E_ENDERMAN, E_CRYSTAL};
+      for (int k = 0; k < 6; k++) {
+        Entity *e = ent_new(t[k], pl.x - 5.0f + k * 2.0f, (float)fy, pl.z + 5.5f);
+        if (e) e->health = 20, e->yaw = 180, e->gx = e->x, e->gz = e->z, e->sheared = 2;
+      }
+      Entity *g = ent_new(E_GHAST, pl.x, (float)fy + 2, pl.z + 14);
+      if (g) g->health = 10, g->yaw = 180, g->delay = 1000;
+    }
   }
   if (animals) {
     /* a few animals ahead of the player (forward f, right r blocks), each on the first solid ground under it, facing
@@ -241,6 +252,9 @@ int main(int argc, char **argv) {
       s = c + 1;
     }
   }
+  for (int i = 0; i < N_ENT; i++)
+    if (ents[i].type > E_BOBBER)
+      printf("entity %d at %.1f %.1f %.1f health %d\n", ents[i].type, ents[i].x, ents[i].y, ents[i].z, ents[i].health);
   extern unsigned long st_steps, st_texels, st_jumps, st_pixels;
   printf("per frame: %.0f traces, %.0f steps\n", (double)st_pixels / frames, (double)st_steps / frames);
   extern unsigned long st_dis, st_k0, st_fpfail, st_fpok, st_sky;

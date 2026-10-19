@@ -563,7 +563,7 @@ static void sleep_in(int x, int y, int z) {
   }
   for (int i = 0; i < N_ENT; i++) {
     const Entity *e = &ents[i];
-    if (e->type >= E_ZOMBIE && e->type <= E_SPIDER && fabsf(e->x - x) < 8 && fabsf(e->y - y) < 5 &&
+    if (IS_MONSTER(e->type) && fabsf(e->x - x) < 8 && fabsf(e->y - y) < 5 &&
         fabsf(e->z - z) < 8) {
       gui_message(T("You may not rest now, there are monsters nearby"));
       return;
@@ -944,6 +944,9 @@ void player_tick(uint32_t keys, uint32_t pressed) {
   if (pl.mode == 0) food_tick();
   if (pl.dead) return;
   pick();
+#if NB_DIMS
+  if ((pressed & K_ATTACK) && dims_punch()) player_swing(), pressed &= ~K_ATTACK, keys &= ~K_ATTACK;
+#endif
   /* a mob under the crosshair, nearer than the block: attacking hits it, using uses on it */
   Entity *target = entity_looked_at(pl.mode ? 5.0f : 3.0f, pl.hit_face >= 0 ? hit_t : 1e9f);
   if (target) {

@@ -21,12 +21,31 @@ static const MobInfo info[] = {
     [E_CREEPER] = {0.6f, 1.7f, 0.25f, 20},  [E_SPIDER] = {1.4f, 0.9f, 0.3f, 16},
     [E_PIG] = {0.9f, 0.9f, 0.25f, 10},      [E_COW] = {0.9f, 1.3f, 0.2f, 10},
     [E_SHEEP] = {0.9f, 1.3f, 0.23f, 8},     [E_CHICKEN] = {0.4f, 0.7f, 0.25f, 4},
+#if NB_DIMS
+    [E_PIGMAN] = {0.6f, 1.95f, 0.23f, 20},  [E_GHAST] = {4.0f, 4.0f, 0.0f, 10},
+    [E_BLAZE] = {0.6f, 1.8f, 0.23f, 20},    [E_MAGMA] = {0.51f, 0.51f, 0.2f, 1},
+    [E_WSKELETON] = {0.72f, 2.535f, 0.25f, 20}, [E_ENDERMAN] = {0.6f, 2.9f, 0.3f, 40},
+    [E_CRYSTAL] = {2.0f, 2.0f, 0.0f, 5},    [E_DRAGON] = {16.0f, 8.0f, 0.0f, 200},
+#endif
 };
-float mob_width(int t) { return t >= E_ZOMBIE && t <= E_CHICKEN ? info[t].w : 0.25f; }
-float mob_height(int t) { return t >= E_ZOMBIE && t <= E_CHICKEN ? info[t].h : 0.25f; }
-static bool hostile(int t) { return t >= E_ZOMBIE && t <= E_SPIDER; }
+#if NB_DIMS
+static bool fire_immune(int t);
+static bool neutral(int t);
+static float rnd_gauss(void);
+#endif
+float mob_width(int t) { return IS_MOB(t) ? info[t].w : 0.25f; }
+float mob_height(int t) { return IS_MOB(t) ? info[t].h : 0.25f; }
+static bool hostile(int t) { return IS_MONSTER(t); }
 
 float mob_scale(const Entity *e, float pt) {
+#if NB_DIMS
+  switch (e->type) {
+    case E_WSKELETON: return 1.2f;      /* RenderSkeleton */
+    case E_GHAST: return 4.5f;          /* RenderGhast */
+    case E_MAGMA: return e->sheared;    /* RenderMagmaCube: its size */
+    case E_CRYSTAL: return 2;           /* ModelEnderCrystal */
+  }
+#endif
   if (e->growth < 0) return 0.5f;   /* a baby */
   if (e->type != E_CREEPER || e->delay <= 0) return 1;
   /* RenderCreeper: swells by up to 40% (and flickers) over the fuse */
@@ -172,6 +191,12 @@ int mob_parts(const Entity *e, float pt, Part *o) {
       box(-1, 0, -3, 1, 4, 6, 24, 13, 4, 13, 0, SKIN_CHICKEN)->rz = -flap;
       break;
     }
+#if NB_DIMS
+    default: {
+      void dims_parts_(const Entity *e, float pt, float f, float a, float pitch, float age);
+      dims_parts_(e, pt, f, a, pitch, age);
+    }
+#endif
   }
   return np;
 }
@@ -200,7 +225,7 @@ static bool can_stand(int x, int y, int z) {
 static int count(bool host) {
   int n = 0;
   for (int i = 0; i < N_ENT; i++)
-    if (ents[i].type >= E_ZOMBIE && ents[i].type <= E_CHICKEN && hostile(ents[i].type) == host) n++;
+    if (IS_MOB(ents[i].type) && hostile(ents[i].type) == host) n++;
   return n;
 }
 
@@ -215,7 +240,13 @@ static Entity *spawn(int type, float x, float y, float z) {
 Entity *mob_summon(int type, float x, float y, float z) { return spawn(type, x, y, z); }
 
 /* SpawnerAnimals, made small: a try every second */
+#if NB_DIMS
+static bool dims_spawn(void);
+#endif
 void mobs_spawn(void) {
+#if NB_DIMS
+  if (dims_spawn()) return;
+#endif
   if (pl.dead) return;
   for (int k = 0; k < 4; k++) {
     int x = ifl(pl.x) + rnd(41) - 20, z = ifl(pl.z) + rnd(41) - 20;
@@ -236,6 +267,13 @@ void mobs_spawn(void) {
         static const uint8_t kinds[4] = {E_ZOMBIE, E_SKELETON, E_CREEPER, E_SPIDER};
         int t = kinds[rnd(4)];
         if (t == E_SPIDER && !(can_stand(x + 1, y, z) && can_stand(x, y, z + 1))) t = E_ZOMBIE;
+#if NB_DIMS
+        /* an enderman: weight 10 of the monsters' 410 */
+        if (rnd(41) == 0) {
+          if (!can_stand(x, y + 1, z)) return;
+          t = E_ENDERMAN;
+        }
+#endif
         spawn(t, x + 0.5f, (float)y, z + 0.5f);
         return;
       }
@@ -282,12 +320,27 @@ static void loot(Entity *e) {
       drop(I_FEATHER, rnd(3), e);
       drop(e->fire > 0 ? I_COOKED_CHICKEN : I_CHICKEN, 1, e);
       break;
+#if NB_DIMS
+    default: {
+      bool dims_loot_(Entity *e);
+      if (dims_loot_(e)) return;
+    }
+#endif
   }
   player_add_xp(hostile(e->type) ? 5 : 1 + rnd(3));
 }
 
+#if NB_DIMS
+void dims_hurt_(Entity *e, float dmg, float kx, float kz);
+#endif
 static void hurt(Entity *e, float dmg, float kx, float kz) {
   if (e->state == 255 || e->invuln > 10) return;
+#if NB_DIMS
+  if (e->type == E_DRAGON || e->type == E_CRYSTAL) {
+    dims_hurt_(e, dmg, kx, kz);
+    return;
+  }
+#endif
   e->health = (int16_t)(e->health - (int)ceilf(dmg));
   e->invuln = 20;
   e->hurt = 10;
@@ -302,6 +355,9 @@ static void hurt(Entity *e, float dmg, float kx, float kz) {
   if (!hostile(e->type)) e->panic = 100;
   else if (kx != 0 || kz != 0) e->panic = e->panic > 100 ? e->panic : 100;   /* EntityAIHurtByTarget */
   if (e->type == E_SPIDER) e->panic = 600;   /* a hit spider fights back, even by day */
+#if NB_DIMS
+  dims_hurt_(e, dmg, kx, kz);
+#endif
   if (e->health <= 0) {
     e->state = 255;
     e->timer = 0;
@@ -315,7 +371,7 @@ Entity *entity_looked_at(float reach, float block_t) {
   Entity *hit = NULL;
   for (int i = 0; i < N_ENT; i++) {
     Entity *e = &ents[i];
-    if (e->type < E_ZOMBIE || e->type > E_CHICKEN || e->state == 255) continue;
+    if (NOT_MOB(e->type) || e->state == 255) continue;
     float w = info[e->type].w / 2 + 0.1f, h = info[e->type].h + 0.1f;
     float lo[3] = {e->x - w, e->y, e->z - w}, hi[3] = {e->x + w, e->y + h, e->z + w}, o[3] = {ex, ey, ez};
     float t0 = 0, t1 = best;
@@ -480,7 +536,7 @@ void explode(float x, float y, float z, float power, bool blocks) {
   }
   for (int i = 0; i < N_ENT; i++) {
     Entity *e = &ents[i];
-    if (e->type < E_ZOMBIE || e->type > E_CHICKEN) continue;
+    if (NOT_MOB(e->type)) continue;
     float ex = e->x - x, ez = e->z - z, ey = e->y - y;
     float d = sqrtf(ex * ex + ey * ey + ez * ez) / (power * 2);
     if (d <= 1) hurt(e, ((1 - d) * (1 - d) + (1 - d)) / 2 * 7 * power * 2 + 1, ex, ez);
@@ -540,7 +596,7 @@ static void arrow_tick(Entity *e) {
   if (e->item.aux)
     for (int i = 0; i < N_ENT; i++) {
       Entity *m = &ents[i];
-      if (m->type < E_ZOMBIE || m->type > E_CHICKEN || m->state == 255) continue;
+      if (NOT_MOB(m->type) || m->state == 255) continue;
       float w = info[m->type].w / 2 + 0.15f, mx = m->x - nx, mz = m->z - nz;
       if (fabsf(mx) < w && fabsf(mz) < w && ny > m->y - 0.1f && ny < m->y + info[m->type].h) {
         /* EntityArrow: damage 2 x speed, rounded up (a full draw sometimes more) */
@@ -709,6 +765,10 @@ void mob_tick(Entity *e) {
     tnt_tick(e);
     return;
   }
+#if NB_DIMS
+  bool dims_tick_(Entity *e);
+  if (e->type > E_BOBBER && dims_tick_(e)) return;
+#endif
   const MobInfo *mi = &info[e->type];
   if (e->hurt > 0) e->hurt--;
   if (e->invuln > 0) e->invuln--;
@@ -729,13 +789,19 @@ void mob_tick(Entity *e) {
   int bx = ifl(e->x), by = ifl(e->y), bz = ifl(e->z);
   bool in_water = blk_model[world_get(bx, ifl(e->y + 0.4f), bz)] == M_LIQUID;
   bool in_lava = is_lava(world_get(bx, ifl(e->y + 0.4f), bz));
+#if NB_DIMS
+  bool immune = fire_immune(e->type);
+  if (immune) in_lava = false, e->fire = 0;
+#else
+#define immune 0
+#endif
   /* daylight burns zombies and skeletons (EntityZombie.onLivingUpdate) */
   if ((e->type == E_ZOMBIE || e->type == E_SKELETON) && daylight() && !in_water &&
       light_there(bx, ifl(e->y + 1.6f), bz) >= 15 && world_get(bx, ifl(e->y + 1.6f), bz) == B_AIR) {
     if (e->fire < 160) e->fire = 160;
   }
   if (in_lava) e->fire = 300, hurt(e, 4, 0, 0);
-  if (world_get(bx, by, bz) == B_FIRE || world_get(bx, ifl(e->y + 1), bz) == B_FIRE) {
+  if (!immune && (world_get(bx, by, bz) == B_FIRE || world_get(bx, ifl(e->y + 1), bz) == B_FIRE)) {
     hurt(e, 1, 0, 0);
     if (e->fire < 160) e->fire = 160;
   }
@@ -778,9 +844,23 @@ void mob_tick(Entity *e) {
     /* EntityAINearestAttackableTarget: seen within 16 (a spider only in the dark); EntityAITarget: kept
      * while seen in the last 3 seconds, within 16 (zombies 35) */
     bool dark = e->type != E_SPIDER || light_there(bx, by + 1, bz) < 8 || !daylight();
+#if NB_DIMS
+    if (!neutral(e->type))
+#endif
     if (can && dist < 16 && (dark || e->panic > 60) && (ticks_run + (unsigned)(e - ents)) % 4 == 0 && sees(e))
       e->panic = e->panic > 60 ? e->panic : 60;
     chase = can && e->panic > 0 && dist < (e->type == E_ZOMBIE ? 35 : 16);
+#if NB_DIMS
+    if (e->type == E_PIGMAN || e->type == E_ENDERMAN || e->type == E_BLAZE) chase = can && e->panic > 0 && dist < 40;
+    if (e->type == E_BLAZE) {
+      void blaze_tick_(Entity *e, bool chase, float dist);
+      blaze_tick_(e, chase, dist);
+    }
+    if (e->type == E_MAGMA) {
+      void magma_tick_(Entity *e, bool chase, float dist);
+      magma_tick_(e, chase, dist);
+    }
+#endif
     if (!can) e->panic = 0;
   }
   if (chase) {
@@ -861,6 +941,9 @@ void mob_tick(Entity *e) {
     e->pitch *= 0.8f;
   /* moving: EntityLivingBase.moveEntityWithHeading, the AI's speed twice (as forward and as friction) */
   float fwd = go && e->state != 255 ? speed : 0;
+#if NB_DIMS
+  if (e->type == E_MAGMA) fwd = 0;   /* (it only hops: magma_tick) */
+#endif
   float yr = e->yaw * 0.017453292f;
   if (in_water) {
     if (rndf() < 0.8f) e->vy += 0.04f;   /* EntityAISwimming */
@@ -891,6 +974,9 @@ void mob_tick(Entity *e) {
   }
   /* against a wall: a jump (EntityJumpHelper), set for the next move as Minecraft sets it before
    * moving, so the first rise is the whole 0.42 and a block is climbed */
+#if NB_DIMS
+  if (e->type != E_MAGMA)
+#endif
   if (blocked && go && ground && e->type != E_SPIDER) e->vy = 0.42f;
   /* the walk's swing (limbSwingAmount follows how fast it moves) */
   float target = moved * 4;
@@ -906,6 +992,16 @@ void mob_tick(Entity *e) {
       push_player(dx, dz, 0.4f);
       e->delay = 20;
     }
+#if NB_DIMS
+    /* the pigman's golden sword 9, the wither skeleton's stone sword 8 (and the wither), the enderman 7 */
+    if ((e->type == E_PIGMAN || e->type == E_WSKELETON || e->type == E_ENDERMAN) && dist * dist < reach + 0.5f &&
+        fabsf(dy) < 2.0f && !e->delay) {
+      player_hurt(scaled(e->type == E_PIGMAN ? 9 : e->type == E_WSKELETON ? 8 : 7), DMG_MOB);
+      push_player(dx, dz, 0.4f);
+      if (e->type == E_WSKELETON) wither_ticks = 200;
+      e->delay = 20;
+    }
+#endif
     /* a spider leaps (EntityAILeapAtTarget) */
     if (e->type == E_SPIDER && ground && dist > 2 && dist < 4 && rnd(5) == 0) {
       e->vx += dx / dist * 0.4f;
@@ -919,3 +1015,20 @@ void mob_tick(Entity *e) {
   }
   if (e->y < -64) e->type = E_NONE;
 }
+#if !NB_DIMS
+#undef immune
+#endif
+
+#if NB_DIMS
+#include "mob_dims.h"
+void dims_parts_(const Entity *e, float pt, float f, float a, float pitch, float age) { dims_parts(e, pt, f, a, pitch, age); }
+bool dims_loot_(Entity *e) { return dims_loot(e); }
+bool dims_tick_(Entity *e) { return dims_tick(e); }
+void blaze_tick_(Entity *e, bool chase, float dist) { blaze_tick(e, chase, dist); }
+void magma_tick_(Entity *e, bool chase, float dist) { magma_tick(e, chase, dist); }
+void dims_hurt_(Entity *e, float dmg, float kx, float kz) {
+  if (e->type == E_DRAGON) dragon_hurt(e, dmg);
+  else if (e->type == E_CRYSTAL) crystal_gone(e);
+  else dims_hurt(e, kx, kz);
+}
+#endif

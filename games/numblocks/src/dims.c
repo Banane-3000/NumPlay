@@ -255,11 +255,18 @@ static void travel(int to, float frac, int ax) {
 /* ---------------------------------------------------------------- the player in portals */
 static int16_t portal_count, portal_cool;
 float portal_time;   /* EntityPlayerSP.timeInPortal: the overlay */
+int wither_ticks;
 static bool in_portal;
 
 /* Entity.onEntityUpdate's portal part, Entity.setPortal (a portal block in the player's cells: their
  * whole cells, as doBlockCollisions has it), BlockEndPortal.onEntityCollidedWithBlock */
 void dims_player_tick(void) {
+  /* Potion.wither: 1 every 40 ticks (it kills) */
+  if (wither_ticks > 0) {
+    if (wither_ticks % 40 == 0) player_hurt(1, DMG_MAGIC);
+    wither_ticks--;
+  }
+  end_tick();
   bool nether = false, end = false;
   int px = 0, pz = 0, pax = 0;
   for (int y = ifl(pl.y + 0.001f); y <= ifl(pl.y + 1.799f); y++)
@@ -331,8 +338,6 @@ void dims_respawn(void) {
   memset(ents, 0, sizeof ents);
 }
 
-/* the dragon fight (dragon.c) and the credits come later */
-void dragon_enter(void) {}
 void dims_credits(void) {
   loading_screen();
   if (!world_dim(DIM_OVERWORLD)) return;

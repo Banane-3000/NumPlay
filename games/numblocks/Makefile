@@ -15,7 +15,7 @@ GEN ?= src/gen.c
 GAME = src/main.c src/world.c src/edits.c src/render.c src/player.c src/phys.c src/inv.c src/entity.c src/mob.c src/tick.c src/gui.c src/hand.c src/save.c src/data.c src/names.c src/command.c $(GEN)
 HEADERS = $(wildcard src/*.h) ../common/epsilon_app.h ../common/epsilon_files.h ../common/np_text.h Makefile
 # NumBlocks.nwa's sources: the game's, its tables with the Nether and the End, and theirs
-DIMS_SRC = src/dims.c
+DIMS_SRC = src/dims.c src/end.c
 GAME_DIMS = $(filter-out src/data.c,$(GAME)) src/data_dims.c $(DIMS_SRC)
 
 CFLAGS = -std=gnu11 $(shell $(NWLINK) eadk-cflags-device)

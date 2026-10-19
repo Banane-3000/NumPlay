@@ -200,6 +200,18 @@ void gui_message(const char *s);   /* a line at the bottom left, as Minecraft's 
 /* ---------------------------------------------------------------- entities (entity.c) */
 enum { E_NONE, E_ITEM, E_ZOMBIE, E_SKELETON, E_CREEPER, E_SPIDER, E_PIG, E_COW, E_SHEEP, E_CHICKEN, E_ARROW, E_TNT,
        E_BOBBER };
+#if NB_DIMS
+/* NumBlocks.nwa's: the Nether's and the End's creatures (the ender crystal and the dragon count as mobs: they
+ * are hit), then what flies (fireballs, eyes of ender: their item in item) */
+enum { E_PIGMAN = E_BOBBER + 1, E_GHAST, E_BLAZE, E_MAGMA, E_WSKELETON, E_ENDERMAN, E_CRYSTAL, E_DRAGON, E_FIREBALL, E_EYE };
+#define IS_MOB(t) (((t) >= E_ZOMBIE && (t) <= E_CHICKEN) || ((t) >= E_PIGMAN && (t) <= E_DRAGON))
+#define NOT_MOB(t) (!IS_MOB(t))
+#define IS_MONSTER(t) (((t) >= E_ZOMBIE && (t) <= E_SPIDER) || ((t) >= E_PIGMAN && (t) <= E_ENDERMAN))
+#else
+#define IS_MOB(t) ((t) >= E_ZOMBIE && (t) <= E_CHICKEN)
+#define NOT_MOB(t) ((t) < E_ZOMBIE || (t) > E_CHICKEN)
+#define IS_MONSTER(t) ((t) >= E_ZOMBIE && (t) <= E_SPIDER)
+#endif
 typedef struct {
   uint8_t type, on_ground, hurt, state;   /* hurt: ticks of red; state 255: dying (timer counts) */
   int16_t age, health, timer, delay;   /* delay: an item's pickup delay, a mob's attack wait, a creeper's fuse */
