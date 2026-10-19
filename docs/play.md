@@ -360,6 +360,23 @@ Last from 12 AM to 6 AM, five nights in a row. Light the doorways to see who is 
 
 <br clear="right">
 
+## Sonic the Hedgehog
+
+<img src="media/sonic.gif" width="320" align="right" alt="Sonic the Hedgehog: the title, Green Hill, Marble, Spring Yard and a Special Stage">
+
+Sonic the Hedgehog comes as its own app, `SonicTheHedgehog.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** (or 4, 6, 8, 2) | Run, look up, duck; **Down** while running rolls |
+| **OK**, **EXE**, 5, 0 or **shift** | Jump |
+| **Back** or **⌫** | Pause: Resume or Quit game |
+| **Home** or **On/Off** | Save and quit: Continue on the title goes back there |
+
+Run right to the signpost at the end of each act; each zone's third act ends with Dr. Robotnik and the capsule of animals. When something hits you, you drop your rings; with none you lose a life, and 100 give an extra life. Finish an act with 50 rings and jump into the giant ring for a Special Stage: steer through the turning maze to the Chaos Emerald, away from the GOAL blocks. All six emeralds change the ending. Each act is saved as it starts, and the save is copied into `sonic_saves.py`, so installing the app again doesn't erase it.
+
+<br clear="right">
+
 ## Subway Surfers
 
 <img src="media/subway.gif" width="320" align="right" alt="Subway Surfers: running between trains, jumping barriers, then flying with the jetpack">

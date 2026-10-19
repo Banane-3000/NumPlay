@@ -5,8 +5,8 @@
 <h1 align="center">NumPlay</h1>
 
 <p align="center">
-  <b>17 free games for your NumWorks calculator, in one app.</b><br>
-  Plus five big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
+  <b>21 free games for your NumWorks calculator, in one app.</b><br>
+  Plus 13 big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
 </p>
 
 <p align="center">
@@ -60,6 +60,11 @@ All of these come in one app, **NumPlay.nwa**.
     <td align="center"><a href="games/g2048/README.md"><img src="docs/media/thumb_g2048.png" width="120" alt="2048"><br><b>2048</b></a></td>
     <td align="center"><a href="games/minesweeper/README.md"><img src="docs/media/thumb_minesweeper.png" width="120" alt="Minesweeper"><br><b>Minesweeper</b></a></td>
     <td align="center"><a href="games/breakout/README.md"><img src="docs/media/thumb_breakout.png" width="120" alt="Block Breaker"><br><b>Block Breaker</b></a></td>
+    <td align="center"><a href="games/leveldevil/README.md"><img src="docs/media/thumb_leveldevil.png" width="120" alt="Level Devil"><br><b>Level Devil</b></a></td>
+    <td align="center"><a href="games/twoplayer/README.md"><img src="docs/media/thumb_twoplayer.png" width="120" alt="2 Players"><br><b>2 Players</b></a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="games/cookieclicker/README.md"><img src="docs/media/thumb_cookieclicker.png" width="120" alt="Cookie Clicker"><br><b>Cookie Clicker</b></a></td>
     <td align="center"><a href="games/numvisuals/README.md"><img src="docs/media/thumb_numvisuals.png" width="120" alt="NumVisuals"><br><b>NumVisuals</b></a></td>
   </tr>
 </table>
@@ -82,7 +87,18 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
     <td align="center"><a href="games/undertale/README.md"><img src="docs/media/thumb_undertale.png" width="200" alt="Undertale"><br><b>Undertale</b></a><br><sub>The whole Underground, from the golden flowers to the barrier and the neutral ending</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/Undertale.nwa">Download</a></td>
   </tr>
   <tr>
-    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>The Binding of Isaac, Plants vs. Zombies, Doom and more: see the roadmap</sub></td>
+    <td align="center"><a href="games/doom/README.md"><img src="docs/media/thumb_doom.png" width="200" alt="Doom"><br><b>Doom</b></a><br><sub>Knee-Deep in the Dead: all nine levels of the shareware episode</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/Doom.nwa">Download</a></td>
+    <td align="center"><a href="games/isaac/README.md"><img src="docs/media/thumb_isaac.png" width="200" alt="The Binding of Isaac"><br><b>The Binding of Isaac</b></a><br><sub>A whole run: the Basement to Mom, her heart, Sheol and the Cathedral</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/BindingOfIsaac.nwa">Download</a></td>
+    <td align="center"><a href="games/pvz/README.md"><img src="docs/media/thumb_pvz.png" width="200" alt="Plants vs. Zombies"><br><b>Plants vs. Zombies</b></a><br><sub>The whole Adventure, from the front lawn to the roof and Dr. Zomboss</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/PlantsVsZombies.nwa">Download</a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="games/fnaf/README.md"><img src="docs/media/thumb_fnaf.png" width="200" alt="Five Nights at Freddy's"><br><b>Five Nights at Freddy's</b></a><br><sub>All five nights, the 6th and the Custom Night</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/FiveNightsAtFreddys.nwa">Download</a></td>
+    <td align="center"><a href="games/sonic/README.md"><img src="docs/media/thumb_sonic.png" width="200" alt="Sonic the Hedgehog"><br><b>Sonic the Hedgehog</b></a><br><sub>The whole 1991 game: six zones, the Final Zone, the Special Stages and the ending</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/SonicTheHedgehog.nwa">Download</a></td>
+    <td align="center"><a href="games/subway/README.md"><img src="docs/media/thumb_subway.png" width="200" alt="Subway Surfers"><br><b>Subway Surfers</b></a><br><sub>The endless run down the tracks, in 3D</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/SubwaySurfers.nwa">Download</a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="games/hillclimb/README.md"><img src="docs/media/thumb_hillclimb.png" width="200" alt="Hill Climb Racing"><br><b>Hill Climb Racing</b></a><br><sub>Ten stages, eight vehicles and all their upgrades</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/HillClimbRacing.nwa">Download</a></td>
+    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Super Mario 64, the Nether and the End in NumBlocks and more: see the roadmap</sub></td>
   </tr>
 </table>
 
@@ -175,15 +191,16 @@ Filmed on my own calculator, no emulator.
 - [x] The Powder Toy (NumPowder)
 - [x] Block Blast
 - [x] Undertale: the whole Underground, from the Ruins to New Home and the neutral ending
-- [ ] The Binding of Isaac
-- [ ] Plants vs. Zombies
-- [ ] Doom
-- [ ] Five Nights at Freddy's
-- [ ] Pong and more two-player games
-- [ ] Cookie Clicker
-- [ ] Level Devil
-- [ ] Sonic the Hedgehog
-- [ ] Subway Surfers
+- [x] The Binding of Isaac: a whole run, from the Basement to the Cathedral
+- [x] Plants vs. Zombies: the whole Adventure, from the front lawn to the roof and Dr. Zomboss
+- [x] Doom: Knee-Deep in the Dead, the shareware episode
+- [x] Five Nights at Freddy's: all five nights, the 6th and the Custom Night
+- [x] Pong and more two-player games: 2 Players, with Pong, Air Hockey, Tanks and Light Cycles
+- [x] Cookie Clicker
+- [x] Level Devil
+- [x] Sonic the Hedgehog: the whole 1991 game, Green Hill to the Final Zone, with the Special Stages
+- [x] Subway Surfers
+- [x] Hill Climb Racing
 - [ ] The Nether and the End in NumBlocks
 - [ ] Full Minecraft 1.18.2 as a standalone app
 - [ ] A customizer website: pick the games you want in your launcher, with Enlarged Extra Apps support to fit several big games, or big and small ones together
@@ -203,6 +220,16 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 - **Celeste** inspired NumPlay's Celeste, which uses the game's own pictures, maps, texts and fonts. Not affiliated with Maddy Makes Games.
 - **Hollow Knight** inspired NumPlay's Hollow Knight, which uses the game's own pictures, animations, maps, texts and fonts. Not affiliated with Team Cherry.
 - **Undertale** by Toby Fox inspired NumPlay's Undertale, which uses the game's maps, pictures and texts from the [Undertale Wiki](https://undertale.fandom.com) and the game's free demo, and the **Pixel Operator** fonts by Jayvee Enaguas (public domain). Not affiliated with Toby Fox.
+- **Doom** (1993) by id Software, run by its own engine: [RP2040 Doom](https://github.com/kilograham/rp2040-doom) by Graham Sanderson (GNU GPL v2, its own files BSD 3-Clause), made from [Chocolate Doom](https://github.com/chocolate-doom/chocolate-doom) by Simon Howard and its contributors and the Doom source code id Software released under the GNU GPL, with the levels, pictures and texts of the shareware DOOM1.WAD. Not affiliated with id Software, ZeniMax or Bethesda.
+- **The Binding of Isaac** by Edmund McMillen and Florian Himsl (Rebirth by Nicalis) inspired NumPlay's The Binding of Isaac, which uses the game's own pictures from [Basement Renovator](https://github.com/Basement-Renovator/basement-renovator)'s resources and the **Upheaval** font by Brian Kent (freeware). Not affiliated with them.
+- **Plants vs. Zombies** by PopCap Games inspired NumPlay's Plants vs. Zombies, which uses the game's pictures, animations and numbers as kept by [pvz-web](https://github.com/xyxiao001/pvz-web), and the **Rammetto One** and **Nunito** fonts (SIL Open Font License). Not affiliated with PopCap Games or Electronic Arts.
+- **Five Nights at Freddy's** by Scott Cawthon inspired NumPlay's Five Nights at Freddy's, which uses the game's own pictures and words, as the fan ports [Five Nights at Freddy's Web](https://github.com/souwell/Five-Nights-at-Freddys-Web) (wellsousaaa) and [HX-NAF](https://github.com/BaranMuzu/HX-NAF) (BaranMuzu) keep them, and the DejaVu fonts ([license](LICENSES/DejaVu.txt)). How the animatronics move follows RosieSapphire's [FNaF64](https://github.com/RosieSapphire/FNaF64) and LOUDO2's [fnaf-1-godot](https://github.com/LOUDO2/fnaf-1-godot). Not affiliated with Scott Cawthon.
+- **Sonic the Hedgehog** by Sonic Team inspired NumPlay's Sonic the Hedgehog, which reads the game's art, levels and demos from the [Sonic Retro disassembly](https://github.com/sonicretro/s1disasm) and follows the [Sonic Physics Guide](https://info.sonicretro.org/Sonic_Physics_Guide). Not affiliated with SEGA.
+- **Subway Surfers** by SYBO and Kiloo inspired NumPlay's Subway Surfers, drawn from scratch in 3D with no art from the game, and lettered in the **Lilita One** font by Juan Montoreano (SIL Open Font License, [license](LICENSES/OFL-1.1-LilitaOne.txt)). Not affiliated with them.
+- **Hill Climb Racing** by Fingersoft inspired NumPlay's Hill Climb Racing, which uses the game's own pictures from the [Hill Climb Racing Wiki](https://hillclimbracing.fandom.com) and the **Teko** font (SIL Open Font License, [license](LICENSES/OFL-1.1-Teko.txt)). Not affiliated with Fingersoft.
+- **[Level Devil](https://store.steampowered.com/app/3242750/)** by Unept inspired NumPlay's Level Devil, written in C for NumPlay with no code or art from it: its look and its traps follow the game, and its 80 rooms are made for the calculator's screen.
+- **Pong** by Atari (1972) inspired NumPlay's 2 Players, with air hockey, tanks in a maze in the spirit of Tank Trouble and the light cycles of Tron. All four are written in C for NumPlay and drawn from shapes, with no code or art from them.
+- **[Cookie Clicker](https://orteil.dashnet.org/cookieclicker/)** by Orteil (DashNet) inspired NumPlay's Cookie Clicker, written in C for NumPlay with no code or art from it: its numbers and the names of its buildings, upgrades, achievements and news follow the game.
 - **[The Powder Toy](https://powdertoy.co.uk)** inspired NumPowder, which ports its materials' behaviour, its font and its icons from [its source code](https://github.com/The-Powder-Toy/The-Powder-Toy) (GNU GPL v3.0), by Stanislaw K Skowronek, Simon Robertshaw and its contributors. Not affiliated with them.
 - **[The Final Earth 2](https://store.steampowered.com/app/1180130/The_Final_Earth_2/)** by [Florian van Strien](https://florianvanstrien.nl) inspired NumPlay's The Final Earth 2, which uses the game's own pictures, fonts and texts, with additional sprites by LukXD99. Not affiliated with him.
 - **Buckshot Roulette** by Mike Klubnika inspired NumPlay's Buckshot Roulette, whose scenes are rendered from the game through the Open Buckshot Roulette project (1503Dev). Fonts: Fake Receipt by Ray Larabie and Dot Matrix by Dionaea.
@@ -220,7 +247,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 
 NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyright (c) 2026 Mason Chen. Code and fonts from others keep their own licenses: the `UNLICENSE` files in the games' folders and the [LICENSES](LICENSES) folder. The names, artwork and music of the games NumPlay is inspired by belong to their makers and are not covered by it.
 
-<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco and Connect Four of Hasbro.</sub>
+<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media and Sonic the Hedgehog of SEGA.</sub>
 
 ## Gallery
 
@@ -268,5 +295,21 @@ NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyri
   <tr>
     <td align="center"><img src="docs/media/gallery/championisland.gif" width="100%" alt="Champion Island: climbing, artistic swimming and the marathon"><br><a href="games/championisland/README.md"><b>Champion Island</b></a></td>
     <td align="center"><img src="docs/media/gallery/undertale.gif" width="100%" alt="Undertale: Flowey's friendliness pellets, Toriel's tile puzzle and her fire"><br><a href="games/undertale/README.md"><b>Undertale</b></a></td>
+    <td align="center"><img src="docs/media/gallery/doom.gif" width="100%" alt="Doom: imps down a corridor of Phobos Lab, then zombiemen around the yellow key"><br><a href="games/doom/README.md"><b>Doom</b></a></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/media/gallery/isaac.gif" width="100%" alt="The Binding of Isaac: a room of the Basement, then Monstro"><br><a href="games/isaac/README.md"><b>The Binding of Isaac</b></a></td>
+    <td align="center"><img src="docs/media/gallery/pvz.gif" width="100%" alt="Plants vs. Zombies: the front lawn, the pool and Dr. Zomboss"><br><a href="games/pvz/README.md"><b>Plants vs. Zombies</b></a></td>
+    <td align="center"><img src="docs/media/gallery/fnaf.gif" width="100%" alt="Five Nights at Freddy's: the office, Bonnie at the left door, the door comes down"><br><a href="games/fnaf/README.md"><b>Five Nights at Freddy's</b></a></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/media/gallery/sonic.gif" width="100%" alt="Sonic the Hedgehog: the title, Green Hill, Marble, Spring Yard and a Special Stage"><br><a href="games/sonic/README.md"><b>Sonic the Hedgehog</b></a></td>
+    <td align="center"><img src="docs/media/gallery/subway.gif" width="100%" alt="Subway Surfers: the title, running between trains, then the jetpack"><br><a href="games/subway/README.md"><b>Subway Surfers</b></a></td>
+    <td align="center"><img src="docs/media/gallery/hillclimb.gif" width="100%" alt="Hill Climb Racing: a rope bridge in the Desert, then the Forest's pine trees"><br><a href="games/hillclimb/README.md"><b>Hill Climb Racing</b></a></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/media/gallery/leveldevil.gif" width="100%" alt="Level Devil: spikes come up under a low ceiling, a fake wall hides a pit, a spring throws the runner into spikes, a saw gives chase"><br><a href="games/leveldevil/README.md"><b>Level Devil</b></a></td>
+    <td align="center"><img src="docs/media/gallery/twoplayer.gif" width="100%" alt="2 Players: Pong, Air Hockey, Tanks and Light Cycles against the computer"><br><a href="games/twoplayer/README.md"><b>2 Players</b></a></td>
+    <td align="center"><img src="docs/media/gallery/cookieclicker.gif" width="100%" alt="Cookie Clicker: a golden cookie caught for a Frenzy, then a grandma upgrade bought"><br><a href="games/cookieclicker/README.md"><b>Cookie Clicker</b></a></td>
   </tr>
 </table>
