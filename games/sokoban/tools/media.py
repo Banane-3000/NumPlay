@@ -49,7 +49,7 @@ def gif(path, clips):
 
 
 def main():
-    for args, name in (([PLAY, "shot", "2", "build/shot.ppm"], "shot.png"), ([PLAY, "hub", "build/hub.ppm", "17"], "levels.png")):
+    for args, name in (([PLAY, "shot", "1", "build/shot.ppm"], "shot.png"), ([PLAY, "hub", "build/hub.ppm", "17"], "levels.png")):
         subprocess.run(args, check=True, cwd=HERE)
         Image.open(os.path.join(HERE, args[-1] if name == "shot.png" else args[2])).convert("RGB").save(
             os.path.join(HERE, "docs", name), optimize=True)

@@ -9,13 +9,12 @@ No	否
 Yes	是
 Paused	暂停
 Solved!	过关！
-Push every box onto a goal: one at a time, and never pulled.\nArrows: walk and push\nBackspace: undo   Back: pause	把每个箱子推到目标上：一次推一个，不能拉。\n方向键：走路、推箱子\n退格：撤销   返回：暂停
+Push every box onto a goal: they can't be pulled.\nArrows: walk   Backspace: undo\nBack: pause	把每个箱子推到目标上：箱子不能拉。\n方向键：走路   退格：撤销\n返回：暂停
 Play	开始
 Next level	下一关
 Level 	关卡 
 Moves 	步数 
 Pushes 	推动 
 Solve the levels before it to open it	先过前面的关卡才能打开
-Solved in moves: 	过关步数：
 Not solved yet	还没过关
 Your best: 	最佳：

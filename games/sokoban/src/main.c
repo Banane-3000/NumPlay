@@ -5,9 +5,9 @@
  * boxes one at a time, never pulling them; every step can be undone. A level opens while fewer
  * than three levels are left unsolved before it, and the fewest moves each was solved in are kept.
  *
- * The levels are packed by tools/levels.py: only the floor, the goals, the boxes and the keeper (the
- * walls are the cells around the floor), compressed with DEFLATE and unpacked into the strip buffer
- * when a level opens. Only the rows a step changes are drawn again, in the launcher's strips
+ * The levels are packed by tools/levels.py as Microban has them, but for the walls around the floor,
+ * which the game puts back (the few that differ are written out), compressed with DEFLATE and unpacked
+ * into the strip buffer when a level opens. Only the rows a step changes are drawn again, in the launcher's strips
  * (launcher/src/gfx.c). Inside NumPlay it uses the launcher's shapes, fonts, files and inflater; on
  * its own it brings them along. */
 #include <eadk.h>
@@ -45,6 +45,7 @@ static uint32_t keys(void) {
 #define F_GOAL 2
 #define F_BOX 4
 #define F_WALL 8
+#define F_NONE 16 /* (while a level opens) no wall here, though there is floor next to it */
 
 #define WHITE 0xFFFF
 #define BG HEX(0x2B2730) /* around the warehouse */
@@ -66,7 +67,7 @@ static struct {
 static uint8_t g[MAXW * (MAXH + 2) + 2];
 #define G (g + MAXW + 1)
 static const int8_t off[4] = {-MAXW, 1, MAXW, -1}, ddx[4] = {0, 1, 0, -1}, ddy[4] = {-1, 0, 1, 0}; /* up, right... */
-static uint8_t hist[HIST];                         /* the steps taken: the way, and 4 for a push */
+static uint8_t hist[HIST]; /* the steps taken: the way, and 4 for a push */
 static color_t strip[SCREEN_W * STRIP_H];
 static int level, rows, size, ox, oy, keeper, face, left, moves, pushes, nh, anim, moved;
 static int scr, ov, sel, pick, top, dlo, dhi;
@@ -106,28 +107,26 @@ static void open_level(int n) {
   uint32_t tables[816]; /* np_inflate's two Huffman tables, 2 x 1632 bytes */
   const uint8_t *t = (const uint8_t *)strip;
   np_inflate((uint8_t *)strip, TEXT_BYTES, levels_z, sizeof levels_z, (np_inflate_tables_t *)(void *)tables);
-  for (int k = n; k; t++)
-    if (t[0] == '\n' && t[1] == '\n') k--, t++;
+  for (int k = n; k; t++) k -= *t == '|';
   for (unsigned i = 0; i < sizeof g; i++) g[i] = 0;
-  int x = 1, y = 1, w = 0;
-  for (left = 0; *t != '\n' || x > 1; t++) {
+  int x = 0, y = 0, w = 0;
+  for (left = 0; *t != '|'; t++) {
     int c = *t, i = y * MAXW + x++;
-    if (c == '\n') y++, x = 1;
-    else if (c != ' ') {
-      for (int k = 0; k < 6; k++) /* floor, goal, box, box on a goal, the keeper, on a goal */
-        if (c == "-.$*@+"[k]) G[i] = (uint8_t)"\1\3\5\7\1\3"[k], keeper = k > 3 ? i : keeper;
-      left += c == '$';
-    }
-    if (x > w) w = x;
+    if (c == '\n') y++, x = 0;
+    for (int k = 0; k < 8; k++) /* floor, goal, box, box on a goal, the keeper (on a goal), a wall, no wall */
+      if (c == "-.$*@+#_"[k]) G[i] = (uint8_t)"\1\3\5\7\1\3\10\20"[k], keeper = k == 4 || k == 5 ? i : keeper;
+    left += c == '$';
+    if (x + (G[i] & F_FLOOR) > w) w = x + (G[i] & F_FLOOR); /* (and the wall after the floor) */
   }
   rows = y + 1;
-  for (int i = 0; i < rows * MAXW; i++) /* walls on every cell next to the floor */
+  for (int i = 0; i < rows * MAXW; i++) /* walls on every cell next to the floor, but where there are none */
     for (int d = 0; d < 9; d++)
-      if (!(G[i] & F_FLOOR) && G[i + (d / 3 - 1) * MAXW + d % 3 - 1] & F_FLOOR) G[i] = F_WALL;
-  size = (SCREEN_W - 8) / (w + 1);
+      if (G[i] == F_NONE) G[i] = 0, d = 9;
+      else if (!G[i] && G[i + (d / 3 - 1) * MAXW + d % 3 - 1] & F_FLOOR) G[i] = F_WALL;
+  size = (SCREEN_W - 8) / w;
   if ((SCREEN_H - HDR - 8) / rows < size) size = (SCREEN_H - HDR - 8) / rows;
   if (size > 24) size = 24;
-  ox = (SCREEN_W - (w + 1) * size) / 2, oy = HDR + (SCREEN_H - HDR - rows * size) / 2;
+  ox = (SCREEN_W - w * size) / 2, oy = HDR + (SCREEN_H - HDR - rows * size) / 2;
   level = sv.level = (uint8_t)n, moves = pushes = nh = anim = ov = 0, face = 2, scr = 1;
   mark(0, SCREEN_H);
   save();
@@ -183,7 +182,7 @@ static void overlay(void) {
   gfx_fill_alpha(0, 0, SCREEN_W, SCREEN_H, 0, 110);
   gfx_rrect(40, y, 240, h, 12, BAR, 256);
   gfx_text_center(&np_font_title, 160, y + 32, panels[ov - 1][0], GOLD, 256);
-  y = gfx_paragraph(&np_font_body, 160, y + 54, 224, 16, ov == OV_HELP ? T("Push every box onto a goal: one at a time, and never pulled.\nArrows: walk and push\nBackspace: undo   Back: pause") : ov == OV_DONE ? msg : "", CREAM, 256) - 12;
+  y = gfx_paragraph(&np_font_body, 160, y + 54, 224, 16, ov == OV_HELP ? T("Push every box onto a goal: they can't be pulled.\nArrows: walk   Backspace: undo\nBack: pause") : ov == OV_DONE ? msg : "", CREAM, 256) - 12;
   for (int i = 0; i < n; i++, y += 28) {
     if (sel == i) gfx_rrect(96, y, 128, 24, 12, GOLD, 256);
     gfx_text_center(&np_font_body, 160, y + 17, panels[ov - 1][i + 1], sel == i ? BAR : CREAM, 256);
@@ -196,10 +195,12 @@ static void play_scene(void *ctx) {
   for (int i = 0; i < rows * MAXW; i++) {
     int x = ox + i % MAXW * s, y = oy + i / MAXW * s, f = G[i];
     if (y >= gfx_y1 || y + s <= gfx_y0) continue;
-    if (f & F_WALL) {
-      gfx_fill(x, y, s, s, HEX(0x5B3A26));
-      gfx_fill(x, y, s - 1, s - 1, HEX(0xB57D55));
-      gfx_fill(x + 1, y + 1, s - 2, s - 2, HEX(0x8C5A3A));
+    if (f & F_WALL) { /* bricks, two rows a cell, the joints staggered */
+      gfx_fill(x, y, s, s, HEX(0xA4613C));
+      gfx_fill(x, y + s / 2 - 1, s, 1, HEX(0x5B3A26));
+      gfx_fill(x, y + s - 1, s, 1, HEX(0x5B3A26));
+      gfx_fill(x + s / 2, y, 1, s / 2, HEX(0x5B3A26));
+      gfx_fill(x, y + s / 2, 1, s - s / 2, HEX(0x5B3A26));
     } else if (f) {
       gfx_fill(x, y, s, s, (i ^ i / MAXW) & 1 ? HEX(0xE4D7BC) : HEX(0xDCCDAF));
       if (f & F_GOAL) gfx_circle(x + s / 2, y + s / 2, s / 5 + 1, HEX(0xD2452F), 256);
@@ -207,14 +208,13 @@ static void play_scene(void *ctx) {
     }
   }
   if (anim && moved >= 0) box(moved, ex, ey);
-  /* the keeper, looking the way he goes */
-  int cx = ox + keeper % MAXW * s + ex + s / 2, cy = oy + keeper / MAXW * s + ey + s / 2, r = s * 3 / 8;
-  int lx = ddx[face] * s / 8, ly = ddy[face] * s / 8;
-  gfx_circle(cx, cy, r, HEX(0x3C7BE8), 256);
-  for (int e = -s / 7; e <= s / 7; e += 2 * (s / 7)) {
-    gfx_circle(cx + e + lx, cy - s / 12 + ly, s / 8 + 1, WHITE, 256);
-    gfx_circle(cx + e + lx * 3 / 2, cy - s / 12 + ly * 3 / 2, s / 16 + 1, BAR, 256);
-  }
+  /* the keeper: a warehouse man in blue overalls and a red cap, looking the way he goes */
+  int cx = ox + keeper % MAXW * s + ex + s / 2, cy = oy + keeper / MAXW * s + ey + s / 2;
+  gfx_rrect(cx - s * 5 / 16, cy - s / 16, s * 5 / 8, s * 7 / 16, s / 6, HEX(0x2F5FC4), 256);
+  gfx_circle(cx, cy - s / 6, s / 4, HEX(0xF2C29B), 256);
+  gfx_rrect(cx - s / 4, cy - s * 7 / 16, s / 2, s / 6 + 1, s / 12, HEX(0xC83A2C), 256);
+  for (int e = -1; e <= 1 && face; e += 2) /* (from behind, no eyes) */
+    gfx_fill(cx + e * s / 10 + ddx[face] * s / 10 - s / 32, cy - s / 7, s / 16 + 1, s / 10 + 1, BAR);
   gfx_fill(0, 0, SCREEN_W, HDR, BAR);
   put(line, T("Level "), (uint32_t)level + 1);
   gfx_text(&np_font_body, 8, 16, line, GOLD, 256);
@@ -242,7 +242,7 @@ static void hub_scene(void *ctx) {
   put(cat(put(line, "", (uint32_t)n), " / "), "", LEVELS);
   gfx_text_right(&np_font_body, 308, 24, line, CREAM, 256);
   gfx_fill(0, 214, SCREEN_W, 26, BAR);
-  put(line, T("Solved in moves: "), sv.best[pick]);
+  put(line, T("Your best: "), sv.best[pick]);
   if (sv.best[pick]) gfx_text_center(&np_font_body, 160, 232, line, CREAM, 256);
   if (ov) overlay();
 }

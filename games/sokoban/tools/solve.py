@@ -56,7 +56,7 @@ def assignment(cost):
 
 
 def solve(rows, limit=3000000):
-    cells = {(y, x) for y, r in enumerate(rows) for x, c in enumerate(r) if c != " "}
+    cells = {(y, x) for y, r in enumerate(rows) for x, c in enumerate(r) if c in "-.$*@+"}
     at = {(y, x): c for y, r in enumerate(rows) for x, c in enumerate(r)}
     goals = sorted(p for p in cells if at[p] in ".*+")
     goal_set = frozenset(goals)

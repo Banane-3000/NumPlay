@@ -15,13 +15,14 @@ NWLINK ?= npx --yes -- nwlink@1.0.0
 BUILD_DIR = output
 SRC = src/main.c
 LEVELS = $(BUILD_DIR)/levels.inc
-NUMPLAY_LEVELS ?= 60
+NUMPLAY_LEVELS ?= 50
 HEADERS = ../common/epsilon_app.h ../common/epsilon_files.h ../common/np_text.h ../../launcher/src/gfx.h \
   ../../launcher/src/np.h ../../launcher/src/font.h ../../launcher/src/inflate.h
 
 CFLAGS = -std=c11 $(shell $(NWLINK) eadk-cflags-device) -I$(BUILD_DIR)
 CFLAGS += -Os -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant
 CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fwhole-program -fvisibility=internal
+CFLAGS += -fno-schedule-insns2 -fno-reorder-blocks -fno-tree-loop-optimize # (smaller)
 LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
 LDFLAGS += -Wl,-e,main -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
 LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
