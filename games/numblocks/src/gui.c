@@ -607,7 +607,7 @@ static Furnace *furnace;
 #define USED(t) ((t).used == 1 + dim)
 #define USE_TAG ((uint8_t)(1 + dim))
 #include "edits.h"
-static void chest_loot(Chest *c);
+static void chest_loot(Chest *c, int kind);
 #else
 #define USED(t) ((t).used)
 #define USE_TAG 1
@@ -622,7 +622,11 @@ static Chest *chest_at(int x, int y, int z, bool make) {
       memset(&chests[i], 0, sizeof chests[i]);
       chests[i].used = USE_TAG, chests[i].x = (int16_t)x, chests[i].y = (uint8_t)y, chests[i].z = (int16_t)z;
 #if NB_DIMS
-      if (dim == DIM_NETHER && !edits_changed(x, y, z)) chest_loot(&chests[i]);
+      if (dim == DIM_NETHER && !edits_changed(x, y, z)) chest_loot(&chests[i], 0);
+      else if (dim == DIM_OVERWORLD && !edits_changed(x, y, z)) {
+        int k = gen_stronghold_chest(x, y, z);   /* (a stronghold's: 1-3; none: 0) */
+        if (k) chest_loot(&chests[i], k);
+      }
 #endif
       return &chests[i];
     }
@@ -683,16 +687,31 @@ void tiles_merge(const void *t) {
     if (j < N_FURNACES) furnaces[j] = f[i];
   }
 }
-/* a chest the world made (a fortress's): its loot, when first opened (StructureNetherBridgePieces's list;
- * horse armour and saddles are not in NumBlocks: those draws leave nothing) */
-static void chest_loot(Chest *c) {
-  static const struct { uint16_t id; uint8_t lo, hi, w; } L[] = {
+/* a chest the world made: its loot, when first opened. kind 0 a fortress's (StructureNetherBridgePieces's list),
+ * 1 a stronghold's corridor, 2 its room, 3 its library (StructureStrongholdPieces's); horse armour, saddles,
+ * maps and enchanted books are not in NumBlocks: those draws leave nothing */
+typedef struct { uint16_t id; uint8_t lo, hi, w; } Loot;
+static void chest_loot(Chest *c, int kind) {
+  static const Loot fort[] = {
       {I_DIAMOND, 1, 3, 5}, {I_IRON_INGOT, 1, 5, 5}, {I_GOLD_INGOT, 1, 3, 15}, {I_GOLDEN_SWORD, 1, 1, 5},
       {I_GOLDEN_CHESTPLATE, 1, 1, 5}, {I_FLINT_AND_STEEL, 1, 1, 5}, {I_NETHER_WART, 3, 7, 5}, {0, 1, 1, 10},
       {0, 1, 1, 8}, {0, 1, 1, 5}, {0, 1, 1, 3}, {B_OBSIDIAN, 2, 4, 2}};
-  int n = 2 + rnd(4);
+  static const Loot corridor[] = {
+      {I_ENDER_PEARL, 1, 1, 10}, {I_DIAMOND, 1, 3, 3}, {I_IRON_INGOT, 1, 5, 10}, {I_GOLD_INGOT, 1, 3, 5},
+      {I_REDSTONE, 4, 9, 5}, {I_BREAD, 1, 3, 15}, {I_APPLE, 1, 3, 15}, {I_IRON_PICKAXE, 1, 1, 5},
+      {I_IRON_SWORD, 1, 1, 5}, {I_IRON_CHESTPLATE, 1, 1, 5}, {I_IRON_HELMET, 1, 1, 5}, {I_IRON_LEGGINGS, 1, 1, 5},
+      {I_IRON_BOOTS, 1, 1, 5}, {I_GOLDEN_APPLE, 1, 1, 1}, {0, 1, 1, 5}};
+  static const Loot room[] = {
+      {I_IRON_INGOT, 1, 5, 10}, {I_GOLD_INGOT, 1, 3, 5}, {I_REDSTONE, 4, 9, 5}, {I_COAL, 3, 8, 10},
+      {I_BREAD, 1, 3, 15}, {I_APPLE, 1, 3, 15}, {I_IRON_PICKAXE, 1, 1, 1}, {0, 1, 1, 1}};
+  static const Loot library[] = {{I_BOOK, 1, 3, 20}, {I_PAPER, 2, 7, 20}, {0, 1, 1, 1}, {I_COMPASS, 1, 1, 1}, {0, 1, 5, 2}};
+  static const struct { const Loot *l; uint8_t total, n0, n1; } T[4] = {
+      {fort, 75, 2, 4}, {corridor, 99, 2, 2}, {room, 62, 1, 4}, {library, 44, 1, 4}};
+  if (kind < 0 || kind > 3) return;
+  const Loot *L = T[kind].l;
+  int n = T[kind].n0 + rnd(T[kind].n1);
   for (int k = 0; k < n; k++) {
-    int w = rnd(75), i = 0;
+    int w = rnd(T[kind].total), i = 0;
     while (w >= L[i].w) w -= L[i++].w;
     int count = L[i].lo + rnd(L[i].hi - L[i].lo + 1), slot = rnd(27);
     if (L[i].id) c->s[slot] = (Stack){L[i].id, (uint16_t)(item_dur(L[i].id) ? 0 : count)};

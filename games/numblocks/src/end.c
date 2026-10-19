@@ -309,6 +309,14 @@ void end_tick(void) {
     if (e) e->tx = (int16_t)i, e->tz = 0, e->age = (int16_t)rnd(10000), e->health = 5;
   }
   if (!dst.dragon_dead && !dragon()) dragon_enter();
+  /* the healing crystal's beam to it (RenderDragon): its light along the way, a few bits a tick */
+  float a[3], b[3];
+  if (dragon_beam(a, b))
+    for (int k = 0; k < 3; k++) {
+      float t = rndf();
+      particle_add(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t, 0, 0, 0,
+                   rnd(2) ? 0xFFFF : 0xC81F, 6);
+    }
 }
 
 /* the boss bar: its health (0 to 1), or -1 with no dragon near (BossStatus, set as RenderDragon draws it) */
