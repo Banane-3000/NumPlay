@@ -393,7 +393,7 @@
       "invaders.sav"
     ],
     "shots": [
-      "docs/shot.png"
+      "docs/card.png"
     ],
     "app": "SpaceInvaders.nwa",
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/invaders"

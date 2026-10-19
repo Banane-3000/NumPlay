@@ -2,7 +2,7 @@
  *
  * The arcade draws in a picture of one bit a pixel, 224 wide and 256 high, white on black, seen
  * through strips of coloured film: red over the saucer, green over the bunkers, the cannon and the
- * lives. Here it is the same picture, pixel for pixel, in the middle of the calculator's screen;
+ * cannons left. Here it is the same picture, pixel for pixel, in the middle of the calculator's screen;
  * only its empty margins at the top and the bottom are left out. It works the arcade's way:
  * what moves is wiped and drawn again in the picture, a shot hits whatever it finds lit there, and
  * a burst leaves its shape cut out when it goes, so the bunkers and the ground wear away. The rules
@@ -52,7 +52,7 @@ void np_push(int x, int y, int w, int h, const color_t *px) {
 #define RED HEX(0xFF4848)
 #define GREEN HEX(0x3CF03C)
 
-/* the arcade's pictures, a row of 16 pixels each, the top bit the leftmost */
+/* the arcade's pictures, from its ROM, a row of 16 pixels each, the top bit the leftmost */
 static const uint16_t art[][8] = {
   {0x03C0, 0x1FF8, 0x3FFC, 0x399C, 0x3FFC, 0x0660, 0x0DB0, 0x300C}, /* the octopus, 10 points */
   {0x03C0, 0x1FF8, 0x3FFC, 0x399C, 0x3FFC, 0x0E70, 0x1998, 0x0C30},
@@ -60,12 +60,13 @@ static const uint16_t art[][8] = {
   {0x0410, 0x1224, 0x17F4, 0x1DDC, 0x1FFC, 0x0FF8, 0x0410, 0x0808},
   {0x0180, 0x03C0, 0x07E0, 0x0DB0, 0x0FF0, 0x0240, 0x05A0, 0x0A50}, /* the squid, 30 */
   {0x0180, 0x03C0, 0x07E0, 0x0DB0, 0x0FF0, 0x05A0, 0x0810, 0x0420},
-  {0x0440, 0x2288, 0x1010, 0x0820, 0x600C, 0x0820, 0x1290, 0x2448}, /* an invader hit */
-  {0x0100, 0x0380, 0x0380, 0x3FF8, 0x7FFC, 0x7FFC, 0x7FFC, 0x7FFC}, /* the cannon */
-  {0x0100, 0x2048, 0x0A10, 0x4582, 0x0FD0, 0x3FF0, 0x7FFA, 0xFFFE}, /* the cannon hit, two pictures */
-  {0x1010, 0x0102, 0x4840, 0x0B88, 0x2FD0, 0x1FF2, 0x7FFC, 0xFFFF},
-  {0x07E0, 0x1FF8, 0x3FFC, 0x6DB6, 0xFFFF, 0x399C, 0x1008, 0x0000}, /* the saucer */
-  {0x2244, 0x8811, 0x15A8, 0x4FF2, 0x1FF8, 0x9B6D, 0x0A50, 0x2244}, /* the saucer hit */
+  {0x0440, 0x2108, 0x1010, 0x0820, 0x600C, 0x0820, 0x1110, 0x2448}, /* an invader hit */
+  {0x0080, 0x01C0, 0x01C0, 0x1FFC, 0x3FFE, 0x3FFE, 0x3FFE, 0x3FFE}, /* the cannon */
+  {0x0200, 0x0010, 0x02A0, 0x1200, 0x01B0, 0x45A8, 0x1FE4, 0x3FF5}, /* the cannon hit, two pictures */
+  {0x1004, 0x8219, 0x10C0, 0x0202, 0x4B31, 0x21C4, 0x1FF0, 0x37F2},
+  {0x0000, 0x07E0, 0x1FF8, 0x3FFC, 0x6DB6, 0xFFFF, 0x399C, 0x1008}, /* the saucer */
+  {0x1281, 0x0806, 0x51E3, 0x03F9, 0x0754, 0x11F1, 0x40A3, 0x1110}, /* the saucer hit: 24 columns, 4 */
+  {0x4800, 0x1000, 0x0000, 0xC800, 0xE400, 0x8000, 0x1000, 0x8000}, /* to the saucer's left */
   {0x8900, 0x2200, 0x7E00, 0xFF00, 0xFF00, 0x7E00, 0x2400, 0x9100}, /* the cannon's shot bursting */
   {0x2000, 0x8800, 0x3400, 0x7800, 0xB800, 0x7C00, 0xB800, 0x5400}, /* an invader's shot bursting */
   {0x8000, 0x8000, 0x8000, 0x8000},                                 /* the cannon's shot */
@@ -76,7 +77,7 @@ static const uint16_t art[][8] = {
   {0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF}, /* a whole cell, to wipe it */
   {0xFF00, 0xFF00, 0xFF00, 0xFF00, 0xFF00, 0xFF00, 0xFF00, 0xFF00}, /* a letter's */
 };
-enum { A_BOOM = 6, A_CANNON, A_WRECK, A_SAUCER = 10, A_SBOOM, A_PBOOM, A_ABOOM, A_SHOT, A_BUNKER, A_CELL = 19, A_LETTER };
+enum { A_BOOM = 6, A_CANNON, A_WRECK, A_SAUCER = 10, A_SBOOM, A_SBOOM2, A_PBOOM, A_ABOOM, A_SHOT, A_BUNKER, A_CELL = 20, A_LETTER };
 /* the arcade's letters, 5 columns of 7 pixels (the lowest bit on top) */
 static const char glyphs[] = "0123456789ABCDEGHILMNOPRSTVY<>-*=?";
 static const uint8_t font[][5] = {
@@ -132,7 +133,7 @@ typedef struct {
 static shot_t as[3];
 static int next[3]; /* where the plunger and squiggly shots are in cols[] */
 /* the saucer: where, which way, the frames until the next one; hit: its burst, then its points */
-static int ux, udx, u_wait, u_hit;
+static int ux, udx, u_wait, u_hit, u_pts;
 
 /* ------------------------------------------------------------ the picture */
 /* a picture at x, y (the arcade's): lit, wiped, or only looked at; whether it met anything lit */
@@ -193,9 +194,9 @@ static void screen(void) { /* a clean picture: the scores and the credits */
 
 /* the invaders' shots, 3 pixels by 8 (the top row in the high bits) in four pictures: the rolling
    one twists, the plunger's bar slides down it, the squiggly one wriggles */
-static const uint32_t shot_art[3][4] = {{0x593593, 0xC9AC9A, 0x4D64D6, 0x6B26B2},
-                                        {0x5D2492, 0x497492, 0x4925D2, 0x492497},
-                                        {0x88A88A, 0x454454, 0x2A22A2, 0x511511}};
+static const uint32_t shot_art[3][4] = {{0x492490, 0x4B3598, 0x492490, 0x793C90},
+                                        {0x4925C0, 0x497480, 0x4BA480, 0xE92480},
+                                        {0x511510, 0x88A888, 0x454450, 0x2A22A0}};
 static const uint16_t *shot_pic(int k, int f) {
   for (int r = 0; r < 8; r++) pic[r] = (uint16_t)((shot_art[k][f] >> (21 - 3 * r) & 7) << 13);
   return pic;
@@ -211,7 +212,6 @@ static const uint16_t *look(int i) { return art[i / 22 * 2 + (st[i] >> 1)]; }
 /* ------------------------------------------------------------ the screen */
 static const char *const items[2][2] = {{T("Resume"), T("Quit game")}, {T("No"), T("Yes")}};
 static void overlay(void) {
-  gfx_fill_alpha(0, 0, SCREEN_W, SCREEN_H, 0, 150);
   gfx_rrect(70, 60, 180, 120, 8, 0, 256);
   gfx_rrect_outline(70, 60, 180, 120, 8, 2, WHITE, 256);
   gfx_text_center(&np_font_title, 160, 92, ov == OV_PAUSE ? T("Paused") : T("Quit game?"), WHITE, 256);
@@ -229,11 +229,11 @@ static void scene(void *ctx) {
     int py = y + OFF;
     color_t c = py >= TOPY && py < 64 ? RED : py >= 184 ? GREEN : WHITE, *o = gfx_buf + (y - gfx_y0) * SCREEN_W + X0;
     for (int x = 0; x < 224; x++)
-      if (vram[y][x >> 3] << (x & 7) & 0x80) o[x] = py >= LY && x >= 136 ? WHITE : c;
+      if (vram[y][x >> 3] << (x & 7) & 0x80) o[x] = py >= LY && (x < 16 || x >= 134) ? WHITE : c;
   }
-  if (state == S_TITLE && typed >= TYPED) { /* the keys, and the prompt blinking */
+  if (state == S_TITLE && typed >= TYPED) { /* the keys */
+    gfx_text_center(&np_font_body, 160, 204, T("Press OK to play"), WHITE, 256);
     gfx_text_center(&np_font_small, 160, 222, T("Left Right: move    OK, EXE, Up: fire    Back: pause"), GREEN, 256);
-    if (!(frames / 32 & 1)) gfx_text_center(&np_font_body, 160, 204, T("Press OK to play"), WHITE, 256);
   }
   if (ov) overlay();
 }
@@ -291,9 +291,9 @@ static void shoot(void) {
     add(10 * (i / 22 + 1));
     return;
   } else if (y >= TOPY && udx && !u_hit && y < UY + 8) { /* the saucer */
-    u_hit = 120;
-    wipe(ux, UY), put(A_SBOOM, ux, UY);
-    add(10 * ufo[shots % 15]);
+    u_hit = 120, u_pts = 10 * ufo[shots % 15];
+    wipe(ux, UY), put(A_SBOOM, ux - 4, UY), put(A_SBOOM2, ux + 12, UY);
+    add(u_pts);
     return;
   }
   pb_x = x - 3, pb_y = y < TOPY ? TOPY : y - 4, pb_t = 16;
@@ -371,9 +371,8 @@ static void alien_shot(int k) {
 static void saucer(void) {
   if (u_hit) { /* its burst, then its points, then nothing */
     if (--u_hit == 60) {
-      wipe(ux, UY);
-      int p = 10 * ufo[shots % 15];
-      digits(ux, UY, p, p < 100 ? 2 : 3);
+      wipe(ux - 4, UY), wipe(ux + 12, UY);
+      digits(ux, UY, u_pts, u_pts < 100 ? 2 : 3);
     }
     if (!u_hit) udx = 0, text(ux, UY, "   ", 3);
     return;
@@ -426,7 +425,6 @@ static void tick(uint32_t keys) {
       if (line == 3 && col == 1)
         for (int k = 0; k < 4; k++) put(k ? 2 * (3 - k) : A_SAUCER, 60, 128 + 16 * k);
     }
-    if (typed >= TYPED && frames % 32 == 0) dirty |= 0x0F000000u; /* the prompt blinks */
     return;
   }
   if (state == S_OVER) {
@@ -457,7 +455,7 @@ static void tick(uint32_t keys) {
   int dx = !!(keys & (KEY(eadk_key_right) | KEY(eadk_key_six))) - !!(keys & (KEY(eadk_key_left) | KEY(eadk_key_four)));
   if (dx && px + dx >= 16 && px + dx <= 192) wipe(px, PY), px += dx, put(A_CANNON, px, PY);
   int fire = !!(keys & (KEY(eadk_key_ok) | KEY(eadk_key_exe) | KEY(eadk_key_up) | KEY(eadk_key_eight)));
-  if (fire && !fire_held && !fire_y && !pb_t) fire_x = px + 7, fire_y = PY, shots++; /* a new press each shot */
+  if (fire && !fire_held && !fire_y && !pb_t) fire_x = px + 8, fire_y = PY, shots++; /* a new press each shot */
   fire_held = fire;
   shoot();
   if (boom_t) {

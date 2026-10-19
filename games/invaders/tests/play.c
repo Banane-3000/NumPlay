@@ -3,8 +3,8 @@
  *   play test           a bot plays for an hour of the game's time: it must clear a wave, hit the
  *                       saucer, lose a game and be back on the attract screen, with the rack, the
  *                       shots and the picture always agreeing
- *   play film DIR N S   N frames of the bot's game from frame S, a picture every 2 frames
- *                       (DIR/f_NNNN.ppm)
+ *   play film DIR N S [W]  N frames of the bot's game from frame S, a picture every 2 frames
+ *                       (DIR/f_NNNN.ppm); the bot waits W frames on the attract screen first
  */
 #define main si_main
 #include "../src/main.c"
@@ -48,13 +48,14 @@ static void step(uint32_t k) { /* a frame, as main() runs it: OK on the attract 
   tick(k);
 }
 
+static uint32_t wait_title;
 static uint32_t bot(void) {
   static int press;
   press ^= 1;
-  if (state != S_PLAY) return press && frames % 40 < 2 ? KEY(eadk_key_ok) : 0;
-  int c = px + 7, target = -1, best = 1 << 30;
+  if (state != S_PLAY) return press && frames % 40 < 2 && frames > wait_title ? KEY(eadk_key_ok) : 0;
+  int c = px + 8, target = -1, best = 1 << 30;
   for (int k = 0; k < 3; k++) /* a shot above the cannon and close: step aside */
-    if (as[k].on && as[k].y > PY - 70 && as[k].x + 4 > px - 2 && as[k].x < px + 18)
+    if (as[k].on && as[k].y > PY - 90 && as[k].x + 6 > px && as[k].x < px + 20)
       return as[k].x + 1 < c ? KEY(eadk_key_right) : KEY(eadk_key_left);
   if (udx && !u_hit) target = ux + 8 + udx * 44;
   for (int i = 0; target < 0 && i < 55; i++)
@@ -92,6 +93,7 @@ int main(int argc, char **argv) {
   title();
   if (argc >= 5 && !strcmp(argv[1], "film")) {
     int n = atoi(argv[3]), s = atoi(argv[4]);
+    wait_title = argc > 5 ? (uint32_t)atoi(argv[5]) : 0;
     for (int f = 0; f < s + n; f++) {
       step(bot());
       if (f >= s && (f - s) % 2 == 0) {
@@ -107,8 +109,8 @@ int main(int argc, char **argv) {
   int waves = 0, saucers = 0, overs = 0, titles = 0, was = state;
   for (int f = 0; f < 60 * 60 * 60; f++) {
     step(bot());
-    if (u_hit == 119) saucers++;
-    if (state == S_PLAY && wave > waves) waves = wave;
+    if (u_hit == 119 && ++saucers <= 3) printf("saucer hit at frame %d\n", f);
+    if (state == S_PLAY && wave > waves && (waves = wave) > 1) printf("wave %d at frame %d\n", wave, f);
     if (state != was) overs += state == S_OVER, titles += state == S_TITLE, was = state;
     if (f % 7 == 0) present();
     if (check()) return printf("frame %d\n", f), 1;
