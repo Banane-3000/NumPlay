@@ -26,7 +26,7 @@ Run to the door. The level has other plans. Unept's troll platformer on the NumW
 
 [Level Devil - NOT A Troll Game](https://store.steampowered.com/app/3242750/) is **Unept**'s game (2023). This version is written in C for the calculator, with no code of the original. Its rooms are the original's: [tools/fetch.py](tools/fetch.py) takes each room's tiles and actors (where each one is, its type, size and turn) from the game's web build and keeps them in [tools/scenes.json](tools/scenes.json), and [tools/rooms.py](tools/rooms.py) has what each room's script does (what each trigger sets off, after how long, how far and how fast), written out from the game's scene scripts. The runner's speeds and jump, the gravity of each room and the colours of each world are the game's; its pictures are drawn from the game's sprites.
 
-`make test` plays every room through on a computer with the keys in [tests/solutions.txt](tests/solutions.txt) (found by a search, `build/play search`), so each one can be cleared.
+`make test` plays the rooms through on a computer with the keys in [tests/solutions.txt](tests/solutions.txt) (found by a search, `build/play search`, or written by hand): 75 of the 80 are cleared that way. For the other five (Scale 4, Gravity 4, Movement 3 and Wraparound 4 and 5), no keys have been found yet, so it plays a walk that sets their traps off without the runner dying.
 
 It comes as its own app, `LevelDevil.nwa`, from the [latest release](https://github.com/Mason363/NumPlay/releases/latest).
 

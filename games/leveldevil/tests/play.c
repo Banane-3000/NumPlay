@@ -3,9 +3,14 @@
  *   play solve            every room played through with its keys (tests/solutions.txt): each must
  *                         reach the door without dying; a room with a walk instead ("L-R~ keys", where
  *                         no keys were found) must set off its traps without dying
- *   play search L R       finds keys through a room, for tests/solutions.txt (or, failing that, a walk:
- *                         the way that sets off the most of its traps)
- *   play trace L R [KEYS] where the runner goes
+ *   play search L R [D|-] [CHUNK] [X,Y] [KEYS]
+ *                         finds keys through a room, for tests/solutions.txt (or, failing that, a walk:
+ *                         the way that sets off the most of its traps): D to try the Down key too, the
+ *                         keys held CHUNK steps at a time, to the place X,Y (the runner's middle) instead
+ *                         of the door, after KEYS. PLAY_TRAPS=1 makes for the triggers first, then the
+ *                         door; PLAY_DEPTH the most chunks (900); PLAY_DEBUG=1 shows the search
+ *   play trace L R [KEYS] where the runner goes (every PLAY_EVERY steps; PLAY_EXACT=1 stops with the
+ *                         keys; PLAY_OBJS=1 lists the objects at the end)
  *   play rooms DIR        a picture of every room as it starts (DIR/room_LL_R.ppm)
  *   play film L R DIR [KEYS]  the room played with its keys (or these), a picture every 2 steps
  *                         (DIR/f_NNNN.ppm)
@@ -214,7 +219,6 @@ static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out,
       for (int m = 0; m < nmoves; m++) {
         give(cur + sz * c);
         for (int k = 0; k < chunk && !dead && !won; k++) step(moves[m]);
-        if (getenv("PLAY_DEBUG2") && d < 12) fprintf(stderr, "d%d m%d x%d%s\n", d, m, (int)(hx >> 8), dead ? " dead" : "");
         if (dead) continue;
         memcpy(npath + (size_t)nn * DEPTH, path + (size_t)c * DEPTH, (size_t)d);
         npath[(size_t)nn * DEPTH + d] = (uint8_t)m;
