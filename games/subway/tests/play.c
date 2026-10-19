@@ -1,7 +1,7 @@
 /* Plays Subway Surfers on a computer, with scripted keys, and saves frames.
  *
  *   play [--frames N] [--keys "10-40:right,50:ok,..."] [--shots 30,60|all] [--out DIR] [--saves DIR]
- *        [--seed N] [--bot FROM] [--coins N] [--keys-owned N] [--draw-every N] [--power FRAME:KIND] [--god] [--stats]
+ *        [--seed N] [--bot FROM] [--coins N] [--keys-owned N] [--draw-every N] [--power FRAME:KIND] [--god] [--when roof|tunnel] [--stats]
  *
  * Keys: left right up down ok back one three home. "a-b:key" holds the key from frame a to b, "a:key" for one
  * frame (frames are the game's steps, 60 a second). --bot plays the run from frame FROM on: it reads the
@@ -136,7 +136,8 @@ int main(int argc, char **argv) {
   const char *out = "build/shots", *shots = "", *saves = "build/host-saves";
   long coins = -1, keys_owned = -1;
   bool stats = false, god = false;
-  const char *raw = NULL;
+  const char *raw = NULL, *when = NULL;   /* when: a screenshot the first time the runner is on a roof, in a tunnel */
+  int when_n = 0;
   int raw_from = 0, raw_to = -1;   /* god: nothing hurts (long runs for tests) */
   for (int i = 1; i < argc; i++) {
     const char *a = argv[i], *v = i + 1 < argc ? argv[i + 1] : "";
@@ -152,6 +153,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(a, "--draw-every")) draw_every = atoi(v), i++;
     else if (!strcmp(a, "--stats")) stats = true;
     else if (!strcmp(a, "--god")) god = true;
+    else if (!strcmp(a, "--when")) when = v, i++;
     else if (!strcmp(a, "--raw")) {
       static char dir[256];
       snprintf(dir, sizeof dir, "%s", v);
@@ -210,6 +212,11 @@ int main(int argc, char **argv) {
     char list[8192];
     snprintf(list, sizeof list, ",%s,", shots);
     bool shot = all || strstr(list, name);
+    if (when && !pl.dead) {
+      bool now = (!strcmp(when, "roof") && pl.on_roof) || (!strcmp(when, "tunnel") && world_tunnel(pl.z - 2) && world_tunnel(pl.z + 30));
+      when_n = now ? when_n + 1 : 0;
+      if (when_n == 25) shot = true;
+    }
     bool keep = raw && f >= raw_from && f <= raw_to && f % 4 == 0;   /* (15 frames a second) */
     if (shot || keep || f % draw_every == 0) {
       app_draw();

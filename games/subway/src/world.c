@@ -307,7 +307,7 @@ void world_clear(float z0, float z1) {
   nobs = k;
   k = 0;
   for (int i = 0; i < nitems; i++)
-    if (items[i].z < z0 || items[i].z > z1 || items[i].y < 2.5f || items[i].y > 6) items[k++] = items[i];
+    if (items[i].z < z0 || items[i].z > z1 || items[i].y < 2.5f || items[i].y > 5.5f) items[k++] = items[i];
   nitems = k;
   if (gen_z < z1) gen_z = z1;
 }
@@ -315,7 +315,7 @@ void world_clear(float z0, float z1) {
 void world_sky_coins(float z0, float z1) {
   int lane = rn(3);
   for (float z = z0; z < z1 && nitems < MAXITEMS - 2; z += 1.6f) {
-    item(I_COIN, LANE_X(lane), 8.6f, z);
+    item(I_COIN, LANE_X(lane), world_tunnel(z) || world_tunnel(z + 12) ? 5.6f : 8.6f, z);
     if (rn(14) == 0) lane = lane == 1 ? rn(2) * 2 : 1;
   }
 }

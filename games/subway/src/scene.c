@@ -16,6 +16,7 @@
 #define SLEEPER_W 0.26f
 #define WALL_X 5.8f
 #define BLOCK 24.0f
+#define ROOF 8.5f                  /* a tunnel's ceiling */
 
 enum { G_NONE, G_SLEEPER, G_MIX, G_KINDS };
 static uint16_t ground[2][G_KINDS][GROUND_W * 2];   /* outside and in tunnels; levels one after the other */
@@ -426,23 +427,23 @@ static void open_block(int b, float z0, float dist) {
 static void tunnel_block(float z0, float dist) {
   bool first = !world_tunnel(z0 - 1);
   uint32_t wall = 0x5A5F66, dark = 0x3A3E44;
-  side(-WALL_X, 1, z0, z0 + BLOCK, 0, 7.2f, scene_lit(wall, z0), 0);
-  side(WALL_X, -1, z0, z0 + BLOCK, 0, 7.2f, scene_lit(wall, z0), 0);
-  ceiling(7.2f, -WALL_X, WALL_X, z0, z0 + BLOCK, scene_lit(dark, z0));
+  side(-WALL_X, 1, z0, z0 + BLOCK, 0, ROOF, scene_lit(wall, z0), 0);
+  side(WALL_X, -1, z0, z0 + BLOCK, 0, ROOF, scene_lit(wall, z0), 0);
+  ceiling(ROOF, -WALL_X, WALL_X, z0, z0 + BLOCK, scene_lit(dark, z0));
   if (dist < 120)
     for (int k = 0; k < 3; k++) {
       float lz = z0 + 4 + (float)k * 8;
-      side(-WALL_X + 0.01f, 1, lz, lz + 1.2f, 4.6f, 5.0f, 0xFFF2B0, P_DECAL | P_NOHAZE);
-      side(WALL_X - 0.01f, -1, lz, lz + 1.2f, 4.6f, 5.0f, 0xFFF2B0, P_DECAL | P_NOHAZE);
-      side(-WALL_X + 0.01f, 1, lz - 2, lz - 1.6f, 0, 7.2f, scene_lit(dark, z0), P_DECAL);
-      side(WALL_X - 0.01f, -1, lz - 2, lz - 1.6f, 0, 7.2f, scene_lit(dark, z0), P_DECAL);
+      side(-WALL_X + 0.01f, 1, lz, lz + 1.2f, 5.6f, 6.0f, 0xFFF2B0, P_DECAL | P_NOHAZE);
+      side(WALL_X - 0.01f, -1, lz, lz + 1.2f, 5.6f, 6.0f, 0xFFF2B0, P_DECAL | P_NOHAZE);
+      side(-WALL_X + 0.01f, 1, lz - 2, lz - 1.6f, 0, ROOF, scene_lit(dark, z0), P_DECAL);
+      side(WALL_X - 0.01f, -1, lz - 2, lz - 1.6f, 0, ROOF, scene_lit(dark, z0), P_DECAL);
     }
   if (first) {
     /* the way in: a big face of brick round the opening, with a frame */
     uint32_t brick = 0x9A5A44, trim = 0x6E6A64, line = 0x84493A, top = 0x6E3E30;
-    front(z0, -60, -WALL_X, 0, 13, brick, 0);
-    front(z0, WALL_X, 60, 0, 13, brick, 0);
-    front(z0, -WALL_X, WALL_X, 7.2f, 13, brick, 0);
+    front(z0, -60, -WALL_X, 0, 14, brick, 0);
+    front(z0, WALL_X, 60, 0, 14, brick, 0);
+    front(z0, -WALL_X, WALL_X, ROOF, 14, brick, 0);
     /* courses of brick, a darker band on top, a frame round the opening */
     if (dist < 110) {
       for (int i = 1; i <= 4; i++) {
@@ -450,16 +451,16 @@ static void tunnel_block(float z0, float dist) {
         front(z0, -60, -WALL_X - 0.9f, y, y + 0.12f, line, P_DECAL);
         front(z0, WALL_X + 0.9f, 60, y, y + 0.12f, line, P_DECAL);
       }
-      front(z0, -60, 60, 10.9f, 11.02f, line, P_DECAL);
+      front(z0, -60, 60, 12.0f, 12.12f, line, P_DECAL);
     }
-    front(z0, -60, 60, 11.6f, 13, top, P_DECAL);
-    front(z0, -WALL_X - 0.9f, -WALL_X, 0, 8.1f, trim, P_DECAL);
-    front(z0, WALL_X, WALL_X + 0.9f, 0, 8.1f, trim, P_DECAL);
-    front(z0, -WALL_X - 0.9f, WALL_X + 0.9f, 7.2f, 8.1f, trim, P_DECAL);
+    front(z0, -60, 60, 12.6f, 14, top, P_DECAL);
+    front(z0, -WALL_X - 0.9f, -WALL_X, 0, ROOF + 0.9f, trim, P_DECAL);
+    front(z0, WALL_X, WALL_X + 0.9f, 0, ROOF + 0.9f, trim, P_DECAL);
+    front(z0, -WALL_X - 0.9f, WALL_X + 0.9f, ROOF, ROOF + 0.9f, trim, P_DECAL);
     /* the subway's sign over it */
-    front(z0, -3.0f, 3.0f, 8.5f, 10.5f, 0x1A1A22, P_DECAL);
-    front(z0, -2.8f, 2.8f, 8.7f, 10.3f, 0x2E5FA8, P_DECAL2);
-    for (int i = 0; i < 3; i++) front(z0, -2.2f + 1.6f * (float)i, -1.2f + 1.6f * (float)i, 9.1f, 9.9f, 0xF4F4F4, P_DECAL3);
+    front(z0, -3.0f, 3.0f, 9.8f, 11.8f, 0x1A1A22, P_DECAL);
+    front(z0, -2.8f, 2.8f, 10.0f, 11.6f, 0x2E5FA8, P_DECAL2);
+    for (int i = 0; i < 3; i++) front(z0, -2.2f + 1.6f * (float)i, -1.2f + 1.6f * (float)i, 10.4f, 11.2f, 0xF4F4F4, P_DECAL3);
   }
 }
 

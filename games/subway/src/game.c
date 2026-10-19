@@ -12,6 +12,7 @@
 #define STAND_H 1.75f
 #define ROLL_H 0.85f
 #define FLY_Y 8.0f
+#define FLY_LOW 5.0f       /* (in a tunnel) */
 #define PW 0.32f           /* the runner's half width */
 
 Runner pl;
@@ -415,7 +416,7 @@ void run_step(uint32_t keys, uint32_t pressed) {
   /* up and down */
   bool super = pl.power[PW_SNEAKERS] > 0 || (pl.hover > 0 && pg.board == 1);
   if (pl.fly > 0) {
-    float target = pl.fly;
+    float target = world_tunnel(pl.z + 12) || world_tunnel(pl.z) ? FLY_LOW : pl.fly;
     pl.y += (target - pl.y) * 0.08f;
     pl.vy = 0;
     pl.state = ST_AIR;

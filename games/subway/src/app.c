@@ -165,6 +165,8 @@ static void shop_buy(void) {
 static void camera_follow(void) {
   float tx = pl.x * 0.75f, ty = CAM_Y + pl.ground * 0.85f + (pl.y - pl.ground) * 0.35f;
   if (pl.fly > 0) ty = CAM_Y + pl.y * 0.8f;
+  /* under a tunnel's ceiling */
+  if ((world_tunnel(pl.z - CAM_BACK) || world_tunnel(pl.z + 4)) && ty > 7.9f) ty = 7.9f;
   cam_x += (tx - cam_x) * 0.18f;
   cam_y += (ty - cam_y) * 0.12f;
 }
