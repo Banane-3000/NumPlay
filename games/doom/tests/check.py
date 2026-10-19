@@ -40,7 +40,7 @@ def run(args, saves=None, what=""):
         return None
     end = dict(zip(("time", "quit", "state", "episode", "map", "leveltime", "health", "kills"), map(int, m.groups())))
     end.update(zone_free=int(s.group(1)), columns=int(s.group(2)), overflows=int(s.group(3)), zone=int(s.group(4)),
-               files=files)
+               files=files, demos=[line.split(" ", 2)[2] for line in p.stdout.splitlines() if line.startswith("DEMOEND")])
     return end
 
 
@@ -50,11 +50,22 @@ def check(cond, what):
     print(("ok  " if cond else "FAIL"), what, flush=True)
 
 
-# the title, the credits and the three demos, which must play as they were recorded (they end in their
-# levels at the same moment as on a PC: the title loop comes back around)
-e = run(["--ms", "120000"], what="the demos")
+# the title, the credits and the three demos, which must play exactly as in Chocolate Doom 3.1.0 (vanilla Doom
+# 1.9): where each ends, the player there and both random number generators are Chocolate Doom's, tic for tic
+CHOCOLATE = [
+    "leveltime=5026 map=E1M5 x=87385351 y=84364146 z=5767168 angle=2514731840 health=0 armor=36 kills=61 items=7 "
+    "secrets=1 ammo=103,0,0,0 weapon=1 prnd=181 rnd=108",
+    "leveltime=3836 map=E1M3 x=-9362093 y=-84944896 z=3145728 angle=2688383391 health=0 armor=0 kills=41 items=14 "
+    "secrets=0 ammo=140,34,0,0 weapon=2 prnd=75 rnd=152",
+    "leveltime=2134 map=E1M7 x=-91417116 y=-164628508 z=7340032 angle=2593932736 health=0 armor=68 kills=20 items=9 "
+    "secrets=0 ammo=70,14,0,0 weapon=2 prnd=207 rnd=107",
+]
+e = run(["--ms", "340000"], what="the demos")
 if e:
-    check(e["quit"] == 1, "the title and the demos play for two minutes and quit on Home")
+    check(e["quit"] == 1, "the title loop plays its three demos and quits on Home")
+    for n, want in enumerate(CHOCOLATE):
+        got = e["demos"][n] if n < len(e["demos"]) else "(did not end)"
+        check(got == want, f"demo {n + 1} ends as in Chocolate Doom: {got}")
 
 # every level, walking, turning and firing on Ultra-Violence
 walk = ",".join(f"{t}-{t + 900}:up,{t + 900}-{t + 1300}:right,{t + 300}-{t + 400}:ok" for t in range(1500, 20000, 1500))

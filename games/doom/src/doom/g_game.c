@@ -1182,6 +1182,9 @@ void G_Ticker (void)
 	D_PageTicker (); 
 	break;
     }        
+#if HOST
+    { extern void host_tic(void); host_tic(); }
+#endif
 } 
  
  
@@ -2637,6 +2640,9 @@ boolean G_CheckDemoStatus (void)
 #endif
     }
 
+#if HOST
+    if (demoplayback) { extern void host_demo_end(void); host_demo_end(); }
+#endif
     if (demoplayback)
     { 
         W_ReleaseLumpName(defdemoname);

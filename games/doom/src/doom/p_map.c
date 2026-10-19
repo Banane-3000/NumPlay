@@ -570,9 +570,19 @@ boolean P_ThingHeightClip (mobj_t* thing)
         mobj_full(thing)->floorz = tmfloorz;
         mobj_full(thing)->ceilingz = tmceilingz;
     } else {
+#if NUMWORKS
+        // a static thing keeps no floorz of its own: in vanilla it is always on its floor, which is the
+        // highest floor under its whole radius (tmfloorz), not just its sector's (an item next to a rising
+        // floor rides up with it, and can be picked up from it)
+        if (!(thing->flags & MF_FLOAT))
+        {
+            thing->z = tmfloorz;
+            return tmceilingz - tmfloorz >= mobj_height(thing);
+        }
+#endif
         onfloor = !(thing->flags & MF_FLOAT);
     }
-	
+
     if (onfloor)
     {
 	// walking monsters rise and fall with the floor

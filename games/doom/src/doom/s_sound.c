@@ -462,9 +462,6 @@ void S_StartSound(xy_positioned_t *origin, int sfx_id)
     int cnum;
     int volume;
 
-#if NO_USE_SOUND
-    return; // (the calculator has no speaker)
-#endif
     volume = snd_SfxVolume;
 
     // check for bogus sound #
@@ -530,6 +527,11 @@ void S_StartSound(xy_positioned_t *origin, int sfx_id)
         pitch += 16 - (M_Random()&31);
     }
     pitch = Clamp(pitch);
+#if NO_USE_SOUND
+    // the calculator has no speaker; but the sound got this far, as in vanilla, so M_Random is called the
+    // same times (the status bar's face looks the same way)
+    return;
+#endif
 
     // kill old sound
     S_StopSound(origin);

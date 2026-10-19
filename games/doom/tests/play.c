@@ -16,6 +16,7 @@
 #include "doomtype.h"
 #include "z_zone.h"
 #include "doom/doomstat.h"
+#include "doom/p_local.h"
 #include "nw.h"
 #include "plat.h"
 
@@ -85,8 +86,52 @@ void host_tick(void) {
     host_keys = k;
 }
 
+/* checks against Chocolate Doom: the state at the end of each demo, the player at each tic (--trace), and
+ * the frame of the level in Doom's own pixels at given tics of the level (--dump-tics, DIR/frame_<tic>.raw) */
+extern int rndindex, prndindex;
+static FILE *trace_file;
+static int dump_tics[256], ndump;
+static uint8_t dumped[256];
+extern uint8_t host_doom_screen[SCREENWIDTH * SCREENHEIGHT];
+
+void host_demo_end(void) {
+    player_t *p = &players[consoleplayer];
+    mobj_t *mo = p->mo;
+    printf("DEMOEND gametic=%d leveltime=%d map=E%dM%d x=%d y=%d z=%d angle=%u health=%d armor=%d kills=%d items=%d "
+           "secrets=%d ammo=%d,%d,%d,%d weapon=%d prnd=%d rnd=%d\n",
+           gametic, leveltime, gameepisode, gamemap, mo ? mo->xy.x : 0, mo ? mo->xy.y : 0, mo ? mo->z : 0,
+           mo ? (unsigned)mobj_full(mo)->angle : 0u, p->health, p->armorpoints, p->killcount, p->itemcount,
+           p->secretcount, p->ammo[0], p->ammo[1], p->ammo[2], p->ammo[3], (int)p->readyweapon, prndindex, rndindex);
+    fflush(stdout);
+}
+
+void host_tic(void) {
+    if (!trace_file || gamestate != GS_LEVEL || !players[consoleplayer].mo) return;
+    player_t *p = &players[consoleplayer];
+    mobj_t *mo = p->mo;
+    fprintf(trace_file, "T %d %d %d %d %d %u %d %d %d %d %d %d %d %d\n", gametic, leveltime, mo->xy.x, mo->xy.y, mo->z,
+            (unsigned)mobj_full(mo)->angle, p->health, prndindex, p->ammo[0], p->ammo[1], p->ammo[2], p->ammo[3],
+            p->armorpoints, p->killcount);
+}
+
+static void dump_frame(void) {
+    if (gamestate != GS_LEVEL) return;
+    for (int i = 0; i < ndump; i++) {
+        if (dumped[i] || dump_tics[i] != leveltime) continue;
+        dumped[i] = 1;
+        char path[512];
+        snprintf(path, sizeof path, "%s/frame_%d.raw", out, leveltime);
+        FILE *f = fopen(path, "wb");
+        if (f) {
+            fwrite(host_doom_screen, 1, sizeof host_doom_screen, f);
+            fclose(f);
+        }
+    }
+}
+
 /* each frame drawn: 1/35 s goes by, and screenshots are taken */
 void host_frame(void) {
+    dump_frame();
     while (next_shot < nshots && host_time >= shots[next_shot]) shot(shots[next_shot++]);
     if (every && host_time >= next_every) {
         shot(host_time);
@@ -115,6 +160,13 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--saves") && i + 1 < argc) saves = argv[++i];
         else if (!strcmp(argv[i], "--stats")) stats = 1;
         else if (!strcmp(argv[i], "--warp") && i + 1 < argc) nw_warp = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--trace") && i + 1 < argc) trace_file = fopen(argv[++i], "w");
+        else if (!strcmp(argv[i], "--dump-tics") && i + 1 < argc) {
+            for (char *s = argv[++i]; *s && ndump < 256;) {
+                dump_tics[ndump++] = (int)strtol(s, &s, 10);
+                if (*s == ',') s++;
+            }
+        }
         else if (!strcmp(argv[i], "--exit-at") && i + 1 < argc) {
             for (char *s = argv[++i]; *s && nexits < 16;) {
                 exit_at[nexits++] = (uint32_t)strtoul(s, &s, 10);

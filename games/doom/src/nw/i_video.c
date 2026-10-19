@@ -104,7 +104,14 @@ void nw_band_begin(uint8_t *band, int y0, int y1) {
 }
 
 /* the band to the screen: Doom's rows 5k to 5k + 4 are the screen's 6k to 6k + 5 (the last one twice) */
+#ifdef HOST
+uint8_t host_doom_screen[SCREENWIDTH * SCREENHEIGHT]; /* (tests: the frame in Doom's own pixels) */
+#endif
+
 void nw_band_end(void) {
+#ifdef HOST
+    memcpy(host_doom_screen + nw_band_y0 * SCREENWIDTH, nw_band, (nw_band_y1 - nw_band_y0) * SCREENWIDTH);
+#endif
     uint16_t lines[SCREENWIDTH * 6];
     for (int y = nw_band_y0; y < nw_band_y1; y += 5) {
         const uint8_t *src = nw_band + (y - nw_band_y0) * SCREENWIDTH;
