@@ -187,6 +187,28 @@ static void help_draw(void) {
   if ((t / 25) % 2 == 0) gfx_text(FONT_M, 160, 224, sv.seen_help ? "OK" : "OK: DRIVE!", rgb565(0xFFE14A), C_BLACK, 1);
 }
 
+/* a text in lines of at most width pixels, centred on cx, 13 pixels apart */
+static void wrapped(int cx, int y, int width, const char *s) {
+  char line[96];
+  while (*s) {
+    int n = 0, fit = 0;
+    for (;;) {
+      while (s[n] && s[n] != ' ') n++;
+      if (n >= (int)sizeof line) break;
+      memcpy(line, s, (size_t)n), line[n] = 0;
+      if (gfx_text_width(FONT_S, line) > width && fit) break;
+      fit = n;
+      if (!s[n]) break;
+      n++;
+    }
+    memcpy(line, s, (size_t)fit), line[fit] = 0;
+    gfx_text(FONT_S, cx, y, line, rgb565(0xC8CDD4), C_BLACK, 1);
+    s += fit;
+    while (*s == ' ') s++;
+    y += 13;
+  }
+}
+
 static void level_bar(int x, int y, int w, int level, int max) {
   gfx_rrect(x, y, w, 7, 3, C_BLACK, 200);
   int f = (w - 2) * (level - 1) / (max - 1 > 0 ? max - 1 : 1);
@@ -206,7 +228,7 @@ static void garage_draw(void) {
   char tx[48];
   if (!owned) {
     price_tag(160, 176, v->price, sv.coins >= v->price);
-    gfx_text(FONT_S, 160, 196, v->about, rgb565(0xC8CDD4), C_BLACK, 1);
+    wrapped(160, 196, 296, v->about);
     gfx_text(FONT_S, 160, 230, sv.coins >= v->price ? "OK: buy" : "Not enough coins yet", flash ? rgb565(0xFF5A4A) : C_WHITE,
              C_BLACK, 1);
     return;
@@ -226,8 +248,9 @@ static void garage_draw(void) {
     else {
       char n[20];
       format_number(n, upgrade_cost(shown, u, lv + 1));
-      gfx_text(FONT_S, x + 37, y + 68, n, sv.coins >= upgrade_cost(shown, u, lv + 1) ? rgb565(0xFFE14A) : rgb565(0xFF7A6A),
-               C_BLACK, 1);
+      bool can = sv.coins >= upgrade_cost(shown, u, lv + 1);
+      gfx_text(FONT_S, x + 37, y + 68, n, on ? (can ? C_BLACK : rgb565(0xA01010)) : can ? rgb565(0xFFE14A) : rgb565(0xFF7A6A),
+               on ? rgb565(0xF2B531) : C_BLACK, 1);
     }
   }
   if (row == 0) gfx_text(FONT_S, 160, 236 - 74, "", C_WHITE, C_BLACK, 1);

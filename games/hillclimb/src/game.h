@@ -66,7 +66,7 @@ typedef struct {
 extern Run run;
 
 extern int g_mode;
-extern bool g_running;
+extern bool g_running, g_nohud;
 extern uint32_t g_frame;
 
 void game_init(void);

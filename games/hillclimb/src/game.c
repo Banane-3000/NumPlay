@@ -6,6 +6,7 @@
 
 int g_mode;
 bool g_running = true;
+bool g_nohud;   /* (pictures for the README: the road without the dashboard) */
 uint32_t g_frame;
 static uint32_t held;
 static int pause_sel, pause_ask, end_t;
@@ -140,7 +141,7 @@ void game_frame(uint32_t keys) {
 void game_draw(void) {
   gfx_begin();
   switch (g_mode) {
-    case MODE_RUN: run_draw(true); break;
+    case MODE_RUN: run_draw(!g_nohud); break;
     case MODE_PAUSE: pause_draw(); break;
     case MODE_END: end_draw(); break;
     default: menu_draw(); break;

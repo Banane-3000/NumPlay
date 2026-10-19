@@ -22,7 +22,7 @@ void host_save_dir(const char *d);
 typedef struct { int a, b; uint32_t k; } Hold;
 static Hold holds[4096];
 static int nholds;
-static int shots[4096], nshots, every;
+static int shots[4096], nshots, every, every_from, every_to = 1 << 30;
 
 static uint32_t key_of(const char *s) {
   static const char *const names[] = {"left", "right", "up", "down", "ok", "back", "home"};
@@ -45,6 +45,7 @@ static void parse_keys(const char *spec) {
 }
 
 /* a driver: gas, and in the air the pedals to land level with the ground ahead */
+static bool flipper;   /* --flips: backflips in the air when there is time */
 static uint32_t autopilot(void) {
   const Car *c = &run.car;
   if (run.over) return 0;
@@ -54,7 +55,12 @@ static uint32_t autopilot(void) {
   while (a < -3.14159f) a += 6.28318f;
   float d = a - slope;
   if (car_airborne(c)) {
-    if (d > 0.25f) return K_LEFT;
+    if (flipper && run.air_rot < 2.4f) {   /* time left in the air against the turn still to make */
+      float h = c->ch.y - stage_floor(c->ch.x), g = stage->gravity, vy = c->ch.vy;
+      float left = (vy + sqrtf(vy * vy + 2 * g * (h > 0 ? h : 0))) / g, w = c->ch.w > 2 ? c->ch.w : 2;
+      if (left > (6.28f - run.air_rot) / w + 0.25f) return K_RIGHT;
+    }
+    if (d > 0.25f || (c->ch.w > 1.2f && d > -0.9f)) return K_LEFT;
     if (d < -0.35f) return K_RIGHT;
     return 0;
   }
@@ -76,6 +82,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--shots")) {
       const char *s = argv[++i];
       if (!strncmp(s, "every:", 6)) every = atoi(s + 6);
+      else if (strchr(s, '-') && strchr(s, ':')) sscanf(s, "%d-%d:%d", &every_from, &every_to, &every);
       else
         for (const char *p = s; *p;) {
           shots[nshots++] = atoi(p);
@@ -88,6 +95,8 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--levels")) sscanf(argv[++i], "%d,%d,%d,%d", &levels[0], &levels[1], &levels[2], &levels[3]);
     else if (!strcmp(argv[i], "--coins")) coins = atol(argv[++i]);
     else if (!strcmp(argv[i], "--auto")) autop = true;
+    else if (!strcmp(argv[i], "--nohud")) g_nohud = true;
+    else if (!strcmp(argv[i], "--flips")) autop = flipper = true;
     else if (!strcmp(argv[i], "--trace")) trace = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--things")) {   /* where the first bridges, tunnels and fuel cans of a stage are */
       stage_set(atoi(argv[++i]));
@@ -136,7 +145,7 @@ int main(int argc, char **argv) {
     host_keys = k;
     game_frame(k);
     host_time += 17;
-    bool shot = every ? f % every == 0 : false;
+    bool shot = every && f >= every_from && f <= every_to ? (f - every_from) % every == 0 : false;
     for (int i = 0; i < nshots; i++) shot |= shots[i] == f;
     if (shot) {
       game_draw();

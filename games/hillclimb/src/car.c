@@ -53,7 +53,7 @@ void car_init(Car *c, int veh, const uint8_t lv[4], float x) {
       case UP_SUSPENSION: sus = f; break;
       case UP_TIRES: case UP_TRACKS: tir = f; break;
       case UP_AWD: awd = f; break;
-      case UP_AIR: air *= 1 + 2.4f * f; break;
+      case UP_AIR: air *= 1 + 1.5f * f; break;
       case UP_DOWNFORCE: down = d->downforce * f; break;
     }
   }
@@ -374,7 +374,7 @@ void car_step(Car *c, float gas, float brake, bool fuel) {
     }
     if (air && !c->touch && !c->head_hit) c->ch.w += c->air * (gas - brake) * c->ch.ii * DT;
     /* a little air: nothing spins forever */
-    c->ch.w *= 1 - 0.15f * DT;
+    c->ch.w *= 1 - 0.3f * DT;
     find_contacts(c);
     prepare_contacts();
     prepare_joints(c, gas, brake, fuel);
