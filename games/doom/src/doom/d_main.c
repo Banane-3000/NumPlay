@@ -136,7 +136,9 @@ boolean         main_loop_started = false;
 #if !USE_MEMMAP_ONLY
 char		wadfile[1024];		// primary wad file
 #endif
+#if !NUMWORKS
 char		mapdir[1024];           // directory of development maps
+#endif
 
 isb_int8_t      show_endoom = 1;
 #if !DOOM_TINY

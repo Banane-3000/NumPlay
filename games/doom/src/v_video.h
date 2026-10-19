@@ -86,9 +86,8 @@ void V_EndPatchList(void);
 void V_DrawPatchList(const vpatchlist_t *patchlist);
 extern uint8_t vpatch_clip_top, vpatch_clip_bottom;
 #if NUMWORKS
-// the band of rows being drawn (nw/i_video.c), and patches drawn into it as they come
+// the band being drawn (nw/nw_render.h), and patches drawn into it as they come
 extern uint8_t *nw_band;
-extern int nw_band_y0, nw_band_y1;
 extern boolean nw_direct;
 void V_DrawPatchListBand(const vpatchlist_t *patchlist);
 #endif

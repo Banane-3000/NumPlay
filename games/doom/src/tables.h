@@ -73,7 +73,14 @@ static inline fixed_t finesine(int x) {
 // Effective size is 4096.
 extern const fixed_t _finetangent[FINEANGLES/2];
 
+#if NUMWORKS
+// (vanilla's finesine comes right after finetangent: a wall seen exactly side on reads its first entry)
+static inline fixed_t finetangent(int x) {
+    return x < FINEANGLES / 2 ? _finetangent[x] / (1 << (16 - FRACBITS)) : finesine(x - FINEANGLES / 2);
+}
+#else
 #define finetangent(x) (_finetangent[x] / (1 << (16 - FRACBITS)))
+#endif
 
 // Gamma correction tables.
 #if !DOOM_TINY

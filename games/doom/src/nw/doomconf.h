@@ -99,9 +99,13 @@
 /* the renderer (pd_render.cpp), with room for this many runs of pixels in the view each frame */
 #define PICODOOM_RENDER_NEWHOPE 1
 #define MERGE_DISTSCALE0_INTO_VIEWCOSSINANGLE 1
-#ifndef NW_RENDER_COL_MAX
-#define NW_RENDER_COL_MAX 2700
+// the frame's records (nw/nw_render.h): columns of wall and sky, and of floor and ceiling (a frame with more
+// is drawn band by band)
+#ifndef NW_POOL_KB
+#define NW_POOL_KB 32
 #endif
+#define NW_RENDER_COL_MAX 4096
+#define NW_PLANE_MAX 16384
 
 /* the calculator: no speaker, one core, files in Epsilon's file system */
 #define NO_USE_SOUND 1

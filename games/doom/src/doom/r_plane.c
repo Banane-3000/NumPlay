@@ -79,8 +79,10 @@ floor_ceiling_clip_t ceilingclip[SCREENWIDTH];
 // spanstart holds the start of a plane span
 // initialized to 0 at start
 //
+#if !NO_VISPLANE_GUTS
 int spanstart[SCREENHEIGHT];
 int spanstop[SCREENHEIGHT];
+#endif
 
 //
 // texture mapping
@@ -366,7 +368,6 @@ R_FindPlane
 #if NUMWORKS
 // vanilla's visplanes split as in R_CheckPlane, without their top and bottom arrays: the columns each one
 // has (set as the walls mark them, r_segs.c), and how far it goes
-uint8_t nw_plane_used[MAXVISPLANES][SCREENWIDTH / 8];
 int16_t nw_plane_minx[MAXVISPLANES], nw_plane_maxx[MAXVISPLANES];
 
 void nw_plane_new(int pl, int minx, int maxx) {
@@ -474,6 +475,7 @@ R_CheckPlane
 }
 #endif
 
+#if !NO_VISPLANE_GUTS
 //
 // R_MakeSpans
 //
@@ -502,6 +504,7 @@ R_MakeSpans
         b2--;
     }
 }
+#endif
 
 
 #if !NO_VISPLANE_GUTS

@@ -88,7 +88,7 @@ R_CheckPlane
   int		stop );
 #endif
 #if NUMWORKS
-extern uint8_t nw_plane_used[MAXVISPLANES][SCREENWIDTH / 8];
+extern uint8_t (*const nw_plane_used)[SCREENWIDTH / 8]; /* (in room shared with the bands: pd_render.cpp) */
 void nw_plane_new(int pl, int minx, int maxx);
 // (a wall marks a column of a floor or ceiling as vanilla sets its top and bottom)
 #define NW_PLANE_MARK(pl, x) (nw_plane_used[(pl) - visplanes][(x) >> 3] |= (uint8_t)(1u << ((x) & 7)))

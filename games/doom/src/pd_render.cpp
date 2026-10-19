@@ -168,21 +168,21 @@ int pd_flag;
 fixed_t pd_scale;
 
 #if NUMWORKS
-// The calculator has no room for a frame buffer: the screen is drawn a band of NW_BAND_H rows at a time
-// (nw/i_video.c pushes each to the display), from column lists made once per frame. render_frame_buffer
-// points where row 0 would be, so that the rows of the band are where the drawing code expects them.
+// The calculator has no room for a frame buffer: the screen is drawn a band of NW_BAND_W columns at a time
+// (nw/nw_render.h, nw/nw_back.inc), and nw/i_video.c sends each band to the display. render_frame_buffer
+// points where column 0 would be (NW_STRIDE bytes a row), so that the band's columns are where the drawing
+// code expects them.
+#include "nw/nw_render.h"
 extern "C" {
 extern uint8_t *nw_band;
-extern int nw_band_y0, nw_band_y1;
 extern boolean nw_direct;
-void nw_band_begin(uint8_t *band, int y0, int y1);
-void nw_band_end(int x0, int x1);
+void nw_band_begin(uint8_t *band, int x0, int x1);
 void nw_frame_begin(void);
 void nw_frame_end(void);
 void V_DrawPatchListBand(const vpatchlist_t *patchlist);
 }
-#define NW_BAND_H 40
-static uint8_t __aligned(4) visplane_bit[(SCREENWIDTH / 8) * NW_BAND_H];
+#define NW_STRIDE NW_BAND_W
+static uint8_t __aligned(4) visplane_bit[WHD_PATCH_MAX_WIDTH]; // (RP2040 Doom's, hardly used here)
 #else
 extern uint8_t __aligned(4) frame_buffer[2][SCREENWIDTH * MAIN_VIEWHEIGHT];
 static uint8_t __aligned(4) visplane_bit[(SCREENWIDTH / 8) * MAIN_VIEWHEIGHT]; // this is also used for patch decoding in core1 (since flats are done by then)
@@ -257,26 +257,18 @@ int pd_dump_frame = -1;
 // <24,0x000000> <8, visplane_idx>
 
 #if NUMWORKS
-// vanilla's column at its full precision: the whole texturemid, and the iscale (always below 2^24: vanilla
-// keeps scales between 1/256 and 64), as R_DrawColumn uses them
+// a column of wall, sky, sprite or masked wall as vanilla's R_DrawColumn draws it, at its full precision: its
+// rows, iscale (always below 2^24: vanilla keeps scales between 1/256 and 64), colormap, the column of its
+// texture or patch (its framedrawable), its x, and its texturemid to the last bit: tm << 14, and the fraction
+// of a quarter of a unit (map heights are in quarters) it shares with the others (nw_tm_low) when lowsel is set
 struct pd_column {
-    int16_t next;
-    uint8_t yl;
-    uint8_t yh;
-
-    uint32_t scale: 24;
-    uint32_t colormap_index: 6;
-    uint32_t spare: 2;
-
-    int32_t texturemid; // TEXTUREMID_PLANE for floors and ceilings
-
-    uint8_t col;
-    uint8_t fd_num;
-    union {
-        uint8_t plane;
-        uint8_t x;
-    };
-    uint8_t spare2;
+    uint8_t yl, yh, col, fd_num;
+    uint32_t scale : 24;
+    uint32_t colormap_index : 6;
+    uint32_t lowsel : 1;
+    uint32_t x_hi : 1;
+    int32_t tm : 24;
+    uint32_t x_lo : 8;
 };
 #else
 struct pd_column {
@@ -307,6 +299,16 @@ struct pd_column {
 #define TO_COL_LO(c) ((c)&0x1f)
 #define FROM_COL_HI_LO(h,l) (((h)<<5)|(l))
 
+#if NUMWORKS
+// a run of floor or ceiling in the band: x_start to x_end of a span of vanilla's that starts at x_true (in a
+// band on the left, if it goes on from there)
+struct flat_run {
+    int16_t next;
+    int16_t x_start, x_end, x_true;
+    uint8_t y;
+};
+static_assert(sizeof(pd_column) == 12, "");
+#else
 struct __packed __aligned(2) flat_run {
     int16_t next;
     uint32_t x_start: 12;
@@ -315,9 +317,6 @@ struct __packed __aligned(2) flat_run {
 };
 
 static_assert(sizeof(flat_run) == 6, "");
-#if NUMWORKS
-static_assert(sizeof(pd_column) == 16, "");
-#else
 static_assert(sizeof(pd_column) == 12, "");
 static_assert(sizeof(pd_column) == sizeof(flat_run) * 2, ""); // we pack two into the space of the other
 #endif
@@ -377,30 +376,59 @@ const char *type_name(pd_column column) {
 }
 
 #if NUMWORKS
+// the frame's records (nw/nw_back.inc): columns of wall and sky from the start, then those of the sprite or
+// masked wall being drawn; columns of floor and ceiling from the end; flats decoded in what is left between
 #define RENDER_COL_MAX NW_RENDER_COL_MAX
-#elif !PICO_RP2350
+#define NW_SCRATCH 128
+#define NW_POOL (NW_POOL_KB * 1024)
+static uint8_t __aligned(4) list_buffer[NW_POOL];
+#else
+#if !PICO_RP2350
 #define RENDER_COL_MAX 3600
 #else
 #define RENDER_COL_MAX 7200
 #endif
 static uint8_t __aligned(4) list_buffer[RENDER_COL_MAX * sizeof(pd_column) + 64*64]; // extra 64*64 is for one flat
+#endif
 static uint8_t *last_list_buffer_limit = list_buffer + sizeof(list_buffer);
 //static_assert(text_font_cpy > list_buffer, "");
 #define MAX_CACHED_FLATS (sizeof(list_buffer) / 4096)
+#if NUMWORKS
+// the flats kept: in 4 KB blocks of list_buffer (and one more place when no whole block is free); the slots
+// are this frame's free blocks
+static uint8_t cached_flat_picnum[MAX_CACHED_FLATS + 1];
+static uint8_t *nw_slot_addr[MAX_CACHED_FLATS + 1];
+static uint8_t nw_slot_block[MAX_CACHED_FLATS + 1];
+#define FLAT_SLOT_ADDR(s) (nw_slot_addr[s])
+#define FLAT_SLOT_PIC(s) (cached_flat_picnum[nw_slot_block[s]])
+#else
 static uint8_t cached_flat_picnum[MAX_CACHED_FLATS];
+#define FLAT_SLOT_ADDR(s) (cached_flat0 - (s) * 4096)
+#define FLAT_SLOT_PIC(s) (cached_flat_picnum[s])
+#endif
 static uint8_t cached_flat_slots;
 static uint8_t *cached_flat0;
 static int16_t render_col_count;
 #define render_cols ((pd_column *)list_buffer)
 #if NUMWORKS
 // the band's runs of floor and ceiling, taken in turn (when they run out, what is gathered is drawn)
-#define NW_FLAT_RUNS 512
-static flat_run nw_flat_runs[NW_FLAT_RUNS];
+#define NW_FLAT_RUNS 256
+#define NW_BATCH 512
+// what only the BSP pass uses (the columns each visplane has, r_plane.c) and what only the bands use
+// (nw/nw_back.inc) share their room
+static union {
+    uint8_t plane_used[MAXVISPLANES][SCREENWIDTH / 8];
+    struct {
+        int16_t bidx[NW_BATCH], blink[NW_BATCH];
+        flat_run flat_runs[NW_FLAT_RUNS];
+        uint8_t vbit[(NW_BAND_W / 8) * MAIN_VIEWHEIGHT];
+        int8_t edge_plane[SCREENWIDTH / NW_BAND_W - 1][MAIN_VIEWHEIGHT];
+        int16_t edge_start[SCREENWIDTH / NW_BAND_W - 1][MAIN_VIEWHEIGHT];
+    } band;
+} nw_shared;
+extern "C" { uint8_t (*const nw_plane_used)[SCREENWIDTH / 8] = nw_shared.plane_used; }
 static int16_t nw_flat_run_count;
-#define flat_runs nw_flat_runs
-// for each column of a band, the next of its framedrawable (the column lists' own links stay as they are,
-// for the next band); on the stack of pd_end_frame, which has room to spare where the zone has none
-static int16_t *fd_next;
+#define flat_runs (nw_shared.band.flat_runs)
 #else
 #define flat_runs ((flat_run *)list_buffer)
 #endif
@@ -412,6 +440,7 @@ static int16_t render_col_free;
 extern "C" { uint32_t nw_col_overflows, nw_col_peak, nw_col_frames[40]; }
 static bool nw_overflowed; // (this frame's columns did not all find room: it is drawn in strips)
 #endif
+#if !NUMWORKS
 static int16_t alloc_pd_column(int x) {
     if (render_col_free < 0) {
 #if NUMWORKS
@@ -844,7 +873,20 @@ static void push_down_x(int x, int new_index) {
 #endif
 }
 
+#endif
+#if HOST
+extern "C" { uint32_t nw_cnt_walls, nw_cnt_planes, nw_cnt_masked, nw_max_walls, nw_max_planes, nw_max_masked; }
+#endif
+#if NUMWORKS
+static void nw_pass_start();
+#endif
 void pd_begin_frame() {
+#if HOST
+    if (nw_cnt_walls > nw_max_walls) nw_max_walls = nw_cnt_walls;
+    if (nw_cnt_planes > nw_max_planes) nw_max_planes = nw_cnt_planes;
+    if (nw_cnt_masked > nw_max_masked) nw_max_masked = nw_cnt_masked;
+    nw_cnt_walls = nw_cnt_planes = nw_cnt_masked = 0;
+#endif
     DEBUG_PINS_SET(start_end, 1);
     if (gamestate == GS_LEVEL) {
 //        render_frame_index ^= 1;
@@ -863,6 +905,9 @@ void pd_begin_frame() {
 #if DUMP_SORTING
     if (0) printf("BEGIN FRAME\n");
 #endif
+#if NUMWORKS
+    nw_pass_start();
+#else
     // new
     memset(column_heads, -1, sizeof(column_heads));
     memset(visplane_bit, 0, sizeof(visplane_bit)); // todo could do this with dma
@@ -871,10 +916,8 @@ void pd_begin_frame() {
     not_fully_covered_yh = MAIN_VIEWHEIGHT - 1;
     render_col_count = 0;
     render_col_free = -1;
-    pd_frame++;
-#if NUMWORKS
-    nw_overflowed = false;
 #endif
+    pd_frame++;
     DEBUG_PINS_CLR(start_end, 1);
 }
 
@@ -933,11 +976,15 @@ void pd_add_span() {
 }
 
 #define FORCE_ISCALE 1
-#if HOST
-extern "C" { int nw_dbg_x = -1; }
-#endif
+
 
 void pd_add_column(pd_column_type type) {
+#if NUMWORKS
+#if HOST
+    nw_cnt_walls++;
+#endif
+    nw_record_wall();
+#else
     // --- VALIDATION AND CLAMPING
     int count = dc_yh - dc_yl;
     if (count < 0)
@@ -966,19 +1013,7 @@ void pd_add_column(pd_column_type type) {
     // --------
 
 #if HOST
-    {
-        // (tests: DUMPCOL="x tic" prints the columns at x in that tic's frame, as the reference does)
-        static int dump_x = -2, dump_tic;
-        if (dump_x == -2) {
-            const char *e = getenv("DUMPCOL");
-            dump_x = e ? atoi(e) : -1;
-            dump_tic = e && strchr(e, ' ') ? atoi(strchr(e, ' ')) : -1;
-        }
-        nw_dbg_x = leveltime == dump_tic && gamestate == GS_LEVEL ? dump_x : -1;
-        if (dc_x == dump_x && leveltime == dump_tic && gamestate == GS_LEVEL)
-            printf("COL x=%d yl=%d yh=%d iscale=%d texturemid=%d (pd_scale %d type %d)\n", dc_x, dc_yl, dc_yh,
-                   (int)iscale, dc_texturemid, pd_scale, (int)type);
-    }
+    nw_cnt_walls++;
 #endif
     // todo it would be nice to defer filling this in in case we are entirely clipped - let's get some stats on that
     int rc_index = alloc_pd_column(dc_x);
@@ -1061,9 +1096,14 @@ void pd_add_column(pd_column_type type) {
         p.second = std::max(p.second, frac);
     }
 #endif
+#endif
 }
 
 void pd_add_masked_columns(uint8_t *ys, int seg_count) {
+#if !NUMWORKS
+#if HOST
+    nw_cnt_masked += seg_count;
+#endif
     // --- VALIDATION AND CLAMPING
     fixed_t iscale;
 #if FORCE_ISCALE
@@ -1191,6 +1231,7 @@ void pd_add_masked_columns(uint8_t *ys, int seg_count) {
         p.second = std::max(p.second, frac);
     }
 #endif
+#endif
 }
 
 static int lightlevel(int visplane) {
@@ -1203,6 +1244,12 @@ static int lightlevel(int visplane) {
 }
 
 void pd_add_plane_column(int x, int yl, int yh, fixed_t scale, int floor, int fd_num) {
+#if HOST
+    nw_cnt_planes++;
+#endif
+#if NUMWORKS
+    nw_record_plane(x, yl, yh, fd_num); // (fd_num is the visplane)
+#else
     int rc_index = alloc_pd_column(x);
     if (rc_index < 0) return;
     int iscale = hw_divider_u32_quotient_inlined(0xffffffff, pd_scale);
@@ -1221,8 +1268,10 @@ void pd_add_plane_column(int x, int yl, int yh, fixed_t scale, int floor, int fd
 #endif
     render_cols[rc_index].next = -1;
     push_down_x(x, rc_index);
+#endif
 }
 
+#if !NUMWORKS
 static void reclip_fuzz_columns() {
     // re-add the fuzzy columns so they are correctly clipped
     for (int x = 0; x < SCREENWIDTH; x++) {
@@ -1316,6 +1365,7 @@ static void clip_columns(int yl, int yh) {
     }
 }
 
+#endif
 static int translate_picnum(int picnum) {
     if (whd_flattospecial[picnum] != 0xff) {
         picnum = whd_specialtoflat[whd_flattranslation[whd_flattospecial[picnum]]];
@@ -1324,7 +1374,7 @@ static int translate_picnum(int picnum) {
 }
 
 static uint8_t *decode_flat_to_slot(int cache_slot, int picnum) {
-    uint8_t *flat_data = cached_flat0 - cache_slot * 4096;
+    uint8_t *flat_data = FLAT_SLOT_ADDR(cache_slot);
     DEBUG_PINS_SET(flat_decode, 1);
     uint16_t *pos = flat_decoder_buf;
     uint pos_size = count_of(flat_decoder_buf);
@@ -1374,7 +1424,7 @@ static uint8_t *decode_flat_to_slot(int cache_slot, int picnum) {
         }
     }
 //                    printf("Pass %d, caching slot %d pic (%d)\n", pass, cache_slot, picnum);
-    cached_flat_picnum[cache_slot] = picnum;
+    FLAT_SLOT_PIC(cache_slot) = picnum;
     DEBUG_PINS_CLR(flat_decode, 1);
     return flat_data;
 }
@@ -1416,9 +1466,9 @@ static void flush_visplanes(int8_t *flatnum_next, int numvisplanes) {
                 uint8_t *flat_data = nullptr;
                 if (!pass) {
                     for(cache_slot=0;cache_slot<cached_flat_slots;cache_slot++) {
-                        if (cached_flat_picnum[cache_slot] == picnum) {
+                        if (FLAT_SLOT_PIC(cache_slot) == picnum) {
 //                            printf("Pass %d, using slot %d pic (%d)\n", pass, cache_slot, picnum);
-                            flat_data = cached_flat0 - cache_slot * 4096;
+                            flat_data = FLAT_SLOT_ADDR(cache_slot);
                         }
                     }
                     if (!flat_data) continue;
@@ -1463,7 +1513,7 @@ static void flush_visplanes(int8_t *flatnum_next, int numvisplanes) {
                     // stored a column at a time, flat[x * 64 + y])
                     fixed_t distance = 0;
                     for (int16_t fr = visplane_heads[vp]; fr != -1; fr = flat_runs[fr].next) {
-                        int y = flat_runs[fr].y, x1 = flat_runs[fr].x_start;
+                        int y = flat_runs[fr].y, x1 = flat_runs[fr].x_true;
                         if (y != last_y) {
                             distance = FixedMul(rel_height, yslope[y]);
                             xstep = FixedMul(distance, basexscale);
@@ -1488,8 +1538,9 @@ static void flush_visplanes(int8_t *flatnum_next, int numvisplanes) {
                         yfrac = -viewy - FixedMul(finesine(angle), length);
                         uint32_t position = ((xfrac << 10) & 0xffff0000) | ((yfrac >> 6) & 0x0000ffff);
                         uint32_t step = ((xstep << 10) & 0xffff0000) | ((ystep >> 6) & 0x0000ffff);
-                        uint8_t *p = render_frame_buffer + y * SCREENWIDTH + x1;
-                        uint8_t *p_end = render_frame_buffer + y * SCREENWIDTH + flat_runs[fr].x_end;
+                        position += step * (uint32_t) (flat_runs[fr].x_start - x1);
+                        uint8_t *p = render_frame_buffer + y * NW_STRIDE + flat_runs[fr].x_start;
+                        uint8_t *p_end = render_frame_buffer + y * NW_STRIDE + flat_runs[fr].x_end;
                         while (p < p_end) {
                             *p++ = colormap[flat_data[((position >> 20) & 0x0fc0) | ((position >> 10) & 63)]];
                             position += step;
@@ -1598,6 +1649,7 @@ static void flush_visplanes(int8_t *flatnum_next, int numvisplanes) {
     }
 }
 
+#if !NUMWORKS
 static void draw_visplanes(int16_t fr_list) {
     if (!lastvisplane) return;
     int numvisplanes = lastvisplane - visplanes;
@@ -1703,6 +1755,7 @@ static void draw_visplanes(int16_t fr_list) {
     }
 }
 
+#endif
 static inline void col_render(uint8_t *dest, uint count, const uint8_t *source, fixed_t frac, fixed_t fracstep, const lighttable_t* colormap) {
 #if 0 && PICO_ON_DEVICE
     col_interp->accum[0] = xs->col.frac;
@@ -1747,22 +1800,33 @@ static inline void col_render(uint8_t *dest, uint count, const uint8_t *source, 
 #else
     do {
         *dest = colormap[source[(frac >> FRACBITS) & 127]];
-        dest += SCREENWIDTH;
+        dest += NW_STRIDE;
         frac += fracstep;
     } while (count--);
 #endif
 }
 
 #if NUMWORKS
-// a column's link in the band's lists, and its rows in the band
-#define COL_LINK(i) (fd_next[(i) & 0x7fffu])
-static int nw_view_y0, nw_view_y1; // the rows of the 3D view in the band
-#define COL_YL(c) ((c).yl < nw_view_y0 ? nw_view_y0 : (c).yl)
-#define COL_YH(c) ((c).yh >= nw_view_y1 ? nw_view_y1 - 1 : (c).yh)
+// the columns being drawn: entries 0 to n of nw_bidx (the records' indices), each linked to the next of its
+// framedrawable (and then of its texture column) by nw_blink
+#define nw_bidx (nw_shared.band.bidx)
+#define nw_blink (nw_shared.band.blink)
+static int32_t nw_tm_low;
+#define COL_REC(i) (render_cols[nw_bidx[i]])
+#define COL_X(c) ((c).x_lo | ((c).x_hi << 8))
+#define COL_LINK(i) (nw_blink[i])
+#define COL_YL(c) ((c).yl)
+#define COL_YH(c) ((c).yh)
+#define COL_PTR(c, i) (render_frame_buffer + __mul_instruction(COL_YL(c), NW_STRIDE) + COL_X(c))
+#define COL_TEXTUREMID(c) ((int32_t)((uint32_t)(int32_t)(c).tm << 14) + ((c).lowsel ? nw_tm_low : 0))
 #else
+#define COL_REC(i) (render_cols[(i) & 0x7fffu])
 #define COL_LINK(i) (render_cols[(i) & 0x7fffu].next)
 #define COL_YL(c) ((c).yl)
 #define COL_YH(c) ((c).yh)
+#define COL_PTR(c, i) (render_frame_buffer + __mul_instruction(COL_YL(c), SCREENWIDTH) + c.x + ((i & 0x8000u) >> 7u))
+#define COL_TEXTUREMID(c) UP_SHIFT((c).texturemid)
+#define NW_STRIDE SCREENWIDTH
 #endif
 
 struct patch_hash_entry_header {
@@ -1972,9 +2036,9 @@ const uint8_t *get_patch_decoder_table(uint patch_num, const uint16_t *decoder, 
 static void draw_patch_columns(int patch_num, int patch_head, int16_t *col_heads, uint8_t *col_height, int translated) {
     // fix up the sky scale (we had to preserve the original scale for column clipping/sorting)
     //  note: we do this as a rare edge case here, rather than checking in loops
-    if (patch_num == skytexture_patch) {
+    if (!NUMWORKS && patch_num == skytexture_patch) { // (the calculator keeps the sky's own iscale)
         for(int j=patch_head; j != -1;) {
-            auto &c = render_cols[j & 0x7fffu];
+            auto &c = COL_REC(j);
             c.scale = 0x10000;
             j = COL_LINK(j);
         }
@@ -1990,7 +2054,7 @@ static void draw_patch_columns(int patch_num, int patch_head, int16_t *col_heads
     assert(i != -1);
     int h = patch_height(pdi.patch);
     do {
-        auto &c = render_cols[i & 0x7fffu];
+        auto &c = COL_REC(i);
         #if NUMWORKS
         uint col = c.col;
 #else
@@ -2005,7 +2069,7 @@ static void draw_patch_columns(int patch_num, int patch_head, int16_t *col_heads
         // we actually don't know how many pixels are in the column without looking at the run data, however
         // we can see the last pixel we've used, which means, as a bonus, we won't decode all of a column when we only
         // use the top
-        fixed_t texturemid = UP_SHIFT(c.texturemid);
+        fixed_t texturemid = COL_TEXTUREMID(c);
         fixed_t fracstep = DDA_UP_SHIFT(c.scale);
         if (!fracstep) fracstep = 0x10000;
         fixed_t start = (texturemid + (COL_YL(c) - centery) * fracstep) >> FRACBITS;
@@ -2082,31 +2146,29 @@ static void draw_patch_columns(int patch_num, int patch_head, int16_t *col_heads
 
             if (fixedcolormap || patch_num == skytexture_patch) {
 #if NO_USE_DC_COLORMAP
-                should_be_const lighttable_t *dc_colormap = colormaps + 256 * (patch_num == 1203 ? 0 : fixedcolormap);
+                should_be_const lighttable_t *dc_colormap = colormaps + 256 * (patch_num == skytexture_patch ? 0 : fixedcolormap);
 #endif
                 do {
-                    const auto &c = render_cols[i & 0x7fffu];
-                    uint8_t *p = render_frame_buffer + __mul_instruction(COL_YL(c), SCREENWIDTH) + c.x +
-                                 ((i & 0x8000u) >> 7u);
-                    assert (c.texturemid != TEXTUREMID_PLANE);
+                    const auto &c = COL_REC(i);
+                    uint8_t *p = COL_PTR(c, i);
+                    
                     fixed_t fracstep = DDA_UP_SHIFT(c.scale);
                     if (!fracstep) fracstep = 0x10000;
-                    fixed_t frac = UP_SHIFT(c.texturemid) + (COL_YL(c) - centery) * fracstep;
+                    fixed_t frac = COL_TEXTUREMID(c) + (COL_YL(c) - centery) * fracstep;
                     col_render(p, COL_YH(c) - COL_YL(c), pixels, frac, fracstep, dc_colormap);
                     i = COL_LINK(i);
                 } while (i != -1);
             } else {
                 do {
-                    const auto &c = render_cols[i & 0x7fffu];
-                    uint8_t *p = render_frame_buffer + __mul_instruction(COL_YL(c), SCREENWIDTH) + c.x +
-                                 ((i & 0x8000u) >> 7u);
+                    const auto &c = COL_REC(i);
+                    uint8_t *p = COL_PTR(c, i);
 #if NO_USE_DC_COLORMAP
                     should_be_const lighttable_t *dc_colormap = colormaps + 256 * c.colormap_index;
 #endif
-                    assert (c.texturemid != TEXTUREMID_PLANE);
+                    
                     fixed_t fracstep = DDA_UP_SHIFT(c.scale);
                     if (!fracstep) fracstep = 0x10000;
-                    fixed_t frac = UP_SHIFT(c.texturemid) + (COL_YL(c) - centery) * fracstep;
+                    fixed_t frac = COL_TEXTUREMID(c) + (COL_YL(c) - centery) * fracstep;
 //                    if (get_core_num()) {
 //                        for(int yy=COL_YL(c);yy<=COL_YH(c);yy++) {
 //                            p[0] = 0xfc;
@@ -2137,7 +2199,7 @@ static void draw_composite_columns(int texture_num, int tex_head) {
     int max = 0;
 //    printf("DCC tex=%d\n", texture_num);
     do {
-        auto &c = render_cols[i & 0x7fffu];
+        auto &c = COL_REC(i);
         #if NUMWORKS
         uint col = c.col;
 #else
@@ -2152,7 +2214,7 @@ static void draw_composite_columns(int texture_num, int tex_head) {
         // we actaully don't know how many pixels are in the column without looking at the run data, however
         // we can see the last pixel we've used, which means, as a bonus, we won't decode all of a column when we only
         // use the top
-        fixed_t texturemid = UP_SHIFT(c.texturemid);
+        fixed_t texturemid = COL_TEXTUREMID(c);
         fixed_t fracstep = DDA_UP_SHIFT(c.scale);
         if (!fracstep) fracstep = 0x10000;
         fixed_t start = (texturemid + (COL_YL(c) - centery) * fracstep) >> FRACBITS;
@@ -2399,28 +2461,26 @@ static void draw_composite_columns(int texture_num, int tex_head) {
                             should_be_const lighttable_t *dc_colormap = colormaps + 256 * fixedcolormap;
     #endif
                             do {
-                                const auto &c = render_cols[i & 0x7fffu];
-                                uint8_t *p = render_frame_buffer + __mul_instruction(COL_YL(c), SCREENWIDTH) + c.x +
-                                             ((i & 0x8000u) >> 7u);
-                                assert (c.texturemid != TEXTUREMID_PLANE);
+                                const auto &c = COL_REC(i);
+                                uint8_t *p = COL_PTR(c, i);
+                                
                                 fixed_t fracstep = DDA_UP_SHIFT(c.scale);
                                 if (!fracstep) fracstep = 0x10000;
-                                fixed_t frac = UP_SHIFT(c.texturemid) + (COL_YL(c) - centery) * fracstep;
+                                fixed_t frac = COL_TEXTUREMID(c) + (COL_YL(c) - centery) * fracstep;
                                 col_render(p, COL_YH(c) - COL_YL(c), pixels, frac, fracstep, dc_colormap);
                                 i = COL_LINK(i);
                             } while (i != -1);
                         } else {
                             do {
-                                const auto &c = render_cols[i & 0x7fffu];
-                                uint8_t *p = render_frame_buffer + __mul_instruction(COL_YL(c), SCREENWIDTH) + c.x +
-                                             ((i & 0x8000u) >> 7u);
+                                const auto &c = COL_REC(i);
+                                uint8_t *p = COL_PTR(c, i);
     #if NO_USE_DC_COLORMAP
                                 should_be_const lighttable_t *dc_colormap = colormaps + 256 * c.colormap_index;
     #endif
-                                assert (c.texturemid != TEXTUREMID_PLANE);
+                                
                                 fixed_t fracstep = DDA_UP_SHIFT(c.scale);
                                 if (!fracstep) fracstep = 0x10000;
-                                fixed_t frac = UP_SHIFT(c.texturemid) + (COL_YL(c) - centery) * fracstep;
+                                fixed_t frac = COL_TEXTUREMID(c) + (COL_YL(c) - centery) * fracstep;
                                 col_render(p, COL_YH(c) - COL_YL(c), pixels, frac, fracstep, dc_colormap);
                                 i = COL_LINK(i);
                             } while (i != -1);
@@ -2428,15 +2488,15 @@ static void draw_composite_columns(int texture_num, int tex_head) {
     #else
                         uint8_t color = texture_num & 0xff;
                     do {
-                        const auto &c = render_cols[i & 0x7fffu];
+                        const auto &c = COL_REC(i);
                         uint8_t *p =
-                                render_frame_buffer + __mul_instruction(COL_YL(c), SCREENWIDTH) + c.x + ((i & 0x8000u) >> 7u);
-                        assert (c.texturemid != TEXTUREMID_PLANE);
+                                COL_PTR(c, i);
+                        
     #if NO_USE_DC_COLORMAP
                         should_be_const lighttable_t *dc_colormap = colormaps + 256 * c.colormap_index;
     #endif
                         uint8_t lcolor = dc_colormap[color];
-    //                    fixed_t texturemid = UP_SHIFT(c.texturemid);
+    //                    fixed_t texturemid = COL_TEXTUREMID(c);
     //                    fixed_t fracstep = DDA_UP_SHIFT(c.scale);
     //                    fixed_t start = (texturemid + (COL_YL(c) - centery) * fracstep) >> FRACBITS;
     //                    fixed_t end = (texturemid + (COL_YH(c) - centery) * fracstep) >> FRACBITS;
@@ -2478,6 +2538,7 @@ static void draw_composite_columns(int texture_num, int tex_head) {
     }
 }
 
+#if !NUMWORKS
 // noinline as it uses alloca
 static void __noinline draw_regular_columns(int core) {
     if (!core) {
@@ -2630,6 +2691,7 @@ static void draw_splash(int patch_num, int top, int bottom, uint8_t *dest, int s
     }
 }
 
+#endif
 extern "C" int M_Random();
 
 #if !NUMWORKS
@@ -3141,44 +3203,6 @@ void pd_end_frame(int wipe_start) {
 
 #else // NUMWORKS
 
-// ---------------------------------------------------------------------------------------------------------------
-// The calculator: the frame drawn a band at a time
-
-// regular columns keep their x (its low 8 bits; the links say if it is 256 or more)
-static void nw_freeze_columns() {
-    for (int x = 0; x < SCREENWIDTH; x++) {
-        for (int16_t i = column_heads[x]; i >= 0; i = render_cols[i].next) {
-            auto &c = render_cols[i];
-            if (c.texturemid != TEXTUREMID_PLANE) {
-                c.x = (uint8_t)x;
-            }
-        }
-    }
-}
-
-// floors and ceilings: their visplane numbers on the band's pixels, with a bit set for each
-static void nw_mark_planes(int y0, int y1) {
-    memset(visplane_bit, 0, (SCREENWIDTH / 8) * (y1 - y0));
-    for (int x = 0; x < SCREENWIDTH; x++) {
-        uint8_t *screen_col = render_frame_buffer + x;
-        uint8_t *vb_col = visplane_bit + x / 8;
-        uint8_t bit = 1u << (x & 7u);
-        for (int16_t i = column_heads[x]; i >= 0; i = render_cols[i].next) {
-            const auto &c = render_cols[i];
-            if (c.texturemid != TEXTUREMID_PLANE || c.yh < y0 || c.yl >= y1) continue;
-            int yl = c.yl < y0 ? y0 : c.yl, yh = c.yh >= y1 ? y1 - 1 : c.yh;
-            uint8_t *p = screen_col + yl * SCREENWIDTH;
-            uint8_t *vp = vb_col + (yl - y0) * (SCREENWIDTH / 8);
-            for (int y = yl; y <= yh; y++) {
-                *p = c.plane;
-                p += SCREENWIDTH;
-                *vp |= bit;
-                vp += SCREENWIDTH / 8;
-            }
-        }
-    }
-}
-
 // draws the runs gathered so far, a flat at a time (each flat's visplanes are linked again first, as
 // flush_visplanes takes them off as it goes)
 static void nw_flush_planes(int numvisplanes) {
@@ -3194,311 +3218,7 @@ static void nw_flush_planes(int numvisplanes) {
     nw_flat_run_count = 0;
 }
 
-// the marked pixels of the band as runs of the same visplane, row by row, then drawn
-static void nw_draw_planes(int y0, int y1) {
-    if (!lastvisplane) return;
-    int numvisplanes = lastvisplane - visplanes;
-    memset(visplane_heads, -1, numvisplanes * sizeof(visplane_heads[0]));
-    nw_flat_run_count = 0;
-    for (int y = y0; y < y1; y++) {
-        uint8_t *vp = &visplane_bit[(y - y0) * (SCREENWIDTH / 8)];
-        uint8_t *vp_end = vp + SCREENWIDTH / 8;
-        uint bit = 0;
-        uint8_t *p0 = &render_frame_buffer[y * SCREENWIDTH];
-        uint8_t *p = p0;
-        while (vp != vp_end) {
-            if (!*vp) {
-                vp++;
-                p += 8 - bit;
-                bit = 0;
-                continue;
-            }
-            while (!(*vp & (1u << bit))) bit++, p++;
-            uint x_start = p - p0;
-            uint8_t plane_num = *p;
-            assert(plane_num < numvisplanes);
-            while (bit < 8 && *p == plane_num && *vp & (1u << bit)) {
-                p++;
-                bit++;
-            }
-            if (bit == 8) {
-                vp++;
-                bit = 0;
-                if (vp < vp_end && *vp == 255 && *p == plane_num) {
-                    uint fourx = plane_num * 0x1010101;
-                    while (vp < vp_end && *vp == 255 && ((uint32_t *) p)[0] == fourx && ((uint32_t *) p)[1] == fourx) {
-                        p += 8;
-                        vp++;
-                    }
-                }
-                if (vp < vp_end) {
-                    while (bit < 8 && *p == plane_num && *vp & (1u << bit)) {
-                        p++;
-                        bit++;
-                    }
-                    *vp &= ~((1u << bit) - 1);
-                }
-            } else {
-                *vp &= ~((1u << bit) - 1);
-            }
-            if (nw_flat_run_count == NW_FLAT_RUNS) nw_flush_planes(numvisplanes);
-            int16_t fr_pos = nw_flat_run_count++;
-            auto &fr = flat_runs[fr_pos];
-            fr.x_start = x_start;
-            fr.x_end = p - p0;
-            fr.y = y;
-            fr.next = visplane_heads[plane_num];
-            visplane_heads[plane_num] = fr_pos;
-        }
-    }
-    if (nw_flat_run_count) nw_flush_planes(numvisplanes);
-}
-
-// walls and things in the band, by framedrawable: each texture or patch decoded once for the band
-static void __noinline nw_draw_columns(int y0, int y1) {
-    memset(fd_heads, -1, sizeof(fd_heads));
-    for (int x = 0; x < SCREENWIDTH; x++) {
-        for (int16_t i = column_heads[x]; i >= 0; i = render_cols[i].next) {
-            const auto &c = render_cols[i];
-            if (c.texturemid == TEXTUREMID_PLANE || c.yh < y0 || c.yl >= y1) continue;
-            fd_next[i] = fd_heads[c.fd_num];
-            fd_heads[c.fd_num] = (x >> 8) ? (int16_t) (i | 0x8000) : i;
-        }
-    }
-    for (int fd_num = 0; fd_num < num_framedrawables; fd_num++) {
-        int i = fd_heads[fd_num];
-        if (i == -1) continue;
-        int id = framedrawables[fd_num].real_id;
-        if (id > 0) {
-            draw_composite_columns(id, i);
-        } else if (id < 0) {
-            int16_t heads[WHD_PATCH_MAX_WIDTH];
-            uint8_t heights[WHD_PATCH_MAX_WIDTH];
-            draw_patch_columns(-id, i, heads, heights, 0);
-        }
-    }
-}
-
-// the shimmer of things that are invisible: the pixels around them, darker (a neighbour outside the band
-// is the pixel itself)
-static void nw_draw_fuzz(int y0, int y1) {
-    const lighttable_t *darken_map = xcolormaps + 256 * 6;
-    for (int x = 0; x < SCREENWIDTH; x++) {
-        for (int16_t i = fuzzy_column_heads[x]; i >= 0; i = render_cols[i].next) {
-            const auto &c = render_cols[i];
-            int yl = c.yl, yh = c.yh;
-            if (yl == 0) yl = 1;
-            if (yh >= MAIN_VIEWHEIGHT - 1) yh = MAIN_VIEWHEIGHT - 2;
-            if (yl < y0) yl = y0;
-            if (yh >= y1) yh = y1 - 1;
-            uint8_t *p = render_frame_buffer + x + yl * SCREENWIDTH;
-            for (int y = yl; y <= yh; y++, p += SCREENWIDTH) {
-                int off = fuzzoffset[fuzzpos];
-                if ((off < 0 && y == y0) || (off > 0 && y == y1 - 1)) off = 0;
-                *p = darken_map[p[off]];
-                if (++fuzzpos == FUZZTABLE) fuzzpos = 0;
-            }
-        }
-    }
-}
-
-// columns left without a place to go (more than RENDER_COL_MAX): black
-static void nw_clear_uncovered(int y0, int y1) {
-    if (not_fully_covered_yl > y0) y0 = not_fully_covered_yl;
-    if (not_fully_covered_yh + 1 < y1) y1 = not_fully_covered_yh + 1;
-    for (uint i = 0; i < count_of(not_fully_covered_cols); i++) {
-        if (!not_fully_covered_cols[i]) continue;
-        for (int j = 0; j < 32; j++) {
-            if (!(not_fully_covered_cols[i] & (1u << j))) continue;
-            int x = (i * 32 + j) * 4;
-            if (x >= SCREENWIDTH) break;
-            for (int y = y0; y < y1; y++) memset(render_frame_buffer + y * SCREENWIDTH + x, 0, 4);
-        }
-    }
-}
-
-// a flat tiled over the band (behind the ending's text, and darker behind the keys page)
-static void nw_tile_flat(const char *name, int y0, int y1, int light = 0) {
-    int flatnum = W_GetNumForName(name) - firstflat;
-    uint8_t *flat_data = nullptr;
-    for (int slot = 0; slot < cached_flat_slots; slot++) {
-        if (cached_flat_picnum[slot] == flatnum) flat_data = cached_flat0 - slot * 4096;
-    }
-    if (!flat_data) flat_data = decode_flat_to_slot(0, flatnum);
-    uint8_t *dest = nw_band;
-    for (int y = y0; y < y1; y++) {
-        const uint8_t *src = flat_data + (y & 63);
-        for (int i = 0; i < SCREENWIDTH; i++) *dest++ = src[(i & 63) * 64];
-    }
-    if (light) {
-        const lighttable_t *map = xcolormaps + 256 * light;
-        for (uint8_t *p = nw_band; p < dest; p++) *p = map[*p];
-    }
-}
-
-// a full screen picture behind everything when there is no level to see
-static void nw_draw_background(int y0, int y1) {
-    int patch_num = 0;
-    if (inhelpscreens) {
-        switch (inhelpscreens & 127) {
-            case 1: patch_num = W_GetNumForName("HELP1"); break;
-            case 2: patch_num = W_GetNumForName("HELP2"); break;
-            case 3: patch_num = W_GetNumForName("HELP"); break;
-            case 4: nw_tile_flat("FLOOR4_8", y0, y1, 22); return;
-        }
-    } else {
-        switch (gamestate) {
-            case GS_INTERMISSION:
-                patch_num = wi_background_patch_num;
-                break;
-            case GS_DEMOSCREEN:
-                patch_num = W_GetNumForName(pagename);
-                break;
-            case GS_FINALE:
-                if (finalestage == F_STAGE_TEXT) {
-                    nw_tile_flat(finaleflat, y0, y1); // (the tiled flat behind the text)
-                    return;
-                } else if (finalestage == F_STAGE_ARTSCREEN) {
-                    const char *ln = F_ArtScreenLumpName();
-                    if (ln) patch_num = W_GetNumForName(ln);
-                }
-                break;
-            default:
-                break;
-        }
-    }
-    if (patch_num) {
-        draw_splash(patch_num, y0, y1, nw_band);
-    } else {
-        memset(nw_band, 0, (y1 - y0) * SCREENWIDTH);
-    }
-}
-
-// the status bar, messages, the menu... over the picture
-static vpatchlist_t nw_patches[400];
-
-// flats are cached in what the columns leave of list_buffer
-static void nw_columns_ready(bool view) {
-    uint8_t *list_buffer_limit = list_buffer + count_of(list_buffer);
-    if (cached_flat0 != list_buffer_limit - 4096) {
-        cached_flat0 = list_buffer_limit - 4096;
-        memset(cached_flat_picnum, -1, sizeof(cached_flat_picnum));
-    }
-    last_list_buffer_limit = list_buffer_limit;
-    int new_cache_flat_slots = 1 + ((int)(cached_flat0 - list_buffer - render_col_count * sizeof(pd_column))) / 4096;
-    if (new_cache_flat_slots < 1) new_cache_flat_slots = 1;
-    for (int i = cached_flat_slots; i < new_cache_flat_slots; i++) cached_flat_picnum[i] = 0xff;
-    cached_flat_slots = new_cache_flat_slots;
-    if (view) {
-        nw_col_frames[render_col_count / 250 < 40 ? render_col_count / 250 : 39]++;
-        nw_freeze_columns();
-    }
-}
-
-// the frame, band by band, for the columns x0 to x1 of the screen
-static void nw_draw_bands(uint8_t *band, bool view, bool showing_help, int x0, int x1) {
-    for (int y0 = 0; y0 < SCREENHEIGHT; y0 += NW_BAND_H) {
-        int y1 = y0 + NW_BAND_H;
-        nw_band_begin(band, y0, y1);
-        render_frame_buffer = nw_band - y0 * SCREENWIDTH;
-        I_VideoBuffer = render_frame_buffer;
-        if (view) {
-            if (y0 < MAIN_VIEWHEIGHT) {
-                nw_view_y0 = y0;
-                nw_view_y1 = y1 < MAIN_VIEWHEIGHT ? y1 : MAIN_VIEWHEIGHT;
-                if (automapactive) {
-                    nw_direct = true;
-                    AM_Drawer();
-                    nw_direct = false;
-                } else {
-                    nw_mark_planes(nw_view_y0, nw_view_y1);
-                    nw_draw_planes(nw_view_y0, nw_view_y1);
-                    nw_draw_columns(nw_view_y0, nw_view_y1);
-                    nw_draw_fuzz(nw_view_y0, nw_view_y1);
-                    nw_clear_uncovered(nw_view_y0, nw_view_y1);
-                }
-            }
-            if (y1 > MAIN_VIEWHEIGHT) {
-                int from = y0 > MAIN_VIEWHEIGHT ? y0 : MAIN_VIEWHEIGHT;
-                memset(render_frame_buffer + from * SCREENWIDTH, 0, (y1 - from) * SCREENWIDTH);
-            }
-        } else {
-            nw_draw_background(y0, y1);
-            if (gamestate == GS_FINALE && finalestage == F_STAGE_TEXT && !showing_help) {
-                nw_direct = true;
-                F_TextWrite();
-                nw_direct = false;
-            } else if ((inhelpscreens & 127) == 4) {
-                nw_direct = true;
-                M_DrawKeys();
-                nw_direct = false;
-            }
-        }
-        V_DrawPatchListBand(nw_patches);
-        nw_band_end(x0, x1);
-    }
-}
-
-// a frame with more pieces than list_buffer has room for is drawn again in strips, each with the view
-// rendered for its columns only, halved again as long as needed (vanilla has no such limit, and neither do we)
-extern "C" { int nw_strip_x0 = 0, nw_strip_x1 = SCREENWIDTH; uint32_t nw_strips; }
-static void nw_draw_strip(uint8_t *band, int x0, int x1) {
-    pd_begin_frame();
-    nw_strip_x0 = x0;
-    nw_strip_x1 = x1;
-    R_RenderPlayerView(&players[displayplayer]);
-    nw_strip_x0 = 0;
-    nw_strip_x1 = SCREENWIDTH;
-    if (nw_overflowed && x1 - x0 > 8) {
-        int mid = (x0 + x1) / 2;
-        nw_draw_strip(band, x0, mid);
-        nw_draw_strip(band, mid, x1);
-        return;
-    }
-    nw_strips++;
-    reclip_fuzz_columns();
-    nw_columns_ready(true);
-    nw_draw_bands(band, true, false, x0, x1);
-}
-
-void pd_end_frame(int wipe_start) {
-    // these were only clipped as they were inserted (so may be more obscured)
-    reclip_fuzz_columns();
-    bool showing_help = inhelpscreens;
-    bool view = gamestate == GS_LEVEL && !showing_help;
-    int16_t fd_next_here[RENDER_COL_MAX];
-    fd_next = fd_next_here;
-    bool strips = view && !automapactive && nw_overflowed;
-    if (!strips) nw_columns_ready(view);
-
-    // what is drawn over the picture, gathered once
-    nw_patches[0].header.max = count_of(nw_patches) - 1;
-    V_BeginPatchList(nw_patches);
-    if (!showing_help) {
-        if (gamestate == GS_LEVEL) ST_Drawer(false, !pre_wipe_state);
-        else if (gamestate == GS_INTERMISSION) WI_Drawer();
-    } else if (gamestate == GS_LEVEL) {
-        ST_doPaletteStuff();
-    }
-    ST_FpsDrawer(-1);
-    if (!pre_wipe_state && gamestate == GS_LEVEL && gametic && !inhelpscreens) HU_Drawer();
-    if (paused) {
-        int y = automapactive ? 4 : viewwindowy + 4;
-        V_DrawPatchDirect(viewwindowx + (scaledviewwidth - 68) / 2, y, VPATCH_HANDLE(VPATCH_NAME(M_PAUSE)));
-    }
-    M_Drawer();
-    if (pre_wipe_state == PRE_WIPE_EXTRA_FRAME_NEEDED) pre_wipe_state = PRE_WIPE_EXTRA_FRAME_DONE;
-
-    nw_frame_begin();
-    uint8_t __aligned(8) band[SCREENWIDTH * NW_BAND_H];
-    if (strips) {
-        nw_draw_strip(band, 0, SCREENWIDTH / 2);
-        nw_draw_strip(band, SCREENWIDTH / 2, SCREENWIDTH);
-    } else {
-        nw_draw_bands(band, view, showing_help, 0, SCREENWIDTH);
-    }
-    nw_frame_end();
-}
+#include "nw/nw_back.inc"
 
 #endif // NUMWORKS
 

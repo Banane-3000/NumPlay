@@ -1,7 +1,7 @@
 /* Plays Doom on a computer, with scripted keys, and saves screenshots.
  *
  *   play [--ms N] [--keys "1000-1500:up,2000:ok,..."] [--shots 3000,6000] [--every MS] [--out DIR]
- *        [--saves DIR] [--stats]
+ *        [--saves DIR] [--stats] [--warp EM] [--scan]
  *
  * Keys are the calculator's (tools/emu.py's names: left up down right ok back home onoff shift alpha xnt
  * var toolbox backspace sqrt 0-9 plus minus mul div exe). "a-b:key" holds it from a ms to b ms, "a:key"
@@ -105,7 +105,9 @@ void host_demo_end(void) {
     fflush(stdout);
 }
 
+static void scan_tic(void);
 void host_tic(void) {
+    scan_tic();
     if (!trace_file || gamestate != GS_LEVEL || !players[consoleplayer].mo) return;
     player_t *p = &players[consoleplayer];
     mobj_t *mo = p->mo;
@@ -129,8 +131,83 @@ static void dump_frame(void) {
     }
 }
 
+/* --scan: in the level --warp starts, the view from all over the map, a frame from the middle of each
+ * subsector looking 8 ways round (god mode on), for the most the renderer is asked to hold and draw; the
+ * heaviest views are printed (SCAN lines) */
+static int scan_on, scan_ss = -1, scan_dir, scan_frames;
+static struct { uint32_t load; fixed_t x, y; unsigned angle; } scan_top[8];
+extern uint32_t nw_last_walls, nw_last_planes;
+static fixed_t scan_x, scan_y;
+
+static void scan_report(void) {
+    extern uint32_t nw_col_peak, nw_col_overflows, nw_strips, nw_peak[4];
+    printf("SCAN E%dM%d %d frames: walls %u (overflows %u, strips %u) plane records %u drawsegs %u openings %u "
+           "vissprites %u\n", gameepisode, gamemap, scan_frames, nw_col_peak, nw_col_overflows, nw_strips, nw_peak[0],
+           nw_peak[1], nw_peak[2], nw_peak[3]);
+    for (int k = 0; k < 8 && scan_top[k].load; k++)
+        printf("SCAN load %u at %d %d angle %u\n", scan_top[k].load, scan_top[k].x >> FRACBITS,
+               scan_top[k].y >> FRACBITS, scan_top[k].angle);
+    fflush(stdout);
+}
+
+static int scan_middle(int i, fixed_t *x, fixed_t *y) {
+    subsector_t *sub = &subsectors[i];
+    seg_t *line = subsector_firstline(sub), *limit = subsector_linelimit(sub);
+    int64_t sx = 0, sy = 0;
+    int n = 0;
+    for (; line < limit; line += seg_next_step(line), n++) {
+        sx += vertex_x(seg_v1(line));
+        sy += vertex_y(seg_v1(line));
+    }
+    if (!n) return 0;
+    *x = (fixed_t)(sx / n);
+    *y = (fixed_t)(sy / n);
+    sector_t *s = subsector_sector(sub);
+    return R_PointInSubsector(*x, *y) == sub && sector_ceilingheight(s) - sector_floorheight(s) >= 56 * FRACUNIT;
+}
+
+static void scan_tic(void) {
+    player_t *p = &players[consoleplayer];
+    mobj_t *mo = p->mo;
+    if (!scan_on || gamestate != GS_LEVEL || !mo) return;
+    p->cheats |= CF_GODMODE;
+    if (scan_ss < 0 || ++scan_dir == 8) {
+        scan_dir = 0;
+        do {
+            if (++scan_ss >= (int)numsubsectors) {
+                scan_report();
+                exit(0);
+            }
+        } while (!scan_middle(scan_ss, &scan_x, &scan_y));
+    }
+    P_UnsetThingPosition(mo);
+    mo->xy.x = scan_x;
+    mo->xy.y = scan_y;
+    P_SetThingPosition(mo);
+    mo->z = sector_floorheight(mobj_sector(mo));
+    p->viewz = mo->z + VIEWHEIGHT;
+    mobj_full(mo)->angle = (angle_t)scan_dir * ANG45;
+}
+
+static void scan_frame(void) {
+    if (!scan_on || scan_ss < 0) return;
+    scan_frames++;
+    uint32_t load = nw_last_walls * 4 + nw_last_planes; /* (bytes of records, by 4) */
+    int k = 7;
+    if (load <= scan_top[k].load) return;
+    while (k > 0 && load > scan_top[k - 1].load) {
+        scan_top[k] = scan_top[k - 1];
+        k--;
+    }
+    scan_top[k].load = load;
+    scan_top[k].x = scan_x;
+    scan_top[k].y = scan_y;
+    scan_top[k].angle = (unsigned)scan_dir * 45;
+}
+
 /* each frame drawn: 1/35 s goes by, and screenshots are taken */
 void host_frame(void) {
+    scan_frame();
     dump_frame();
     while (next_shot < nshots && host_time >= shots[next_shot]) shot(shots[next_shot++]);
     if (every && host_time >= next_every) {
@@ -160,6 +237,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--saves") && i + 1 < argc) saves = argv[++i];
         else if (!strcmp(argv[i], "--stats")) stats = 1;
         else if (!strcmp(argv[i], "--warp") && i + 1 < argc) nw_warp = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--scan")) scan_on = 1, end_ms = 0xfffffff;
         else if (!strcmp(argv[i], "--trace") && i + 1 < argc) trace_file = fopen(argv[++i], "w");
         else if (!strcmp(argv[i], "--dump-tics") && i + 1 < argc) {
             for (char *s = argv[++i]; *s && ndump < 256;) {
@@ -190,6 +268,10 @@ int main(int argc, char **argv) {
                nw_zone_fixed_peak, nw_strips);
         for (int i = 0; i < 40; i++) printf(" %u", nw_col_frames[i]);
         printf("\n");
+        extern uint32_t nw_max_walls, nw_max_planes, nw_max_masked, nw_peak[4], nw_low_mismatch;
+        printf("LOWMISMATCH %u\n", nw_low_mismatch);
+        printf("MAXES walls %u planes %u masked %u plane records %u drawsegs %u openings %u vissprites %u\n",
+               nw_max_walls, nw_max_planes, nw_max_masked, nw_peak[0], nw_peak[1], nw_peak[2], nw_peak[3]);
     }
     printf("END time %u quit %d state %d map E%dM%d leveltime %d health %d kills %d\n", host_time, (int)nw_quit,
            (int)gamestate, gameepisode, gamemap, leveltime, players[consoleplayer].health,

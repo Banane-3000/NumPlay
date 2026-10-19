@@ -14,6 +14,7 @@ void plat_sleep(uint32_t ms) {
 void plat_push(int x, int y, int w, int h, const uint16_t *px) {
   eadk_display_push_rect((eadk_rect_t){(uint16_t)x, (uint16_t)y, (uint16_t)w, (uint16_t)h}, px);
 }
+bool plat_vblank(void) { return eadk_display_wait_for_vblank(); }
 void plat_fill(int x, int y, int w, int h, uint16_t c) {
   if (w > 0 && h > 0) eadk_display_push_rect_uniform((eadk_rect_t){(uint16_t)x, (uint16_t)y, (uint16_t)w, (uint16_t)h}, c);
 }

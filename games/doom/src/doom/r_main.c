@@ -1198,7 +1198,7 @@ void R_RenderPlayerView(player_t *player) {
 #if !USE_WHD
     R_RenderBSPNode(numnodes - 1);
 #else
-#if PICODOOM_RENDER_NEWHOPE
+#if PICODOOM_RENDER_NEWHOPE && !NUMWORKS
     // for pd column lets draw these early since they clip other stuff (and we don't want to discard
     // them if we run out of column slots)
     // draw the psprites on top of everything
@@ -1227,7 +1227,13 @@ void R_RenderPlayerView(player_t *player) {
     // Check for new console commands.
     NetUpdate();
 
+#if NUMWORKS
+    // (the sprites, masked walls and weapon are drawn with each band: nw/nw_render.h)
+    extern void nw_sort_vissprites(void);
+    nw_sort_vissprites();
+#else
     R_DrawMasked();
+#endif
 
     // Check for new console commands.
     NetUpdate();

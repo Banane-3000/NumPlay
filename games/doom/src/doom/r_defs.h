@@ -47,7 +47,7 @@ typedef struct xy_positioned_s {
     fixed_t x, y;
 } xy_positioned_t;
 
-#if !NO_DRAWSEGS
+#if !NO_DRAWSEGS || NUMWORKS
 // Silhouette, needed for clipping Segs (mainly)
 // and sprites representing things.
 #define SIL_NONE		0
@@ -449,6 +449,22 @@ typedef struct drawseg_s
 // A vissprite_t is a thing
 //  that will be drawn during a refresh.
 // I.e. a sprite object that is partly visible.
+#if NUMWORKS
+// (vanilla's, smaller: sorted through an array of indices, nw_sort_vissprites)
+typedef struct vissprite_s
+{
+    int16_t x1, x2;
+    int16_t patch;
+    int8_t colormap;      // -1: shadow (fuzz)
+    uint8_t fuzzbase;     // where fuzzpos is at its first column, in vanilla's order of drawing
+    fixed_t gx, gy, gz, gzt;
+    fixed_t startfrac;
+    fixed_t scale;
+    fixed_t xiscale;
+    fixed_t texturemid;
+    int mobjflags;
+} vissprite_t;
+#else
 typedef struct vissprite_s
 {
     // Doubly linked list.
@@ -490,6 +506,7 @@ typedef struct vissprite_s
     int			mobjflags;
     
 } vissprite_t;
+#endif
 
 //	
 // Sprites are patches with a special naming convention

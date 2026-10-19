@@ -732,6 +732,9 @@ void ST_Ticker (void)
     st_randomnumber = M_Random();
     ST_updateWidgets();
     st_oldhealth = plyr->health;
+#if HOST
+    if (getenv("FACETRACE")) printf("FACE %d %d %d\n", leveltime, st_faceindex, st_randomnumber);
+#endif
 
 }
 

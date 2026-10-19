@@ -47,6 +47,9 @@
 #include "dstrings.h"
 
 #include "am_map.h"
+#if NUMWORKS
+#include "nw/nw_render.h"
+#endif
 
 
 // For use if I do walls with outsides/insides
@@ -881,8 +884,7 @@ void AM_clearFB(int color)
 #endif
 #if NUMWORKS
     // only the band being drawn is there
-    int y0 = nw_band_y0, y1 = nw_band_y1 < f_h ? nw_band_y1 : f_h;
-    if (y1 > y0) memset(fb + y0 * f_w, color, (y1 - y0) * f_w * sizeof(*fb));
+    for (int y = 0; y < f_h; y++) memset(fb + y * NW_BAND_W + nw_band_x0, color, nw_band_x1 - nw_band_x0);
 #else
     memset(fb, color, f_w*f_h*sizeof(*fb));
 #endif
@@ -1062,7 +1064,9 @@ AM_drawFline
 #endif
 
 #if NUMWORKS
-#define PUTDOT(xx,yy,cc) do { int yy_ = (yy); if (yy_ >= nw_band_y0 && yy_ < nw_band_y1) fb[yy_*f_w+(xx)]=(cc); } while (0)
+    // (a line wholly outside the band being drawn has nothing in it)
+    if ((fl->a.x < nw_band_x0 && fl->b.x < nw_band_x0) || (fl->a.x >= nw_band_x1 && fl->b.x >= nw_band_x1)) return;
+#define PUTDOT(xx,yy,cc) do { int xx_ = (xx); if (xx_ >= nw_band_x0 && xx_ < nw_band_x1) fb[(yy)*NW_BAND_W+xx_]=(cc); } while (0)
 #else
 #define PUTDOT(xx,yy,cc) fb[(yy)*f_w+(xx)]=(cc)
 #endif
@@ -1397,8 +1401,8 @@ void AM_drawMarks(void)
 void AM_drawCrosshair(int color)
 {
 #if NUMWORKS
-    int at = (f_w*(f_h+1))/2;
-    if (at / f_w >= nw_band_y0 && at / f_w < nw_band_y1) fb[at] = color;
+    int at = (f_w*(f_h+1))/2, x = at % f_w;
+    if (x >= nw_band_x0 && x < nw_band_x1) fb[at / f_w * NW_BAND_W + x] = color;
 #else
     fb[(f_w*(f_h+1))/2] = color; // single point for now
 #endif

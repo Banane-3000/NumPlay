@@ -390,11 +390,11 @@ void V_DrawPatchList(const vpatchlist_t *patchlist) {
 #pragma GCC pop_options
 
 #if NUMWORKS
-// The calculator draws the screen a band of rows at a time (nw/i_video.c): patches are drawn into the band,
-// clipped to its rows, from a list gathered once per frame (V_DrawPatchListBand) or as they come (nw_direct,
-// for what draws straight to the screen: the automap's marks, the finale's text).
+// The calculator draws the screen a band of NW_BAND_W columns at a time (nw/nw_render.h): patches are drawn
+// into the band, clipped to its columns, from a list gathered once per frame (V_DrawPatchListBand) or as they
+// come (nw_direct, for what draws straight to the screen: the automap's marks, the finale's text).
+#include "nw/nw_render.h"
 uint8_t *nw_band;
-int nw_band_y0, nw_band_y1;
 boolean nw_direct;
 
 static void nw_shared_palettes(void) {
@@ -405,23 +405,24 @@ static void nw_shared_palettes(void) {
     }
 }
 
-// one patch at (x, y), its rows in the band drawn and the others skipped
-static void nw_vpatch(const patch_t *patch, int x, int y, int repeat, int handle) {
+// one patch at (x, y), its pixels in columns c0 to c1 (and in the band) drawn
+static void nw_vpatch_cols(const patch_t *patch, int x, int y, int c0, int c1) {
     int w = vpatch_width(patch), h = vpatch_height(patch);
-    int y0 = nw_band_y0, y1 = nw_band_y1;
-    if (y >= y1 || y + h <= y0) return;
+    if (c0 < nw_band_x0) c0 = nw_band_x0;
+    if (c1 > nw_band_x1) c1 = nw_band_x1;
+    if (c0 < 0) c0 = 0;
+    if (c1 > SCREENWIDTH) c1 = SCREENWIDTH;
+    if (x >= c1 || x + w <= c0 || y >= SCREENHEIGHT) return;
     nw_shared_palettes();
     const uint8_t *pal = vpatch_has_shared_palette(patch) ? shared_palette8[vpatch_shared_palette(patch)]
                                                           : vpatch_palette(patch);
     const uint8_t *data = vpatch_data(patch);
-    int rw = handle == VPATCH_M_THERMM && repeat ? w - 1 : w; // (the thermometer's middle repeats one pixel narrower)
-    // rows wholly on the screen need no check of each pixel
-    boolean safe = x >= 0 && x + w + repeat * rw <= SCREENWIDTH;
-#define PUT(px, c) do { int px_ = (px); if (safe || (unsigned)px_ < SCREENWIDTH) row[px_] = (c); } while (0)
+    unsigned cw = (unsigned)(c1 - c0);
+#define PUT(px, c) do { int px_ = (px); if ((unsigned)(px_ - c0) < cw) row[px_] = (c); } while (0)
     for (int r = 0; r < h; r++) {
         int sy = y + r;
-        if (sy >= y1) break;
-        uint8_t *row = sy >= y0 ? nw_band + (sy - y0) * SCREENWIDTH : NULL;
+        if (sy >= SCREENHEIGHT) break;
+        uint8_t *row = sy >= 0 ? nw_band - nw_band_x0 + sy * NW_BAND_W : NULL;
         switch (vpatch_type(patch)) {
             case vp4_runs: {
                 int p = 0;
@@ -530,14 +531,16 @@ static void nw_vpatch(const patch_t *patch, int x, int y, int repeat, int handle
             default:
                 return;
         }
-        if (row && repeat) {
-            for (int i = 0; i < repeat * rw; i++) {
-                int from = x + i, to = x + rw + i;
-                if ((unsigned)from < SCREENWIDTH && (unsigned)to < SCREENWIDTH) row[to] = row[from];
-            }
-        }
     }
 #undef PUT
+}
+
+// one patch at (x, y), and repeat times again to its right
+static void nw_vpatch(const patch_t *patch, int x, int y, int repeat, int handle) {
+    int w = vpatch_width(patch);
+    int rw = handle == VPATCH_M_THERMM && repeat ? w - 1 : w; // (the thermometer's middle repeats one pixel narrower)
+    for (int k = 0; k <= repeat; k++)
+        nw_vpatch_cols(patch, x + k * rw, y, x + k * rw, k < repeat ? x + (k + 1) * rw : x + k * rw + w);
 }
 
 void V_DrawPatchListBand(const vpatchlist_t *patchlist) {

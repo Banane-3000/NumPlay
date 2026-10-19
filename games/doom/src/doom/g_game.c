@@ -2510,6 +2510,9 @@ void G_DoPlayDemo (void)
 
     lumpnum = W_GetNumForName(defdemoname);
     gameaction = ga_nothing;
+#if HOST
+    { extern void host_demo_start(void); host_demo_start(); }
+#endif
     should_be_const byte *demobuffer = W_CacheLumpNum(lumpnum, PU_STATIC);
 #if USE_WHD
     const byte* demo_p;

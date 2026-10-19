@@ -3949,6 +3949,8 @@ texture_index convert_textures(wad &wad) {
         std::vector<std::vector<int>> column_pixels(mtexture.width);
         std::vector<int> pixel_patch(mtexture.width * mtexture.height);
         std::fill(pixel_patch.begin(), pixel_patch.end(), -1);
+        std::vector<int> pixel_src(mtexture.width * mtexture.height); // (the patch's row each pixel is from)
+        std::vector<int> patch_widths;
 
         for (int j = 0; j < mtexture.patchcount; j++) {
             auto mpatch = get_field_inc<mappatch_t>(tex_lump->data, offset);
@@ -3986,12 +3988,19 @@ texture_index convert_textures(wad &wad) {
                     if (y1 < 0) y1 = 0;
                     if (y1 > tex_whd.height) y1 = tex_whd.height;
                     while (post[0] != 0xff) {
-                        int yp = post[0] + mpatch.originy;
-                        for (int k = 3; k < 3 + post[1]; k++, yp++) {
+                        // as vanilla's R_DrawColumnInCache: a post that starts above the texture is cut short at
+                        // the top, but its pixels are still taken from its start
+                        int position = post[0] + mpatch.originy, count = post[1];
+                        if (position < 0) {
+                            count += position;
+                            position = 0;
+                        }
+                        int yp = position;
+                        for (int k = 3; k < 3 + count; k++, yp++) {
                             if (yp >= tex_whd.height) break;
-                            if (yp < 0) continue;
                             pixel_usage[yp * tex_whd.width + xp]++;
                             pixel_patch[yp * tex_whd.width + xp] = j;
+                            pixel_src[yp * tex_whd.width + xp] = post[0] + k - 3;
                             column_pixels[xp][yp] = post[k];
 
                             touched_pixels++;
@@ -4008,6 +4017,7 @@ texture_index convert_textures(wad &wad) {
                 }
                 if (patch_solid) solid_patches++;
 #endif
+                patch_widths.push_back(ph->width);
                 printf("  Patch %d (%d): %d at %d,%d %dx%d solid = %d\n", j, pname_lookup[mpatch.patch], mpatch.patch,
                        mpatch.originx, mpatch.originy, ph->width, ph->height, patch_solid);
             } else {
@@ -4064,10 +4074,12 @@ texture_index convert_textures(wad &wad) {
                 int last = -1;
                 int run = 0;
                 int localp;
+                int run_src = 0;
                 bool had_col_transparent = false;
                 for (int y = 0; y < tex_whd.height; y++) {
                     int p = pixel_patch[y * tex_whd.width + x];
-                    if (p != last) {
+                    // (a run goes on while the pixels are from consecutive rows of the same patch)
+                    if (p != last || (p != -1 && pixel_src[y * tex_whd.width + x] != run_src + run)) {
                         if (run) {
                             if (localp == 0xff) {
                                 had_col_transparent = true;
@@ -4076,9 +4088,10 @@ texture_index convert_textures(wad &wad) {
                                 if (run > 128) fail("run is too long %d\n", run);
                                 col_patch_runs.push_back(run - 1);
                                 col_patch_runs.push_back((uint8_t) mpatches[last].originx);
-                                col_patch_runs.push_back((int8_t) (y-run)-mpatches[last].originy);
+                                col_patch_runs.push_back((uint8_t) run_src);
                             }
                         }
+                        run_src = p != -1 ? pixel_src[y * tex_whd.width + x] : 0;
                         last = p;
                         if (p != -1) {
                             auto f = std::find(local_patches.begin(), local_patches.end(), pname_lookup[mpatches[p].patch]);
@@ -4107,12 +4120,41 @@ texture_index convert_textures(wad &wad) {
                         if (run > 128) fail("run is too long %d\n", run);
                         col_patch_runs.push_back(128 | (run - 1));
                         col_patch_runs.push_back((uint8_t) mpatches[last].originx);
-                        col_patch_runs.push_back((int8_t) (tex_whd.height-run)-mpatches[last].originy);
+                        col_patch_runs.push_back((uint8_t) run_src);
                     }
                 }
                 if (had_col_transparent) {
                     if (col_patch_runs.size() != 4 && !col_patch_runs.empty()) {
                         printf("WARNING: Can't mix transparency with anything but single patch column, will be undefined. tex=%s col %d\n", name.c_str(), x);
+                    }
+                }
+                // vanilla's R_GenerateLookup: a column that one patch goes over (whatever its rows) is that patch's
+                // column as it is; one that more go over is made from them (even if one alone shows)
+                int vcount = 0, vlast = -1;
+                for (int j = 0; j < (int) mpatches.size(); j++) {
+                    if (x >= mpatches[j].originx && x < mpatches[j].originx + patch_widths[j]) vcount++, vlast = j;
+                }
+                if (vcount == 1) {
+                    int pn = pname_lookup[mpatches[vlast].patch];
+                    auto f = std::find(local_patches.begin(), local_patches.end(), pn);
+                    int lp = f - local_patches.begin();
+                    if (f == local_patches.end()) local_patches.push_back(pn);
+                    unique_col_patches.insert(lp);
+                    col_patch_runs = {(uint8_t) lp, (uint8_t) (0x80 | ((tex_whd.height - 1) & 0x7f)),
+                                      (uint8_t) mpatches[vlast].originx, 0};
+                } else if (vcount > 1 && col_patch_runs.size() == 4) {
+                    int len = (col_patch_runs[1] & 0x7f) + 1;
+                    if (len > 1) {
+                        // (two runs, or it would be taken for a single patch's column)
+                        std::vector<uint8_t> two = col_patch_runs;
+                        two[1] = (uint8_t) (len / 2 - 1);
+                        two.push_back(col_patch_runs[0]);
+                        two.push_back((uint8_t) (0x80 | (len - len / 2 - 1)));
+                        two.push_back(col_patch_runs[2]);
+                        two.push_back((uint8_t) (col_patch_runs[3] + len / 2));
+                        col_patch_runs = two;
+                    } else {
+                        printf("WARNING: composite column of one pixel %s col %d\n", name.c_str(), x);
                     }
                 }
                 if (col_patch_runs.size() == 4) {

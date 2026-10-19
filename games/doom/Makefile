@@ -20,7 +20,7 @@ WAD ?=
 # the engine (Chocolate Doom by way of RP2040 Doom), and the calculator's side of it (src/nw)
 ENGINE = $(wildcard src/*.c) $(wildcard src/doom/*.c)
 NW = src/nw/i_system.c src/nw/i_video.c src/nw/i_input.c src/nw/i_sound.c src/nw/saves.c src/nw/main.c
-HEADERS = $(wildcard src/*.h src/doom/*.h src/nw/*.h src/compat/*.h src/compat/*/*.h) ../common/epsilon_app.h \
+HEADERS = $(wildcard src/*.h src/doom/*.h src/nw/*.h src/nw/*.inc src/compat/*.h src/compat/*/*.h) ../common/epsilon_app.h \
   ../common/epsilon_files.h
 INC = -include src/nw/doomconf.h -Isrc -Isrc/doom -Isrc/compat -Isrc/nw
 # (the engine's own code has warnings of its own, left as they are; the calculator's side has none)

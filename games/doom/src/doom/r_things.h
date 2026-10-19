@@ -22,8 +22,10 @@
 #define __R_THINGS__
 
 
-#if !NO_VISSPRITES
+#if !NO_VISSPRITES || NUMWORKS
 #define MAXVISSPRITES  	128
+#endif
+#if !NO_VISSPRITES
 
 extern vissprite_t	vissprites[MAXVISSPRITES];
 extern vissprite_t*	vissprite_p;

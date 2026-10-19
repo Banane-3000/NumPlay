@@ -86,6 +86,35 @@ fixed_t rw_midtexturemid;
 fixed_t rw_toptexturemid;
 fixed_t rw_bottomtexturemid;
 fixed_t rw_maskedtexturemid;
+#if NUMWORKS
+#include "nw/nw_render.h"
+// the seg being drawn, its drawseg as vanilla's, and all of the frame's so far (vanilla's MAXDRAWSEGS counts
+// them all; only those that matter to R_DrawMasked are kept, in nw_drawsegs)
+static nw_drawseg_t nw_ds;
+static int nw_drawseg_total;
+static int16_t *nw_maskedcol;
+static nw_masked_t *nw_masked_head;
+static int nw_tm_mid, nw_tm_top, nw_tm_bottom, nw_tm_sky = -1;
+nw_drawseg_t nw_drawsegs[NW_DRAWSEG_MAX];
+int nw_drawseg_count;
+uint8_t __attribute__((aligned(4))) nw_openings[NW_OPENINGS];
+int nw_opening_count;
+
+void nw_clear_drawsegs(void) {
+    nw_drawseg_total = nw_drawseg_count = nw_opening_count = 0;
+    nw_tm_sky = -1;
+}
+
+static int nw_open_alloc(int n) {
+    int off = (nw_opening_count + 3) & ~3;
+    if (off + n > NW_OPENINGS) {
+        nw_record_overflow();
+        return 0; // (the frame is drawn again band by band)
+    }
+    nw_opening_count = off + n;
+    return off;
+}
+#endif
 
 int worldtop;
 int worldbottom;
@@ -305,6 +334,10 @@ void R_RenderSegLoop(void) {
 #endif
 
                     dc_texturemid = skytexturemid;
+#if NUMWORKS
+                    if (nw_tm_sky < 0) nw_tm_sky = nw_add_tmid(skytexturemid);
+                    nw_tmid_cur = nw_tm_sky;
+#endif
 
                     dc_x = rw_x;
                     dc_yl = top;
@@ -358,9 +391,6 @@ void R_RenderSegLoop(void) {
             angle = (rw_centerangle + x_to_viewangle(rw_x)) >> ANGLETOFINESHIFT;
             texturecolumn = rw_offset - FixedMul(finetangent(angle), rw_distance);
             texturecolumn >>= FRACBITS;
-#if HOST
-            { extern int nw_dbg_x; if (nw_dbg_x == rw_x) printf("TC x=%d off=%d dist=%d cang=%u tc=%d scale=%d\n", rw_x, rw_offset, rw_distance, rw_centerangle, texturecolumn, rw_scale); }
-#endif
             // calculate lighting
             index = rw_scale >> LIGHTSCALESHIFT;
 
@@ -395,6 +425,9 @@ void R_RenderSegLoop(void) {
             dc_yh = yh;
             dc_texturemid = rw_midtexturemid;
             dc_source = R_GetColumn(midtexture, texturecolumn);
+#if NUMWORKS
+            nw_tmid_cur = nw_tm_mid;
+#endif
 #if PD_COLUMNS
 #if PD_SCALE_SORT
             pd_add_column2(PDCOL_MID);
@@ -426,6 +459,9 @@ void R_RenderSegLoop(void) {
                     dc_yh = mid;
                     dc_texturemid = rw_toptexturemid;
                     dc_source = R_GetColumn(toptexture, texturecolumn);
+#if NUMWORKS
+                    nw_tmid_cur = nw_tm_top;
+#endif
 #if PD_COLUMNS
                     pd_add_column2(PDCOL_TOP);
 #endif
@@ -455,6 +491,9 @@ void R_RenderSegLoop(void) {
                     dc_texturemid = rw_bottomtexturemid;
                     dc_source = R_GetColumn(bottomtexture,
                                             texturecolumn);
+#if NUMWORKS
+                    nw_tmid_cur = nw_tm_bottom;
+#endif
 #if PD_COLUMNS
                     pd_add_column2(PDCOL_BOTTOM);
 #endif
@@ -481,6 +520,8 @@ void R_RenderSegLoop(void) {
                 //  for backdrawing of masked mid texture
 #if !NO_DRAWSEGS
                 maskedtexturecol[rw_x] = texturecolumn;
+#elif NUMWORKS
+                if (rw_x >= nw_strip_x0 && rw_x < nw_strip_x1) nw_maskedcol[rw_x] = (int16_t)texturecolumn;
 #else
                 // graham: added drawing here
                 // draw the texture
@@ -549,6 +590,10 @@ R_StoreWallRange
     // don't overflow and crash
     if (ds_p == &drawsegs[MAXDRAWSEGS])
         return;
+#elif NUMWORKS
+    // (vanilla draws no more walls past MAXDRAWSEGS)
+    if (nw_drawseg_total == MAXDRAWSEGS)
+        return;
 #endif
 
 #ifdef RANGECHECK
@@ -589,6 +634,10 @@ R_StoreWallRange
     ds_p->x1 = rw_x;
     ds_p->x2 = stop;
     ds_p->curline = curline;
+#elif NUMWORKS
+    nw_ds.x1 = rw_x;
+    nw_ds.x2 = stop;
+    nw_ds.curline = curline;
 #endif
     rw_stopx = stop + 1;
 
@@ -598,6 +647,8 @@ R_StoreWallRange
             R_ScaleFromGlobalAngle(viewangle + x_to_viewangle(start));
 #if !NO_DRAWSEGS
     ds_p->scale1 = rw_scale;
+#elif NUMWORKS
+    nw_ds.scale1 = rw_scale;
 #endif
 
     if (stop > start) {
@@ -606,6 +657,9 @@ R_StoreWallRange
 #if !NO_DRAWSEGS
         ds_p->scale2 = scale2;
         ds_p->scalestep = rw_scalestep;
+#elif NUMWORKS
+        nw_ds.scale2 = scale2;
+        nw_ds.scalestep = rw_scalestep;
 #endif
     } else {
         // UNUSED: try to fix the stretched line bug
@@ -625,6 +679,9 @@ R_StoreWallRange
 #endif
 #if !NO_DRAWSEGS
         ds_p->scale2 = ds_p->scale1;
+#elif NUMWORKS
+        nw_ds.scale2 = nw_ds.scale1;
+        nw_ds.scalestep = 0;
 #endif
     }
 
@@ -636,6 +693,9 @@ R_StoreWallRange
     midtexture = toptexture = bottomtexture = maskedtexture = 0;
 #if !NO_DRAWSEGS
     ds_p->maskedtexturecol = NULL;
+#elif NUMWORKS
+    nw_ds.masked = NW_OPEN_NONE;
+    nw_masked_head = NULL;
 #endif
 
     if (!backsector) {
@@ -653,9 +713,6 @@ R_StoreWallRange
             rw_midtexturemid = worldtop;
         }
         rw_midtexturemid += side_rowoffset(sidedef);
-#if HOST
-        { extern int nw_dbg_x; if (nw_dbg_x >= start && nw_dbg_x <= stop) printf("SEG mid tex %d h %d worldtop %d viewz %d rowoff %d peg %d floor %d tmid %d\n", side_midtexture(sidedef), texture_height(side_midtexture(sidedef)), worldtop, viewz, side_rowoffset(sidedef), (line_flags(linedef) & ML_DONTPEGBOTTOM) != 0, sector_floorheight(frontsector), rw_midtexturemid); }
-#endif
 
 #if !NO_DRAWSEGS
         ds_p->silhouette = SIL_BOTH;
@@ -663,6 +720,13 @@ R_StoreWallRange
         ds_p->sprbottomclip =  minfloorceilingcliparray;
         ds_p->bsilheight = INT_MAX;
         ds_p->tsilheight = INT_MIN;
+#elif NUMWORKS
+        nw_ds.silhouette = SIL_BOTH;
+        nw_ds.topclip = NW_OPEN_MAX;
+        nw_ds.botclip = NW_OPEN_MIN;
+        nw_ds.bsilheight = INT_MAX;
+        nw_ds.tsilheight = INT_MIN;
+        nw_tm_mid = nw_add_tmid(rw_midtexturemid);
 #endif
     } else {
 #if !NO_DRAWSEGS
@@ -698,6 +762,40 @@ R_StoreWallRange
             ds_p->sprtopclip = maxfloorceilingcliparray;
             ds_p->tsilheight = INT_MIN;
             ds_p->silhouette |= SIL_TOP;
+        }
+#elif NUMWORKS
+        // two sided line
+        nw_ds.topclip = nw_ds.botclip = NW_OPEN_NONE;
+        nw_ds.silhouette = 0;
+
+        if (frontsector->rawfloorheight > backsector->rawfloorheight) {
+            nw_ds.silhouette = SIL_BOTTOM;
+            nw_ds.bsilheight = sector_floorheight(frontsector);
+        } else if (sector_floorheight(backsector) > viewz) {
+            nw_ds.silhouette = SIL_BOTTOM;
+            nw_ds.bsilheight = INT_MAX;
+            // nw_ds.sprbottomclip = negonearray;
+        }
+
+        if (frontsector->rawceilingheight < backsector->rawceilingheight) {
+            nw_ds.silhouette |= SIL_TOP;
+            nw_ds.tsilheight = sector_ceilingheight(frontsector);
+        } else if (sector_ceilingheight(backsector) < viewz) {
+            nw_ds.silhouette |= SIL_TOP;
+            nw_ds.tsilheight = INT_MIN;
+            // nw_ds.sprtopclip = screenheightarray;
+        }
+
+        if (backsector->rawceilingheight <= frontsector->rawfloorheight) {
+            nw_ds.botclip = NW_OPEN_MIN;
+            nw_ds.bsilheight = INT_MAX;
+            nw_ds.silhouette |= SIL_BOTTOM;
+        }
+
+        if (backsector->rawfloorheight >= frontsector->rawceilingheight) {
+            nw_ds.topclip = NW_OPEN_MAX;
+            nw_ds.tsilheight = INT_MIN;
+            nw_ds.silhouette |= SIL_TOP;
         }
 #endif
         worldhigh = sector_ceilingheight(backsector) - viewz;
@@ -764,6 +862,10 @@ R_StoreWallRange
         }
         rw_toptexturemid += side_rowoffset(sidedef);
         rw_bottomtexturemid += side_rowoffset(sidedef);
+#if NUMWORKS
+        if (toptexture) nw_tm_top = nw_add_tmid(rw_toptexturemid);
+        if (bottomtexture) nw_tm_bottom = nw_add_tmid(rw_bottomtexturemid);
+#endif
 
         // allocate space for masked texture tables
         if (side_midtexture(sidedef)) {
@@ -786,6 +888,20 @@ R_StoreWallRange
                 rw_maskedtexturemid = rw_maskedtexturemid - viewz;
             }
             rw_maskedtexturemid += side_rowoffset(seg_sidedef(curline));
+#if NUMWORKS
+            {
+                // (the columns of the strip being recorded)
+                int s0 = rw_x > nw_strip_x0 ? rw_x : nw_strip_x0, s1 = rw_stopx < nw_strip_x1 ? rw_stopx : nw_strip_x1;
+                int off = nw_open_alloc(sizeof(nw_masked_t) + 2 * (s1 > s0 ? s1 - s0 : 0));
+                nw_masked_head = (nw_masked_t *) (nw_openings + off);
+                nw_masked_head->texturemid = rw_maskedtexturemid;
+                nw_masked_head->texture = maskedtexture_tex;
+                nw_masked_head->x0 = (int16_t) s0;
+                nw_masked_head->lightnum = 0;
+                nw_maskedcol = (int16_t *) (nw_masked_head + 1) - s0;
+                nw_ds.masked = (int16_t) off;
+            }
+#endif
 #else
             maskedtexturecol = lastopening - rw_x;
             ds_p->maskedtexturecol = maskedtexturecol;
@@ -845,6 +961,9 @@ R_StoreWallRange
                 lightnum--;
             else if (line_is_vert(seg_linedef(curline)))
                 lightnum++;
+#if NUMWORKS
+            if (nw_masked_head) nw_masked_head->lightnum = (int8_t) lightnum;
+#endif
 
             if (lightnum < 0)
                 walllights = scalelight[0];
@@ -907,6 +1026,34 @@ R_StoreWallRange
 #endif
 
     R_RenderSegLoop();
+#if NUMWORKS
+    // save sprite clipping info (for the columns of the strip being recorded)
+    int s0 = start > nw_strip_x0 ? start : nw_strip_x0, s1 = rw_stopx < nw_strip_x1 ? rw_stopx : nw_strip_x1;
+    if (s1 < s0) s1 = s0;
+    if (((nw_ds.silhouette & SIL_TOP) || maskedtexture) && nw_ds.topclip == NW_OPEN_NONE) {
+        int off = nw_open_alloc(s1 - s0);
+        memcpy(nw_openings + off, ceilingclip + s0, s1 - s0);
+        nw_ds.topclip = (int16_t) (off - (s0 - start));
+    }
+    if (((nw_ds.silhouette & SIL_BOTTOM) || maskedtexture) && nw_ds.botclip == NW_OPEN_NONE) {
+        int off = nw_open_alloc(s1 - s0);
+        memcpy(nw_openings + off, floorclip + s0, s1 - s0);
+        nw_ds.botclip = (int16_t) (off - (s0 - start));
+    }
+    if (maskedtexture && !(nw_ds.silhouette & SIL_TOP)) {
+        nw_ds.silhouette |= SIL_TOP;
+        nw_ds.tsilheight = INT_MIN;
+    }
+    if (maskedtexture && !(nw_ds.silhouette & SIL_BOTTOM)) {
+        nw_ds.silhouette |= SIL_BOTTOM;
+        nw_ds.bsilheight = INT_MAX;
+    }
+    if ((nw_ds.silhouette || maskedtexture) && s1 > s0) {
+        if (nw_drawseg_count == NW_DRAWSEG_MAX) nw_record_overflow();
+        else nw_drawsegs[nw_drawseg_count++] = nw_ds;
+    }
+    nw_drawseg_total++;
+#endif
 
 
 #if !NO_DRAWSEGS
@@ -938,7 +1085,15 @@ R_StoreWallRange
 }
 
 #if PD_COLUMNS && USE_WHD
+#if NUMWORKS
 void pd_add_column2(pd_column_type type) {
+    if (nw_resolve_column()) pd_add_column(type);
+}
+
+int nw_resolve_column(void) {
+#else
+void pd_add_column2(pd_column_type type) {
+#endif
     assert(dc_source.real_id >= 0);
     int pc = whd_textures[dc_source.real_id].patch_count;
     if (!pc) {
@@ -963,11 +1118,19 @@ void pd_add_column2(pd_column_type type) {
                 // note as pre R_GenerateLookup, a single patch column ignores the patch offsety
                 dc_source = make_drawcolumn(lookup_patch(pnum-firstspritelump), (uint8_t)(dc_source.col - metadata[2]));
             } else {
+#if NUMWORKS
+                return 0;
+#else
 #warning untested no patch column
                 return;
+#endif
             }
         }
     }
+#if NUMWORKS
+    return 1;
+#else
     pd_add_column(type);
+#endif
 }
 #endif

@@ -336,9 +336,14 @@ void R_InitSprites() {
 // R_ClearSprites
 // Called at frame start.
 //
+#if NUMWORKS
+void nw_clear_vissprites(void);
+#endif
 void R_ClearSprites(void) {
 #if !NO_VISSPRITES
     vissprite_p = vissprites;
+#elif NUMWORKS
+    nw_clear_vissprites();
 #endif
 }
 
@@ -637,6 +642,20 @@ R_DrawVisSprite
 }
 
 
+#if NUMWORKS
+#include "nw/nw_render.h"
+// vanilla's vissprites (MAXVISSPRITES of them, the others dropped as vanilla does), drawn band by band
+static vissprite_t nw_vissprites[MAXVISSPRITES];
+static uint8_t nw_vis_order[MAXVISSPRITES];
+int nw_vissprite_count;
+void nw_clear_vissprites(void) { nw_vissprite_count = 0; }
+static vissprite_t *nw_new_vissprite(void) {
+    if (nw_vissprite_count == MAXVISSPRITES)
+        return &overflowsprite;
+    return &nw_vissprites[nw_vissprite_count++];
+}
+#endif
+
 //
 // R_ProjectSprite
 // Generates a vissprite for a thing
@@ -735,7 +754,9 @@ void R_ProjectSprite(mobj_t *thing) {
         return;
 
     // store information in a vissprite
-#if NO_VISSPRITES
+#if NUMWORKS
+    vis = nw_new_vissprite();
+#elif NO_VISSPRITES
     vissprite_t vis_a;
     vis = &vis_a;
 #else
@@ -743,7 +764,7 @@ void R_ProjectSprite(mobj_t *thing) {
 #endif
     vis->mobjflags = thing->flags;
     vis->scale = xscale << detailshift;
-#if !DOOM_TINY
+#if !DOOM_TINY || NUMWORKS
     vis->gx = thing->xy.x;
     vis->gy = thing->xy.y;
     vis->gz = thing->z;
@@ -795,7 +816,9 @@ void R_ProjectSprite(mobj_t *thing) {
 
         vis->colormap = spritelights[index];
     }
+#if !NUMWORKS
     R_DrawSpriteEarly(vis);
+#endif
 }
 
 
@@ -1178,3 +1201,306 @@ void R_DrawSpriteEarly(vissprite_t *spr) {
     pd_flag &= ~1;
 #endif
 }
+
+#if NUMWORKS
+// ---------------------------------------------------------------------------------------------------------------
+// The calculator: vanilla's R_DrawMasked, for the columns of one band at a time (nw/nw_render.h)
+
+// sprites back to front, as vanilla's selection sort leaves them (the first of equal scales first)
+void nw_sort_vissprites(void) {
+    for (int i = 0; i < nw_vissprite_count; i++) {
+        int j = i;
+        while (j > 0 && nw_vissprites[nw_vis_order[j - 1]].scale > nw_vissprites[i].scale) {
+            nw_vis_order[j] = nw_vis_order[j - 1];
+            j--;
+        }
+        nw_vis_order[j] = (uint8_t) i;
+    }
+}
+
+// the clipping of the masked column being drawn, in screen rows (vanilla's mfloorclip and mceilingclip)
+static int16_t nw_clipbot[SCREENWIDTH], nw_cliptop[SCREENWIDTH];
+static boolean nw_fuzz;
+
+// vanilla's R_DrawMaskedColumn: the posts of dc_x's column within the clip, to the back end
+static void nw_draw_masked_column(maskedcolumn_t column) {
+    int topscreen, bottomscreen, yl, yh;
+    if (column.real_id >= 0) {
+        // a masked middle texture's column: its patch's posts, if a single patch makes it
+        dc_source = column;
+        if (!nw_resolve_column()) return;
+        column = dc_source;
+    }
+    if (column.real_id >= 0) {
+        // more than one patch: drawn whole, as RP2040 Doom does
+        topscreen = sprtopscreen;
+        bottomscreen = topscreen + spryscale * (texture_height(column.real_id) >> FRACBITS);
+        yl = (topscreen + FRACUNIT - 1) >> FRACBITS;
+        yh = (bottomscreen - 1) >> FRACBITS;
+        if (yh >= nw_clipbot[dc_x]) yh = nw_clipbot[dc_x] - 1;
+        if (yl <= nw_cliptop[dc_x]) yl = nw_cliptop[dc_x] + 1;
+        if (yl <= yh) {
+            dc_source = column;
+            nw_masked_column(dc_x, yl, yh, 0, nw_fuzz);
+        }
+        return;
+    }
+    patch_t *patch = W_CacheLumpNum(-(int) column.real_id, PU_CACHE);
+    dc_source = column;
+    int height = patch_height(patch);
+    if (patch_fully_opaque(patch)) {
+        topscreen = sprtopscreen;
+        bottomscreen = topscreen + spryscale * height;
+        yl = (topscreen + FRACUNIT - 1) >> FRACBITS;
+        yh = (bottomscreen - 1) >> FRACBITS;
+        if (yh >= nw_clipbot[dc_x]) yh = nw_clipbot[dc_x] - 1;
+        if (yl <= nw_cliptop[dc_x]) yl = nw_cliptop[dc_x] + 1;
+        if (yl <= yh) nw_masked_column(dc_x, yl, yh, 0, nw_fuzz);
+        return;
+    }
+    // the posts, from the packed column's run data (as RP2040 Doom reads them)
+    th_backwards_bit_input rbi;
+    uint data_index = 3 + patch_has_extra(patch);
+    data_index += ((uint8_t *) patch)[data_index * 2];
+    uint16_t *col_offsets = &((uint16_t *) patch)[data_index];
+    uint16_t col_offset = col_offsets[column.col];
+    uint next_column;
+    if (0xff == (col_offset >> 8)) {
+        next_column = (col_offset & 0xff) + 1;
+    } else {
+        next_column = column.col + 1;
+    }
+    col_offset = col_offsets[next_column];
+    while (0xff == (col_offset >> 8)) col_offset = col_offsets[++next_column];
+    data_index = (data_index + patch_width(patch)) * 2 + 2;
+    if (patch_byte_addressed(patch)) {
+        th_backwards_bit_input_init(&rbi, (const uint8_t *) patch + data_index + col_offset);
+    } else {
+        th_backwards_bit_input_init_bit_offset(&rbi, (const uint8_t *) patch + data_index, col_offset);
+    }
+    int prev = 0, base_offset = 0;
+    do {
+        int top = prev + th_read_backwards_bits(&rbi, bitcount8(height - prev));
+        if (top >= height) break;
+        base_offset += top - prev;
+        int size = th_read_backwards_bits(&rbi, bitcount8(height - top));
+        prev = top + size;
+        topscreen = sprtopscreen + spryscale * top;
+        bottomscreen = topscreen + spryscale * size;
+        yl = (topscreen + FRACUNIT - 1) >> FRACBITS;
+        yh = (bottomscreen - 1) >> FRACBITS;
+        if (yh >= nw_clipbot[dc_x]) yh = nw_clipbot[dc_x] - 1;
+        if (yl <= nw_cliptop[dc_x]) yl = nw_cliptop[dc_x] + 1;
+        if (yl <= yh) nw_masked_column(dc_x, yl, yh, base_offset, nw_fuzz);
+    } while (true);
+}
+
+// vanilla's R_DrawVisSprite, for columns x1 to x2 of the sprite
+static void nw_draw_vis_sprite(vissprite_t *vis, int x1, int x2) {
+    nw_fuzz = vis->colormap < 0;
+    dc_colormap_index = nw_fuzz ? 0 : vis->colormap;
+    dc_iscale = abs(vis->xiscale) >> detailshift;
+    dc_texturemid = vis->texturemid;
+    nw_masked_texturemid = dc_texturemid;
+    fixed_t frac = vis->startfrac + (x1 - vis->x1) * vis->xiscale;
+    spryscale = vis->scale;
+    sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
+    framedrawable_t *fd = lookup_patch(vis->patch);
+    for (dc_x = x1; dc_x <= x2; dc_x++, frac += vis->xiscale) {
+        nw_draw_masked_column(R_GetPatchColumn(fd, frac >> FRACBITS));
+    }
+    nw_masked_flush();
+}
+
+// vanilla's R_RenderMaskedSegRange
+static void nw_masked_seg_range(nw_drawseg_t *ds, int x1, int x2) {
+    if (x1 > x2) return;
+    nw_masked_t *m = (nw_masked_t *) (nw_openings + ds->masked);
+    int16_t *cols = (int16_t *) (m + 1) - m->x0;
+    int lightnum = m->lightnum;
+    const int8_t *walllights = scalelight[lightnum < 0 ? 0 : lightnum >= LIGHTLEVELS ? LIGHTLEVELS - 1 : lightnum];
+    fixed_t step = ds->scalestep;
+    spryscale = ds->scale1 + (x1 - ds->x1) * step;
+    for (int x = x1; x <= x2; x++) {
+        nw_cliptop[x] = ds->topclip == NW_OPEN_MAX ? viewheight
+                        : ds->topclip == NW_OPEN_MIN ? -1
+                        : nw_openings[ds->topclip + x - ds->x1] - FLOOR_CEILING_CLIP_OFFSET;
+        nw_clipbot[x] = ds->botclip == NW_OPEN_MAX ? viewheight
+                        : ds->botclip == NW_OPEN_MIN ? -1
+                        : nw_openings[ds->botclip + x - ds->x1] - FLOOR_CEILING_CLIP_OFFSET;
+    }
+    dc_texturemid = m->texturemid;
+    nw_masked_texturemid = dc_texturemid;
+    nw_fuzz = false;
+    framedrawable_t *fd = lookup_masked_texture(m->texture);
+    int width_mask = whd_textures[m->texture].width - 1;
+    if (fixedcolormap) dc_colormap_index = fixedcolormap;
+    for (dc_x = x1; dc_x <= x2; dc_x++, spryscale += step) {
+        if (cols[dc_x] == SHRT_MAX) continue;
+        if (!fixedcolormap) {
+            unsigned index = spryscale >> LIGHTSCALESHIFT;
+            if (index >= MAXLIGHTSCALE) index = MAXLIGHTSCALE - 1;
+            dc_colormap_index = walllights[index];
+        }
+        sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
+        dc_iscale = 0xffffffffu / (unsigned) spryscale;
+        nw_draw_masked_column(R_GetMaskedColumn(fd, cols[dc_x] & width_mask));
+        cols[dc_x] = SHRT_MAX;
+    }
+    nw_masked_flush();
+}
+
+// vanilla's R_DrawSprite: the sprite clipped by the drawsegs in front of it (the masked ones behind it drawn
+// first), for the band's columns; from x_from on for the clipping (a fuzzy sprite counts its pixels from its
+// first column, its fuzz going on from there)
+static void nw_draw_sprite(vissprite_t *spr, int x_from) {
+    int a = spr->x1 > nw_band_x0 ? spr->x1 : nw_band_x0;
+    int b = spr->x2 < nw_band_x1 - 1 ? spr->x2 : nw_band_x1 - 1;
+    int c0 = x_from < a ? x_from : a;
+    for (int x = c0; x <= b; x++) nw_clipbot[x] = nw_cliptop[x] = -2;
+    for (int i = nw_drawseg_count - 1; i >= 0; i--) {
+        nw_drawseg_t *ds = &nw_drawsegs[i];
+        if (ds->x1 > spr->x2 || ds->x2 < spr->x1 || (!ds->silhouette && ds->masked == NW_OPEN_NONE))
+            continue;
+        int r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
+        int r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;
+        fixed_t scale, lowscale;
+        if (ds->scale1 > ds->scale2) {
+            lowscale = ds->scale2;
+            scale = ds->scale1;
+        } else {
+            lowscale = ds->scale1;
+            scale = ds->scale2;
+        }
+        if (scale < spr->scale
+            || (lowscale < spr->scale && !R_PointOnSegSide(spr->gx, spr->gy, (seg_t *) ds->curline))) {
+            // masked mid texture behind the sprite: drawn first (in the band)
+            if (ds->masked != NW_OPEN_NONE) {
+                int m1 = r1 > nw_band_x0 ? r1 : nw_band_x0;
+                int m2 = r2 < nw_band_x1 - 1 ? r2 : nw_band_x1 - 1;
+                nw_masked_seg_range(ds, m1, m2);
+            }
+            continue;
+        }
+        // clip this piece of the sprite
+        int silhouette = ds->silhouette;
+        if (spr->gz >= ds->bsilheight) silhouette &= ~SIL_BOTTOM;
+        if (spr->gzt <= ds->tsilheight) silhouette &= ~SIL_TOP;
+        if (r1 < c0) r1 = c0;
+        if (r2 > b) r2 = b;
+        // (a frame drawn band by band has the openings of the band's columns only)
+        if (r1 < nw_strip_x0) r1 = nw_strip_x0;
+        if (r2 >= nw_strip_x1) r2 = nw_strip_x1 - 1;
+        for (int x = r1; x <= r2; x++) {
+            if ((silhouette & SIL_BOTTOM) && nw_clipbot[x] == -2)
+                nw_clipbot[x] = ds->botclip == NW_OPEN_MAX ? viewheight
+                                : ds->botclip == NW_OPEN_MIN ? -1
+                                : nw_openings[ds->botclip + x - ds->x1] - FLOOR_CEILING_CLIP_OFFSET;
+            if ((silhouette & SIL_TOP) && nw_cliptop[x] == -2)
+                nw_cliptop[x] = ds->topclip == NW_OPEN_MAX ? viewheight
+                                : ds->topclip == NW_OPEN_MIN ? -1
+                                : nw_openings[ds->topclip + x - ds->x1] - FLOOR_CEILING_CLIP_OFFSET;
+        }
+    }
+    for (int x = c0; x <= b; x++) {
+        if (nw_clipbot[x] == -2) nw_clipbot[x] = viewheight;
+        if (nw_cliptop[x] == -2) nw_cliptop[x] = -1;
+    }
+    nw_draw_vis_sprite(spr, c0, b);
+}
+
+// vanilla's R_DrawPSprite and R_DrawPlayerSprites (on top of everything)
+static void nw_draw_psprite(pspdef_t *psp, const int8_t *lights) {
+    spriteframeref_t sprframe = sprite_frame(psp->state->sprite, psp->state->frame & FF_FRAMEMASK);
+    int lump = spriteframe_unrotated_pic(sprframe);
+    boolean flip = (boolean) spriteframe_unrotated_flipped(sprframe);
+    fixed_t tx = psp->sx - (SCREENWIDTH / 2) * FRACUNIT - sprite_offset(lump);
+    int x1 = (centerxfrac + FixedMul(tx, pspritescale)) >> FRACBITS;
+    if (x1 > viewwidth) return;
+    tx += sprite_width(lump);
+    int x2 = ((centerxfrac + FixedMul(tx, pspritescale)) >> FRACBITS) - 1;
+    if (x2 < 0) return;
+    vissprite_t avis, *vis = &avis;
+    vis->mobjflags = 0;
+    vis->texturemid = (BASEYCENTER << FRACBITS) + FRACUNIT / 2 - (psp->sy - sprite_topoffset(lump));
+    vis->x1 = x1 < 0 ? 0 : x1;
+    vis->x2 = x2 >= viewwidth ? viewwidth - 1 : x2;
+    vis->scale = pspritescale << detailshift;
+    if (flip) {
+        vis->xiscale = -pspriteiscale;
+        vis->startfrac = sprite_width(lump) - 1;
+    } else {
+        vis->xiscale = pspriteiscale;
+        vis->startfrac = 0;
+    }
+    if (vis->x1 > x1) vis->startfrac += vis->xiscale * (vis->x1 - x1);
+    vis->patch = lump;
+    if (viewplayer->powers[pw_invisibility] > 4 * 32 || viewplayer->powers[pw_invisibility] & 8) {
+        vis->colormap = -1; // shadow draw
+    } else if (fixedcolormap) {
+        vis->colormap = fixedcolormap;
+    } else if (psp->state->frame & FF_FULLBRIGHT) {
+        vis->colormap = 0;
+    } else {
+        vis->colormap = lights[MAXLIGHTSCALE - 1];
+    }
+    int a = vis->x1 > nw_band_x0 ? vis->x1 : nw_band_x0;
+    int b = vis->x2 < nw_band_x1 - 1 ? vis->x2 : nw_band_x1 - 1;
+    // (a fuzzy weapon counts its pixels from its first column)
+    int c0 = vis->colormap < 0 ? vis->x1 : a;
+    for (int x = c0; x <= b; x++) {
+        nw_clipbot[x] = viewheight;
+        nw_cliptop[x] = -1;
+    }
+    if (c0 <= b) nw_draw_vis_sprite(vis, c0, b);
+}
+
+static void nw_draw_player_sprites(void) {
+    int lightnum = (mobj_sector(viewplayer->mo)->lightlevel >> LIGHTSEGSHIFT) + extralight;
+    const int8_t *lights = scalelight[lightnum < 0 ? 0 : lightnum >= LIGHTLEVELS ? LIGHTLEVELS - 1 : lightnum];
+    pspdef_t *psp = viewplayer->psprites;
+    for (int i = 0; i < NUMPSPRITES; i++, psp++)
+        if (psp->state) nw_draw_psprite(psp, lights);
+}
+
+static void nw_draw_player_sprites(void);
+
+// fuzz: where vanilla's fuzzpos is at each fuzzy sprite and at the weapon, the frame drawn in its order
+// (the pixels counted, nothing drawn: no band)
+static int nw_fuzz_psprites;
+int nw_fuzz_prepass(int fuzzpos) {
+    int bx0 = nw_band_x0, bx1 = nw_band_x1;
+    nw_band_x0 = nw_band_x1 = SCREENWIDTH;
+    nw_fuzz_at = fuzzpos;
+    for (int k = 0; k < nw_vissprite_count; k++) {
+        vissprite_t *spr = &nw_vissprites[nw_vis_order[k]];
+        if (spr->colormap >= 0) continue;
+        spr->fuzzbase = (uint8_t) nw_fuzz_at;
+        nw_draw_sprite(spr, spr->x1);
+    }
+    nw_fuzz_psprites = nw_fuzz_at;
+    if (!viewangleoffset && (viewplayer->powers[pw_invisibility] > 4 * 32 || viewplayer->powers[pw_invisibility] & 8))
+        nw_draw_player_sprites();
+    nw_band_x0 = bx0;
+    nw_band_x1 = bx1;
+    return nw_fuzz_at;
+}
+
+// the band's sprites, masked walls and weapon (nw_band_x0 to nw_band_x1): vanilla's R_DrawMasked
+void nw_draw_masked(void) {
+    for (int k = 0; k < nw_vissprite_count; k++) {
+        vissprite_t *spr = &nw_vissprites[nw_vis_order[k]];
+        if (spr->x2 < nw_band_x0 || spr->x1 >= nw_band_x1) continue;
+        if (spr->colormap < 0) nw_fuzz_at = spr->fuzzbase;
+        nw_draw_sprite(spr, spr->colormap < 0 ? spr->x1 : nw_band_x1);
+    }
+    for (int i = nw_drawseg_count - 1; i >= 0; i--) {
+        nw_drawseg_t *ds = &nw_drawsegs[i];
+        if (ds->masked == NW_OPEN_NONE || ds->x2 < nw_band_x0 || ds->x1 >= nw_band_x1) continue;
+        nw_masked_seg_range(ds, ds->x1 > nw_band_x0 ? ds->x1 : nw_band_x0,
+                            ds->x2 < nw_band_x1 - 1 ? ds->x2 : nw_band_x1 - 1);
+    }
+    nw_fuzz_at = nw_fuzz_psprites;
+    if (!viewangleoffset) nw_draw_player_sprites();
+}
+#endif
