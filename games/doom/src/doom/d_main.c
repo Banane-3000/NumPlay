@@ -665,6 +665,17 @@ void D_AdvanceDemo (void)
 // This cycles through the demo sequences.
 // FIXME - version dependend demo numbers?
 //
+#if NUMWORKS
+// (a build of chosen maps, tools/pick.py, leaves out the demos of the maps it leaves out: the next page instead)
+static boolean D_NwDemoIn(const char *name)
+{
+    if (W_CheckNumForName(name) >= 0)
+        return true;
+    advancedemo = true;
+    return false;
+}
+#define G_DeferedPlayDemo(name) (D_NwDemoIn(name) ? G_DeferedPlayDemo(name) : (void) 0)
+#endif
 void D_DoAdvanceDemo (void)
 {
     players[consoleplayer].playerstate = PST_LIVE;  // not reborn
@@ -752,6 +763,9 @@ void D_DoAdvanceDemo (void)
         pagename = DEH_String("INTERPIC");
     }
 }
+#if NUMWORKS
+#undef G_DeferedPlayDemo
+#endif
 
 
 
@@ -921,6 +935,19 @@ void D_IdentifyVersion(void)
 #if !DEMO1_ONLY
     // Make sure gamemode is set up correctly
 
+#if NUMWORKS
+    // (a build of chosen maps, tools/pick.py, says which game the full WAD is)
+    int nwmode = W_CheckNumForName("NWMODE");
+    if (nwmode >= 0)
+    {
+        const char *m = W_CacheLumpNum(nwmode, PU_STATIC);
+        gamemode = m[0] == 'c' ? commercial : m[0] == 'r' && m[1] == 'e' && m[2] == 't' ? retail
+                 : m[0] == 'r' ? registered : shareware;
+        if (gamemode == commercial && gamemission == doom)
+            gamemission = doom2;
+        return;
+    }
+#endif
     if (logical_gamemission == doom)
     {
         // Doom 1.  But which version?
@@ -2168,6 +2195,16 @@ void D_DoomMain (void)
         screenblocks = atoi(v);
         detailLevel = strchr(v, ' ') ? atoi(strchr(v, ' ')) : 0;
         M_NwViewLoaded();
+    }
+#endif
+#if NW_SCAN
+    {
+        // (the emulator's frame rate build, nw/scan.c: the full size, in high or low detail, frames as they come)
+        extern int nw_sync_off;
+        screenblocks = 10;
+        detailLevel = NW_SCAN == 2;
+        M_NwViewLoaded();
+        nw_sync_off = 1;
     }
 #endif
     if (nw_warp)

@@ -128,6 +128,9 @@ void nw_frame_end(void) {
     perf_frames++;
     last_ms = now;
     last_slept = nw_slept_ms;
+#if NW_SCAN
+    { extern void nw_scan_frame(void); nw_scan_frame(); }
+#endif
 }
 #endif
 

@@ -156,7 +156,16 @@ static boolean M_NwCheatSide(int right)
 {
     int maps = gamemode == commercial ? 32 : 9;
     if (itemOn == ch_warp)
-        nw_warp_map = (nw_warp_map + (right ? 1 : maps - 1) - 1) % maps + 1;
+    {
+        // (the maps of this build)
+        int episode = gamemode == commercial ? 0 : gameepisode ? gameepisode : 1;
+        for (int k = 0; k < maps; k++)
+        {
+            nw_warp_map = (nw_warp_map + (right ? 1 : maps - 1) - 1) % maps + 1;
+            if (G_NwMapIn(episode, nw_warp_map))
+                break;
+        }
+    }
     else if (itemOn == ch_power)
         nw_power = (nw_power + (right ? 1 : 5)) % 6;
     else

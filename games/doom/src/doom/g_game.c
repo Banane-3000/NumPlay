@@ -1185,6 +1185,9 @@ void G_Ticker (void)
 #if HOST
     { extern void host_tic(void); host_tic(); }
 #endif
+#if NW_SCAN
+    { extern void nw_scan_tic(void); nw_scan_tic(); }
+#endif
 } 
  
  
@@ -1506,10 +1509,35 @@ void G_SecretExitLevel (void)
     gameaction = ga_completed; 
 } 
  
-void G_DoCompleted (void) 
-{ 
-    int             i; 
-	 
+#if NUMWORKS
+// a build of chosen maps (tools/pick.py) may leave some out: whether a map is in, and the first one in from a map
+// to another (0: none)
+boolean G_NwMapIn(int episode, int map)
+{
+    char name[9];
+    if (gamemode == commercial)
+        M_snprintf(name, sizeof name, "MAP%02d", map);
+    else
+        M_snprintf(name, sizeof name, "E%dM%d", episode, map);
+    return W_CheckNumForName(name) >= 0;
+}
+
+int G_NwNextMapIn(int episode, int map, int last)
+{
+    for (; map <= last; map++)
+        if (G_NwMapIn(episode, map))
+            return map;
+    return 0;
+}
+
+// (the last map in is done: Doom II's game ends as after MAP30)
+static boolean nw_game_ends;
+#endif
+
+void G_DoCompleted (void)
+{
+    int             i;
+
     gameaction = ga_nothing; 
  
     for (i=0 ; i<MAXPLAYERS ; i++) 
@@ -1616,10 +1644,30 @@ void G_DoCompleted (void)
 		break;
 	    }                
 	} 
-	else 
-	    wminfo.next = gamemap;          // go to next level 
+	else
+	    wminfo.next = gamemap;          // go to next level
     }
-		 
+#if NUMWORKS
+    // (the next map is left out: a secret level's exit goes on as the normal one, then to the next map that is
+    // in; with none, the episode ends, as after its eighth map, or Doom II's game as after MAP30)
+    nw_game_ends = false;
+    if (!G_NwMapIn(gameepisode, wminfo.next + 1))
+    {
+        int last = gamemode == commercial ? 30 : 8;
+        int next = gamemap > last ? 16 : secretexit && gamemap < last ? gamemap + 1 : wminfo.next + 2;
+        next = G_NwNextMapIn(gameepisode, next, last);
+        if (next)
+            wminfo.next = next - 1;
+        else if (gamemode != commercial)
+        {
+            gameaction = ga_victory;
+            return;
+        }
+        else
+            nw_game_ends = true;
+    }
+#endif
+
     wminfo.maxkills = totalkills; 
     wminfo.maxitems = totalitems; 
     wminfo.maxsecret = totalsecret; 
@@ -1685,6 +1733,14 @@ void G_WorldDone (void)
     if (secretexit) 
 	players[consoleplayer].didsecret = true;
 
+#if NUMWORKS
+    if (nw_game_ends)
+    {
+        gamemap = 30;
+        F_StartFinale ();
+        return;
+    }
+#endif
     if ( gamemode == commercial )
     {
 	switch (gamemap)
@@ -2123,6 +2179,18 @@ G_InitNew
     if ( (map > 9)
 	 && ( gamemode != commercial) )
       map = 9;
+#if NUMWORKS
+    // (a map left out: the first one in from it, or from the episode's first)
+    if (!G_NwMapIn(episode, map))
+    {
+        int last = gamemode == commercial ? 32 : 9;
+        int m = G_NwNextMapIn(episode, map, last);
+        if (!m)
+            m = G_NwNextMapIn(episode, 1, last);
+        if (m)
+            map = m;
+    }
+#endif
 
     M_ClearRandom ();
 

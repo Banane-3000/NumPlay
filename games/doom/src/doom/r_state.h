@@ -269,7 +269,7 @@ boolean is_switched_texture(const side_t *side, int where);
 #if WHD_SUPER_TINY
 #define sidenum_to_side(sidenum) (sides_z + (sidenum))
 static inline uint side_sectornum(side_t *side) {
-    return side[1];
+    return side[1] | (side[0] & 128) << 1; // (the top bit of the first byte: sectors up to 511)
 }
 #define side_sector(side) (sectors + side_sectornum(side))
 
@@ -306,6 +306,14 @@ static inline int side_textureoffset16(side_t *side) {
     return toff;
 }
 #define side_textureoffset(side) (side_textureoffset16(side) << FRACBITS)
+// a packed side's bytes: its kind, sector, textures, texture offset and row offset (a line's back side follows its
+// front one: from a front side of 7 bytes or more, the line does not say how far, nw/pick.py)
+static inline int side_bytes(const side_t *side) {
+    static const uint8_t textures[16] = {0, 1, 1, 1, 2, 1, 1, 2, 1, 1, 2, 2, 2, 2, 2, 3};
+    int n = 2 + textures[side[0] & 0xf] + ((side[0] >> 4) & 3);
+    if (side[0] & 64) n += side[n] & 128 ? 2 : 1;
+    return n;
+}
 static inline int side_rowoffset16(side_t *side) {
     // todo is this shared with the other?
     static uint8_t offset_offset[16] = {2, 3, 3, 3, 4, 3, 3, 4, 3, 3, 4, 4, 4, 4, 4, 5};
@@ -397,13 +405,15 @@ static inline int line_sidenum(const line_t *l, int side) {
     if (side && line_onesided(l)) return -1;
     int s;
     if (line_predict_side(l)) {
-        s = ((l - lines) * whd_sidemul) >> 16;
+        s = ((uint32_t) (l - lines) * whd_sidemul) >> 14; // (whd_gen: a quarter, as big maps need)
         s += (int8_t)l[2];
     } else {
         s = l[2] + (l[3] << 8);
     }
     if (side) {
-        s += l[1] >> 5;
+        int d = l[1] >> 5;
+        if (d == 7) d = side_bytes(sidenum_to_side(s));
+        s += d;
     }
     return s;
 }

@@ -1260,6 +1260,13 @@ void M_Episode(int choice)
 	M_SetupNextMenu(&ReadDef1);
 	return;
     }
+#if NUMWORKS
+    if (!G_NwNextMapIn(choice + 1, 1, 9))
+    {
+        M_StartMessage("THIS EPISODE IS NOT IN THIS\nBUILD OF DOOM.\n\n" PRESSKEY, NULL, false);
+        return;
+    }
+#endif
 
     epi = choice;
     M_SetupNextMenu(&NewDef);

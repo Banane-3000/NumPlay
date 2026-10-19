@@ -41,6 +41,8 @@ typedef struct __packed {
 
 
 bool super_tiny = true;
+// -drop-unused: what nothing converts (music, other ports' lumps...) is left empty (nw/pick.py's WADs)
+bool drop_unused = false;
 // -silent: no sound effects or music (a calculator has no speaker), their lumps kept empty
 bool silent = false;
 // -lossless: what RP2040 Doom approximates is kept as in the WAD: the menu, status bar and font graphics
@@ -2391,6 +2393,9 @@ void dump_patch(const char *name, int num, lump &patch) {
     }
 }
 
+// the packed sides of the level being converted (convert_linedefs reads them)
+static std::vector<uint8_t> sides_z_of_level;
+
 std::vector<int> convert_sidedefs(wad &wad, const texture_index &tex_index, lump &lump) {
     assert(lump.data.size() % sizeof(mapsidedef_t) == 0);
     int count = lump.data.size() / sizeof(mapsidedef_t);
@@ -2492,11 +2497,10 @@ std::vector<int> convert_sidedefs(wad &wad, const texture_index &tex_index, lump
             } else {
                 toff_size = 2;
             }
-            bool onebyte_sector = msd.sector < 256;
-            bool onebyte = onebyte_sector | onebyte_texture;
-            sides_z.push_back(enc | (!(onebyte) << 7) | (have_rowoff << 6) | (toff_size << 4));
-            sides_z.push_back(msd.sector);
-            assert(onebyte);
+            // (the sector's top bit, for up to 511, goes in the first byte's top bit)
+            if (msd.sector >= 512) fail("%d sectors: the calculator's build has room for 511", msd.sector + 1);
+            sides_z.push_back(enc | ((msd.sector >> 8) << 7) | (have_rowoff << 6) | (toff_size << 4));
+            sides_z.push_back(msd.sector & 0xff);
             if (hasA[enc]) {
                 sides_z.push_back(toptexture);
             }
@@ -2533,7 +2537,7 @@ std::vector<int> convert_sidedefs(wad &wad, const texture_index &tex_index, lump
                 int texoff = 0;
                 if (sides_z[s0] & 48) {
                     if (sides_z[s0] & 32) {
-                        texoff = (sides_z[s0 + offset_offset[enc2]] << 8) + sides_z[s0 + 1 + offset_offset[enc2]];
+                        texoff = (int16_t) ((sides_z[s0 + offset_offset[enc2]] << 8) + sides_z[s0 + 1 + offset_offset[enc2]]); // (negative offsets: the engine reads an int16_t too)
                     } else {
                         texoff = sides_z[s0 + offset_offset[enc2]] << 1;
                     }
@@ -2555,6 +2559,7 @@ std::vector<int> convert_sidedefs(wad &wad, const texture_index &tex_index, lump
             side_meta.record(sizeof(whdsidedef_t));
             side_metaz.record(sides_z.size() - s0);
         }
+        sides_z_of_level = sides_z;
         lump.data = sides_z;
     } else {
         std::vector<uint8_t> whd_sides;
@@ -2599,17 +2604,27 @@ std::vector<int> convert_sidedefs(wad &wad, const texture_index &tex_index, lump
 #define line_predict_v1(l) ((l[1] & (ML_NO_PREDICT_V1 >> 8)) == 0)
 #define line_predict_v2(l) ((l[1] & (ML_NO_PREDICT_V2 >> 8)) == 0)
 
+// a side's bytes (as r_state.h works them out)
+static inline int side_bytes(const uint8_t *side) {
+    static const uint8_t textures[16] = {0, 1, 1, 1, 2, 1, 1, 2, 1, 1, 2, 2, 2, 2, 2, 3};
+    int n = 2 + textures[side[0] & 0xf] + ((side[0] >> 4) & 3);
+    if (side[0] & 64) n += side[n] & 128 ? 2 : 1;
+    return n;
+}
+
 static inline int line_sidenum(const uint8_t *lines, uint16_t whd_sidemul, const uint8_t *l, int side) {
     if (side && line_onesided(l)) return -1;
     int s;
     if (line_predict_side(l)) {
-        s = ((l - lines) * whd_sidemul) >> 16;
+        s = ((uint32_t) (l - lines) * whd_sidemul) >> 14; // (a quarter: big maps have more side bytes than line bytes)
         s += (int8_t)l[2];
     } else {
         s = l[2] + (l[3] << 8);
     }
     if (side) {
-        s += l[1] >> 5;
+        int d = l[1] >> 5;
+        if (d == 7) d = side_bytes(sides_z_of_level.data() + s);
+        s += d;
     }
     return s;
 }
@@ -2689,7 +2704,7 @@ std::vector<int> convert_linedefs(wad &wad, lump &lump, const std::vector<int>& 
             printf("Guess %d\n", size_guess);
             uint vmul = 65536 * max_v / size_guess;
             assert(vmul < 65536);
-            uint smul = 65536 * max_side_num / size_guess;
+            uint smul = 16384 * max_side_num / size_guess;
             assert(smul < 65536);
             offset = 0;
             std::vector<uint8_t> result;
@@ -2722,11 +2737,12 @@ std::vector<int> convert_linedefs(wad &wad, lump &lump, const std::vector<int>& 
                 int sidenum = sidedef_mapping[msd.sidenum[0]];
                 if (msd.sidenum[1] != -1) {
                     uint delta = sidedef_mapping[msd.sidenum[1]] - sidenum;
-                    assert(delta > 0 && delta <= 7);
-                    flags |= delta << 13;
+                    // (7: as far as the front side's own size, which the engine works out, side_bytes)
+                    assert(delta > 0 && (delta < 7 || delta == side_bytes(sides_z_of_level.data() + sidenum)));
+                    flags |= std::min(delta, 7u) << 13;
                 }
 
-                int s_est = (int)((base * smul) >> 16u);
+                int s_est = (int)((base * smul) >> 14u);
                 bool s_in_range = abs(sidenum - s_est) <= 127;
                 side_num_range.record(s_in_range);
                 side_num_range_v.record(sidenum - s_est);
@@ -2799,7 +2815,7 @@ std::vector<int> convert_linedefs(wad &wad, lump &lump, const std::vector<int>& 
         offset = 0;
         const uint8_t *lines = last_encoding.first.data();
         const auto &offsets = last_encoding.second;
-        uint smul = 65536 * max_side_num / size_guess;
+        uint smul = 16384 * max_side_num / size_guess;
         uint vmul = 65536 * max_v / size_guess;
         for (int i = 0; i < count; i++) {
             auto msd = get_field_inc<maplinedef_t>(lump.data, offset);
@@ -4474,6 +4490,7 @@ void convert_flats(wad &wad) {
     fstart_lump.data = special_to_flat;
     fstart_lump.data.insert(fstart_lump.data.end(), flat_to_special.begin(), flat_to_special.end());
     wad.update_lump(fstart_lump);
+    touched[fstart_lump.num] = TOUCHED_FLAT; // (the flats' metadata: kept by -drop-unused)
 }
 
 void convert_demo(wad & wad, lump& l) {
@@ -4814,6 +4831,7 @@ int main(int argc, const char **argv) {
             if (!strcmp(argv[argn], "-no-super-tiny")) super_tiny = false;
             else if (!strcmp(argv[argn], "-silent")) silent = true;
             else if (!strcmp(argv[argn], "-lossless")) lossless = true;
+            else if (!strcmp(argv[argn], "-drop-unused")) drop_unused = true;
             else usage();
             argn++;
         }
@@ -4905,6 +4923,11 @@ int main(int argc, const char **argv) {
         }
         printf("}; \n");
 #endif
+        lump nwmode; // (nw/pick.py's: which game the full WAD is)
+        if (wad.get_lump("NWMODE", nwmode)) {
+            touched[nwmode.num] = TOUCHED_ENDOOM;
+            name_required.insert("NWMODE");
+        }
         lump endoom;
         if (wad.get_lump("ENDOOM", endoom)) {
             touched[endoom.num] = TOUCHED_ENDOOM;
@@ -5239,6 +5262,11 @@ int main(int argc, const char **argv) {
                 printf("UNTOUCHED %d %s (%d)\n", e.first, e.second.name.c_str(), (int) e.second.data.size());
                 total += e.second.data.size();
                 touched[e.first] = TOUCHED_UNUSED;
+                if (drop_unused) {
+                    lump l = e.second;
+                    l.data.clear();
+                    wad.update_lump(l);
+                }
             }
         }
         printf("UNTOUCHED TOTAL %d\n", total);

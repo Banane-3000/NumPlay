@@ -1501,6 +1501,10 @@ ST_Responder (event_t* ev)
                 }
             }
 
+#if NUMWORKS
+            if (!G_NwMapIn(epsd, map))
+                return false; // (left out of this build)
+#endif
             // So be it.
             plyr->message = DEH_String(STSTR_CLEV);
             G_DeferedInitNew(gameskill, epsd, map, false);
