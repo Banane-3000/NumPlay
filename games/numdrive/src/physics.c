@@ -10,7 +10,7 @@
 vec3 phys_gravity = {0, -9.8f, 0};
 
 #define DT (1.0f / PHYS_HZ)
-#define MAX_ELEMS 128   /* collision elements considered per body */
+#define MAX_ELEMS 136   /* collision elements considered per body (the most a level makes is 129, in Mobile Home) */
 #define MAX_CONTACTS 1024
 #define MAX_EVENTS 64
 #define ITER 10
@@ -372,12 +372,13 @@ static bool build_elems(Body *b) {
     const Block *bk = blocks[s->blk[i]];
     if (bk->flags & 3) cap++;
   }
-  if (cap > 255) cap = 255;
+  /* every collider part first (Spinning World's box has 320, Tilt's 378: past 255 the parts furthest along x
+     were left out, and that side of them let the car through), merged below, then at most 255 kept */
   uint32_t mark = arena_mark();
-  b->el = arena_alloc(sizeof(Elem) * (cap ? cap : 1));
-  if (!b->el) return false;
-  b->nel = 0;
-  for (int i = 0; i < s->np && b->nel < cap; i++) {
+  Elem *el = arena_alloc(sizeof(Elem) * (cap ? cap : 1));
+  if (!el) return false;
+  int n = 0;
+  for (int i = 0; i < s->np && n < cap; i++) {
     const Block *bk = blocks[s->blk[i]];
     int coll = bk->flags & 3;
     if (!coll) continue;
@@ -387,7 +388,7 @@ static bool build_elems(Body *b) {
       vec3 c;
       float rad;
       part_sphere(bk, comp, k, &c, &rad);
-      Elem *e = &b->el[b->nel++];
+      Elem *e = &el[n++];
       e->circle = 1;
       e->cx = c.x - s->com.x;
       e->cy = c.y - s->com.y;
@@ -401,7 +402,7 @@ static bool build_elems(Body *b) {
     if (bb[0] > bb[3]) continue;
     float mnx = PK_X(k) + bb[0] / 8.0f, mny = PK_Y(k) + bb[1] / 8.0f, mnz = PK_Z(k) + bb[2] / 8.0f;
     float mxx = PK_X(k) + (bb[3] + 1) / 8.0f, mxy = PK_Y(k) + (bb[4] + 1) / 8.0f, mxz = PK_Z(k) + (bb[5] + 1) / 8.0f;
-    Elem *e = &b->el[b->nel++];
+    Elem *e = &el[n++];
     e->circle = 0;
     e->cx = (mnx + mxx) * 0.5f - s->com.x;
     e->cy = (mny + mxy) * 0.5f - s->com.y;
@@ -411,11 +412,11 @@ static bool build_elems(Body *b) {
     e->z1 = mxz - s->com.z;
   }
   /* merge boxes sharing an edge */
-  for (int i = 0; i < b->nel; i++) {
-    Elem *e = &b->el[i];
+  for (int i = 0; i < n; i++) {
+    Elem *e = &el[i];
     if (e->circle) continue;
-    for (int j = i + 1; j < b->nel; j++) {
-      Elem *f = &b->el[j];
+    for (int j = i + 1; j < n; j++) {
+      Elem *f = &el[j];
       if (f->circle || fabsf(e->z0 - f->z0) > 1e-4f || fabsf(e->z1 - f->z1) > 1e-4f) continue;
       int merged = 0;
       if (fabsf(e->cx - f->cx) < 1e-4f && fabsf(e->hx - f->hx) < 1e-4f && fabsf(fabsf(e->cy - f->cy) - (e->hy + f->hy)) < 1e-4f) {
@@ -430,14 +431,16 @@ static bool build_elems(Body *b) {
         merged = 1;
       }
       if (merged) {
-        *f = b->el[b->nel - 1];
-        b->nel--;
+        *f = el[n - 1];
+        n--;
         j = i;
       }
     }
   }
+  if (n > 255) n = 255;
   arena_release(mark);
-  arena_alloc(sizeof(Elem) * (b->nel ? b->nel : 1)); /* keep only the merged elements */
+  b->el = arena_alloc(sizeof(Elem) * (n ? n : 1)); /* keep only the merged elements (where they are) */
+  b->nel = (uint8_t)n;
   nelems += b->nel;
   b->bound = 0;
   for (int i = 0; i < b->nel; i++) {

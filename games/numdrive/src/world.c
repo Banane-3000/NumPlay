@@ -388,7 +388,8 @@ static void shape_finish(Shape *s) {
   }
   {
     /* Fancade's object position: the centre of its bounds, where a stock block counts its whole cell
-       and a custom block its voxels */
+       and a custom block its voxels; an object without colliders counts whole cells (Laser Gun's beams,
+       thin lines of voxels at a cell's corner, are placed by their cell's centre) */
     float lo[3] = {1e9f, 1e9f, 1e9f}, hi[3] = {-1e9f, -1e9f, -1e9f};
     for (int i = 0; i < s->np; i++) {
       const Block *b = blocks[s->blk[i]];
@@ -396,7 +397,8 @@ static void shape_finish(Shape *s) {
       const uint8_t *bb = b->bb + PK_C(k) * 6;
       int c[3] = {PK_X(k), PK_Y(k), PK_Z(k)};
       for (int a = 0; a < 3; a++) {
-        float l = (b->flags & 8) ? c[a] : c[a] + bb[a] / 8.0f, h = (b->flags & 8) ? c[a] + 1 : c[a] + (bb[a + 3] + 1) / 8.0f;
+        bool cell = (b->flags & 8) || !coll;
+        float l = cell ? c[a] : c[a] + bb[a] / 8.0f, h = cell ? c[a] + 1 : c[a] + (bb[a + 3] + 1) / 8.0f;
         if (l < lo[a]) lo[a] = l;
         if (h > hi[a]) hi[a] = h;
       }
