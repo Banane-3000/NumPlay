@@ -1,0 +1,86 @@
+# Cookie Clicker in Chinese: the English text as in the source, a tab, the translation (see tools/lang.py).
+# The names come from the game's own Chinese version; the upgrades', achievements' and news' stay English.
+Cursor	指针
+Grandma	老太婆
+Farm	农场
+Mine	矿坑
+Factory	工厂
+Bank	银行
+Temple	神庙
+Wizard tower	巫师塔
+Shipment	装运飞船
+Alchemy lab	炼金术实验室
+Portal	传送门
+Time machine	时光机
+Antimatter condenser	反物质聚光镜
+Prism	棱镜
+Chancemaker	机会制造器
+Fractal engine	分形引擎
+Javascript console	Javascript 控制台
+Idleverse	空闲宇宙
+Cortex baker	脑皮层面包师
+You	你
+# numbers, in Chinese units
+ million	 百万
+ billion	 十亿
+ trillion	 万亿
+ quadrillion	 千万亿
+ quintillion	 百京
+ sextillion	 十垓
+ septillion	 秭
+ octillion	 千秭
+ nonillion	 百穰
+ decillion	 十沟
+ undecillion	 涧
+ duodecillion	 千涧
+The mouse and cursors are twice as efficient.	鼠标点击和指针的生产率翻倍。
+The mouse and cursors gain +0.1 cookies for each other building.	每拥有一座其他建筑，鼠标点击和指针 +0.1 块饼干。
+Thousand fingers x	千手指 x
+Clicking gains +1% of your CpS.	点击获得 +1% 的 CpS。
+More CpS the more milk you have.	牛奶越多，CpS 越高。
+Golden cookies come twice as often, stay twice as long.	黄金饼干出现的频率翻倍，存在时间翻倍。
+Golden cookie effects last twice as long.	黄金饼干效果的持续时间翻倍。
+Cookie production +	饼干产量 +
+: twice as efficient.	：生产率翻倍。
+Bake 	烘焙 
+Make 	点击制作 
+Have 	拥有 
+Click 	点击 
+Own 	拥有 
+Purchase 	购买 
+ cookies.	 块饼干。
+ cookies per second.	 块饼干/秒。
+ cookies from clicking.	 块饼干。
+ golden cookies.	 块黄金饼干。
+ buildings.	 座建筑。
+ upgrades.	 项升级。
+Lucky! +	好运气！+
+cookies	块饼干
+per second: 	每秒：
+Click frenzy x777: 	点击狂热 x777：
+Frenzy x7: 	狂热 x7：
+Achievement unlocked	已解锁成就
+Upgrades	升级
+Buildings	建筑
+Stats	统计
+Buy x	购买 x
+ achievements	 项成就
+Each makes 	每座 
+ make 	 座共 
+Resume	继续
+How to play	玩法
+Quit game	退出游戏
+click the cookie	点击饼干
+catch a golden cookie	抓住黄金饼干
+Arrows	方向键
+choose, change tabs	选择、切换页面
+buy	购买
+buy 1, 10 or 100	一次买 1、10 或 100 个
+Back	返回
+menu	菜单
+Quit the game?	退出游戏？
+Your bakery only bakes while the game is open.	只有游戏打开时，你的面包房才会烘焙。
+Play	开始
+No	否
+Yes	是
+Your bakery is saved.	你的面包房已保存。

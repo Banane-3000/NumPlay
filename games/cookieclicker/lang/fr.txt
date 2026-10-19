@@ -1,0 +1,86 @@
+# Cookie Clicker in French: the English text as in the source, a tab, the translation (see tools/lang.py).
+# The names come from the game's own French version; the upgrades', achievements' and news' stay English.
+Cursor	Curseur
+Grandma	Grand-mère
+Farm	Ferme
+Mine	Mine
+Factory	Usine
+Bank	Banque
+Temple	Temple
+Wizard tower	Tour de mage
+Shipment	Cargaison
+Alchemy lab	Labo d'alchimie
+Portal	Portail
+Time machine	Machine temporelle
+Antimatter condenser	Condenseur d'antimatière
+Prism	Prisme
+Chancemaker	Porte-bonheur
+Fractal engine	Moteur fractal
+Javascript console	Console javascript
+Idleverse	Veillevers
+Cortex baker	Cortex pâtissier
+You	Toi
+# numbers, in the French long scale
+ million	 million
+ billion	 milliard
+ trillion	 billion
+ quadrillion	 billiard
+ quintillion	 trillion
+ sextillion	 trilliard
+ septillion	 quadrillion
+ octillion	 quadrilliard
+ nonillion	 quintillion
+ decillion	 quintilliard
+ undecillion	 sextillion
+ duodecillion	 sextilliard
+The mouse and cursors are twice as efficient.	La souris et les curseurs sont deux fois plus efficaces.
+The mouse and cursors gain +0.1 cookies for each other building.	La souris et les curseurs gagnent +0,1 cookie par autre bâtiment.
+Thousand fingers x	Mille doigts x
+Clicking gains +1% of your CpS.	Tes clics rapportent +1 % de ton CpS.
+More CpS the more milk you have.	Plus de CpS avec plus de lait.
+Golden cookies come twice as often, stay twice as long.	Les cookies dorés viennent deux fois plus souvent, restent deux fois plus longtemps.
+Golden cookie effects last twice as long.	Les effets des cookies dorés durent deux fois plus longtemps.
+Cookie production +	Production de cookies +
+: twice as efficient.	 : deux fois plus efficace.
+Bake 	Prépare 
+Make 	Fais 
+Have 	Possède 
+Click 	Clique 
+Own 	Possède 
+Purchase 	Achète 
+ cookies.	 cookies.
+ cookies per second.	 cookies par seconde.
+ cookies from clicking.	 cookies en cliquant.
+ golden cookies.	 cookies dorés.
+ buildings.	 bâtiments.
+ upgrades.	 améliorations.
+Lucky! +	Quelle chance ! +
+cookies	cookies
+per second: 	par seconde : 
+Click frenzy x777: 	Frénésie de clics x777 : 
+Frenzy x7: 	Frénésie x7 : 
+Achievement unlocked	Trophée débloqué
+Upgrades	Bonus
+Buildings	Bâtiments
+Stats	Stats
+Buy x	Acheter x
+ achievements	 trophées
+Each makes 	Chacun fait 
+ make 	 font 
+Resume	Reprendre
+How to play	Comment jouer
+Quit game	Quitter le jeu
+click the cookie	cliquer le cookie
+catch a golden cookie	attraper un cookie doré
+Arrows	Flèches
+choose, change tabs	choisir, changer d'onglet
+buy	acheter
+buy 1, 10 or 100	acheter 1, 10 ou 100
+Back	Retour
+menu	menu
+Quit the game?	Quitter le jeu ?
+Your bakery only bakes while the game is open.	Ta boulangerie ne cuit que quand le jeu est ouvert.
+Play	Jouer
+No	Non
+Yes	Oui
+Your bakery is saved.	Ta boulangerie est sauvegardée.
