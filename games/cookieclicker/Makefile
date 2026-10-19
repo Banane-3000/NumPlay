@@ -1,56 +1,57 @@
-# Cookie Clicker — click the big cookie, buy buildings and upgrades, catch golden cookies.
-#   make          build output/cookieclicker.nwa
-#   make check    link the app like the calculator does (output/cookieclicker.bin)
-#   make data     src/data.h from tools/data.py (the names, news and pictures; needs zopfli)
-#
-# In NumPlay the game draws with the launcher's strips, shapes and fonts, unpacks its texts with its
-# DEFLATE decoder and saves through its file functions (module.o leaves them to the launcher); on its
-# own it brings them along.
+# Cookie Clicker on the NumWorks calculator.
+#   make            output/cookieclicker.nwa
+#   make check      link it like the calculator does (output/cookieclicker.bin)
+#   make host       build/play: the game on a computer, for tests and screenshots
+#   make test       the game played on a computer (tests/check.py, with the sanitizers)
+#   make data       src/data.bin and src/data.h from the public material tools/fetch.py gathers
+#                   (REF=its folder; Node runs the game's script for its numbers and texts, then Python with
+#                   Pillow and NumPy packs them)
 Q ?= @
-CC = arm-none-eabi-gcc
+# the ARM toolchain on the PATH, or in TOOLCHAIN=<its bin folder>
+TOOLCHAIN ?=
+BIN = $(if $(TOOLCHAIN),$(TOOLCHAIN)/)
+CC = $(BIN)arm-none-eabi-gcc
 NWLINK ?= npx --yes -- nwlink@1.0.0
+STRIP ?= $(BIN)arm-none-eabi-strip --strip-unneeded
+SIZE = $(BIN)arm-none-eabi-size
 BUILD_DIR = output
-SRC = src/main.c
-HEADERS = src/data.h ../common/epsilon_app.h ../common/epsilon_files.h ../common/np_text.h \
-  ../../launcher/src/gfx.h ../../launcher/src/np.h ../../launcher/src/font.h ../../launcher/src/inflate.h
+REF ?=
 
-# (its numbers are doubles, written exactly: no -fsingle-precision-constant, except for the launcher's drawing)
-CFLAGS = -std=c11 $(shell $(NWLINK) eadk-cflags-device)
-CFLAGS += -Os -Wall -Wextra -Wno-unused-parameter -fno-math-errno
+# the drawing runs every frame at -O2; the rest is small at -Os
+HOT = src/gfx.c
+COLD = $(filter-out $(HOT) src/plat_host.c src/plat_eadk.c,$(wildcard src/*.c))
+COLD_OBJ = $(patsubst %.c,$(BUILD_DIR)/cold/%.o,$(notdir $(COLD)))
+HEADERS = $(wildcard src/*.h) ../common/epsilon_app.h ../common/epsilon_files.h
+
+# (its numbers are doubles, as the game's: no -fsingle-precision-constant)
+CFLAGS = -std=gnu11 $(shell $(NWLINK) eadk-cflags-device) -DDATA_BIN='"src/data.bin"'
+CFLAGS += -O2 -Wall -Wextra -Wno-unused-parameter -fno-math-errno
 CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fwhole-program -fvisibility=internal
-LIBFLAGS = $(CFLAGS) -fsingle-precision-constant
+CFLAGS += -ffunction-sections -fdata-sections $(EXTRA)
 LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
 LDFLAGS += -Wl,-e,main -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
 LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
 
-.PHONY: build check clean data
+.PHONY: build check clean host test data
 build: $(BUILD_DIR)/cookieclicker.nwa
 
+# apps get 133652 bytes of RAM on custom builds of Epsilon 25.2 (148928 or more on official ones)
 check: $(BUILD_DIR)/cookieclicker.nwa
-	$(Q) $(NWLINK) nwa-bin $< $(BUILD_DIR)/cookieclicker.bin
+	$(Q) $(NWLINK) nwa-bin --ram-length 133652 $< $(BUILD_DIR)/cookieclicker.bin
 	@echo "BIN     $(BUILD_DIR)/cookieclicker.bin: $$(wc -c < $(BUILD_DIR)/cookieclicker.bin) bytes"
 
-data:
-	python3 tools/data.py
+$(BUILD_DIR)/data.o: src/data.S src/data.bin | $(BUILD_DIR)
+	$(Q) $(CC) -c -DDATA_BIN='"src/data.bin"' $< -o $@
 
-# compiled, then linked (the link options would upset the compiler)
-$(BUILD_DIR)/main.o: $(SRC) $(HEADERS) | $(BUILD_DIR)
-	@echo "CC      $<"
-	$(Q) $(CC) $(CFLAGS) -c $(SRC) -o $@
-$(BUILD_DIR)/gfx.o: ../../launcher/src/gfx.c $(HEADERS) | $(BUILD_DIR)
-	$(Q) $(CC) $(LIBFLAGS) -c $< -o $@
-$(BUILD_DIR)/font_data.o: ../../launcher/src/font_data.c ../../launcher/src/font.h | $(BUILD_DIR)
-	$(Q) $(CC) $(LIBFLAGS) -c $< -o $@
-$(BUILD_DIR)/xfont.o: ../../launcher/src/xfont.c ../../launcher/src/np_xfont.h $(HEADERS) | $(BUILD_DIR)
-	$(Q) $(CC) $(LIBFLAGS) -c $< -o $@
-$(BUILD_DIR)/inflate.o: ../../launcher/src/inflate.c ../../launcher/src/inflate.h | $(BUILD_DIR)
-	$(Q) $(CC) $(LIBFLAGS) -c $< -o $@
+$(BUILD_DIR)/cold/%.o: src/%.c $(HEADERS)
+	@mkdir -p $(@D)
+	$(Q) $(CC) $(CFLAGS) -Os -c $< -o $@
 
-$(BUILD_DIR)/cookieclicker.nwa: $(BUILD_DIR)/main.o $(BUILD_DIR)/gfx.o $(BUILD_DIR)/font_data.o $(BUILD_DIR)/xfont.o \
-  $(BUILD_DIR)/inflate.o $(BUILD_DIR)/icon.o
+$(BUILD_DIR)/cookieclicker.nwa: $(HOT) src/plat_eadk.c $(COLD_OBJ) $(HEADERS) $(BUILD_DIR)/icon.o $(BUILD_DIR)/data.o
 	@echo "LD      $@"
-	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $^ -lm -o $@
-	$(Q) arm-none-eabi-strip --strip-unneeded $@
+	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $(HOT) src/plat_eadk.c $(COLD_OBJ) $(BUILD_DIR)/data.o $(BUILD_DIR)/icon.o -lm -o $@
+	$(Q) $(STRIP) $@
+	$(Q) $(SIZE) $@
 
 $(BUILD_DIR)/icon.o: src/icon.png | $(BUILD_DIR)
 	@echo "ICON    $<"
@@ -59,21 +60,23 @@ $(BUILD_DIR)/icon.o: src/icon.png | $(BUILD_DIR)
 $(BUILD_DIR):
 	$(Q) mkdir -p $@
 
+# on a computer: tests/play.c plays it with scripted keys and saves screenshots
+HOST_FLAGS = -std=gnu11 -O1 -g -Wall -Wextra -Wno-unused-parameter -Isrc -DHOST -DDATA_BIN='"src/data.bin"'
+HOST_SAN = -fsanitize=address,undefined -fno-sanitize-recover=undefined
+HOST_SRC = $(filter-out src/plat_eadk.c,$(wildcard src/*.c))
+host: build/play
+build/play: $(HOST_SRC) tests/play.c src/data.S src/data.bin $(HEADERS)
+	$(Q) mkdir -p $(dir $@)
+	$(Q) cc $(HOST_FLAGS) $(HOST_SAN) $(HOST_SRC) tests/play.c src/data.S -lm -o $@
+	@echo "HOST    $@"
+
+test: build/play
+	python3 tests/check.py build/play
+
+data:
+	@test -n "$(REF)" || { echo "make data REF=<the folder tools/fetch.py filled>"; exit 1; }
+	node tools/extract.js $(REF) $(REF)/game.json
+	python3 -I tools/pack.py $(REF) $(REF)/game.json
+
 clean:
-	$(Q) rm -rf $(BUILD_DIR)
-
-# NumPlay launcher: the app as a module (see ../../tools/npmodule.py) for the
-# calculator, and as a relocatable object for the simulator build.
-.PHONY: module sim-module
-module: $(BUILD_DIR)/module.o
-$(BUILD_DIR)/module-main.o: $(SRC) $(HEADERS) | $(BUILD_DIR)
-	$(Q) $(CC) $(CFLAGS) -DNP_MODULE=1 -c $(SRC) -o $@
-$(BUILD_DIR)/module.o: $(BUILD_DIR)/module-main.o
-	$(Q) $(CC) $(CFLAGS) -Wl,--relocatable -nostartfiles -nostdlib -Wl,-e,main -flinker-output=nolto-rel $< -o $@
-
-sim-module: $(BUILD_DIR)/sim-module.o
-$(BUILD_DIR)/sim-module.o: $(SRC) $(HEADERS) | $(BUILD_DIR)
-	$(Q) mkdir -p $(BUILD_DIR)/sim
-	$(Q) cc -std=c11 -O2 -fPIC $(shell $(NWLINK) eadk-cflags-simulator) -DNP_MODULE=1 -Dmain=np_cookieclicker_main \
-	  -c $(SRC) -o $(BUILD_DIR)/sim/main.o
-	$(Q) ld -r $(BUILD_DIR)/sim/main.o -exported_symbol _np_cookieclicker_main -o $@
+	$(Q) rm -rf $(BUILD_DIR) build
