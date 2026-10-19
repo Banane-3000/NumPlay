@@ -75,12 +75,14 @@ static int keys_of(char c) {
 }
 
 /* plays keys ("R30 RJ12 N8"); 1 the door reached, 0 dead, -1 neither */
+static int exact; /* (no waiting after the last keys) */
 static int play(const char *s, const char *film, int trace) {
   int t = 0;
   char path[256];
   for (;;) {
     while (*s == ' ') s++;
     int in = 0, n = 300; /* (after the last keys, nothing for a while) */
+    if (!*s && exact) return -1;
     for (; *s >= 'A' && *s <= 'Z'; s++) in |= keys_of(*s);
     if (*s) {
       char *e;
@@ -161,6 +163,7 @@ static int by_score(const void *a, const void *b) {
 #define BEAM 1000
 #define DEPTH 900
 #define CELL_MAX 4
+static const char *prefix; /* keys played before the search */
 static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out, int depth_max) {
   size_t sz = snap_size();
   uint8_t *cur = malloc(sz * BEAM), *nxt = malloc(sz * BEAM * 9), *path = malloc((size_t)BEAM * DEPTH),
@@ -170,6 +173,7 @@ static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out,
   uint16_t *cellv = malloc(2 * BEAM * 9);
   int ncur = 1, found = 0;
   setup(i);
+  if (prefix) exact = 1, play(prefix, 0, 0), exact = 0;
   take(cur);
   for (int d = 0; d < depth_max && d < DEPTH && !found; d++) {
     int nn = 0;
@@ -180,8 +184,8 @@ static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out,
         if (dead) continue;
         memcpy(npath + (size_t)nn * DEPTH, path + (size_t)c * DEPTH, (size_t)d);
         npath[(size_t)nn * DEPTH + d] = (uint8_t)m;
-        if (won) { /* the keys */
-          char *o = out;
+        if (won || (have_goal && score() < 6 && (ground || frozen))) { /* the keys (to the door, or the waypoint) */
+          char *o = out + sprintf(out, "%s%s", prefix ? prefix : "", prefix ? " " : "");
           const uint8_t *p = npath + (size_t)nn * DEPTH;
           for (int a = 0; a <= d;) {
             int b = a;
@@ -198,12 +202,14 @@ static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out,
         take(nxt + sz * nn);
         uint64_t key = (uint64_t)(hx >> 9) * 1000003u ^ (uint64_t)(hy >> 9) * 9176u ^ (uint64_t)((vx >> 6) + 512) * 131u ^
                        (uint64_t)((vy >> 6) + 512) * 7u ^ (uint64_t)ground << 40 ^ (uint64_t)(gy < 0) << 41;
-        for (int e = 0; e < EVENTS; e++) key = key * 31 + cnt[e];
+        for (int e = 0; e < EVENTS; e++) /* (and how long ago each event went off) */
+          key = key * 31 + cnt[e] + (cnt[e] ? (uint64_t)imin((uint16_t)(frame - at_[e]), 600) / 8 * 7 : 0);
+        key = key * 31 + (uint64_t)frozen + (uint64_t)born * 64;
         keyv[nn] = key;
         uint32_t ev = 0;
         for (int e = 1; e < EVENTS; e++) ev = ev * 3 + cnt[e];
-        uint32_t cell = (uint32_t)(((hx >> 12) & 63) | ((hy >> 12) & 31) << 6 | (vx > 0 ? 1 : vx < 0 ? 2 : 0) << 11 |
-                                  (vy > 0 ? 1 : vy < 0 ? 2 : 0) << 13) * 2654435761u + ev * 40503u;
+        uint32_t cell = ((uint32_t)(((hx >> 12) & 63) | ((hy >> 12) & 31) << 6 | (vx > 0 ? 1 : vx < 0 ? 2 : 0) << 11 |
+                                    (vy > 0 ? 1 : vy < 0 ? 2 : 0) << 13) ^ ev * 40503u ^ (uint32_t)(frozen >> 2) << 15) * 2654435761u;
         cellv[nn] = (uint16_t)(cell >> 16);
         sc[nn] = score() * 4;
         ord[nn] = nn;
@@ -231,7 +237,14 @@ static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out,
       memcpy(path + (size_t)ncur * DEPTH, npath + (size_t)q * DEPTH, (size_t)d + 1);
       ncur++;
     }
-    if (getenv("LD_DEBUG")) fprintf(stderr, "depth %d: %d states, %d kept, best %d\n", d, nn, ncur, sc[ord[0]]);
+    if (getenv("PLAY_DEBUG")) {
+      fprintf(stderr, "depth %d: %d states, %d kept:", d, nn, ncur);
+      for (int c = 0; c < ncur; c++) {
+        give(cur + sz * c);
+        if (cnt[1]) fprintf(stderr, " %d,%d%s%d", (int)(hx >> 8), (int)(hy >> 8), frozen ? "f" : "", frozen);
+      }
+      fprintf(stderr, "\n");
+    }
   }
   free(cur), free(nxt), free(path), free(npath), free(sc), free(ord), free(keyv), free(cellv);
   return found;
@@ -249,6 +262,7 @@ int main(int argc, char **argv) {
                                     I_LEFT | I_DOWN};
     int n = argc > 4 && strchr(argv[4], 'D') ? 9 : 6, chunk = argc > 5 ? atoi(argv[5]) : 4;
     if (argc > 6) have_goal = sscanf(argv[6], "%d,%d", &goal_x, &goal_y) == 2;
+    if (argc > 7) prefix = argv[7];
     if (search(i, n, moves, chunk, out, 900)) {
       printf("%d-%d: %s\n", i / ROOMS + 1, i % ROOMS + 1, out);
       return 0;
