@@ -372,8 +372,10 @@ class Room:
         # the steps: those alike on objects one after the other, at the same time or at times along x
         groups = {}
         order = []
+        seq = {}  # (at the same time, the steps go in the script's order)
         for ev in evs:
-            for op in self.events[ev]:
+            for i, op in enumerate(self.events[ev]):
+                seq[id(op)] = i
                 key = (ev, op.code, op.cond, ref(op.a), ref(op.b), ref(op.c))
                 if key not in groups:
                     groups[key] = []
@@ -404,9 +406,11 @@ class Room:
                 if n == 1:
                     k = 0
                 a, b, c = (v.index if isinstance(v, Obj) else v for v in (p.a, p.b, p.c))
-                recs.append((key[0], frames(p.t), p.code, NOBODY if p.obj is None else p.obj.index, n, key[2], a, b, c, k))
+                recs.append((key[0], frames(p.t), p.code, NOBODY if p.obj is None else p.obj.index, n, key[2], a, b, c, k,
+                             seq[id(p)]))
                 i = j
-        recs.sort(key=lambda r: (r[0], r[1]))
+        recs.sort(key=lambda r: (r[0], r[1], r[-1]))
+        recs = [r[:-1] for r in recs]
         self.expanded = sum(r[4] for r in recs)
         assert len(recs) < 256 and self.expanded <= 240, (self.name, len(recs), self.expanded)
         return span_rec, recs

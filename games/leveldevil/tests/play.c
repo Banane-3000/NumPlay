@@ -301,6 +301,10 @@ int main(int argc, char **argv) {
     exact = getenv("PLAY_EXACT") || (argc <= 4 && walk[i]);
     int got = play(argc > 4 ? argv[4] : solutions[i], 0, getenv("PLAY_EVERY") ? atoi(getenv("PLAY_EVERY")) : 4);
     fprintf(stderr, "%d events set off\n", events_set_off());
+    if (getenv("PLAY_OBJS"))
+      for (int k = 0; k < no; k++)
+        fprintf(stderr, "%d: kind %d flags %d at %d,%d size %d,%d\n", k, ob[k].kind & 15, ob[k].f, (int)(ob[k].x >> 8),
+                (int)(ob[k].y >> 8), ob[k].w / 16, ob[k].h / 16);
     printf("%d\n", got);
     return 0;
   }
