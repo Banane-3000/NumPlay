@@ -29,6 +29,7 @@ void save_set_seen_keys(void);
 /* Sonic (sonic.c, react.c) */
 void SonicPlayer(Obj *o);
 void Sonic_ResetOnFloor(Obj *o);
+void Sonic_ChkRoll(Obj *o);
 void Sonic_AnglePos(Obj *o);
 void Sonic_LoadGfx(Obj *o);
 int ReactToItem(Obj *o);

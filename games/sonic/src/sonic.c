@@ -437,7 +437,7 @@ sides:
   goto bottom;
 }
 
-static void Sonic_ChkRoll(Obj *o) {
+void Sonic_ChkRoll(Obj *o) {
   if (o->status & 4) return;
   o->status |= 4;
   o->height = sonic_roll_height, o->width = sonic_roll_width;

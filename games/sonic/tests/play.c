@@ -1,10 +1,11 @@
 /* Plays Sonic the Hedgehog on a computer, with scripted keys, and saves frames.
  *
  *   play [--frames N] [--keys "10-40:right,50:a,..."] [--shots 30,60|all|every:N] [--out DIR]
- *        [--saves DIR] [--level Z.A] [--lives N] [--trace] [--dump N] [--god]
+ *        [--saves DIR] [--level Z.A] [--at X,Y] [--lives N] [--trace] [--dump N] [--god]
  *
  * Keys: up down left right a b c start home. "a-b:key" holds the key from frame a to b, "a:key" for one
- * frame. --level starts the act straight away (zone 0-6, act 0-3), past the SEGA and title screens.
+ * frame. --level starts the act straight away (zone 0-6, act 0-3), past the SEGA and title screens, --at
+ * starts it at that place.
  * Screenshots are DIR/shot_<frame>.ppm; --trace prints Sonic's position and state every frame, --dump N
  * the objects at frame N; --god keeps Sonic invincible (pits still kill). */
 #include <stdio.h>
@@ -30,7 +31,7 @@ static int frames = 600, frame, every, trace, dump = -1, god;
 static char out_dir[256] = "build/shots";
 static bool shot_all;
 static int shots[1024], nshots;
-int host_level = -1, host_act, host_lives = -1;
+int host_level = -1, host_act, host_lives = -1, host_at_x, host_at_y;
 
 static uint32_t key_bit(const char *k) {
   static const struct {
@@ -97,6 +98,11 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--god")) god = 1;
     else if (!strcmp(argv[i], "--dump") && i + 1 < argc) dump = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--lives") && i + 1 < argc) host_lives = atoi(argv[++i]);
+    else if (!strcmp(argv[i], "--at") && i + 1 < argc) {
+      char *s = argv[++i];
+      host_at_x = atoi(s);
+      host_at_y = strchr(s, ',') ? atoi(strchr(s, ',') + 1) : 0;
+    }
     else if (!strcmp(argv[i], "--level") && i + 1 < argc) {
       char *s = argv[++i];
       host_level = atoi(s);

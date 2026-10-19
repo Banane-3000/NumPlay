@@ -66,6 +66,10 @@ void LevelSizeLoad(void) {
     const uint16_t *p = DATAW(start_loc[V.zone][V.act & 3]);
     if (V.f_demo < 0) p = DATAW(ending_start[(V.creditsnum - 1) & 7]);
     x = (int16_t)p[0], y = (int16_t)p[1];
+#ifdef HOST
+    extern int host_at_x, host_at_y;
+    if (host_at_x && V.f_demo >= 0) x = (int16_t)host_at_x, y = (int16_t)host_at_y;
+#endif
     player->x.w.i = x, player->y.w.i = y;
   }
   uint16_t cx = (uint16_t)(x - 160);

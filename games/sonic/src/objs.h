@@ -171,6 +171,17 @@ void LabyrinthConvey(Obj *o);
 void Waterfall(Obj *o);
 void BossLabyrinth(Obj *o);
 
+/* obj_slz.c */
+void Elevator(Obj *o);
+void CirclingPlatform(Obj *o);
+void Staircase(Obj *o);
+void Pylon(Obj *o);
+void Fan(Obj *o);
+void Seesaw(Obj *o);
+void Bomb(Obj *o);
+void BossStarLight(Obj *o);
+void BossSpikeball(Obj *o);
+
 /* screens.c */
 void TitleSonic(Obj *o);
 void PSBTM(Obj *o);
