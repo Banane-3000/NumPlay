@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Solves every level as the game gets it (tools/levels.py) and writes tests/solutions.txt: a line a
+"""Solves the levels as the game gets them (tools/levels.py) and writes tests/solutions.txt: a line a
 level, its moves in the usual letters (u r d l to walk, U R D L to push), for the host test (make test),
 which plays each one through the game's own rules.
 
 The search goes a push at a time, the most promising first: how many pushes the boxes need at least,
 each to a goal of its own (an assignment of the boxes to the goals), plus a little for the pushes made.
 Squares a box could never get from to a goal, and boxes frozen together (four cells in a square, all
-boxes or walls, one box off its goal), are left out. The solutions aren't the shortest; they only show
-every level can be solved as packed.
+boxes or walls, one box off its goal), are left out. The solutions aren't the shortest. It solves 153
+of the 155 (not 146 and 153, a dozen boxes and more in the open); the host test checks every level
+against Microban as published either way.
 
-Usage: solve.py [tests/solutions.txt]
+Usage: solve.py [tests/solutions.txt]   (the levels not in it yet)
 """
 import heapq
 import os
@@ -55,7 +56,7 @@ def assignment(cost):
     return -v[0]
 
 
-def solve(rows, limit=3000000):
+def solve(rows, limit=3000000, weight=3):
     cells = {(y, x) for y, r in enumerate(rows) for x, c in enumerate(r) if c in "-.$*@+"}
     at = {(y, x): c for y, r in enumerate(rows) for x, c in enumerate(r)}
     goals = sorted(p for p in cells if at[p] in ".*+")
@@ -128,7 +129,7 @@ def solve(rows, limit=3000000):
                         continue
                     parent[nk] = (key, b, (dy, dx))
                     tie += 1
-                    heapq.heappush(heap, (3 * h + c + 1, c + 1, tie, nk, na))
+                    heapq.heappush(heap, (weight * h + c + 1, c + 1, tie, nk, na))
     return None
 
 
@@ -169,17 +170,30 @@ def moves(key, parent, keeper, boxes, cells):
 
 
 def main():
+    """Levels already in the file are kept; the others are solved and the file written after each one."""
     path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "..", "tests", "solutions.txt")
-    only = [int(a) for a in sys.argv[2:]]
-    lines = ["# tools/solve.py: each level's moves (u r d l walk, U R D L push), for tests/play.c"]
+    done = {}
+    if os.path.exists(path):
+        for line in open(path):
+            if line[:1].isdigit():
+                n, m = line.split(":", 1)
+                done[int(n)] = m.strip()
     for i, rows in enumerate([levels.pack(r) for r in levels.read()], 1):
-        if only and i not in only:
+        if i in done:
             continue
-        s = solve(rows)
-        assert s, f"level {i} not solved"
+        s = None
+        for weight in (10, 30):  # (the greedier, the faster on the big ones)
+            s = solve(rows, weight=weight)
+            if s:
+                break
+        if not s:  # (146 and 153, with a dozen boxes or more in the open, are too much for it)
+            print(f"level {i}: not solved", flush=True)
+            continue
         print(f"level {i}: {len(s)} moves, {sum(ch.isupper() for ch in s)} pushes", flush=True)
-        lines.append(f"{i}: {s}")
-    open(path, "w").write("\n".join(lines) + "\n")
+        done[i] = s
+        lines = ["# tools/solve.py: each level's moves (u r d l walk, U R D L push), for tests/play.c"]
+        lines += [f"{n}: {done[n]}" for n in sorted(done)]
+        open(path, "w").write("\n".join(lines) + "\n")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 # Sokoban — push every box onto a goal, with David W. Skinner's Microban.
 #   make          build output/sokoban.nwa
 #   make check    link the app like the calculator does (output/sokoban.bin)
-#   make test     every level solved on a computer with its solution (tests/play.c, tests/solutions.txt)
+#   make test     every level checked against Microban and played through on a computer (tests/play.c)
 #   make media    the pictures of the README and How to play
 #
 # tools/levels.py packs levels/microban.txt into output/levels.inc (Python 3; zopfli if installed): all
@@ -68,7 +68,7 @@ $(BUILD_DIR):
 clean:
 	$(Q) rm -rf $(BUILD_DIR) build
 
-# on a computer, with the sanitizers: every level solved, and pictures
+# on a computer, with the sanitizers: every level as published, played through, and pictures
 HOST_FLAGS = -std=gnu11 -O1 -g -Wall -Wextra -Wno-unused-parameter -DPLATFORM_DEVICE=1 -DHOST -I$(BUILD_DIR) \
   $(shell $(NWLINK) eadk-cflags-simulator) -fsanitize=address,undefined -fno-sanitize-recover=undefined
 host: build/play
@@ -78,7 +78,7 @@ build/play: $(SRC) $(LEVELS) tests/play.c $(HEADERS)
 	  ../../launcher/src/xfont.c ../../launcher/src/inflate.c -lm -o $@
 	@echo "HOST    $@"
 test: build/play
-	build/play solve tests/solutions.txt
+	build/play check levels/microban.txt tests/solutions.txt
 # the README's and How to play's pictures (tools/media.py)
 media: build/play
 	python3 tools/media.py

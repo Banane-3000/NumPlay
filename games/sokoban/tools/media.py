@@ -4,7 +4,7 @@
   docs/shot.png, docs/levels.png    a level, and the level select (shot.png is NumPlay's card too)
   ../../docs/media/sokoban.gif         levels 2 and 4 solved, for How to play
   ../../docs/media/gallery/sokoban.gif level 9, for the README's gallery
-  ../../docs/media/thumb_sokoban.png   the README's table
+  ../../docs/media/thumb_sokoban.png   the README's table (level 4 on the way)
 
 The moves come from tests/solutions.txt. Python 3 with Pillow.
 """
@@ -53,11 +53,11 @@ def main():
         subprocess.run(args, check=True, cwd=HERE)
         Image.open(os.path.join(HERE, args[-1] if name == "shot.png" else args[2])).convert("RGB").save(
             os.path.join(HERE, "docs", name), optimize=True)
-    gif(os.path.join(MEDIA, "sokoban.gif"), [film(2), film(4)])
-    nine = film(9)
-    gif(os.path.join(MEDIA, "gallery", "sokoban.gif"), [nine])
+    four = film(4)
+    gif(os.path.join(MEDIA, "sokoban.gif"), [film(2), four])
+    gif(os.path.join(MEDIA, "gallery", "sokoban.gif"), [film(9)])
     thumb = os.path.join(MEDIA, "thumb_sokoban.png")
-    nine[len(nine) // 2].crop((40, 30, 280, 210)).resize((160, 120), Image.LANCZOS).save(thumb, optimize=True)
+    four[len(four) // 3].crop((40, 30, 280, 210)).resize((160, 120), Image.LANCZOS).save(thumb, optimize=True)
     subprocess.run(["python3", os.path.join(HERE, "..", "..", "tools", "media", "round_corners.py"), thumb], check=True)
 
 

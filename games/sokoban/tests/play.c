@@ -1,8 +1,10 @@
 /* Sokoban on a computer, for tests and pictures (make host, make test).
  *
- *   play solve FILE        every level played through with its moves (tests/solutions.txt, from
- *                          tools/solve.py): each step must go, each push push, the level must end
- *                          solved; then every step is undone, back to the level as it started
+ *   play check LEVELS SOLUTIONS
+ *                          every level as the game opens it, against Microban as published
+ *                          (levels/microban.txt): the same walls, goals, boxes and keeper; then played
+ *                          through with its moves, when tools/solve.py found them (tests/solutions.txt),
+ *                          and undone back to the start
  *   play shot L OUT [MOVES]  a picture of level L (from 1) after these moves (u r d l), with the
  *                          keeper half way through the last one
  *   play hub OUT [SOLVED]  a picture of the level select, the first SOLVED levels solved
@@ -47,48 +49,96 @@ static int way(char c) {
   return p ? (int)(p - "urdl") : -1;
 }
 
-static int solve(const char *file) {
-  static char text[1 << 18];
+static char *slurp(const char *file) {
+  static char texts[2][1 << 18];
+  static int k;
+  char *text = texts[k++ & 1];
   FILE *f = fopen(file, "r");
-  size_t n = f ? fread(text, 1, sizeof text - 1, f) : 0;
+  size_t n = f ? fread(text, 1, sizeof texts[0] - 1, f) : 0;
   if (f) fclose(f);
   text[n] = 0;
-  int done = 0, bad = 0;
-  for (char *line = strtok(text, "\n"); line; line = strtok(0, "\n")) {
-    int l, at;
-    if (line[0] == '#' || sscanf(line, "%d:%n", &l, &at) < 1) continue;
-    open_level(l - 1);
-    uint8_t start[sizeof g];
-    memcpy(start, g, sizeof g);
-    int boxes = 0, goals = 0, start_left = left, start_keeper = keeper, problem = 0;
-    for (int i = 0; i < rows * MAXW; i++) boxes += !!(G[i] & F_BOX), goals += !!(G[i] & F_GOAL);
-    if (boxes != goals || !boxes || !left || !(G[keeper] & F_FLOOR) || G[keeper] & F_BOX) problem = 1;
-    for (const char *p = line + at; *p && !problem; p++) {
-      int d = way(*p), m = moves, q = pushes;
-      if (d < 0) continue;
-      step(d);
-      anim = 0;
-      if (moves != m + 1 || pushes != q + (*p < 'a')) problem = 2;
-    }
-    if (!problem && left) problem = 3;
-    if (!problem && moves != nh) problem = 4;
-    while (!problem && nh) undo();
-    if (!problem && (memcmp(start, g, sizeof g) || left != start_left || keeper != start_keeper || moves || pushes))
-      problem = 5;
-    if (problem) {
-      printf("level %d: %s\n", l,
-             (const char *[]){"", "not a level", "a step didn't go", "not solved", "steps lost", "undo"}[problem]);
-      bad++;
-    }
-    done++;
+  return text;
+}
+
+/* The level as the game opened it against Microban as published (its rows, the keeper on both): the
+   same walls, goals, boxes and keeper, and floor only where Microban has no wall. */
+static const char *differs(char pub[][40], int np) {
+  int ky = -1, kx = 0;
+  for (int y = 0; y < np; y++)
+    for (int x = 0; pub[y][x]; x++)
+      if (pub[y][x] == '@' || pub[y][x] == '+') ky = y, kx = x;
+  if (ky < 0) return "no keeper in Microban";
+  int dy = keeper / MAXW - ky, dx = keeper % MAXW - kx, boxes = 0, goals = 0;
+  for (int i = 0; i < rows * MAXW; i++) { /* every cell of the game in Microban */
+    int y = i / MAXW - dy, x = i % MAXW - dx, f = G[i];
+    char c = y >= 0 && y < np && x >= 0 && x < (int)strlen(pub[y]) ? pub[y][x] : ' ';
+    boxes += !!(f & F_BOX), goals += !!(f & F_GOAL);
+    if (!!(f & F_WALL) != (c == '#')) return "a wall";
+    if (c == '#' || !f) continue;
+    if (!(f & F_FLOOR)) return "floor";
+    if (!!(f & F_GOAL) != (c == '.' || c == '*' || c == '+') || !!(f & F_BOX) != (c == '$' || c == '*'))
+      return "a box or a goal";
   }
-  printf("%d levels played, %d solved and undone%s\n", done, done - bad, done == LEVELS ? "" : ": some are missing");
-  return bad || done != LEVELS;
+  for (int y = 0; y < np; y++) /* and every wall, box and goal of Microban in the game */
+    for (int x = 0; pub[y][x]; x++) {
+      int gy = y + dy, gx = x + dx, f = gy >= 0 && gy < rows && gx >= 0 && gx < MAXW ? G[gy * MAXW + gx] : 0;
+      if ((pub[y][x] == '#' && !(f & F_WALL)) || (strchr(".$*+", pub[y][x]) && !(f & F_FLOOR))) return "missing";
+    }
+  if (boxes != goals || !left || G[keeper] & F_BOX) return "boxes and goals";
+  return 0;
+}
+
+/* plays a solution through: each step must go and each push push, the level must end solved; then
+   every step is undone, back to the level as it began */
+static const char *play(const char *m) {
+  uint8_t start[sizeof g];
+  memcpy(start, g, sizeof g);
+  int start_left = left, start_keeper = keeper;
+  for (const char *p = m; *p; p++) {
+    int d = way(*p), n = moves, q = pushes;
+    if (d < 0) continue;
+    step(d);
+    anim = 0;
+    if (moves != n + 1 || pushes != q + (*p < 'a')) return "a step didn't go";
+  }
+  if (left) return "not solved";
+  if (moves != nh) return "steps lost";
+  while (nh) undo();
+  if (memcmp(start, g, sizeof g) || left != start_left || keeper != start_keeper || moves || pushes) return "undo";
+  return 0;
+}
+
+static int check(const char *levels_file, const char *solutions_file) {
+  static char pub[MAXH + 8][40];
+  static const char *solution[ALL_LEVELS + 1];
+  char *sol = slurp(solutions_file), *text = slurp(levels_file);
+  for (char *line = strtok(sol, "\n"); line; line = strtok(0, "\n")) {
+    int l, at;
+    if (sscanf(line, "%d:%n", &l, &at) >= 1 && l >= 1 && l <= ALL_LEVELS) solution[l] = line + at;
+  }
+  int level_n = 0, n = 0, bad = 0, solved = 0;
+  for (char *line = text;; ) { /* the levels of microban.txt, an empty line after each */
+    char *end = strchr(line, '\n');
+    if (end) *end = 0;
+    if (line[0] && line[0] != ';') {
+      if (n < MAXH + 8) snprintf(pub[n++], sizeof pub[0], "%s", line);
+    } else if (!line[0] && n) {
+      open_level(level_n);
+      const char *why = differs(pub, n);
+      if (!why && solution[level_n + 1]) why = play(solution[level_n + 1]), solved += !why;
+      if (why) printf("level %d: %s\n", level_n + 1, why), bad++;
+      level_n++, n = 0;
+    }
+    if (!end) break;
+    line = end + 1;
+  }
+  printf("%d levels as Microban has them; %d played through with their solutions and undone\n", level_n - bad, solved);
+  return bad || level_n != LEVELS;
 }
 
 int main(int argc, char **argv) {
   gfx_buf = strip;
-  if (argc >= 3 && !strcmp(argv[1], "solve")) return solve(argv[2]);
+  if (argc >= 4 && !strcmp(argv[1], "check")) return check(argv[2], argv[3]);
   if (argc >= 4 && !strcmp(argv[1], "shot")) {
     open_level(atoi(argv[2]) - 1);
     const char *m = argc > 4 ? argv[4] : "";
@@ -136,6 +186,6 @@ int main(int argc, char **argv) {
     picture(argv[2]);
     return 0;
   }
-  fprintf(stderr, "play solve FILE | shot L OUT [MOVES] | hub OUT [SOLVED]\n");
+  fprintf(stderr, "play check LEVELS SOLUTIONS | shot L OUT [MOVES [PANEL]] | film L DIR MOVES | hub OUT [SOLVED]\n");
   return 2;
 }
