@@ -290,6 +290,7 @@ void LevelDataLoad(void);
 void LevelLayoutLoad(void);
 void level_blocks_load(void);
 void DrawChunks_BG(void);
+void DrawChunks_FG(void);
 void LoadTilesFromStart(void);
 void LoadTilesAsYouMove(void);
 void LoadTilesAsYouMove_BGOnly(void);

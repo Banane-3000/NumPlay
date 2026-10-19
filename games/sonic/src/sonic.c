@@ -909,6 +909,12 @@ static void Sonic_ResetLevel(Obj *o) {
   V.f_restart = 1;
 }
 
+/* (debug mode, the original's object placer, is reached only by its cheat, which this version leaves out) */
+void DebugMode(Obj *o) {
+  (void)o;
+  V.debuguse = 0;
+}
+
 /* ------------------------------------------------------------------ the object */
 void SonicPlayer(Obj *o) {
   if (V.debuguse) {

@@ -331,6 +331,7 @@ static void draw_chunks(uint16_t (*pl)[64], int plane, const Cam *cam) {
 
 /* the title's background: the whole of plane B from the background camera (DrawChunks) */
 void DrawChunks_BG(void) { draw_chunks(plane_b, 1, &V.cam[1]); }
+void DrawChunks_FG(void) { draw_chunks(plane_a, 0, &V.cam[0]); }
 
 static void bg_rows_by_map(const uint8_t *map, int ybase, int ymask, int from) {
   for (int r = 0; r < 16; r++) {

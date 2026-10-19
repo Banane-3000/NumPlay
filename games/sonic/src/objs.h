@@ -213,6 +213,15 @@ void SonicSpecial(Obj *o);
 void SSResult(Obj *o);
 void SSRChaos(Obj *o);
 
+/* ending.c */
+void ContScrItem(Obj *o);
+void ContSonic(Obj *o);
+void EndSonic(Obj *o);
+void EndChaos(Obj *o);
+void EndSTH(Obj *o);
+void EndEggman(Obj *o);
+void TryChaos(Obj *o);
+
 /* screens.c */
 void TitleSonic(Obj *o);
 void PSBTM(Obj *o);

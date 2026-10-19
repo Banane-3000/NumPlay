@@ -317,6 +317,18 @@ void game_init(void) {
       V.lastspecial = (uint8_t)host_act;
       return;
     }
+    /* (--level 8.n: the ending with n emeralds; 9.n: the continue screen with n continues) */
+    if (host_level == 8) {
+      V.gamemode = id_Ending;
+      V.emeralds = (uint8_t)host_act;
+      for (int i = 0; i < 6; i++) V.emldlist[i] = (uint8_t)i;
+      return;
+    }
+    if (host_level == 9) {
+      V.gamemode = id_Continue;
+      V.continues = (uint8_t)host_act;
+      return;
+    }
     V.zone = (uint8_t)host_level, V.act = (uint8_t)host_act;
     return;
   }

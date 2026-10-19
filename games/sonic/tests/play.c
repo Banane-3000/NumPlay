@@ -4,7 +4,8 @@
  *        [--saves DIR] [--level Z.A] [--at X,Y] [--lives N] [--trace] [--dump N] [--god]
  *
  * Keys: up down left right a b c start home. "a-b:key" holds the key from frame a to b, "a:key" for one
- * frame. --level starts the act straight away (zone 0-6, act 0-3), past the SEGA and title screens, --at
+ * frame. --level starts the act straight away (zone 0-6, act 0-3; 7.n special stage n, 8.n the ending with
+ * n emeralds, 9.n the continue screen with n continues), past the SEGA and title screens, --at
  * starts it at that place.
  * Screenshots are DIR/shot_<frame>.ppm; --trace prints Sonic's position and state every frame, --dump N
  * the objects at frame N; --god keeps Sonic invincible (pits still kill). */
