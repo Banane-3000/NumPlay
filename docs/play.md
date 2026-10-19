@@ -393,7 +393,7 @@ Subway Surfers comes as its own app, `SubwaySurfers.nwa`: it is too big to share
 | **Back** | Pause (Resume, Quit game), or go back in menus |
 | **Home** or **On/Off** | Save and quit |
 
-Hit the side of a train or a barrier's edge and you stumble: the Inspector and his dog are right behind you, and a second stumble gets you caught. Run into anything head-on and the run is over, unless you spend keys to be saved. Ramps lead up onto the trains' roofs; Super Sneakers jump high enough to land on them. Missions raise your score multiplier, and coins buy upgrades, items, characters and boards in the shop. Your progress is also copied into `subway_saves.py`, so installing the app again doesn't erase it.
+Hit the side of a train or a barrier's edge and you stumble: the Inspector and his dog are right behind you, and a second stumble gets you caught. The yard is the classic one: the orange viaduct and its trees, steel bridges over the water, tunnels, and the orange and lime trains. Run into anything head-on and the run is over, unless you spend keys to be saved. Ramps lead up onto the trains' roofs; Super Sneakers jump high enough to land on them. Missions raise your score multiplier, and coins buy upgrades, items, characters and boards in the shop. Your progress is also copied into `subway_saves.py`, so installing the app again doesn't erase it.
 
 <br clear="right">
 
