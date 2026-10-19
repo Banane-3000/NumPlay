@@ -121,20 +121,20 @@ static int run(const char *s, const char *film) {
    as it starts, through states not seen yet, the nearest to the door first */
 typedef struct {
   obj_t ob[28];
-  int no, face, ground, coyote, buffer, held_in, anim, mode, warped;
+  int no, face, ground, coyote, buffer, held_in, anim, mode, warped, sprung;
   int32_t px, py, vx, vy;
   uint32_t found;
 } snap_t;
 static void take(snap_t *s) {
   memcpy(s->ob, ob, sizeof ob);
   s->no = no, s->face = face, s->ground = ground, s->coyote = coyote, s->buffer = buffer, s->held_in = held_in;
-  s->anim = anim, s->mode = mode, s->warped = warped, s->px = px, s->py = py, s->vx = vx, s->vy = vy;
+  s->anim = anim, s->mode = mode, s->warped = warped, s->sprung = sprung, s->px = px, s->py = py, s->vx = vx, s->vy = vy;
   s->found = found;
 }
 static void give(const snap_t *s) {
   memcpy(ob, s->ob, sizeof ob);
   no = s->no, face = s->face, ground = s->ground, coyote = s->coyote, buffer = s->buffer, held_in = s->held_in;
-  anim = s->anim, mode = s->mode, warped = s->warped, px = s->px, py = s->py, vx = s->vx, vy = s->vy;
+  anim = s->anim, mode = s->mode, warped = s->warped, sprung = s->sprung, px = s->px, py = s->py, vx = s->vx, vy = s->vy;
   found = s->found, dead = won = 0;
 }
 static uint64_t key_of(void) { /* the state, roughly: the runner and every object */

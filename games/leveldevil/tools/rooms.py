@@ -162,7 +162,7 @@ room([floor(0, 70), floor(80, 80), block(86, 100, 8, 20, trap=trap(RIGHT, 64, ON
 room([floor(0, 160), block(148, 86, 12, 14, trap=trap(RIGHT, 40, ONCE, dx=-110, speed=1.5)), door(128)])
 # a wall comes down from the ceiling, low enough to walk under but not to jump; then a crusher
 room([floor(0, 160), block(66, 10, 14, 60, trap=trap(RIGHT, 50, ONCE, dy=22, speed=3)),
-      block(100, 10, 14, 30, trap=trap(RIGHT, 76, LOOP, dy=60, speed=3)), door(DOOR_X)])
+      block(100, 10, 14, 30, trap=trap(RIGHT, 86, LOOP, dy=60, speed=3)), door(DOOR_X)])
 # the ceiling comes down on the whole room: hurry
 room([floor(0, 160), block(4, 10, 152, 10, trap=trap(RIGHT, 20, ONCE, dy=78, speed=0.5)), spikes(60, 95, 2),
       spikes(100, 95, 3), door(DOOR_X)])
@@ -220,7 +220,7 @@ room([floor(0, 30), block(34, 112, 106, 8), spikes(34, 107, 21)]
 # ------------------------------------------------------------------ 7: springs
 room([floor(0, 160), spring(60), block(100, 58, 56, 42), door(140, y=38)])
 # a spring comes out under the runner, into the spikes on the ceiling
-room([floor(0, 160), spring(70, flags=HIDDEN, trap=trap(RIGHT, 72)), block(56, 10, 40, 30), spikes(56, 40, 8, "d"),
+room([floor(0, 160), spring(70, flags=HIDDEN, trap=trap(RIGHT, 72)), block(56, 10, 40, 36), spikes(56, 46, 8, "d"),
       door(DOOR_X)])
 # from spring to spring over the spikes
 room([floor(0, 40), block(40, 108, 80, 12), spikes(40, 103, 16), block(62, 96, 10, 12), spring(63, y=93),

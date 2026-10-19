@@ -120,7 +120,7 @@ static color_t strip[SCREEN_W * STRIP_H];
 static const uint8_t *room;
 static int level, rnum, tries, mode, scr, ov, sel, banner, dlo, dhi, full;
 static int32_t px, py, vx, vy; /* the runner: its box's top-left and its speed, in 256ths of a pixel */
-static int face = 1, ground, coyote, buffer, held_in, anim, dead, won, warped, curtain;
+static int face = 1, ground, coyote, buffer, held_in, anim, dead, won, warped, curtain, sprung;
 static uint32_t found, seed, banner_t, now;
 static const obj_t *skip_ob; /* left out of collisions (a block pushing the runner) */
 static color_t bg, fg;
@@ -223,7 +223,7 @@ static void mark(int y, int h) { /* rows y to y + h (game pixels) to draw again 
 static void reset(void) { /* the room as it starts, the runner at the start */
   const uint8_t *p = room;
   mode = p[0], px = p[1] * 256, py = (p[2] - PH) * 256, vx = vy = 0;
-  ground = coyote = buffer = dead = won = warped = 0, face = 1;
+  ground = coyote = buffer = dead = won = warped = sprung = 0, face = 1;
   int n = p[3];
   no = 0, p += 4;
   for (int i = 0; i < n; i++) {
@@ -359,7 +359,7 @@ static void contacts(void) {
       int c = b[2] / 2, cx = b[0] + c, cy = b[1] + c, dx = cx - clampi(cx, x, x + PW - 1), dy = cy - clampi(cy, y, y + PH - 1);
       if (dx * dx + dy * dy < (c - 1) * (c - 1)) die();
     } else if (kind == K_SPRING) {
-      if (overlap(x, y + PH - 1, PW, 2, b) && vy * g >= 0) vy = -g * SPRING, o->t = 236, ground = 0;
+      if (overlap(x, y + PH - 1, PW, 2, b) && vy * g >= 0) vy = -g * SPRING, o->t = 236, ground = 0, sprung = 1;
     } else if (kind == K_WARP) {
       int e[4] = {o->r[3], o->r[4], 8, 12}, a = overlap(x, y, PW, PH, b), z = overlap(x, y, PW, PH, e);
       if ((a || z) && !warped) {
@@ -400,7 +400,8 @@ static void step(int in) {
   if (dir) vx = clampi(vx + dir * acc, -RUN, RUN), face = dir;
   else vx = vx > dec ? vx - dec : vx < -dec ? vx + dec : 0;
   if (buffer && (buffer--, coyote || mode & R_AIR)) vy = -g * JUMP, buffer = coyote = 0;
-  vy += g * (vy * g < 0 && !(in & I_JUMP) ? 3 * GRAV : GRAV);
+  sprung &= vy * g < 0; /* (a spring's lift isn't cut short like a jump let go) */
+  vy += g * (vy * g < 0 && !(in & I_JUMP) && !sprung ? 3 * GRAV : GRAV);
   if (vy * g > FALL) vy = g * FALL;
   if (move(&px, vx, 0)) vx = 0;
   if (move(&py, vy, 1)) vy = 0;

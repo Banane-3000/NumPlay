@@ -86,6 +86,10 @@ GAMES = {
     # new game from the pause menu and its first square
     "minesweeper": ("Minesweeper.nwa", "mines.sav", presses((1500, "ok"), (2000, "ok"), (2400, "right")), 3000,
                     presses((1500, "ok"), (2000, "back"), (2300, "down"), (2600, "ok"), (3000, "ok")), 3600),
+    # past the keys, the first door: the runner runs right into the first trap, and again; next time the
+    # first door again (the keys not shown), and more deaths
+    "leveldevil": ("LevelDevil.nwa", "leveldevil.sav", presses((1500, "ok"), (2000, "ok"), (3000, "right", 4000)), 8000,
+                   presses((1500, "ok"), (2500, "right", 3000)), 6500),
     # Play, serve, a brick or more: the best is kept; next time, Settings, screen shake off, back
     "breakout": ("BlockBreaker.nwa", "breakout.sav", presses((1500, "ok"), (2500, "ok")), 6000,
                  presses((1500, "down"), (1800, "ok"), (2100, "down"), (2400, "ok"), (2800, "back")), 4000),
@@ -224,6 +228,9 @@ CHECKS = {
     "blockblast": (lambda v: len(v) == 92 and v[:3] == b"B\1\3" and struct.unpack_from("<I", v, 12)[0] >= 1
                    and struct.unpack_from("<I", v, 8)[0] >= struct.unpack_from("<I", v, 12)[0],
                    lambda v: v[2] & 1 and struct.unpack_from("<I", v, 12)[0] >= 2),
+    # the keys were shown and the runner died (the deaths at 8); then died again
+    "leveldevil": (lambda v: len(v) == 48 and v[:2] == b"L\1" and v[2] & 1 and struct.unpack_from("<I", v, 8)[0] >= 1,
+                   lambda v: struct.unpack_from("<I", v, 8)[0] >= 2),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
 }
