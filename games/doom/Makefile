@@ -122,7 +122,7 @@ $(WHD_GEN): $(WHD_GEN_OBJ)
 	$(Q) c++ $^ -o $@
 data: $(WHD_GEN)
 	@test -n "$(WAD)" || { echo "make data WAD=<the shareware DOOM1.WAD> (python3 tools/fetch.py downloads it)"; exit 1; }
-	$(WHD_GEN) -silent $(WAD) src/doom1.whx
+	$(WHD_GEN) -silent -lossless $(WAD) src/doom1.whx
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) build

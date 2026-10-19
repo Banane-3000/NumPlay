@@ -305,10 +305,12 @@ static inline int side_rowoffset16(side_t *side) {
     int16_t rowoff = 0;
     if (side[0] & 64) {
         uint enc = side[0] & 0xf;
-        uint pos = offset_offset[enc] + ((sides_z[0] >> 4)&3);
+        // (RP2040 Doom read these two from the level's first sidedef, sides_z, instead of this one: a row
+        // offset was then taken from the wrong byte whenever their texture offsets took up different sizes)
+        uint pos = offset_offset[enc] + ((side[0] >> 4)&3);
         rowoff = side[pos];
         if (rowoff & 128) {
-            rowoff = ((rowoff << 8) | sides_z[pos + 1])<<1;
+            rowoff = ((rowoff << 8) | side[pos + 1])<<1;
             rowoff /= 2;
         } else {
             rowoff <<= 1;
@@ -559,8 +561,18 @@ static inline int seg_next_step(const seg_t *s) {
     if (s[0]&64) {
         size += s[5]&128 ? 2 : 1;
     }
+#if WHD_SEG_ANGLES
+    size += 2;
+#endif
     return size;
 }
+#if WHD_SEG_ANGLES
+// the seg's angle as the WAD has it (the last two bytes of its record, whd_gen -lossless)
+static inline angle_t seg_angle_whd(const seg_t *s) {
+    int p = seg_next_step(s) - 2;
+    return (angle_t)(s[p] | (s[p + 1] << 8)) << 16;
+}
+#endif
 #endif
 #define seg_sidedef(s) (sidenum_to_side(line_sidenum(seg_linedef(s), seg_side(s))))
 static inline sector_t *seg_frontsector(const seg_t *seg) {

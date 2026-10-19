@@ -94,7 +94,23 @@ void nw_frame_begin(void) {
 void host_frame(void); /* tests/play.c: time goes by, screenshots */
 void nw_frame_end(void) { host_frame(); }
 #else
-void nw_frame_end(void) {}
+/* how long frames take to make (the emulator, tools/emu.py, reads perf_frames, perf_max and perf_slow; the
+ * rest are for tests: the work of each frame in ms, by 1 ms, and the most frames in a row over a tic) */
+uint32_t perf_frames, perf_max, perf_slow, perf_hist[64];
+extern uint32_t nw_slept_ms;
+void nw_frame_end(void) {
+    static uint32_t last_ms, last_slept;
+    uint32_t now = plat_millis();
+    uint32_t work = (now - last_ms) - (nw_slept_ms - last_slept);
+    if (perf_frames) {
+        if (work > perf_max) perf_max = work;
+        if (work > 28) perf_slow++;
+        perf_hist[work < 63 ? work : 63]++;
+    }
+    perf_frames++;
+    last_ms = now;
+    last_slept = nw_slept_ms;
+}
 #endif
 
 void nw_band_begin(uint8_t *band, int y0, int y1) {
@@ -108,21 +124,23 @@ void nw_band_begin(uint8_t *band, int y0, int y1) {
 uint8_t host_doom_screen[SCREENWIDTH * SCREENHEIGHT]; /* (tests: the frame in Doom's own pixels) */
 #endif
 
-void nw_band_end(void) {
+void nw_band_end(int x0, int x1) {
+    int w = x1 - x0;
 #ifdef HOST
-    memcpy(host_doom_screen + nw_band_y0 * SCREENWIDTH, nw_band, (nw_band_y1 - nw_band_y0) * SCREENWIDTH);
+    for (int y = nw_band_y0; y < nw_band_y1; y++)
+        memcpy(host_doom_screen + y * SCREENWIDTH + x0, nw_band + (y - nw_band_y0) * SCREENWIDTH + x0, w);
 #endif
     uint16_t lines[SCREENWIDTH * 6];
     for (int y = nw_band_y0; y < nw_band_y1; y += 5) {
-        const uint8_t *src = nw_band + (y - nw_band_y0) * SCREENWIDTH;
+        const uint8_t *src = nw_band + (y - nw_band_y0) * SCREENWIDTH + x0;
         uint16_t *d = lines;
         for (int j = 0; j < 5; j++) {
-            for (int i = 0; i < SCREENWIDTH; i++) d[i] = palette[src[i]];
+            for (int i = 0; i < w; i++) d[i] = palette[src[i]];
             src += SCREENWIDTH;
-            d += SCREENWIDTH;
+            d += w;
         }
-        memcpy(d, d - SCREENWIDTH, SCREENWIDTH * sizeof *d);
-        plat_push(0, y / 5 * 6, SCREENWIDTH, 6, lines);
+        memcpy(d, d - w, w * sizeof *d);
+        plat_push(x0, y / 5 * 6, w, 6, lines);
     }
 }
 

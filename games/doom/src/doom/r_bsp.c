@@ -228,10 +228,20 @@ R_ClipPassWallSegment
 //
 // R_ClearClipSegs
 //
+#if NUMWORKS
+// the columns of the view drawn this time (all of them, unless a frame has more pieces than there is room for
+// and is drawn in strips: pd_render.cpp)
+extern int nw_strip_x0, nw_strip_x1;
+#endif
 void R_ClearClipSegs(void) {
     solidsegs[0].first = -0x7fff;
+#if NUMWORKS
+    solidsegs[0].last = nw_strip_x0 - 1;
+    solidsegs[1].first = nw_strip_x1 < viewwidth ? nw_strip_x1 : viewwidth;
+#else
     solidsegs[0].last = -1;
     solidsegs[1].first = viewwidth;
+#endif
     solidsegs[1].last = 0x7fff;
     newend = solidsegs + 2;
 }

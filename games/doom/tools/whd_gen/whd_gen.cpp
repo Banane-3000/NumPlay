@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#include "config.h" // (this folder's: the engine's headers would otherwise find the engine's own config.h)
 #include "wad.h"
 #include <iostream>
 #include <ostream>
@@ -36,12 +37,15 @@ typedef struct __packed {
     const uint8_t w;
     const uint8_t h;
 } txt_font_t;
-#include "../../textscreen/fonts/normal.h"
+#include "textscreen_normal_font.h" /* (Chocolate Doom's textscreen font) */
 
 
 bool super_tiny = true;
 // -silent: no sound effects or music (a calculator has no speaker), their lumps kept empty
 bool silent = false;
+// -lossless: what RP2040 Doom approximates is kept as in the WAD: the menu, status bar and font graphics
+// keep all their colours (RP2040 Doom merges the closest to fit them in 16 or 64), and segs keep their angles
+bool lossless = false;
 
 using std::vector;
 
@@ -748,6 +752,9 @@ struct texture_index {
 
 extern "C" {
 #include "adpcm-lib.h"
+#ifndef LOOKAHEAD
+#define LOOKAHEAD 3 // (as config.h has it; with -silent there are no sounds to encode)
+#endif
 }
 
 template<typename T>
@@ -2041,6 +2048,21 @@ void convert_vpatch(wad &wad, lump &patch, int max_colors, bool use_runs, std::s
     // note in the case of shared_palettes we are doing the same color reduction work for every patch, but it is idempotent, and it was easier
     // than extracting/refactoring the code!!!
 
+    if (lossless) {
+        std::set<int> own;
+        for (const auto &p: pix) own.insert(p);
+        int needed = (int)own.size() - (own.find(-1) != own.end() ? 1 : 0);
+        const std::set<int> &pal = shared_palette_handle >= 0 ? colors : own;
+        int cap = max_colors + (use_runs && pal.find(-1) != pal.end() ? 1 : 0);
+        if ((int)pal.size() > cap) {
+            // a palette big enough for this patch alone, and runs for its transparent pixels
+            max_colors = needed <= 16 ? 16 : needed <= 64 ? 64 : 256;
+            use_runs = true;
+            shared_palette_handle = -1;
+            colors = own;
+        }
+        if (needed > 255) fail("too many colours for a vpatch");
+    }
     if (use_runs && colors.find(-1) != colors.end()) max_colors++;
     // this only saves 500 bytes (trying 4 color textures)
 //    if (max_colors == 16 || max_colors == 17) {
@@ -2186,8 +2208,8 @@ void convert_vpatch(wad &wad, lump &patch, int max_colors, bool use_runs, std::s
                     if (xend - x >= 255) fail("gap too big");
                     patch.data.push_back(xend - x);
                     x = xend;
-                    while (xend < ph.width && pix[i + xend] != -1) xend++;
-                    if (xend - x > 255) fail("run too big");
+                    // (a longer run goes on as another, after a gap of 0)
+                    while (xend < ph.width && pix[i + xend] != -1 && xend - x < 255) xend++;
                     patch.data.push_back(xend - x);
                 }
             } else {
@@ -2852,6 +2874,12 @@ std::vector<int> convert_segs(wad &wad, lump &lump, const std::vector<int>& line
                     newdata.push_back(ms.offset&0xff);
                 }
             }
+            if (lossless) {
+                // the seg's own angle, which vanilla draws its wall with (RP2040 Doom works it out from the
+                // vertexes again, which is not always the same to the last bits)
+                newdata.push_back(ms.angle & 0xff);
+                newdata.push_back((ms.angle >> 8) & 0xff);
+            }
         }
         offset = 0;
         int pos = 0;
@@ -2877,6 +2905,10 @@ std::vector<int> convert_segs(wad &wad, lump &lump, const std::vector<int>& line
             }
             pos += 5;
             assert(soffset == ms.offset);
+            if (lossless) {
+                assert((short)(newdata[pos] | (newdata[pos + 1] << 8)) == ms.angle);
+                pos += 2;
+            }
         }
         rc.push_back(newdata.size()); // we need an end marker too
     }
@@ -4729,6 +4761,7 @@ int main(int argc, const char **argv) {
         while (argn < argc && argv[argn][0] == '-') {
             if (!strcmp(argv[argn], "-no-super-tiny")) super_tiny = false;
             else if (!strcmp(argv[argn], "-silent")) silent = true;
+            else if (!strcmp(argv[argn], "-lossless")) lossless = true;
             else usage();
             argn++;
         }

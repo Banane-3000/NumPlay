@@ -87,11 +87,11 @@ void host_tick(void) {
 }
 
 /* checks against Chocolate Doom: the state at the end of each demo, the player at each tic (--trace), and
- * the frame of the level in Doom's own pixels at given tics of the level (--dump-tics, DIR/frame_<tic>.raw) */
+ * the frame of the level in Doom's own pixels at given tics of each level (--dump-tics, DIR/frame_<map>_<tic>.raw) */
 extern int rndindex, prndindex;
 static FILE *trace_file;
 static int dump_tics[256], ndump;
-static uint8_t dumped[256];
+static uint8_t dumped[10][256];
 extern uint8_t host_doom_screen[SCREENWIDTH * SCREENHEIGHT];
 
 void host_demo_end(void) {
@@ -117,10 +117,10 @@ void host_tic(void) {
 static void dump_frame(void) {
     if (gamestate != GS_LEVEL) return;
     for (int i = 0; i < ndump; i++) {
-        if (dumped[i] || dump_tics[i] != leveltime) continue;
-        dumped[i] = 1;
+        if (dumped[gamemap % 10][i] || dump_tics[i] != leveltime) continue;
+        dumped[gamemap % 10][i] = 1;
         char path[512];
-        snprintf(path, sizeof path, "%s/frame_%d.raw", out, leveltime);
+        snprintf(path, sizeof path, "%s/frame_%d%d_%d.raw", out, gameepisode, gamemap, leveltime);
         FILE *f = fopen(path, "wb");
         if (f) {
             fwrite(host_doom_screen, 1, sizeof host_doom_screen, f);
@@ -183,9 +183,11 @@ int main(int argc, char **argv) {
     host_save_dir(saves);
     int r = nw_main();
     if (stats) {
-        extern uint32_t nw_col_overflows, nw_col_peak, nw_col_frames[40], nw_zone_peak, nw_zone_size;
-        printf("STATS zone_free %d columns peak %u overflows %u zone peak %u of %u frames by 250 columns:",
-               Z_FreeMemory(), nw_col_peak, nw_col_overflows, nw_zone_peak, nw_zone_size);
+        extern uint32_t nw_col_overflows, nw_col_peak, nw_col_frames[40], nw_zone_peak, nw_zone_size,
+            nw_zone_fixed_peak, nw_strips;
+        printf("STATS zone_free %d columns peak %u overflows %u zone peak %u of %u fixed %u strips %u frames by 250 "
+               "columns:", Z_FreeMemory(), nw_col_peak, nw_col_overflows, nw_zone_peak, nw_zone_size,
+               nw_zone_fixed_peak, nw_strips);
         for (int i = 0; i < 40; i++) printf(" %u", nw_col_frames[i]);
         printf("\n");
     }

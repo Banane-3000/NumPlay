@@ -87,6 +87,12 @@ R_CheckPlane
   int		start,
   int		stop );
 #endif
+#if NUMWORKS
+extern uint8_t nw_plane_used[MAXVISPLANES][SCREENWIDTH / 8];
+void nw_plane_new(int pl, int minx, int maxx);
+// (a wall marks a column of a floor or ceiling as vanilla sets its top and bottom)
+#define NW_PLANE_MARK(pl, x) (nw_plane_used[(pl) - visplanes][(x) >> 3] |= (uint8_t)(1u << ((x) & 7)))
+#endif
 
 
 #endif

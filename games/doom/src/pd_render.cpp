@@ -176,7 +176,7 @@ extern uint8_t *nw_band;
 extern int nw_band_y0, nw_band_y1;
 extern boolean nw_direct;
 void nw_band_begin(uint8_t *band, int y0, int y1);
-void nw_band_end(void);
+void nw_band_end(int x0, int x1);
 void nw_frame_begin(void);
 void nw_frame_end(void);
 void V_DrawPatchListBand(const vpatchlist_t *patchlist);
@@ -200,6 +200,14 @@ static_assert(USE_ROWAD, ""); // don't want things moving!
 #define SHOW_COSTLY_DATA_STATS 0
 
 // we always want to collapse range of iscale and dda
+#if NUMWORKS
+#define SHIFT 0
+#define DOWN_SHIFT(x) (x)
+#define MINI INT32_MIN
+#define MAXI INT32_MAX
+#define TEXTUREMID_PLANE INT32_MIN
+#define UP_SHIFT(x) (x)
+#else
 #define SHIFT 7
 #define DOWN_SHIFT(x) ((x) >> SHIFT) // only used for texturemid
 #define MINI (-512*65536)
@@ -208,13 +216,18 @@ static_assert(USE_ROWAD, ""); // don't want things moving!
 static_assert(TEXTUREMID_PLANE == 0x3ffff, "");
 
 #define UP_SHIFT(x) ((x) << SHIFT) // only used for texturemid
+#endif
 #define CLAMP(x) (((x)<<13)>>13)
 
 #define DDA_MIN 0
 #define DDA_SHIFT 0
 #define DDA_DOWN_SHIFT(x) ((x)>>DDA_SHIFT)
+#if NUMWORKS
+#define DDA_MAX 0xffffff // (vanilla's iscale is always below this)
+#else
 // note max is slightly over this, but the texture is likely unintelligable at this point anyway
 #define DDA_MAX 0xfffff
+#endif
 #define DDA_CLAMP(x) (((uint)((x)<<12))>>12)
 #define DDA_UP_SHIFT(x) ((x) << DDA_SHIFT)
 
@@ -243,6 +256,29 @@ int pd_dump_frame = -1;
 // <19,0x4000> <5,cmap_index> <8, len>
 // <24,0x000000> <8, visplane_idx>
 
+#if NUMWORKS
+// vanilla's column at its full precision: the whole texturemid, and the iscale (always below 2^24: vanilla
+// keeps scales between 1/256 and 64), as R_DrawColumn uses them
+struct pd_column {
+    int16_t next;
+    uint8_t yl;
+    uint8_t yh;
+
+    uint32_t scale: 24;
+    uint32_t colormap_index: 6;
+    uint32_t spare: 2;
+
+    int32_t texturemid; // TEXTUREMID_PLANE for floors and ceilings
+
+    uint8_t col;
+    uint8_t fd_num;
+    union {
+        uint8_t plane;
+        uint8_t x;
+    };
+    uint8_t spare2;
+};
+#else
 struct pd_column {
 #if PD_COLUMN_DEBUG
     pd_column_type type;
@@ -265,6 +301,7 @@ struct pd_column {
         uint8_t x;
     };
 };
+#endif
 
 #define TO_COL_HI(c) ((c)>>5)
 #define TO_COL_LO(c) ((c)&0x1f)
@@ -278,8 +315,12 @@ struct __packed __aligned(2) flat_run {
 };
 
 static_assert(sizeof(flat_run) == 6, "");
+#if NUMWORKS
+static_assert(sizeof(pd_column) == 16, "");
+#else
 static_assert(sizeof(pd_column) == 12, "");
 static_assert(sizeof(pd_column) == sizeof(flat_run) * 2, ""); // we pack two into the space of the other
+#endif
 
 static __aligned(4) int16_t column_heads[SCREENWIDTH * 2];
 #define fuzzy_column_heads (&column_heads[SCREENWIDTH])
@@ -358,10 +399,8 @@ static flat_run nw_flat_runs[NW_FLAT_RUNS];
 static int16_t nw_flat_run_count;
 #define flat_runs nw_flat_runs
 // for each column of a band, the next of its framedrawable (the column lists' own links stay as they are,
-// for the next band), and the framedrawable itself (its field holds the column's x); both on the stack of
-// pd_end_frame, which has room to spare where the zone has none
+// for the next band); on the stack of pd_end_frame, which has room to spare where the zone has none
 static int16_t *fd_next;
-static uint8_t *col_fd;
 #else
 #define flat_runs ((flat_run *)list_buffer)
 #endif
@@ -371,12 +410,13 @@ static int16_t render_col_free;
 // (tests read these: the most columns a frame had, the columns that found no room, how many frames had
 // 0-249 columns, 250-499...)
 extern "C" { uint32_t nw_col_overflows, nw_col_peak, nw_col_frames[40]; }
+static bool nw_overflowed; // (this frame's columns did not all find room: it is drawn in strips)
 #endif
 static int16_t alloc_pd_column(int x) {
     if (render_col_free < 0) {
 #if NUMWORKS
         if (render_col_count >= (int)nw_col_peak) nw_col_peak = render_col_count + 1;
-        if (render_col_count == RENDER_COL_MAX) nw_col_overflows++;
+        if (render_col_count == RENDER_COL_MAX) nw_col_overflows++, nw_overflowed = true;
 #endif
         if (render_col_count == RENDER_COL_MAX) {
             assert(x>=0 && x<SCREENWIDTH);
@@ -832,6 +872,9 @@ void pd_begin_frame() {
     render_col_count = 0;
     render_col_free = -1;
     pd_frame++;
+#if NUMWORKS
+    nw_overflowed = false;
+#endif
     DEBUG_PINS_CLR(start_end, 1);
 }
 
@@ -890,6 +933,9 @@ void pd_add_span() {
 }
 
 #define FORCE_ISCALE 1
+#if HOST
+extern "C" { int nw_dbg_x = -1; }
+#endif
 
 void pd_add_column(pd_column_type type) {
     // --- VALIDATION AND CLAMPING
@@ -919,6 +965,21 @@ void pd_add_column(pd_column_type type) {
     if (texturemid > MAXI) texturemid = MAXI;
     // --------
 
+#if HOST
+    {
+        // (tests: DUMPCOL="x tic" prints the columns at x in that tic's frame, as the reference does)
+        static int dump_x = -2, dump_tic;
+        if (dump_x == -2) {
+            const char *e = getenv("DUMPCOL");
+            dump_x = e ? atoi(e) : -1;
+            dump_tic = e && strchr(e, ' ') ? atoi(strchr(e, ' ')) : -1;
+        }
+        nw_dbg_x = leveltime == dump_tic && gamestate == GS_LEVEL ? dump_x : -1;
+        if (dc_x == dump_x && leveltime == dump_tic && gamestate == GS_LEVEL)
+            printf("COL x=%d yl=%d yh=%d iscale=%d texturemid=%d (pd_scale %d type %d)\n", dc_x, dc_yl, dc_yh,
+                   (int)iscale, dc_texturemid, pd_scale, (int)type);
+    }
+#endif
     // todo it would be nice to defer filling this in in case we are entirely clipped - let's get some stats on that
     int rc_index = alloc_pd_column(dc_x);
     if (rc_index < 0) return;
@@ -944,8 +1005,12 @@ void pd_add_column(pd_column_type type) {
 #endif
 
     render_cols[rc_index].fd_num = dc_source.fd_num;
+#if NUMWORKS
+    render_cols[rc_index].col = dc_source.col;
+#else
     render_cols[rc_index].col_hi = TO_COL_HI(dc_source.col);
     render_cols[rc_index].col_lo = TO_COL_LO(dc_source.col);
+#endif
 #if !PICO_ON_DEVICE && !NUMWORKS
     if (dc_source.real_id < 0) {
         // patch
@@ -1045,8 +1110,12 @@ void pd_add_masked_columns(uint8_t *ys, int seg_count) {
 #endif
 
     render_cols[rc_index].fd_num = dc_source.fd_num;
+#if NUMWORKS
+    render_cols[rc_index].col = dc_source.col;
+#else
     render_cols[rc_index].col_hi = TO_COL_HI(dc_source.col);
     render_cols[rc_index].col_lo = TO_COL_LO(dc_source.col);
+#endif
 #if !PICO_ON_DEVICE && !NUMWORKS
     if (dc_source.real_id < 0) {
         // patch
@@ -1147,6 +1216,9 @@ void pd_add_plane_column(int x, int yl, int yh, fixed_t scale, int floor, int fd
     render_cols[rc_index].colormap_index = dc_colormap_index;
     render_cols[rc_index].texturemid = TEXTUREMID_PLANE;
     render_cols[rc_index].fd_num = fd_num;
+#if NUMWORKS
+    render_cols[rc_index].plane = fd_num; // (the visplane: fd_num has a byte of its own here)
+#endif
     render_cols[rc_index].next = -1;
     push_down_x(x, rc_index);
 }
@@ -1385,6 +1457,45 @@ static void flush_visplanes(int8_t *flatnum_next, int numvisplanes) {
                     uint32_t step;
                     uint32_t position;
 #endif
+#if NUMWORKS
+                    // each run is one of vanilla's spans (R_MapPlane, R_DrawSpan): its texture position is worked out
+                    // at its own first pixel, and the packed position carries from y into x as in vanilla (the flat is
+                    // stored a column at a time, flat[x * 64 + y])
+                    fixed_t distance = 0;
+                    for (int16_t fr = visplane_heads[vp]; fr != -1; fr = flat_runs[fr].next) {
+                        int y = flat_runs[fr].y, x1 = flat_runs[fr].x_start;
+                        if (y != last_y) {
+                            distance = FixedMul(rel_height, yslope[y]);
+                            xstep = FixedMul(distance, basexscale);
+                            ystep = FixedMul(distance, baseyscale);
+                            int colormap_index;
+                            if (fixedcolormap) {
+                                colormap_index = fixedcolormap;
+                            } else {
+                                unsigned index = distance >> LIGHTZSHIFT;
+                                // (vanilla's zlight table, worked out)
+                                int level = startmap - (int)(80 / (index + 1));
+                                if (level < 0) level = 0;
+                                if (level >= NUMCOLORMAPS) level = NUMCOLORMAPS - 1;
+                                colormap_index = level;
+                            }
+                            colormap = xcolormaps + colormap_index * 256;
+                            last_y = y;
+                        }
+                        fixed_t length = FixedMul(distance, distscale(x1));
+                        angle_t angle = (viewangle + x_to_viewangle(x1)) >> ANGLETOFINESHIFT;
+                        xfrac = viewx + FixedMul(finecosine(angle), length);
+                        yfrac = -viewy - FixedMul(finesine(angle), length);
+                        uint32_t position = ((xfrac << 10) & 0xffff0000) | ((yfrac >> 6) & 0x0000ffff);
+                        uint32_t step = ((xstep << 10) & 0xffff0000) | ((ystep >> 6) & 0x0000ffff);
+                        uint8_t *p = render_frame_buffer + y * SCREENWIDTH + x1;
+                        uint8_t *p_end = render_frame_buffer + y * SCREENWIDTH + flat_runs[fr].x_end;
+                        while (p < p_end) {
+                            *p++ = colormap[flat_data[((position >> 20) & 0x0fc0) | ((position >> 10) & 63)]];
+                            position += step;
+                        }
+                    }
+#else
                     for (int16_t fr = visplane_heads[vp]; fr != -1; fr = flat_runs[fr].next) {
                         int delta;
                         if (flat_runs[fr].y != last_y) {
@@ -1477,6 +1588,7 @@ static void flush_visplanes(int8_t *flatnum_next, int numvisplanes) {
                         }
 //                        last_x_end = flat_runs[fr].x_end;
                     }
+#endif
                     vp = flatnum_next[vp];
                 } while (vp != -1);
                 DEBUG_PINS_CLR(render_thing, 2);
@@ -1879,7 +1991,11 @@ static void draw_patch_columns(int patch_num, int patch_head, int16_t *col_heads
     int h = patch_height(pdi.patch);
     do {
         auto &c = render_cols[i & 0x7fffu];
+        #if NUMWORKS
+        uint col = c.col;
+#else
         uint col = FROM_COL_HI_LO(c.col_hi, c.col_lo);
+#endif
         assert(col < pdi.w);
         int16_t tmp = col_heads[col];
         col_heads[col] = (int16_t)i;
@@ -2022,7 +2138,11 @@ static void draw_composite_columns(int texture_num, int tex_head) {
 //    printf("DCC tex=%d\n", texture_num);
     do {
         auto &c = render_cols[i & 0x7fffu];
+        #if NUMWORKS
+        uint col = c.col;
+#else
         uint col = FROM_COL_HI_LO(c.col_hi, c.col_lo);
+#endif
         assert(col < w);
         int16_t tmp = col_heads[col];
         col_heads[col] = (int16_t)i;
@@ -3024,13 +3144,12 @@ void pd_end_frame(int wipe_start) {
 // ---------------------------------------------------------------------------------------------------------------
 // The calculator: the frame drawn a band at a time
 
-// regular columns keep their x where their framedrawable was (col_fd remembers that)
+// regular columns keep their x (its low 8 bits; the links say if it is 256 or more)
 static void nw_freeze_columns() {
     for (int x = 0; x < SCREENWIDTH; x++) {
         for (int16_t i = column_heads[x]; i >= 0; i = render_cols[i].next) {
             auto &c = render_cols[i];
             if (c.texturemid != TEXTUREMID_PLANE) {
-                col_fd[i] = c.fd_num;
                 c.x = (uint8_t)x;
             }
         }
@@ -3142,8 +3261,8 @@ static void __noinline nw_draw_columns(int y0, int y1) {
         for (int16_t i = column_heads[x]; i >= 0; i = render_cols[i].next) {
             const auto &c = render_cols[i];
             if (c.texturemid == TEXTUREMID_PLANE || c.yh < y0 || c.yl >= y1) continue;
-            fd_next[i] = fd_heads[col_fd[i]];
-            fd_heads[col_fd[i]] = (x >> 8) ? (int16_t) (i | 0x8000) : i;
+            fd_next[i] = fd_heads[c.fd_num];
+            fd_heads[c.fd_num] = (x >> 8) ? (int16_t) (i | 0x8000) : i;
         }
     }
     for (int fd_num = 0; fd_num < num_framedrawables; fd_num++) {
@@ -3258,13 +3377,8 @@ static void nw_draw_background(int y0, int y1) {
 // the status bar, messages, the menu... over the picture
 static vpatchlist_t nw_patches[400];
 
-void pd_end_frame(int wipe_start) {
-    // these were only clipped as they were inserted (so may be more obscured)
-    reclip_fuzz_columns();
-    bool showing_help = inhelpscreens;
-    bool view = gamestate == GS_LEVEL && !showing_help;
-
-    // flats are cached in what the columns leave of list_buffer
+// flats are cached in what the columns leave of list_buffer
+static void nw_columns_ready(bool view) {
     uint8_t *list_buffer_limit = list_buffer + count_of(list_buffer);
     if (cached_flat0 != list_buffer_limit - 4096) {
         cached_flat0 = list_buffer_limit - 4096;
@@ -3275,35 +3389,14 @@ void pd_end_frame(int wipe_start) {
     if (new_cache_flat_slots < 1) new_cache_flat_slots = 1;
     for (int i = cached_flat_slots; i < new_cache_flat_slots; i++) cached_flat_picnum[i] = 0xff;
     cached_flat_slots = new_cache_flat_slots;
-    int16_t fd_next_here[RENDER_COL_MAX];
-    uint8_t col_fd_here[RENDER_COL_MAX];
-    fd_next = fd_next_here;
-    col_fd = col_fd_here;
     if (view) {
         nw_col_frames[render_col_count / 250 < 40 ? render_col_count / 250 : 39]++;
         nw_freeze_columns();
     }
+}
 
-    // what is drawn over the picture, gathered once
-    nw_patches[0].header.max = count_of(nw_patches) - 1;
-    V_BeginPatchList(nw_patches);
-    if (!showing_help) {
-        if (gamestate == GS_LEVEL) ST_Drawer(false, !pre_wipe_state);
-        else if (gamestate == GS_INTERMISSION) WI_Drawer();
-    } else if (gamestate == GS_LEVEL) {
-        ST_doPaletteStuff();
-    }
-    ST_FpsDrawer(-1);
-    if (!pre_wipe_state && gamestate == GS_LEVEL && gametic && !inhelpscreens) HU_Drawer();
-    if (paused) {
-        int y = automapactive ? 4 : viewwindowy + 4;
-        V_DrawPatchDirect(viewwindowx + (scaledviewwidth - 68) / 2, y, VPATCH_HANDLE(VPATCH_NAME(M_PAUSE)));
-    }
-    M_Drawer();
-    if (pre_wipe_state == PRE_WIPE_EXTRA_FRAME_NEEDED) pre_wipe_state = PRE_WIPE_EXTRA_FRAME_DONE;
-
-    nw_frame_begin();
-    uint8_t __aligned(8) band[SCREENWIDTH * NW_BAND_H];
+// the frame, band by band, for the columns x0 to x1 of the screen
+static void nw_draw_bands(uint8_t *band, bool view, bool showing_help, int x0, int x1) {
     for (int y0 = 0; y0 < SCREENHEIGHT; y0 += NW_BAND_H) {
         int y1 = y0 + NW_BAND_H;
         nw_band_begin(band, y0, y1);
@@ -3342,7 +3435,67 @@ void pd_end_frame(int wipe_start) {
             }
         }
         V_DrawPatchListBand(nw_patches);
-        nw_band_end();
+        nw_band_end(x0, x1);
+    }
+}
+
+// a frame with more pieces than list_buffer has room for is drawn again in strips, each with the view
+// rendered for its columns only, halved again as long as needed (vanilla has no such limit, and neither do we)
+extern "C" { int nw_strip_x0 = 0, nw_strip_x1 = SCREENWIDTH; uint32_t nw_strips; }
+static void nw_draw_strip(uint8_t *band, int x0, int x1) {
+    pd_begin_frame();
+    nw_strip_x0 = x0;
+    nw_strip_x1 = x1;
+    R_RenderPlayerView(&players[displayplayer]);
+    nw_strip_x0 = 0;
+    nw_strip_x1 = SCREENWIDTH;
+    if (nw_overflowed && x1 - x0 > 8) {
+        int mid = (x0 + x1) / 2;
+        nw_draw_strip(band, x0, mid);
+        nw_draw_strip(band, mid, x1);
+        return;
+    }
+    nw_strips++;
+    reclip_fuzz_columns();
+    nw_columns_ready(true);
+    nw_draw_bands(band, true, false, x0, x1);
+}
+
+void pd_end_frame(int wipe_start) {
+    // these were only clipped as they were inserted (so may be more obscured)
+    reclip_fuzz_columns();
+    bool showing_help = inhelpscreens;
+    bool view = gamestate == GS_LEVEL && !showing_help;
+    int16_t fd_next_here[RENDER_COL_MAX];
+    fd_next = fd_next_here;
+    bool strips = view && !automapactive && nw_overflowed;
+    if (!strips) nw_columns_ready(view);
+
+    // what is drawn over the picture, gathered once
+    nw_patches[0].header.max = count_of(nw_patches) - 1;
+    V_BeginPatchList(nw_patches);
+    if (!showing_help) {
+        if (gamestate == GS_LEVEL) ST_Drawer(false, !pre_wipe_state);
+        else if (gamestate == GS_INTERMISSION) WI_Drawer();
+    } else if (gamestate == GS_LEVEL) {
+        ST_doPaletteStuff();
+    }
+    ST_FpsDrawer(-1);
+    if (!pre_wipe_state && gamestate == GS_LEVEL && gametic && !inhelpscreens) HU_Drawer();
+    if (paused) {
+        int y = automapactive ? 4 : viewwindowy + 4;
+        V_DrawPatchDirect(viewwindowx + (scaledviewwidth - 68) / 2, y, VPATCH_HANDLE(VPATCH_NAME(M_PAUSE)));
+    }
+    M_Drawer();
+    if (pre_wipe_state == PRE_WIPE_EXTRA_FRAME_NEEDED) pre_wipe_state = PRE_WIPE_EXTRA_FRAME_DONE;
+
+    nw_frame_begin();
+    uint8_t __aligned(8) band[SCREENWIDTH * NW_BAND_H];
+    if (strips) {
+        nw_draw_strip(band, 0, SCREENWIDTH / 2);
+        nw_draw_strip(band, SCREENWIDTH / 2, SCREENWIDTH);
+    } else {
+        nw_draw_bands(band, view, showing_help, 0, SCREENWIDTH);
     }
     nw_frame_end();
 }

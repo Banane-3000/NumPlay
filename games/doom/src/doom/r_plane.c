@@ -350,6 +350,9 @@ R_FindPlane
     check->height = height;
     check->picnum = picnum;
     check->lightlevel = lightlevel;
+#if NUMWORKS
+    nw_plane_new(check - visplanes, SCREENWIDTH, -1);
+#endif
 #if !NO_VISPLANE_GUTS
     check->minx = SCREENWIDTH;
     check->maxx = -1;
@@ -359,6 +362,56 @@ R_FindPlane
 #endif
     return check;
 }
+
+#if NUMWORKS
+// vanilla's visplanes split as in R_CheckPlane, without their top and bottom arrays: the columns each one
+// has (set as the walls mark them, r_segs.c), and how far it goes
+uint8_t nw_plane_used[MAXVISPLANES][SCREENWIDTH / 8];
+int16_t nw_plane_minx[MAXVISPLANES], nw_plane_maxx[MAXVISPLANES];
+
+void nw_plane_new(int pl, int minx, int maxx) {
+    nw_plane_minx[pl] = minx;
+    nw_plane_maxx[pl] = maxx;
+    memset(nw_plane_used[pl], 0, sizeof nw_plane_used[pl]);
+}
+
+visplane_t *R_CheckPlane(visplane_t *pl, int start, int stop) {
+    int intrl, intrh, unionl, unionh, x;
+    int n = pl - visplanes;
+
+    if (start < nw_plane_minx[n]) {
+        intrl = nw_plane_minx[n];
+        unionl = start;
+    } else {
+        unionl = nw_plane_minx[n];
+        intrl = start;
+    }
+    if (stop > nw_plane_maxx[n]) {
+        intrh = nw_plane_maxx[n];
+        unionh = stop;
+    } else {
+        unionh = nw_plane_maxx[n];
+        intrh = stop;
+    }
+    for (x = intrl; x <= intrh; x++)
+        if (nw_plane_used[n][x >> 3] & (1u << (x & 7)))
+            break;
+    if (x > intrh) {
+        nw_plane_minx[n] = unionl;
+        nw_plane_maxx[n] = unionh;
+        return pl; // use the same one
+    }
+    // make a new visplane
+    if (lastvisplane - visplanes == MAXVISPLANES)
+        I_Error("R_CheckPlane: no more visplanes");
+    lastvisplane->height = pl->height;
+    lastvisplane->picnum = pl->picnum;
+    lastvisplane->lightlevel = pl->lightlevel;
+    pl = lastvisplane++;
+    nw_plane_new(pl - visplanes, start, stop);
+    return pl;
+}
+#endif
 
 #if !NO_VISPLANE_GUTS
 //

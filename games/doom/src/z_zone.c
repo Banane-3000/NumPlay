@@ -115,6 +115,9 @@ static memzone_t *mainzone;
 #if NUMWORKS
 // what the zone holds, and the most it held (tests read these)
 uint32_t nw_zone_used, nw_zone_peak, nw_zone_size;
+// (and of that, what can't be purged: the zone runs out only when this does not fit)
+uint32_t nw_zone_fixed, nw_zone_fixed_peak;
+#define NW_FIXED(tag) ((tag) != PU_FREE && (tag) < PU_PURGELEVEL)
 #endif
 #if !NO_ZONE_DEBUG
 static boolean zero_on_free;
@@ -238,6 +241,7 @@ void Z_Free (void* ptr)
 #endif
 #if NUMWORKS
     if (block->tag != PU_FREE) nw_zone_used -= memblock_size(block);
+    if (NW_FIXED(block->tag)) nw_zone_fixed -= memblock_size(block);
 #endif
 
     // mark as free
@@ -426,6 +430,8 @@ Z_MallocNoUser
 #if NUMWORKS
     nw_zone_used += memblock_size(base);
     if (nw_zone_used > nw_zone_peak) nw_zone_peak = nw_zone_used;
+    if (NW_FIXED(base->tag) && (nw_zone_fixed += memblock_size(base)) > nw_zone_fixed_peak)
+        nw_zone_fixed_peak = nw_zone_fixed;
 #endif
 #ifdef USE_MEM_USE_TRACKING
     mem_used += memblock_size(base) + sizeof(memblock_t);
@@ -611,6 +617,11 @@ void Z_ChangeTag2(void *ptr, int tag, const char *file, int line)
                 "for purgable blocks", file, line);
 #endif
 
+#if NUMWORKS
+    if (NW_FIXED(block->tag)) nw_zone_fixed -= memblock_size(block);
+    if (NW_FIXED(tag) && (nw_zone_fixed += memblock_size(block)) > nw_zone_fixed_peak)
+        nw_zone_fixed_peak = nw_zone_fixed;
+#endif
     block->tag = tag;
 }
 

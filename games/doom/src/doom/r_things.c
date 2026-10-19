@@ -611,7 +611,13 @@ R_DrawVisSprite
 #if USE_WHD
     framedrawable_t *fd = lookup_patch(vis->patch);
 #endif
+#if NUMWORKS
+    extern int nw_strip_x0, nw_strip_x1;
+#endif
     for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale) {
+#if NUMWORKS
+        if (dc_x < nw_strip_x0 || dc_x >= nw_strip_x1) continue; // (outside the strip being drawn)
+#endif
         texturecolumn = frac >> FRACBITS;
 #ifdef RANGECHECK
         if (patch && (texturecolumn < 0 || texturecolumn >= patch_width(patch)))

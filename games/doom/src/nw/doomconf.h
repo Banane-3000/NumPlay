@@ -85,6 +85,7 @@
 #define NO_USE_LOADING_DISK 1
 #define USE_WHD 1
 #define WHD_SUPER_TINY 1
+#define WHD_SEG_ANGLES 1 /* (the segs keep their angles: whd_gen -lossless) */
 #define NO_Z_MALLOC_USER_PTR 1
 #define FIXED_SCREENWIDTH 1
 #define FLOOR_CEILING_CLIP_8BIT 1
@@ -99,7 +100,7 @@
 #define PICODOOM_RENDER_NEWHOPE 1
 #define MERGE_DISTSCALE0_INTO_VIEWCOSSINANGLE 1
 #ifndef NW_RENDER_COL_MAX
-#define NW_RENDER_COL_MAX 3600
+#define NW_RENDER_COL_MAX 2700
 #endif
 
 /* the calculator: no speaker, one core, files in Epsilon's file system */

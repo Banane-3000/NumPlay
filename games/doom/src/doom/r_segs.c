@@ -285,6 +285,8 @@ void R_RenderSegLoop(void) {
 #if !NO_VISPLANE_GUTS
                 ceilingplane->top[rw_x] = top;
                 ceilingplane->bottom[rw_x] = bottom;
+#elif NUMWORKS
+                NW_PLANE_MARK(ceilingplane, rw_x);
 #endif
 #if PICO_DOOM
                 if (frontsector->ceilingpic != skyflatnum) {
@@ -341,6 +343,8 @@ void R_RenderSegLoop(void) {
 #if !NO_VISPLANE_GUTS
                 floorplane->top[rw_x] = top;
                 floorplane->bottom[rw_x] = bottom;
+#elif NUMWORKS
+                NW_PLANE_MARK(floorplane, rw_x);
 #endif
 #if PICO_DOOM
                 pd_add_plane_column(rw_x, top, bottom, rw_scale + EPSILON, true, floorplane - visplanes);
@@ -354,6 +358,9 @@ void R_RenderSegLoop(void) {
             angle = (rw_centerangle + x_to_viewangle(rw_x)) >> ANGLETOFINESHIFT;
             texturecolumn = rw_offset - FixedMul(finetangent(angle), rw_distance);
             texturecolumn >>= FRACBITS;
+#if HOST
+            { extern int nw_dbg_x; if (nw_dbg_x == rw_x) printf("TC x=%d off=%d dist=%d cang=%u tc=%d scale=%d\n", rw_x, rw_offset, rw_distance, rw_centerangle, texturecolumn, rw_scale); }
+#endif
             // calculate lighting
             index = rw_scale >> LIGHTSCALESHIFT;
 
@@ -556,7 +563,9 @@ R_StoreWallRange
     line_set_mapped(linedef);
 
     // calculate rw_distance for scale calculation
-#if WHD_SUPER_TINY
+#if WHD_SEG_ANGLES
+    rw_normalangle = seg_angle_whd(curline) + ANG90;
+#elif WHD_SUPER_TINY
     // don't bother to store angle in seg
     int dx = vertex_x(seg_v2(curline)) - vertex_x(seg_v1(curline));
     int dy = vertex_y(seg_v2(curline)) - vertex_y(seg_v1(curline));
@@ -644,6 +653,9 @@ R_StoreWallRange
             rw_midtexturemid = worldtop;
         }
         rw_midtexturemid += side_rowoffset(sidedef);
+#if HOST
+        { extern int nw_dbg_x; if (nw_dbg_x >= start && nw_dbg_x <= stop) printf("SEG mid tex %d h %d worldtop %d viewz %d rowoff %d peg %d floor %d tmid %d\n", side_midtexture(sidedef), texture_height(side_midtexture(sidedef)), worldtop, viewz, side_rowoffset(sidedef), (line_flags(linedef) & ML_DONTPEGBOTTOM) != 0, sector_floorheight(frontsector), rw_midtexturemid); }
+#endif
 
 #if !NO_DRAWSEGS
         ds_p->silhouette = SIL_BOTH;
@@ -885,7 +897,7 @@ R_StoreWallRange
         }
     }
 
-#if !NO_VISPLANE_GUTS
+#if !NO_VISPLANE_GUTS || NUMWORKS
     // render it
     if (markceiling)
         ceilingplane = R_CheckPlane(ceilingplane, rw_x, rw_stopx - 1);
