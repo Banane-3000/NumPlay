@@ -318,6 +318,26 @@ On the menu, **Controls** swaps them: the number keys walk and the arrows cry. E
 
 <br clear="right">
 
+## Plants vs. Zombies
+
+<img src="media/pvz.gif" width="320" align="right" alt="Plants vs. Zombies: the front lawn, the night, the pool, the fog, the roof and Dr. Zomboss">
+
+Plants vs. Zombies comes as its own app, `PlantsVsZombies.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** | Move over the lawn, choose in the menus |
+| **1** to **9**, **0** | Pick a seed packet (from the conveyor belt too) |
+| **OK** or **EXE** | Plant, whack a zombie, break a vase, confirm |
+| **⌫** | The shovel: then **OK** digs up a plant |
+| **Back** | Put the seed back, or pause |
+| **toolbox** | The Almanac, in the menu |
+| **Home** | Keep the level and quit |
+
+Plant your lawn to stop the zombies before they reach your house. Sunflowers make sun, and seeds cost sun: move the cursor over falling sun and coins to pick them up. Each seed recharges after you plant it. At night no sun falls and mushrooms are awake; in the day they sleep unless you plant a Coffee Bean on them. The pool's lanes need Lily Pads, the fog hides the zombies until a Plantern lights it or a Blover blows it away, and on the roof every plant goes in a Flower Pot and only lobbed shots get over the slope. A lawn mower saves each lane once. Before most levels you choose your seeds; on the conveyor-belt levels they come to you. Crazy Dave opens his shop once you find his car key, and the coins zombies drop buy more seed slots, pool and roof cleaners, a rake and Wall-nut First Aid. At the end of the roof, Dr. Zomboss waits in his Zombot: hit his head when he lowers it, put out his fire balls with an Ice-shroom and melt his ice balls with a Jalapeno. Home keeps the level you are playing, and Continue brings it back. Your saves are also copied into `pvz_saves.py`, so installing the app again doesn't erase them.
+
+<br clear="right">
+
 ## Five Nights at Freddy's
 
 <img src="media/fnaf.gif" width="320" align="right" alt="Five Nights at Freddy's: Bonnie at the left door, the door comes down, then the cameras">
