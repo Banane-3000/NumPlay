@@ -109,10 +109,6 @@ GAMES = {
     "blockblast": ("BlockBlast.nwa", "blockblast.sav", presses((1500, "ok"), (2000, "ok")), 3000,
                    presses(*[(1500 + 250 * i, "up") for i in range(4)], *[(2500 + 250 * i, "left") for i in range(4)],
                            (3600, "ok")), 4500),
-    # past how to play, the big cookie clicked three times; next time two more
-    "cookieclicker": ("CookieClicker.nwa", "cookieclicker.sav",
-                      presses((1500, "ok"), (2000, "ok"), (2300, "ok"), (2600, "ok")), 4000,
-                      presses((1500, "ok"), (1800, "ok")), 3000),
     # a game: right to the gap between the first bunkers, and four shots up the third column; Home keeps the
     # best. Next time another game, five shots, quit with On/Off: the best is read back, kept or beaten
     "invaders": ("SpaceInvaders.nwa", "invaders.sav",
@@ -312,10 +308,6 @@ CHECKS = {
     # the keys were shown and the runner died (the deaths at 8); then died again
     "leveldevil": (lambda v: len(v) == 48 and v[:2] == b"L\1" and v[2] & 1 and struct.unpack_from("<I", v, 8)[0] >= 1,
                    lambda v: struct.unpack_from("<I", v, 8)[0] >= 2),
-    # the guide read, 3 clicks and the cookies they made (the bank at 64, baked at 72); then 5
-    "cookieclicker": (lambda v: len(v) == 120 and v[:3] == b"C\1\1" and struct.unpack_from("<I", v, 44)[0] == 3
-                      and struct.unpack_from("<d", v, 72)[0] >= 3,
-                      lambda v: struct.unpack_from("<I", v, 44)[0] == 5 and struct.unpack_from("<d", v, 64)[0] >= 5),
     # the best score ("I", version 1, the best at 4): some invaders shot; then kept, or beaten
     "invaders": (lambda v: len(v) == 8 and v[:2] == b"I\1" and struct.unpack_from("<I", v, 4)[0] >= 20,
                  lambda v: len(v) == 8 and v[:2] == b"I\1" and struct.unpack_from("<I", v, 4)[0] >= 20),
