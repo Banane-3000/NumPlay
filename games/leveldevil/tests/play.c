@@ -6,8 +6,8 @@
  *   play search L R [D]   finds a way through a room (after D deaths), for tests/solutions.txt
  *   play trace L R [D]    where the runner goes with the solution
  *   play rooms DIR        a picture of every room as it starts (DIR/room_LL_R.ppm)
- *   play film L R DIR [D] the solution of a room (after D deaths), a picture every 2 steps
- *                         (DIR/f_NNNN.ppm)
+ *   play film L R DIR [D [KEYS]]  the solution of a room (after D deaths), or these keys, a picture
+ *                         every 2 steps (DIR/f_NNNN.ppm)
  */
 #define main ld_main
 #include "../src/main.c"
@@ -111,6 +111,15 @@ static int run(const char *s, const char *film) {
         snprintf(path, sizeof path, "%s/f_%04d.ppm", film, frame / 2);
         picture(path);
       }
+      if ((won || dead) && film) /* the runner in pieces, or the door closing, a little longer */
+        for (int k = 0; k < 44; k++) {
+          step(0);
+          if (!(frame++ & 1)) {
+            draw();
+            snprintf(path, sizeof path, "%s/f_%04d.ppm", film, frame / 2);
+            picture(path);
+          }
+        }
       if (won || dead) return won ? 1 : 0;
     }
     if (!*s) return -1;
@@ -272,7 +281,7 @@ int main(int argc, char **argv) {
     int i = (atoi(argv[2]) - 1) * ROOMS + atoi(argv[3]) - 1;
     if (i < 0 || i >= ROOM_COUNT) return 2;
     setup(i / ROOMS, i % ROOMS, argc > 5 ? atoi(argv[5]) : 0);
-    return run(solutions[i][argc > 5 ? atoi(argv[5]) & 3 : 0], argv[4]) == 1 ? 0 : 1;
+    return run(argc > 6 ? argv[6] : solutions[i][argc > 5 ? atoi(argv[5]) & 3 : 0], argv[4]) == 1 ? 0 : 1;
   }
   if (!strcmp(argv[1], "solve")) {
     int bad = 0;
