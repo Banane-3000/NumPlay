@@ -158,23 +158,26 @@ s, ev = run(["--stars", "3", "--keys", "100:down,120:down,140:down,160:ok,200:up
 if s:
     check(s["running"] == 0 and any(e["kind"] == "golden" for e in ev), f"custom night 1/9/8/7: {s} {ev}")
 
-# Home keeps the night: the next start is back in it, paused, at the same moment
+# Home keeps the night: the next start is back in it, paused, at the same moment; installing apps keeps only the
+# scripts, and it comes back from the copy
 saves = tempfile.mkdtemp(prefix="fnaf_check_")
 s, _ = run(["--night", "2", "--keys", "200:7,1500:home"], 1600, saves, "Home")
 if s:
     check(s["running"] == 0 and record(saves, "fnafres.sav") is not None, f"Home: {s}")
+    os.remove(os.path.join(saves, "fnafres.sav"))
     s2, _ = run([], 30, saves, "back after Home")
     if s2:
         check(s2["scene"] == SC_NIGHT and s2["paused"] == 1 and s2["night"] == 2 and abs(s2["t"] - s["t"]) < 0.5
-              and s2["doors"][0] == 1, f"back after Home: {s2} (left at {s})")
+              and s2["doors"][0] == 1, f"back after Home, from the copy: {s2} (left at {s})")
         check(record(saves, "fnafres.sav") is None, "the kept night is read once")
-    # installing apps leaves only the scripts: the saves come back from the copy
-    for name in ("fnaf.sav", "fnafres.sav"):
-        if os.path.exists(os.path.join(saves, name)):
-            os.remove(os.path.join(saves, name))
-    s3, _ = run([], 30, saves, "after a reinstall")
-    if s3:
-        check(record(saves, "fnaf.sav") is not None, "after a reinstall: fnaf.sav not restored from fnaf_saves.py")
+shutil.rmtree(saves, ignore_errors=True)
+# the progress too
+saves = tempfile.mkdtemp(prefix="fnaf_check_")
+s, _ = run(["--keys", "60:ok,200:ok,700:ok"], 900, saves, "a new game")
+if s and record(saves, "fnaf.sav"):
+    os.remove(os.path.join(saves, "fnaf.sav"))
+    run([], 30, saves, "after a reinstall")
+    check(record(saves, "fnaf.sav") is not None, "after a reinstall: fnaf.sav not restored from fnaf_saves.py")
 shutil.rmtree(saves, ignore_errors=True)
 
 # the call: 0 mutes it

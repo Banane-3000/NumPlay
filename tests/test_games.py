@@ -137,6 +137,10 @@ GAMES = {
     # straight from the title into another run, quit with On/Off
     "subway": ("SubwaySurfers.nwa", "subway.sav", presses((1500, "ok"), (2500, "ok")), 8000,
                presses((1500, "ok")), 6000),
+    # Continue: the first night's card, then the office; Home keeps the night, and the next start is back in it,
+    # paused: Back, and the night goes on
+    "fnaf": ("FiveNightsAtFreddys.nwa", "fnafres.sav", presses((1500, "down"), (1800, "ok")), 9000,
+             presses((1500, "back")), 5000),
     # the intro, then OK draws for a while (the autosave on Home); next time it comes back and more is drawn
     "numpowder": ("NumPowder.nwa", "numpowder.sav", presses((2000, "ok"), (3000, "ok", 1500)), 6000,
                   presses((2000, "ok"), (2500, "right", 600), (3200, "ok", 800)), 5000),
@@ -171,8 +175,8 @@ SEEDS = {
 # the app again, only the scripts are left, and the save must come back
 COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.py", "celeste": "celeste_saves.py",
           "hollowknight": "hollowknight_saves.py", "finalearth2": "finalearth2_saves.py",
-          "numpowder": "numpowder_saves.py", "undertale": "undertale_saves.py",
-          "subway": "subway_saves.py"}
+          "numpowder": "numpowder_saves.py", "undertale": "undertale_saves.py", "subway": "subway_saves.py",
+          "fnaf": "fnaf_saves.py"}
 CHECKS = {
     # the island remembers where Lucky was; after the reinstall, from the copy
     "championisland": (lambda v: v[:3] == b"CI1" and b"PLAYER_LOC" in v,) * 2,
@@ -189,6 +193,9 @@ CHECKS = {
     # the progress ("SUB1"): a run played, its coins banked (offset 8), runs at 20; then a second run
     "subway": (lambda v: v[:4] == b"SUB1" and struct.unpack_from("<I", v, 8)[0] > 0 and struct.unpack_from("<I", v, 20)[0] == 1,
                lambda v: v[:4] == b"SUB1" and struct.unpack_from("<I", v, 20)[0] == 2),
+    # the night kept ("FNAF", its seconds at 40); after the reinstall, from the copy, it goes on
+    "fnaf": (lambda v: v[:4] == b"FNAF" and struct.unpack_from("<f", v, 40)[0] > 2,
+             lambda v: v[:4] == b"FNAF" and struct.unpack_from("<f", v, 40)[0] > 6.5),
     # a simulation saved ("NPWD"); after the reinstall, from the copy, it goes on and is saved again
     "numpowder": (lambda v: v[:4] == b"NPWD",) * 2,
     # a game saved ("HKSV", then the play time at 152); after the reinstall, from the copy, it goes on

@@ -1,12 +1,14 @@
 /* Plays Five Nights at Freddy's on a computer, with scripted keys (or a player of its own), and saves frames.
  *
  *   play [--frames N] [--keys "10-40:left,50:ok,..."] [--shots 30,60|all|every:N] [--out DIR] [--saves DIR]
- *        [--night N] [--ai F,B,C,X] [--power P] [--hour H] [--seed S] [--bot] [--resume]
+ *        [--night N] [--ai F,B,C,X] [--power P] [--hour H] [--pos F,B,C] [--foxy N] [--gold] [--stars S]
+ *        [--seed S] [--bot]
  *
  * Keys: left right up down ok back home del 0 to 9. "a-b:key" holds the key from frame (step) a to b, "a:key" for
- * one step. --night starts that night (its card first); --ai, --power and --hour then set its AI levels, power
- * and hour. --bot plays the night itself (it knows where everyone is): doors when someone is at them, a look
- * at Pirate Cove now and then. Frames are steps (60 a second); the screen is drawn every second step.
+ * one step. --night starts that night (its card first); --ai, --power, --hour, --pos (Freddy, Bonnie, Chica:
+ * where they are), --foxy (his step out of the cove) and --gold (Golden Freddy's poster up) then set the night;
+ * --stars the stars won. --bot plays the night itself (it knows where everyone is): doors when someone is at them,
+ * a look at Pirate Cove now and then. Frames are steps (60 a second); the screen is drawn every second step.
  * Screenshots are DIR/shot_<frame>.ppm. At the end it prints the state: "END scene ... night ... hour ...". */
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,7 +82,7 @@ static uint32_t bot(int f) {
 
 int main(int argc, char **argv) {
   int frames = 600, night = 0, power = -1, hour = -1, ai[4] = {-1, -1, -1, -1}, gold = 0, stars = -1;
-  int pos[3] = {-1, -1, -1};
+  int pos[3] = {-1, -1, -1}, foxy = -1;
   bool use_bot = false, all = false;
   int every = 0;
   const char *out = "build/shots", *saves = "build/host-saves";
@@ -107,6 +109,7 @@ int main(int argc, char **argv) {
       for (unsigned k = 0; k < s % 1000; k++) rnd();
     } else if (!strcmp(a, "--bot")) use_bot = true;
     else if (!strcmp(a, "--gold")) gold = 1;
+    else if (!strcmp(a, "--foxy")) foxy = atoi(argv[++i]);
     else if (!strcmp(a, "--pos")) sscanf(argv[++i], "%d,%d,%d", &pos[0], &pos[1], &pos[2]);
     else if (!strcmp(a, "--stars")) stars = atoi(argv[++i]);
     else {
@@ -140,6 +143,7 @@ int main(int argc, char **argv) {
       if (gold) g.n.gold = 1;
       for (int k = 0; k < 3; k++)
         if (pos[k] >= 0) g.n.pos[k] = (uint8_t)pos[k];
+      if (foxy >= 0) g.n.foxy = (uint8_t)foxy;
     }
     uint32_t k = 0;
     for (int i = 0; i < nholds; i++)
