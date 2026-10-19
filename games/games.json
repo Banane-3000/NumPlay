@@ -417,6 +417,24 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/sudoku"
   },
   {
+    "id": "uttt",
+    "title": "Ultimate Tic-Tac-Toe",
+    "tagline": "Tic-tac-toe in tic-tac-toe",
+    "credit": null,
+    "top": "0x2B3470",
+    "bottom": "0x10132A",
+    "accent": "0xFF4D6D",
+    "colors": 6,
+    "records": [
+      "uttt.sav"
+    ],
+    "shots": [
+      "docs/card.png"
+    ],
+    "app": "UltimateTicTacToe.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/uttt"
+  },
+  {
     "id": "numvisuals",
     "title": "NumVisuals",
     "tagline": "Backgrounds, clocks, timers",

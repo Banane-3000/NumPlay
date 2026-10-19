@@ -100,6 +100,8 @@ Pong and more, side by side	Pong et plus, côte à côte
 Cookie Clicker	Cookie Clicker
 Click the cookie, bake billions	Clique le cookie, cuis des milliards
 Fill the grid, 1 to 9	Remplis la grille, de 1 à 9
+Ultimate Tic-Tac-Toe	Morpion ultime
+Tic-tac-toe in tic-tac-toe	Un morpion dans le morpion
 Backgrounds, clocks, timers	Fonds, horloges, minuteurs
 Reach the door, trust nothing	Atteins la porte, ne te fie à rien
 Stop the invasion, one cannon	Arrête l'invasion avec un seul canon

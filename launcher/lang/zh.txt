@@ -100,6 +100,8 @@ Cookie Clicker	Cookie Clicker
 Click the cookie, bake billions	点击饼干，烤出亿万饼干
 Sudoku	数独
 Fill the grid, 1 to 9	填满九宫格，1 到 9
+Ultimate Tic-Tac-Toe	终极井字棋
+Tic-tac-toe in tic-tac-toe	井字棋里的井字棋
 Backgrounds, clocks, timers	背景、时钟、计时器
 Reach the door, trust nothing	走到门口，什么都别相信
 Space Invaders	太空侵略者
