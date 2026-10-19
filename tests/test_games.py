@@ -148,6 +148,11 @@ GAMES = {
     # the intro, then OK draws for a while (the autosave on Home); next time it comes back and more is drawn
     "numpowder": ("NumPowder.nwa", "numpowder.sav", presses((2000, "ok"), (3000, "ok", 1500)), 6000,
                   presses((2000, "ok"), (2500, "right", 600), (3200, "ok", 800)), 5000),
+    # the title, the menu, New Game, Knee-Deep in the Dead, Hurt Me Plenty: the hangar, walking; Home keeps the
+    # moment, and the next start is back in it
+    "doom": ("Doom.nwa", "doomres.sav",
+             presses((2500, "ok"), (3200, "ok"), (3900, "ok"), (4600, "ok"), (6500, "up", 1500)), 9500,
+             presses((4000, "up", 1000)), 7000),
     # Press OK to Play: the first scenario, its first goal closed, the city runs; then Continue
     "finalearth2": ("FinalEarth2.nwa", "finalearth2.sav", presses((2000, "ok"), (3000, "ok")), 9000,
                     presses((2000, "ok")), 6000),
@@ -180,7 +185,7 @@ SEEDS = {
 COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.py", "celeste": "celeste_saves.py",
           "hollowknight": "hollowknight_saves.py", "finalearth2": "finalearth2_saves.py",
           "numpowder": "numpowder_saves.py", "undertale": "undertale_saves.py", "subway": "subway_saves.py",
-          "fnaf": "fnaf_saves.py"}
+          "fnaf": "fnaf_saves.py", "doom": "doom_saves.py"}
 CHECKS = {
     # the island remembers where Lucky was; after the reinstall, from the copy
     "championisland": (lambda v: v[:3] == b"CI1" and b"PLAYER_LOC" in v,) * 2,
@@ -200,6 +205,8 @@ CHECKS = {
     # the night kept ("FNAF", its seconds at 40); after the reinstall, from the copy, it goes on
     "fnaf": (lambda v: v[:4] == b"FNAF" and struct.unpack_from("<f", v, 40)[0] > 2,
              lambda v: v[:4] == b"FNAF" and struct.unpack_from("<f", v, 40)[0] > 6.5),
+    # the moment kept (a save named "the moment"); after the reinstall, from the copy, loaded and kept again
+    "doom": (lambda v: v[:10] == b"the moment",) * 2,
     # a simulation saved ("NPWD"); after the reinstall, from the copy, it goes on and is saved again
     "numpowder": (lambda v: v[:4] == b"NPWD",) * 2,
     # a game saved ("HKSV", then the play time at 152); after the reinstall, from the copy, it goes on

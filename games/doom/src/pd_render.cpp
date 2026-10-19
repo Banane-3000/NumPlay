@@ -366,8 +366,15 @@ static uint8_t col_fd[RENDER_COL_MAX];
 #endif
 static int16_t render_col_free;
 
+#if NUMWORKS
+extern "C" { uint32_t nw_col_overflows, nw_col_peak; } // (tests read these)
+#endif
 static int16_t alloc_pd_column(int x) {
     if (render_col_free < 0) {
+#if NUMWORKS
+        if (render_col_count >= (int)nw_col_peak) nw_col_peak = render_col_count + 1;
+        if (render_col_count == RENDER_COL_MAX) nw_col_overflows++;
+#endif
         if (render_col_count == RENDER_COL_MAX) {
             assert(x>=0 && x<SCREENWIDTH);
             not_fully_covered_cols[x/(4*32)] |= 1u << ((x/4)&31);
