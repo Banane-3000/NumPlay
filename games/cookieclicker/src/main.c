@@ -4,9 +4,8 @@
  * and catch the golden cookies. The numbers are the game's own (version 2.05): its 20 buildings
  * with their prices and cookies per second, each one 15% dearer than the last, the tiered
  * upgrades that double a building, the cursor's thousand fingers, the mice, flavored cookies,
- * grandma types, kittens that turn milk (achievements) into cookies, golden cookies with Frenzy,
- * Lucky and Click frenzy, and ascension, which trades the bakery for prestige levels: +1%
- * cookies per second each.
+ * kittens that turn milk (achievements) into cookies, and golden cookies with Frenzy, Lucky and
+ * Click frenzy.
  *
  * The bank is counted in doubles, as the game does; prices and rates in floats, whose 7 digits
  * are more than the game shows (1.234 million). Inside NumPlay it draws with the launcher's
@@ -109,7 +108,7 @@ static float powi(float x, int n) {
 }
 static float p10(int e) { return e < 0 ? 1 / powi(10, -e) : powi(10, e); }
 static float base_price(int b) { return bdata[b][0] * p10(bdata[b][1]); }
-static int many(void) { return sv.mode == 2 ? 100 : sv.mode * 9 + 1; }
+static int many(void) { return sv.mode == 2 ? 100 : sv.mode == 1 ? 10 : 1; }
 /* the price of n more buildings b: 15% more for each one owned, rounded up */
 static float price(int b, int n) {
   float p = base_price(b) * powi(1.15f, sv.amount[b]);
@@ -138,7 +137,6 @@ static char *num(char *o, uint32_t v) { /* with commas: 1,234,567 */
 /* 0.1 and 12.3 (a decimal when there is one, below 1,000), 123,456, then 1.234 million, 12.5 billion... */
 static char *big(char *o, double v) {
   int u = 0;
-  if (!(v > 0)) v = 0;
   if (v < 1e6) {
     uint32_t t = (uint32_t)(v * 10 + .5);
     if (v >= 1000 || t % 10 == 0) return num(o, v >= 1000 ? (uint32_t)v : t / 10);
@@ -256,8 +254,8 @@ static int ach_building(int a) { return a - A_BUILD < N_CURSOR_ACH ? 0 : a - A_B
 static bool ach_won(int a) {
   float v;
   int k = threshold(a, &v);
-  float have[7] = {0, raw_cps, 0, sv.amount[ach_building(a)], sv.golden, owned, nup};
-  return k == 0 ? sv.earned >= v : k == 2 ? sv.handmade >= v : have[k] >= v;
+  return (k == 0 ? sv.earned : k == 2 ? sv.handmade : k == 1 ? raw_cps : k == 3 ? sv.amount[ach_building(a)]
+          : k == 4 ? (double)sv.golden : k == 5 ? owned : nup) >= v;
 }
 static void win(int a) {
   if (has(sv.ach, a)) return;
@@ -266,12 +264,14 @@ static void win(int a) {
 }
 static void ach_desc(int a) { /* what it takes, in buf */
   static const char *const pre[7] = {T("Bake "), T("Bake "), T("Make "), T("Have "), T("Click "), T("Own "), T("Purchase ")};
-  static const char *const post[7] = {T(" cookies in one ascension."), T(" cookies per second."),
+  static const char *const post[7] = {T(" cookies."), T(" cookies per second."),
                                       T(" cookies from clicking."), " x ", T(" golden cookies."), T(" buildings."),
                                       T(" upgrades.")};
   float v;
   int k = threshold(a, &v);
   cpy(cat(buf, pre[k], v, post[k]), k == 3 ? bname[ach_building(a)] : "");
+  if (v == 1) /* 1 cookie, 1 golden cookie: the plural s goes (none of the verbs ends in one) */
+    for (char *s = buf, *d = buf; (*d = *s); s++) d += !(*s == 's' && (s[1] == ' ' || s[1] == '.'));
 }
 
 static void check(void) { /* once a second, and after a purchase: what unlocks, what is won */
@@ -313,11 +313,10 @@ static void buy(void) {
    Click frenzy */
 static int luck(void) { return has(sv.up, U_GOLD) + has(sv.up, U_GOLD + 1); }
 static void golden_pop(void) {
-  uint32_t dur = has(sv.up, U_GOLD + 2) + 1, e = rnd() % 20;
-  sv.golden++, sv.gc_t = 0;
-  gc_life = 0;
-  if (e < 2) sv.cfrenzy = 13000 * dur;
-  else if (e < 11) sv.frenzy = 77000 * dur;
+  uint32_t dur = has(sv.up, U_GOLD + 2) + 1, e = rnd() % 30;
+  sv.golden++, gc_life = 0;
+  if (e == 0) sv.cfrenzy = 13000 * dur;
+  else if (e < 16) sv.frenzy = 77000 * dur;
   else {
     double v = sv.cookies * 0.15 < cps * 900.0 ? sv.cookies * 0.15 : cps * 900.0;
     earn(v + 13);
@@ -354,7 +353,7 @@ static void left(void) {
   uint32_t b = now - bounce_t; /* a little smaller for a moment when clicked */
   cookie(CX, CY, b < 240 ? 48 + (int)b / 60 : 52, false);
   /* the milk, which rises with the achievements and changes flavor every 25 */
-  int h = 10 + (int)((milk > 1 ? 1 : milk) * 20), rank = nach / 25 < N_MILK ? nach / 25 : N_MILK - 1;
+  int h = 10 + (int)((milk > 1 ? 1 : milk) * 20), rank = nach / 25; /* (59 achievements: 3 milks) */
   for (int x = 0; x < LW; x++) {
     int w = (int)(now / 40 + x) % 48;
     gfx_fill(x, SCREEN_H - h + (w < 24 ? w : 48 - w) / 6, 1, h + 8, gfx_rgb(milk_rgb[rank]));
@@ -365,7 +364,6 @@ static void left(void) {
     big(buf, sv.cookies < 1e6 ? (double)(uint32_t)sv.cookies : sv.cookies); /* (whole cookies) */
     for (char *s = buf; *s && !name; s++)
       if (*s == ' ') *s = 0, name = s + 1;
-    mid(&np_font_title, CX + 1, 41, buf, 0);
     mid(&np_font_title, CX, 40, buf, WHITE);
     cpy(name ? cpy(cpy(line2, name), " ") : line2, T("cookies"));
     mid(&np_font_body, CX, 54, line2, WHITE);
@@ -478,7 +476,7 @@ static void store(void) {
 /* ------------------------------------------------------------ the news, and the menus */
 static void next_news(void) { /* how far the bakery's fame has gone: the digits of a tenth of all it baked */
   int l = 0;
-  for (double e = sv.earned / 10; e >= 1 && l < N_LORE - 1; e /= 10) l++;
+  while (l < N_LORE - 1 && sv.earned >= 10 * p10(l)) l++;
   news_n = (uint32_t)(X_NEWS + l);
   news_x = SCREEN_W, news_w = gfx_text_width(&np_font_small, txt(news_n));
 }
@@ -526,14 +524,11 @@ static void scene(void *ctx) {
 static void load(void) {
   uint32_t len = 0;
   const uint8_t *d = np_file_read(SAVE_NAME, &len);
-  uint8_t *v = (uint8_t *)&sv;
-  bool ok = d && len == sizeof sv && d[0] == 'C' && d[1] == 1;
-  for (uint32_t i = 0; i < sizeof sv; i++) v[i] = ok ? d[i] : 0;
+  if (d && len == sizeof sv && d[0] == 'C' && d[1] == 1) /* (or a new bakery: sv starts as zeros) */
+    for (uint32_t i = 0; i < sizeof sv; i++) ((uint8_t *)&sv)[i] = d[i];
   /* whatever it holds, a bakery this game could have saved */
-  double *dv[3] = {&sv.cookies, &sv.earned, &sv.handmade};
-  for (int i = 0; i < 3; i++)
-    if (!(*dv[i] >= 0 && *dv[i] < 1e300)) *dv[i] = 0;
-  if (sv.mode > 2) sv.mode = 0;
+  for (double *v = &sv.cookies; v <= &sv.handmade; v++)
+    if (!(*v >= 0 && *v < 1e300)) *v = 0;
 }
 static void move(int d) {
   int n = rows(), shown = tab == 2 ? 12 : 6, *s = &sel[tab], *t = &top[tab];
@@ -557,8 +552,7 @@ int main(void) {
   color_t *their_strip = gfx_buf;
   gfx_buf = ram.strip;
   now = (uint32_t)eadk_timing_millis();
-  seed = eadk_random() ^ now;
-  if (!seed) seed = 1;
+  seed = eadk_random() | 1;
   load();
   sort_list();
   check();
@@ -603,7 +597,7 @@ int main(void) {
       uint32_t lo = 300000u >> luck();
       float f = (float)(sv.gc_t - lo) / (float)(2 * lo);
       if (f > 1 || (float)(rnd() & 0xFFFF) < f * f * f * f * f * 65536)
-        gc_dur = gc_life = 13000u << luck(), gc_x = 20 + (int)(rnd() % (LW - 40)), gc_y = 84 + (int)(rnd() % 100);
+        sv.gc_t = 0, gc_dur = gc_life = 13000u << luck(), gc_x = 20 + (int)(rnd() % (LW - 40)), gc_y = 84 + (int)(rnd() % 100);
     }
     if (now - second >= 1000) second = now, check();
     if (now - saved >= 10000) saved = now, save();
