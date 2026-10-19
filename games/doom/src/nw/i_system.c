@@ -1,5 +1,4 @@
 /* Doom on the calculator: the system (memory, time, errors, quitting). */
-#include <setjmp.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,6 +48,20 @@ void free(void *p) {
 void *realloc(void *p, size_t n) {
     I_Error("realloc");
 }
+/* (and the C library's own, so that nothing else takes from the heap) */
+struct _reent;
+void *_malloc_r(struct _reent *r, size_t n) { return malloc(n); }
+void _free_r(struct _reent *r, void *p) { free(p); }
+void *_realloc_r(struct _reent *r, void *p, size_t n) { return realloc(p, n); }
+void *_calloc_r(struct _reent *r, size_t a, size_t b) { return calloc(a, b); }
+/* (no signals to raise: a division by zero gives 0, an abort is an error) */
+int __aeabi_idiv0(int r) { return 0; }
+long long __aeabi_ldiv0(long long r) { return 0; }
+void abort(void) { I_Error("abort"); }
+char *strdup(const char *s) {
+    size_t n = strlen(s) + 1;
+    return memcpy(malloc(n), s, n);
+}
 #endif
 
 boolean drone = false; /* (a network game's watcher: never) */
@@ -73,11 +86,11 @@ uint64_t time_us_64(void) { return (uint64_t)plat_millis() * 1000; }
 
 /* ------------------------------------------------------------------ the end */
 boolean nw_quit;
-jmp_buf nw_exit;
+void *nw_exit[5];
 
 void I_Quit(void) {
     nw_quit = true;
-    longjmp(nw_exit, 1);
+    __builtin_longjmp(nw_exit, 1);
 }
 
 /* An error the game cannot go on from: said on the screen until a key is pressed, then the app quits. */
@@ -93,5 +106,5 @@ void I_Error(const char *error, ...) {
         nw_show_error(msg);
     }
     nw_quit = true;
-    longjmp(nw_exit, 2);
+    __builtin_longjmp(nw_exit, 1);
 }

@@ -2,13 +2,13 @@
  *
  * The game runs until Home or On/Off is pressed (the moment is saved, and comes back on the next start),
  * Quit is chosen in the menu, or an error stops it. */
-#include <setjmp.h>
 #include <stdint.h>
 
 #include "doomtype.h"
-#include "doom/d_main.h"
 #include "plat.h"
 #include "nw.h"
+
+void D_DoomMain(void);
 
 #if !defined(HOST)
 const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name"))) = "Doom";
@@ -21,7 +21,7 @@ int nw_main(void);
 int main(void) {
     plat_begin();
     nw_saves_restore();
-    if (!setjmp(nw_exit)) {
+    if (!__builtin_setjmp(nw_exit)) {
         D_DoomMain();
         // the main loop ended: Home or On/Off
         if (nw_home) nw_resume_save();

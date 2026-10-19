@@ -78,6 +78,7 @@
 #define SAVE_COMPRESSED 1
 #define LOAD_COMPRESSED 1
 #define NO_USE_ARGS 1
+#define NO_FILE_ACCESS 1 /* (saves are Epsilon's files: nw/saves.c) */
 #define NO_USE_SAVE_CONFIG 1
 #define NO_USE_FLOAT 1
 #define USE_VANILLA_KEYBOARD_MAPPING_ONLY 1
@@ -109,6 +110,17 @@
 
 #ifndef __ASSEMBLER__
 #include <stdint.h>
+#if !defined(HOST)
+/* the calculator has no console and no files but Epsilon's: what the engine prints goes nowhere */
+#include <stdio.h>
+#define printf(...) ((void)0)
+#define puts(s) ((void)0)
+#define putchar(c) ((void)0)
+#define fprintf(f, ...) ((void)0)
+#define vfprintf(f, ...) ((void)0)
+#define fputs(s, f) ((void)0)
+#define fflush(f) ((void)0)
+#endif
 typedef unsigned int uint;
 #define __fast_mul(a, b) ((a) * (b))
 #define panic_unsupported() I_Error("unsupported")

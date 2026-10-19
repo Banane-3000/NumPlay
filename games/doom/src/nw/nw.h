@@ -1,15 +1,15 @@
 /* Doom on the calculator: what the platform's parts say to each other. */
 #ifndef DOOM_NW_H
 #define DOOM_NW_H
-#include <setjmp.h>
 #include "doomtype.h"
 
 /* the zone on a computer: as much as the calculator's own software leaves */
 #define NW_HOST_ZONE (60 * 1024)
 
-/* i_system.c: Home, On/Off and Quit end the main loop; I_Error and I_Quit jump back to main */
+/* i_system.c: Home, On/Off and Quit end the main loop; I_Error and I_Quit jump back to main
+ * (__builtin_setjmp and __builtin_longjmp on nw_exit) */
 extern boolean nw_quit;
-extern jmp_buf nw_exit;
+extern void *nw_exit[5];
 
 /* i_video.c: an error message on the screen, until a key is pressed */
 void nw_show_error(const char *msg);

@@ -2126,6 +2126,12 @@ void D_DoomMain (void)
     // the calculator's keys and settings; the moment kept by Home, if there is one, comes back
     nw_input_init();
     nw_settings_load();
+#ifdef NW_WARP
+    autostart = true;
+    startepisode = NW_WARP / 10;
+    startmap = NW_WARP % 10;
+    startskill = sk_hard;
+#endif
     if (nw_resume_ready())
     {
         g_load_slot = NW_RESUME_SLOT;

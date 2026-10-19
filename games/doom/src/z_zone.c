@@ -112,6 +112,10 @@ typedef struct
 
 
 static memzone_t *mainzone;
+#if NUMWORKS
+// what the zone holds, and the most it held (tests read these)
+uint32_t nw_zone_used, nw_zone_peak, nw_zone_size;
+#endif
 #if !NO_ZONE_DEBUG
 static boolean zero_on_free;
 static boolean scan_on_free;
@@ -131,6 +135,9 @@ void Z_Init (void)
 
     mainzone = (memzone_t *)I_ZoneBase (&size);
     mainzone->size = size;
+#if NUMWORKS
+    nw_zone_size = size;
+#endif
 
     block = (memblock_t *)( (byte *)mainzone + sizeof(memzone_t) );
     // set the entire zone to one free block
@@ -228,6 +235,9 @@ void Z_Free (void* ptr)
 
 #ifdef USE_MEM_USE_TRACKING
     mem_used -= memblock_size(block) + sizeof(memblock_t);
+#endif
+#if NUMWORKS
+    if (block->tag != PU_FREE) nw_zone_used -= memblock_size(block);
 #endif
 
     // mark as free
@@ -413,6 +423,10 @@ Z_MallocNoUser
     base->id = ZONEID;
 #endif
 
+#if NUMWORKS
+    nw_zone_used += memblock_size(base);
+    if (nw_zone_used > nw_zone_peak) nw_zone_peak = nw_zone_used;
+#endif
 #ifdef USE_MEM_USE_TRACKING
     mem_used += memblock_size(base) + sizeof(memblock_t);
     static int8_t pants;

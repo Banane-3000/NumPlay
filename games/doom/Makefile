@@ -30,13 +30,14 @@ ENGINE_W = -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variabl
   -Wno-int-in-bool-context -Wno-array-bounds -Wno-stringop-overflow -Wno-absolute-value -Wno-dangling-pointer
 
 ARCH = $(shell $(NWLINK) eadk-cflags-device)
-COMMON = $(ARCH) $(INC) -Os -fno-math-errno -fsingle-precision-constant -fno-tree-loop-distribute-patterns \
-  -ffunction-sections -fdata-sections -fwrapv -flto -fno-fat-lto-objects -fvisibility=internal -DNDEBUG
+COMMON = $(ARCH) $(INC) -Os -fno-math-errno -fno-unwind-tables -fno-asynchronous-unwind-tables -fsingle-precision-constant -fno-tree-loop-distribute-patterns \
+  -ffunction-sections -fdata-sections -fwrapv -flto -fno-fat-lto-objects -fvisibility=internal -DNDEBUG $(EXTRA)
 CFLAGS = -std=gnu11 $(COMMON)
 CXXFLAGS = -std=gnu++17 -fno-exceptions -fno-rtti -fno-threadsafe-statics $(COMMON)
 LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
 LDFLAGS += -Wl,-e,main -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
-LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
+LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel $(if $(MAP),-Wl$(comma)-Map$(comma)$(MAP))
+comma = ,
 
 OBJ = $(patsubst src/%.c,$(BUILD_DIR)/obj/%.o,$(ENGINE) $(NW) src/nw/plat_eadk.c) $(BUILD_DIR)/obj/pd_render.o
 
