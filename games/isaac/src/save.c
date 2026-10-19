@@ -241,7 +241,7 @@ typedef struct {
 } Progress;
 
 void save_progress(void) {
-  Progress p = {PROGRESS_MAGIC, g_runs, g_deaths, g_wins, g_best_stage, {g_swap, 0}};
+  Progress p = {PROGRESS_MAGIC, g_runs, g_deaths, g_wins, g_best_stage, {g_swap, g_last_char}};
   plat_save(PROGRESS_NAME, &p, sizeof p);
   copy_write();
 }
@@ -254,4 +254,5 @@ void load_progress(void) {
   memcpy(&p, d, sizeof p);
   if (p.magic != PROGRESS_MAGIC) return;
   g_runs = p.runs, g_deaths = p.deaths, g_wins = p.wins, g_best_stage = p.best_stage, g_swap = p.pad[0] & 1;
+  g_last_char = p.pad[1] < CH_COUNT ? p.pad[1] : 0;
 }

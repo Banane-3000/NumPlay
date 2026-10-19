@@ -78,11 +78,18 @@ typedef struct {
   uint8_t pill_effect[14];         /* what each pill colour does this run */
   float pill_tears, pill_range, pill_speed, pill_luck;   /* what pills did to his stats */
   uint8_t devil_deals;             /* deals taken (no angels after one) */
+  uint8_t character;               /* CH_* */
 } Player;
 extern Player pl;
 
-void player_reset(void);
+enum { CH_ISAAC, CH_MAGDALENE, CH_CAIN, CH_JUDAS, CH_BLUEBABY, CH_EVE, CH_SAMSON, CH_AZAZEL, CH_COUNT };
+void player_reset(int character);
+const char *character_name(int c);
+bool character_unlocked(int c);
+const char *character_unlock_hint(int c);
+int character_head(int c);                   /* its head's sprite (its body's is the next one) */
 void player_stats(void);                     /* recomputes stats from the items */
+void player_starting_items(void);
 void player_update(uint32_t keys);
 void player_draw_shadow(void);
 void player_draw(void);
@@ -121,6 +128,7 @@ typedef struct {
   float width, dmg;
   int16_t life, max;
   uint8_t active, enemy, kind;     /* kind: 0 blood (Brimstone), 1 tech, 2 holy, 3 Shoop */
+  float len;                       /* how far it reaches (0: to the wall) */
 } Laser;
 #define MAX_LASERS 8
 extern Laser lasers[MAX_LASERS];
@@ -313,7 +321,7 @@ extern int16_t banner_t;
 
 /* ---------------------------------------------------------------- the game */
 enum { MODE_TITLE, MODE_MENU, MODE_PLAY, MODE_PAUSE, MODE_MAP, MODE_DEAD, MODE_WIN, MODE_STAGE, MODE_HELP,
-       MODE_CONFIRM, MODE_STATS };
+       MODE_CONFIRM, MODE_STATS, MODE_CHARSEL };
 extern int g_mode;
 extern bool g_running;
 extern uint32_t g_frame;          /* frames since the run began */
@@ -332,7 +340,8 @@ extern bool g_swap;              /* the number keys walk and the arrows cry (as 
 void game_init(void);
 void game_frame(uint32_t keys);
 void game_draw(void);
-void game_new_run(void);
+void game_new_run(int character);
+extern uint8_t g_last_char;
 void game_next_floor(void);
 void game_won(int how);
 void game_over(void);

@@ -259,12 +259,17 @@ static void laser_box(const Laser *l, float *x0, float *y0, float *x1, float *y1
     return;
   }
   float fy = l->y + 10;   /* (its floor line: the head is 10 over the feet) */
+  float len = l->len > 0 ? l->len : 400;
   switch (l->dir) {
-    case DIR_UP: *x0 = l->x - hw, *x1 = l->x + hw, *y0 = 0, *y1 = fy; break;
-    case DIR_DOWN: *x0 = l->x - hw, *x1 = l->x + hw, *y0 = fy, *y1 = SCREEN_H; break;
-    case DIR_LEFT: *x0 = 0, *x1 = l->x, *y0 = fy - hw, *y1 = fy + hw; break;
-    default: *x0 = l->x, *x1 = SCREEN_W, *y0 = fy - hw, *y1 = fy + hw; break;
+    case DIR_UP: *x0 = l->x - hw, *x1 = l->x + hw, *y0 = fy - len, *y1 = fy; break;
+    case DIR_DOWN: *x0 = l->x - hw, *x1 = l->x + hw, *y0 = fy, *y1 = fy + len; break;
+    case DIR_LEFT: *x0 = l->x - len, *x1 = l->x, *y0 = fy - hw, *y1 = fy + hw; break;
+    default: *x0 = l->x, *x1 = l->x + len, *y0 = fy - hw, *y1 = fy + hw; break;
   }
+  if (*y0 < 0) *y0 = 0;
+  if (*x0 < 0) *x0 = 0;
+  if (*y1 > SCREEN_H) *y1 = SCREEN_H;
+  if (*x1 > SCREEN_W) *x1 = SCREEN_W;
 }
 
 void lasers_update(void) {

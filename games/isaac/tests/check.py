@@ -58,7 +58,7 @@ def expect(cond, what):
 
 
 # ---- the menus: the title, a new run, the floor's name, then the first room
-st = run(["--frames", "120", "--keys", "5:ok,15:ok,30:ok"], "menus")
+st = run(["--frames", "130", "--keys", "5:ok,15:ok,25:right,30:left,35:ok"], "menus")
 expect(st and st["mode"] == MODE_PLAY and st["stage"] == 1 and st["kind"] == ROOM["START"], f"menus: not playing ({st})")
 st = run(["--frames", "60", "--keys", "5:ok,10:down,12:down,15:ok,30:back"], "how to play")
 expect(st and st["mode"] == MODE_MENU, f"how to play: not back to the menu ({st})")
@@ -75,6 +75,11 @@ os.remove(os.path.join(saves, "isaacrun.sav"))
 st = run(["--frames", "60", "--keys", "5:ok,15:ok"], "continue from the copy", saves)
 expect(st and st["mode"] == MODE_PLAY, f"continue from the copy: not playing ({st})")
 shutil.rmtree(saves, ignore_errors=True)
+
+# ---- each character, a while with the bot
+for ch in range(8):
+    st = run(["--run", "--char", str(ch), "--bot", "--god", "--frames", "1500", "--seed", str(ch)], f"character {ch}")
+    expect(st is not None, f"character {ch}")
 
 # ---- dying: the bot in the Womb without help, then a new run from the death screen
 st = run(["--run", "--stage", "7", "--frames", "3000", "--bot", "--seed", "5"], "death")

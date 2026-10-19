@@ -2,7 +2,7 @@
  *
  *   play [--frames N] [--keys "10-40:right,50:ok,..."] [--shots 30,60|all|every:N] [--out DIR] [--saves DIR]
  *        [--seed N] [--run] [--stage S] [--give ID,ID...] [--bot] [--god] [--boss MON] [--goto KIND]
- *        [--pocket KIND,ID]
+ *        [--pocket KIND,ID] [--char CH]
  *
  * Keys: left right up down sleft sright sup sdown ok back bomb item card map home; "a-b:key" holds the key
  * from frame a to b, "a:key" for one frame. --run starts a new run past the title (--stage: on that floor).
@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
   int frames = 600, seed = 1, stage = 1, every = 0;
   char keys[65536] = "", shots[65536] = "", out[512] = "build/shots", saves[512] = "build/host-saves", give[1024] = "";
   bool all = false, run = false, bot = false, god = false, immortal = false;
-  int boss = -1, gokind = -1, pocket_kind = 0, pocket = 0;
+  int boss = -1, gokind = -1, pocket_kind = 0, pocket = 0, character = 0;
   for (int i = 1; i < argc; i++) {
     const char *a = argv[i];
     const char *v = i + 1 < argc ? argv[i + 1] : "";
@@ -166,6 +166,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(a, "--give")) snprintf(give, sizeof give, "%s", v), i++;
     else if (!strcmp(a, "--boss")) boss = atoi(v), i++;
     else if (!strcmp(a, "--goto")) gokind = atoi(v), i++;
+    else if (!strcmp(a, "--char")) character = atoi(v), i++;
     else if (!strcmp(a, "--pocket")) sscanf(v, "%d,%d", &pocket_kind, &pocket), i++;
     else if (!strcmp(a, "--run")) run = true;
     else if (!strcmp(a, "--bot")) bot = true;
@@ -182,7 +183,7 @@ int main(int argc, char **argv) {
   game_init();
   if (run) {
     host_time = (uint32_t)seed * 7919u;
-    game_new_run();
+    game_new_run(character);
     if (stage > 1) {
       while (fl.stage < stage) game_next_floor();
     }

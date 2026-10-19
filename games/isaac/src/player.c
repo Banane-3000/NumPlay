@@ -16,12 +16,69 @@ const int8_t DIR_X[4] = {0, -1, 0, 1}, DIR_Y[4] = {1, 0, -1, 0};
 
 #define BASE_SPEED 3.2f   /* pixels a frame at speed 1 */
 
-void player_reset(void) {
+/* ---------------------------------------------------------------- the characters, as Rebirth makes them */
+static const char *const char_names[CH_COUNT] = {"ISAAC", "MAGDALENE", "CAIN", "JUDAS", "???", "EVE", "SAMSON", "AZAZEL"};
+/* their damage (a multiplier), speed, range and luck */
+static const float ch_damage[CH_COUNT] = {1, 1, 1.2f, 1.35f, 1.05f, 0.75f, 1, 1.5f};
+static const float ch_speed[CH_COUNT] = {1, 0.85f, 1.3f, 1, 1.1f, 1.23f, 1.1f, 1.25f};
+static const float ch_range[CH_COUNT] = {23.75f, 23.75f, 20.25f, 23.75f, 23.75f, 23.75f, 21.75f, 23.75f};
+static const float ch_luck[CH_COUNT] = {0, 0, 1, 0, 0, 0, 0, 0};
+
+const char *character_name(int c) { return c >= 0 && c < CH_COUNT ? char_names[c] : ""; }
+int character_head(int c) { return SPR_HEAD_ISAAC + 2 * (c >= 0 && c < CH_COUNT ? c : 0); }
+/* the first four from the start; the others once Mom, her heart, or Satan or Isaac are beaten */
+bool character_unlocked(int c) {
+  switch (c) {
+    case CH_BLUEBABY: return g_wins & 2;
+    case CH_EVE: case CH_SAMSON: return g_wins & 1;
+    case CH_AZAZEL: return g_wins & 12;
+    default: return true;
+  }
+}
+const char *character_unlock_hint(int c) {
+  switch (c) {
+    case CH_BLUEBABY: return "BEAT MOM'S HEART";
+    case CH_EVE: case CH_SAMSON: return "BEAT MOM";
+    case CH_AZAZEL: return "BEAT SATAN OR ISAAC";
+    default: return "";
+  }
+}
+
+static void start_with(int item) {
+  item_give(item);
+  banner_t = 0;
+}
+
+void player_reset(int character) {
   memset(&pl, 0, sizeof pl);
-  pl.containers = 3, pl.red = 6;
-  pl.bombs = 1;
+  pl.character = (uint8_t)(character >= 0 && character < CH_COUNT ? character : 0);
   pl.face = DIR_DOWN, pl.shoot_dir = DIR_NONE;
   pl.x = 160, pl.y = 120;
+  switch (pl.character) {
+    case CH_ISAAC: pl.containers = 3, pl.red = 6, pl.bombs = 1; break;
+    case CH_MAGDALENE: pl.containers = 4, pl.red = 8; break;
+    case CH_CAIN: pl.containers = 2, pl.red = 4, pl.keys = 1; break;
+    case CH_JUDAS: pl.containers = 1, pl.red = 2, pl.coins = 3; break;
+    case CH_BLUEBABY: pl.soul = 6; break;
+    case CH_EVE: pl.containers = 2, pl.red = 4; break;
+    case CH_SAMSON: pl.containers = 3, pl.red = 6; break;
+    case CH_AZAZEL: pl.soul = 6, pl.black = 7, pl.bombs = 1; break;
+  }
+  player_stats();
+}
+
+/* what each one starts with (once the pools are ready) */
+void player_starting_items(void) {
+  switch (pl.character) {
+    case CH_ISAAC: if (g_wins & 2) start_with(105); break;   /* The D6, once Mom's Heart is beaten */
+    case CH_MAGDALENE: start_with(45); break;
+    case CH_CAIN: start_with(46); break;
+    case CH_JUDAS: start_with(34); break;
+    case CH_BLUEBABY: start_with(36); break;
+    case CH_EVE: start_with(122), start_with(117), start_with(126); break;
+    case CH_SAMSON: start_with(157); break;
+    default: break;
+  }
   player_stats();
 }
 
@@ -33,7 +90,8 @@ static float tear_delay_of(float t) {
 /* every item's stats, from scratch (as the game's cache) */
 void player_stats(void) {
   const uint8_t *h = pl.has;
-  float dmg_up = 0, flat = 0, mult = 1, tears = 0, range = 23.75f, shot = 1, speed = 1, luck = 0;
+  int ch = pl.character < CH_COUNT ? pl.character : 0;
+  float dmg_up = 0, flat = 0, mult = ch_damage[ch], tears = 0, range = ch_range[ch], shot = 1, speed = ch_speed[ch], luck = ch_luck[ch];
   uint32_t tf = 0;
   /* damage ups */
   dmg_up += h[7] * 1.0f + h[51] * 1.0f + h[50] * 1.0f + h[79] * 1.0f + h[70] * 1.0f + h[90] * 1.0f + h[193] * 0.3f
@@ -80,7 +138,7 @@ void player_stats(void) {
   if (h[169]) delay = delay * 2.1f + 3;               /* Polyphemus */
   if (h[52]) delay = delay * 2.5f;                    /* Dr. Fetus */
   if (h[149]) delay = delay * 1.33f + 10;             /* Ipecac */
-  if (h[118]) delay = delay * 3;                      /* Brimstone: charging */
+  if (h[118] || ch == CH_AZAZEL) delay = delay * 3;   /* Brimstone (Azazel's, shorter): charging */
   if (h[69]) delay = delay * 2.5f;                    /* Chocolate Milk */
   if (h[152]) delay = 2;                              /* Technology 2: a continuous laser (shots of it) */
   if (h[6]) delay = tear_delay_of(tears) < 5 ? 5 : delay;
@@ -111,7 +169,7 @@ void player_stats(void) {
   if (h[7] || h[51] || h[79] || h[80] || h[118] || h[157] || h[193] || h[186] || pl.belial || pl.damage >= 9) tf |= TF_BLOOD;
   pl.tear_flags = tf;
   pl.shots = h[153] ? 4 : h[2] ? 3 : h[245] ? 2 : 1;
-  pl.flight = h[20] || h[82] || h[159] || h[179] || h[184] || h[185] || pl.bible || pl.pony;
+  pl.flight = h[20] || h[82] || h[159] || h[179] || h[184] || h[185] || pl.bible || pl.pony || ch == CH_AZAZEL;
 }
 
 int player_hearts_total(void) { return pl.red + pl.soul + pl.eternal; }
@@ -132,6 +190,10 @@ void player_add_soul(int halves, bool black) {
 }
 
 void player_add_containers(int n) {
+  if (pl.character == CH_BLUEBABY && n > 0) {
+    player_add_soul(2 * n, false);
+    return;
+  }
   int c = pl.containers + n;
   if (c > 12) c = 12;
   if (c < 0) c = 0;
@@ -342,13 +404,14 @@ void player_update(uint32_t keys) {
   if (pl.fire_cd > 0) pl.fire_cd -= 1;
   if (pl.has[114]) {
     knife_update(dir, dir != DIR_NONE);
-  } else if (pl.has[118]) {   /* Brimstone: charge, then let go */
+  } else if (pl.has[118] || pl.character == CH_AZAZEL) {   /* Brimstone: charge, then let go (Azazel's reaches less far) */
     static int bdir = DIR_DOWN;
     if (dir != DIR_NONE) {
       bdir = dir;
       if (pl.charge < pl.tear_delay) pl.charge++;
     } else if (pl.charge >= pl.tear_delay && pl.charge > 0) {
-      laser_fire(pl.x, pl.y - 10, bdir, 9, pl.damage * 0.6f, 15, 0, false);
+      Laser *l = laser_fire(pl.x, pl.y - 10, bdir, 9, pl.damage * 0.6f, 15, 0, false);
+      if (l && !pl.has[118]) l->len = 80;
       pl.charge = 0;
     } else
       pl.charge = 0;
@@ -395,6 +458,7 @@ void player_draw_shadow(void) {
 }
 
 void player_draw(void) {
+  int head = character_head(pl.character);
   int x = (int)pl.x, y = (int)pl.y;
   if (pl.flight) y -= 4 + (int)((g_frame / 6) % 2);
   bool flash = pl.invuln > 0 && (pl.invuln / 3) % 2 == 0;
@@ -402,12 +466,12 @@ void player_draw(void) {
   uint16_t tint = C_RED;
   int amount = flash ? 14 : 0;
   if (pl.dead) {   /* fallen over, crying */
-    gfx_sprite_tint(SPR_ISAAC_HEAD, 1, x, y + 2, 0, tint, 0, alpha);
+    gfx_sprite_tint(head, 1, x, y + 2, 0, tint, 0, alpha);
     return;
   }
   if (pl.hold_anim > 0) {   /* holding up what he just found */
-    gfx_sprite(SPR_ISAAC_BODY, 8, x, y, 0, alpha);
-    gfx_sprite(SPR_ISAAC_HEAD, 0, x, y - 7, 0, alpha);
+    gfx_sprite(head + 1, 8, x, y, 0, alpha);
+    gfx_sprite(head, 0, x, y - 7, 0, alpha);
     if (pl.hold_item > 0) gfx_sprite(item_sprite(pl.hold_item), 0, x, y - 22, 0, 32);
     return;
   }
@@ -417,16 +481,16 @@ void player_draw(void) {
   if (f == DIR_LEFT || f == DIR_RIGHT) body = 4 + (pl.walk ? step : 0), flags = f == DIR_LEFT ? GFX_FLIPX : 0;
   else body = pl.walk ? step : 0;
   int bob = (pl.walk && (step & 1)) ? 1 : 0;
-  gfx_sprite_tint(SPR_ISAAC_BODY, body, x, y, flags, tint, amount, alpha);
+  gfx_sprite_tint(head + 1, body, x, y, flags, tint, amount, alpha);
   /* the head looks the way he cries, or else the way he walks */
   int hd = pl.shoot_dir != DIR_NONE ? pl.shoot_dir : pl.face;
-  bool crying = pl.shoot_dir != DIR_NONE && (pl.fire_cd > pl.tear_delay * 0.5f || pl.has[118] || pl.has[69]);
-  int head = hd == DIR_UP ? 4 : (hd == DIR_LEFT || hd == DIR_RIGHT) ? 2 : 0;
-  if (crying) head++;
+  bool crying = pl.shoot_dir != DIR_NONE && (pl.fire_cd > pl.tear_delay * 0.5f || pl.has[118] || pl.has[69] || pl.character == CH_AZAZEL);
+  int hf = hd == DIR_UP ? 4 : (hd == DIR_LEFT || hd == DIR_RIGHT) ? 2 : 0;
+  if (crying) hf++;
   int hflags = hd == DIR_LEFT ? GFX_FLIPX : 0;
-  gfx_sprite_tint(SPR_ISAAC_HEAD, head, x, y - 7 + bob, hflags, tint, amount, alpha);
+  gfx_sprite_tint(head, hf, x, y - 7 + bob, hflags, tint, amount, alpha);
   /* Brimstone and Chocolate Milk charge in a bar over his head */
-  if ((pl.has[118] || pl.has[69] || pl.has[114]) && pl.charge > 0) {
+  if ((pl.has[118] || pl.has[69] || pl.has[114] || pl.character == CH_AZAZEL) && pl.charge > 0) {
     float max = pl.has[114] ? 40 : pl.tear_delay;
     int w = (int)(14 * pl.charge / max);
     gfx_rect(x - 8, y - 34, 16, 4, C_BLACK, 24);

@@ -27,6 +27,7 @@ from PIL import Image, ImageDraw, ImageFont
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import art as A  # noqa: E402
+import characters as CH  # noqa: E402
 import rooms as R  # noqa: E402
 
 OUT_BIN = os.path.join(HERE, "..", "src", "data.bin")
@@ -191,6 +192,10 @@ def sprites():
     heads, bodies = A.isaac_frames()
     add("ISAAC_HEAD", [Frame(scaled(h), round(14 * SCALE), round(23 * SCALE)) for h in heads])
     add("ISAAC_BODY", [Frame(scaled(b), round(14 * SCALE), round(9 * SCALE)) for b in bodies])
+    for n in CH.CHARACTERS:   # each character's head and body, in CH.CHARACTERS's order (src/player.c's CH_*)
+        h, b = CH.frames(n)
+        add("HEAD_" + n.upper(), [Frame(scaled(x), round(14 * SCALE), round(23 * SCALE)) for x in h])
+        add("BODY_" + n.upper(), [Frame(scaled(x), round(14 * SCALE), round(9 * SCALE)) for x in b])
     # tears and shots
     add("TEAR", centred(ent("2.0.0 - Tear"), 1))
     add("BLOOD_TEAR", centred(ent("2.1.0 - Blood Tear"), 1))

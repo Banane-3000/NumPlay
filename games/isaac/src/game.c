@@ -14,7 +14,7 @@ bool g_room_was_cleared;
 uint32_t g_run_seed, g_rng = 0x2545F491u;
 uint8_t g_wins, g_best_stage;
 uint16_t g_deaths, g_runs;
-static int menu_sel, pause_sel, confirm_sel, mode_t, ending;
+static int menu_sel, pause_sel, confirm_sel, mode_t, ending, char_sel;
 static int trans_dir, trans_room;
 static bool boss_hit;   /* he was hurt in the boss's room (the Devil's deal) */
 void pills_shuffle(void);
@@ -37,13 +37,15 @@ float fcos(float a) { return cosf(a); }
 float dist2(float ax, float ay, float bx, float by) { return (ax - bx) * (ax - bx) + (ay - by) * (ay - by); }
 
 /* ---------------------------------------------------------------- a run */
-void game_new_run(void) {
+uint8_t g_last_char;
+void game_new_run(int character) {
   g_run_seed = g_rng ^ (plat_millis() * 2654435761u);
   if (!g_run_seed) g_run_seed = 1;
   g_rng = g_run_seed;
   g_frame = 0;
-  player_reset();
+  player_reset(character);
   items_new_run();
+  player_starting_items();
   pills_shuffle();
   floor_new(1);
   floor_enter_room(fl.start, DIR_NONE);
@@ -315,6 +317,50 @@ static void draw_menu(void) {
     if (g_wins & (1 << i)) gfx_sprite_scaled(marks[i], 0, 112 + i * 32, 226, 90, 90, 0, 0, 0, 32);
 }
 
+/* who plays: Rebirth's characters, their hearts and what they start with */
+static void draw_charsel(void) {
+  gfx_backdrop(BD_ISAACS_ROOM);
+  gfx_rect(0, 0, SCREEN_W, SCREEN_H, C_BLACK, 12);
+  paper(50, 20, 220, 196);
+  int c = char_sel;
+  bool open = character_unlocked(c);
+  gfx_text_c(FONT_UPHEAVAL, 160, 30, open ? character_name(c) : "???", INK, 2, false);
+  int head = character_head(c);
+  int bob = (int)(g_frame / 10 % 2);
+  gfx_ellipse(160, 118, 16, 5, C_BLACK, 10);
+  gfx_sprite_scaled(head + 1, 0, 160, 118, 512, 512, 0, C_BLACK, open ? 0 : 32, 32);
+  gfx_sprite_scaled(head, 0, 160, 104 + bob, 512, 512, 0, C_BLACK, open ? 0 : 32, 32);
+  /* the neighbours, smaller, either side */
+  for (int s = -1; s <= 1; s += 2) {
+    int n = (c + CH_COUNT + s) % CH_COUNT, nh = character_head(n);
+    bool o = character_unlocked(n);
+    gfx_sprite_scaled(nh + 1, 0, 160 + s * 76, 112, 256, 256, 0, C_BLACK, o ? 12 : 32, 24);
+    gfx_sprite_scaled(nh, 0, 160 + s * 76, 105, 256, 256, 0, C_BLACK, o ? 12 : 32, 24);
+  }
+  gfx_text_c(FONT_UPHEAVAL, 84, 100, "<", INK2, 2, false);
+  gfx_text_c(FONT_UPHEAVAL, 236, 100, ">", INK2, 2, false);
+  if (!open) {
+    gfx_text_c(FONT_UPHEAVAL, 160, 140, "LOCKED", rgb565(0x901010), 2, false);
+    gfx_text_c(FONT_UPHEAVAL, 160, 162, character_unlock_hint(c), INK2, 1, false);
+    return;
+  }
+  /* his hearts and his start, as the run will give them */
+  Player keep = pl;
+  player_reset(c);
+  int x0 = 160 - (pl.containers + pl.soul / 2) * 11 / 2;
+  for (int i = 0; i < pl.containers; i++) gfx_sprite(SPR_HUD_HEART, 0, x0 + i * 11, 136, 0, 32);
+  for (int i = 0; i < pl.soul / 2; i++) gfx_sprite(SPR_HUD_HEART, (pl.black >> i) & 1 ? 5 : 3, x0 + (pl.containers + i) * 11, 136, 0, 32);
+  pl = keep;
+  static const int16_t start[CH_COUNT][3] = {{0}, {45}, {46}, {34}, {36}, {122, 117, 126}, {157}, {118}};
+  int n = 0;
+  while (n < 3 && start[c][n]) n++;
+  for (int i = 0; i < n; i++) gfx_sprite(item_sprite(start[c][i]), 0, 160 - n * 13 + 13 + i * 26, 178, 0, 32);
+  static const char *const about[CH_COUNT] = {"THE ONE WHO STARTED IT ALL", "MORE HEARTS, SLOWER", "LUCKY, QUICK, A KEY",
+                                              "ONE HEART, HARD TEARS", "SOUL HEARTS ONLY", "CURSED, AND STRONGER FOR IT",
+                                              "ANGRIER WITH EVERY HIT", "SHORT BRIMSTONE, FLIES"};
+  gfx_text_c(FONT_UPHEAVAL, 160, 190, about[c], INK2, 1, false);
+}
+
 static void draw_help(void) {
   gfx_rect(0, 0, SCREEN_W, SCREEN_H, rgb565(0x1A1210), 32);
   paper(14, 10, 292, 220);
@@ -396,8 +442,8 @@ static void draw_stage(void) {
   /* Isaac falls through the dark to the next floor */
   int y = k * 4 - 30;
   if (y > 150) y = 150;
-  gfx_sprite(SPR_ISAAC_BODY, 0, 160, y + 7, 0, 32);
-  gfx_sprite(SPR_ISAAC_HEAD, 1, 160, y, 0, 32);
+  gfx_sprite(character_head(pl.character) + 1, 0, 160, y + 7, 0, 32);
+  gfx_sprite(character_head(pl.character), 1, 160, y, 0, 32);
   gfx_text_c(FONT_UPHEAVAL, 160, 90, stage_name(fl.stage, fl.alt), C_WHITE, 3, false);
   if (fl.curse) {
     static const char *const names[6] = {"CURSE OF DARKNESS", "CURSE OF THE LOST", "CURSE OF THE UNKNOWN", "CURSE OF THE MAZE",
@@ -412,8 +458,8 @@ static void draw_dead(void) {
   gfx_rect(0, 0, SCREEN_W, SCREEN_H, rgb565(0x140808), 32);
   paper(40, 16, 240, 208);
   gfx_text_c(FONT_UPHEAVAL, 160, 26, "YOU DIED", rgb565(0x901010), 3, false);
-  gfx_sprite(SPR_ISAAC_BODY, 0, 90, 110, 0, 32);
-  gfx_sprite(SPR_ISAAC_HEAD, 1, 90, 103, 0, 32);
+  gfx_sprite(character_head(pl.character) + 1, 0, 90, 110, 0, 32);
+  gfx_sprite(character_head(pl.character), 1, 90, 103, 0, 32);
   gfx_text(FONT_UPHEAVAL, 120, 66, "KILLED BY", INK2, 1, false);
   const char *who = mon_name(g_killer);
   if (g_killer >= MON_MONSTRO) {
@@ -441,8 +487,8 @@ static void draw_win(void) {
     {"ISAAC HAS FACED HIMSELF.", "IN THE LIGHT, NOTHING IS LEFT", "TO BE AFRAID OF.", "THE END."},
   };
   int e = ending & 3;
-  gfx_sprite(SPR_ISAAC_BODY, 0, 160, 200, 0, 32);
-  gfx_sprite(SPR_ISAAC_HEAD, e >= 2 ? 0 : 1, 160, 193, 0, 32);
+  gfx_sprite(character_head(pl.character) + 1, 0, 160, 200, 0, 32);
+  gfx_sprite(character_head(pl.character), e >= 2 ? 0 : 1, 160, 193, 0, 32);
   for (int i = 0; i < 4; i++)
     if (mode_t > i * 25) gfx_text_c(FONT_UPHEAVAL, 160, 50 + i * 26, text[e][i], C_WHITE, i == 0 || (e >= 2 && i == 3) ? 2 : 1, false);
   if (mode_t > 110) gfx_text_c(FONT_UPHEAVAL, 160, 222, e >= 2 ? "OK: TO THE MENU" : "OK: GO ON", rgb565(0xB0B0B0), 1, false);
@@ -454,6 +500,7 @@ void game_draw(void) {
     case MODE_TITLE: draw_title(); break;
     case MODE_MENU: draw_menu(); break;
     case MODE_HELP: draw_help(); break;
+    case MODE_CHARSEL: draw_charsel(); break;
     case MODE_PLAY: case MODE_MAP: draw_room(); break;
     case MODE_PAUSE: case MODE_CONFIRM: draw_pause(); break;
     case MODE_STAGE: draw_stage(); break;
@@ -499,7 +546,7 @@ void game_frame(uint32_t keys) {
       bool side = g_pressed & (K_LEFT | K_RIGHT | K_SLEFT | K_SRIGHT);
       if (ok || (side && ids[menu_sel] == M_CONTROLS)) {
         int pick = ids[menu_sel];
-        if (pick == M_NEW) game_new_run();
+        if (pick == M_NEW) g_mode = MODE_CHARSEL, mode_t = 0, char_sel = g_last_char;
         else if (pick == M_CONTROLS) g_swap = !g_swap, save_progress();
         else if (pick == M_CONTINUE) {
           if (load_run()) {
@@ -507,7 +554,7 @@ void game_frame(uint32_t keys) {
             player_stats();
             g_mode = MODE_PLAY;
           } else
-            game_new_run();
+            game_new_run(g_last_char);
         } else
           g_mode = MODE_HELP;
       }
@@ -515,6 +562,17 @@ void game_frame(uint32_t keys) {
     }
     case MODE_HELP:
       if (ok || (g_pressed & K_BACK)) g_mode = MODE_MENU;
+      break;
+    case MODE_CHARSEL:
+      g_frame++;
+      if (g_pressed & (K_LEFT | K_SLEFT)) char_sel = (char_sel + CH_COUNT - 1) % CH_COUNT;
+      if (g_pressed & (K_RIGHT | K_SRIGHT)) char_sel = (char_sel + 1) % CH_COUNT;
+      if (g_pressed & K_BACK) g_mode = MODE_MENU;
+      if (ok && character_unlocked(char_sel)) {
+        g_last_char = (uint8_t)char_sel;
+        save_progress();
+        game_new_run(char_sel);
+      }
       break;
     case MODE_STAGE:
       g_frame++;
@@ -549,7 +607,7 @@ void game_frame(uint32_t keys) {
       }
       break;
     case MODE_DEAD:
-      if (mode_t > 30 && ok) game_new_run();
+      if (mode_t > 30 && ok) game_new_run(pl.character);
       else if (mode_t > 30 && (g_pressed & K_BACK)) g_mode = MODE_MENU, menu_sel = 0;
       break;
     case MODE_WIN:
