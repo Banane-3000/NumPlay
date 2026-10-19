@@ -250,7 +250,8 @@ static void robot(void) {
     return;
   }
   if (has_conveyor()) {
-    if (!B.npackets || B.ticks % 25) return;
+    /* (with --sun-from, a few seeds on the belt first, as one plays) */
+    if (!B.npackets || B.ticks % 25 || (sun_from < (1 << 30) && B.npackets < 4)) return;
     for (int i = 0; i < B.npackets; i++)
       if (robot_packet(i)) return;
     /* nowhere, the belt full: the first one dropped */
@@ -260,10 +261,11 @@ static void robot(void) {
     }
     return;
   }
-  /* plants: every cell, what it wants first */
-  for (int r = 0; r < B.nrows; r++) {
-    if (!(B.rows >> r & 1)) continue;
-    for (int c = 0; c < 8; c++) {
+  /* plants: every cell, what it wants first (with --sun-from, a column at a time from the house, as one plays) */
+  for (int i = 0; i < 8 * B.nrows; i++) {
+    int c = sun_from < (1 << 30) ? i / B.nrows : i % 8, r = sun_from < (1 << 30) ? i % B.nrows : i / 8;
+    {
+      if (!(B.rows >> r & 1)) continue;
       int kinds[24], n = want(c, r, kinds);
       for (int k = 0; k < n; k++)
         for (int s = 0; s < B.nseeds; s++)

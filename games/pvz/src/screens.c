@@ -1048,7 +1048,7 @@ static void draw_help(void) {
     {"Arrows", "Move over the lawn"},
     {"1 2 3 ... 0", "Pick a seed packet"},
     {"OK", "Plant it (or whack, or break a vase)"},
-    {"Cursor", "Moving over sun and coins picks them up"},
+    {"Cursor", "Over sun and coins, picks them up"},
     {"Delete", "The shovel: then OK digs up a plant"},
     {"Back", "Put the seed back, or pause"},
     {"Toolbox", "The Almanac (in the menu)"},
