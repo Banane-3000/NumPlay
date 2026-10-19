@@ -1,19 +1,19 @@
 /* Subway Surfers: the 3D renderer.
  *
- * The world is convex polygons with flat colours: each frame they are moved
- * in front of the camera, cut at the near plane, projected and kept in a
- * list; then the screen is drawn in bands of BAND_H rows, each one its
- * background (sky and the ground, scene.c), the polygons that cross it with
- * a depth buffer, the see-through ones (shadows) after them, and what is
- * drawn flat over the picture (ui.c). The whole screen never has to fit in
- * RAM: a band and its depths do. */
+ * The world is polygons: flat ones, shaded ones (a light level at each corner, blended across: round
+ * things look round) and textured ones (a picture laid on, in perspective for big faces like a train's
+ * side). Each frame they are moved in front of the camera, cut at the edges of the view, projected and
+ * kept in a list; then the screen is drawn in bands of BAND_H rows, each one its background (sky and the
+ * ground, scene.c), the polygons that cross it with a depth buffer, the see-through ones after them, and
+ * what is drawn flat over the picture (ui). The whole screen never has to fit in RAM: a band and its
+ * depths do. */
 #ifndef SS_R3D_H
 #define SS_R3D_H
 #include <stdbool.h>
 #include <stdint.h>
 #include "plat.h"
 
-#define BAND_H 30
+#define BAND_H 20
 #define NBANDS (SCREEN_H / BAND_H)
 
 typedef struct {
@@ -45,18 +45,45 @@ bool r_project(V3 p, float *sx, float *sy);
 extern float r_haze0, r_haze1;
 extern uint32_t r_haze_rgb;
 
+/* pictures laid on polygons: width and height are powers of two; index 0 can be see-through */
+typedef struct {
+  uint8_t wl, hl;          /* log2 of the width and height */
+  uint8_t clear;           /* 1: index 0 is not drawn */
+  uint8_t pad;
+  const uint8_t *px;       /* palette indices, row by row */
+  const uint16_t *pal;     /* RGB565 */
+} Texture;
+extern const Texture *const r_tex[];   /* the game's textures, by number (data.c) */
+
 /* polygons: their corners in order (clockwise on the screen when seen from the front: the back is not
  * drawn unless P_TWOSIDED), a colour already lit (r_shade) */
 enum {
   P_TWOSIDED = 1,
   P_DECAL = 2,      /* lies on another polygon: drawn over it */
+  P_ALPHA = 4,      /* see-through (alpha 0..255): drawn last, no depth written */
+  P_NOHAZE = 8,
   P_DECAL2 = 16,    /* lies on a decal */
   P_DECAL3 = 32,    /* lies on that */
-  P_ALPHA = 4,      /* see-through (alpha 0..255): drawn last, no depth written */
-  P_NOHAZE = 8
 };
 void r_begin(void);
 void r_poly(const V3 *v, int n, uint32_t rgb, int flags, int alpha);
+/* a textured polygon, in perspective: uv gives each corner's place in the picture (in texels, two
+ * floats a corner; the picture repeats), light 0..256 */
+void r_poly_tex(const V3 *v, const float *uv, int n, int tex, int light, int flags);
+
+/* meshes (people, the dog): corners in camera space with a light level (0..255) and a place in a
+ * picture (1/4 texels), triangles of three corners and a colour (an index into pal; TEX_COL: the
+ * picture tex) */
+typedef struct {
+  float x, y, z;
+  uint8_t s, u, v, pad;
+} RV;
+typedef struct {
+  uint8_t a, b, c, col;
+} Tri;
+#define TEX_COL 255
+void r_mesh(const RV *v, int nv, const Tri *t, int nt, const uint16_t *pal, int tex);
+
 /* a box: centre, its three half-axes (x, y and z sides), a colour each for the top, sides, front and
  * back, and flags for the faces to leave out (1 top, 2 bottom, 4 -x, 8 +x, 16 front -z, 32 back +z) */
 void r_box(V3 c, V3 ax, V3 ay, V3 az, const uint32_t *rgb6, int skip);

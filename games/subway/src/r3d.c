@@ -4,16 +4,39 @@
 #define NEAR 0.35f
 #define FAR 190.0f
 #define ZK 22000.0f      /* depths are ZK / z: 62857 at the near plane, larger is nearer */
-#define MAXP 1500
-#define MAXV 5200
-#define MAXN 10          /* corners of a polygon cut at the near plane */
+#define MAXP 2300        /* polygons a frame */
+#define MAXV 7400        /* their corners */
+#define MAXA 3800        /* corners with a light level and a place in a picture */
+#define MAXT 200         /* textured faces in perspective */
+#define MAXN 14          /* corners of a polygon once cut */
+#define SUB 8.0f         /* corners are kept in 1/8 pixels */
+#define GUARD 1900.0f    /* (so they may lie at most this far from the screen's middle) */
+
+enum { K_FLAT, K_SHADE, K_TEX, K_PERSP };
 
 typedef struct {
   float a, b, c;         /* its depth at (sx, sy): a sx + b sy + c */
-  uint16_t v0, color;
-  uint8_t n, alpha;
-  int16_t y0, y1;        /* the rows it covers */
+  uint16_t v0, at;       /* its first corner, and its first corner's light and texture place */
+  uint16_t color;        /* RGB565, or the texture's number */
+  uint8_t n, kind;
+  uint8_t y0, y1;        /* the rows it covers */
+  uint8_t alpha;         /* see-through (255: not); textured faces: their light 0..32 */
+  uint8_t extra;         /* a textured face in perspective: its planes */
 } Poly;
+typedef struct {
+  int16_t x, y;
+} Pos;
+typedef struct {
+  uint8_t s, u, v, pad;
+} Attr;
+typedef struct {
+  float ua, ub, uc, va, vb, vc;   /* u and v (in texels) times ZK / z, as planes like the depth */
+} UV;
+
+/* a corner while being cut: camera space, light, texture place */
+typedef struct {
+  float x, y, z, s, u, v;
+} CV;
 
 uint16_t *r_col;
 int r_y0, r_y1;
@@ -24,10 +47,21 @@ uint32_t r_haze_rgb = 0xD8F0FF;
 
 static Poly polys[MAXP];
 static uint16_t order[MAXP];   /* the see-through ones go last */
-static float vx[MAXV], vy[MAXV];
-static int npolys, nverts, nalpha;
+static Pos pos[MAXV];
+static Attr attr[MAXA];
+static UV uvs[MAXT];
+static int npolys, nverts, nattr, nuv, nalpha;
 
 void r_set_band_memory(uint16_t *band) { r_col = band; }
+
+void r_sincos(float a, float *s, float *c) {
+  a -= (float)(int)(a / 6.2831853f) * 6.2831853f;
+  if (a > 3.14159265f) a -= 6.2831853f;
+  if (a < -3.14159265f) a += 6.2831853f;
+  float a2 = a * a;
+  *s = a * (1 - a2 / 6 * (1 - a2 / 20 * (1 - a2 / 42 * (1 - a2 / 72 * (1 - a2 / 110)))));
+  *c = 1 - a2 / 2 * (1 - a2 / 12 * (1 - a2 / 30 * (1 - a2 / 56 * (1 - a2 / 90))));
+}
 
 void r_camera(float x, float y, float z, float pitch, float f, float cx, float cy) {
   cam.x = x, cam.y = y, cam.z = z, cam.pitch = pitch, cam.f = f, cam.cx = cx, cam.cy = cy;
@@ -42,16 +76,7 @@ bool r_project(V3 p, float *sx, float *sy) {
   return true;
 }
 
-void r_sincos(float a, float *s, float *c) {
-  a -= (float)(int)(a / 6.2831853f) * 6.2831853f;
-  if (a > 3.14159265f) a -= 6.2831853f;
-  if (a < -3.14159265f) a += 6.2831853f;
-  float a2 = a * a;
-  *s = a * (1 - a2 / 6 * (1 - a2 / 20 * (1 - a2 / 42 * (1 - a2 / 72 * (1 - a2 / 110)))));
-  *c = 1 - a2 / 2 * (1 - a2 / 12 * (1 - a2 / 30 * (1 - a2 / 56 * (1 - a2 / 90))));
-}
-
-void r_begin(void) { npolys = nverts = nalpha = 0; }
+void r_begin(void) { npolys = nverts = nattr = nuv = nalpha = 0; }
 int r_count(void) { return npolys; }
 
 uint32_t r_mix888(uint32_t a, uint32_t b, int t) {
@@ -70,32 +95,83 @@ uint32_t r_shade(uint32_t rgb, V3 n) {
   return r << 16 | g << 8 | b;
 }
 
-void r_poly(const V3 *w, int n, uint32_t rgb, int flags, int alpha) {
-  if (npolys >= MAXP || nverts + MAXN > MAXV || n < 3 || n > MAXN - 2) return;
-  V3 a[MAXN], b[MAXN];
-  int behind = 0, far = 0;
-  for (int i = 0; i < n; i++) {
-    a[i] = r_view(w[i]);
-    behind += a[i].z < NEAR;
-    far += a[i].z > FAR;
-  }
-  if (behind == n || far == n) return;
-  /* cut at the near plane */
-  const V3 *p = a;
-  if (behind) {
-    int m = 0;
-    for (int i = 0, j = n - 1; i < n; j = i++) {
-      bool in_i = a[i].z >= NEAR, in_j = a[j].z >= NEAR;
-      if (in_i != in_j) {
-        float t = (NEAR - a[j].z) / (a[i].z - a[j].z);
-        b[m++] = (V3){a[j].x + t * (a[i].x - a[j].x), a[j].y + t * (a[i].y - a[j].y), NEAR};
-      }
-      if (in_i) b[m++] = a[i];
+/* ---------------------------------------------------------------- cutting */
+/* keeps the part of the polygon where a x + b y + c z + d >= 0 */
+static int cut(const CV *in, int n, CV *out, float a, float b, float c, float d) {
+  int m = 0;
+  for (int i = 0, j = n - 1; i < n; j = i++) {
+    float di = a * in[i].x + b * in[i].y + c * in[i].z + d, dj = a * in[j].x + b * in[j].y + c * in[j].z + d;
+    if ((di >= 0) != (dj >= 0) && m < MAXN) {
+      float t = dj / (dj - di);
+      const CV *p = &in[j], *q = &in[i];
+      out[m++] = (CV){p->x + t * (q->x - p->x), p->y + t * (q->y - p->y), p->z + t * (q->z - p->z),
+                      p->s + t * (q->s - p->s), p->u + t * (q->u - p->u), p->v + t * (q->v - p->v)};
     }
-    if (m < 3) return;
-    p = b, n = m;
+    if (di >= 0 && m < MAXN) out[m++] = in[i];
   }
-  /* the plane, by Newell's method (good for any convex polygon); depth = ZK (n . (xs, ys, 1)) / d */
+  return m;
+}
+
+/* the plane through three screen points with values w: w(sx, sy) = a sx + b sy + c */
+static bool fit(const float *x, const float *y, const float *w, float *a, float *b, float *c) {
+  float x1 = x[1] - x[0], y1 = y[1] - y[0], x2 = x[2] - x[0], y2 = y[2] - y[0];
+  float det = x1 * y2 - x2 * y1;
+  if (det > -1e-3f && det < 1e-3f) return false;
+  float w1 = w[1] - w[0], w2 = w[2] - w[0];
+  *a = (w1 * y2 - w2 * y1) / det;
+  *b = (x1 * w2 - x2 * w1) / det;
+  *c = w[0] - *a * x[0] - *b * y[0];
+  return true;
+}
+
+/* projects, checks and keeps a polygon in camera space */
+static void emit(CV *p, int n, int kind, uint16_t color, int flags, int alpha) {
+  if (npolys >= MAXP || nverts + MAXN > MAXV || ((kind == K_SHADE || kind == K_TEX) && nattr + MAXN > MAXA)) return;
+  CV b1[MAXN], b2[MAXN];
+  int behind = 0;
+  for (int i = 0; i < n; i++) behind += p[i].z < NEAR;
+  if (behind == n) return;
+  if (behind) {
+    n = cut(p, n, b1, 0, 0, 1, -NEAR);
+    if (n < 3) return;
+    p = b1;
+  }
+  float sx[MAXN], sy[MAXN];
+  float f = cam.f;
+  bool wide = false;
+  for (int i = 0; i < n; i++) {
+    float k = f / p[i].z;
+    sx[i] = p[i].x * k, sy[i] = -p[i].y * k;
+    if (sx[i] > GUARD || sx[i] < -GUARD || sy[i] > GUARD || sy[i] < -GUARD) wide = true;
+  }
+  if (wide) {
+    /* far off the screen: cut at the guard band's sides */
+    float g = GUARD / f;
+    n = cut(p, n, b2, -1, 0, g, 0);
+    n = n >= 3 ? cut(b2, n, b1, 1, 0, g, 0) : 0;
+    n = n >= 3 ? cut(b1, n, b2, 0, -1, g, 0) : 0;
+    n = n >= 3 ? cut(b2, n, b1, 0, 1, g, 0) : 0;
+    if (n < 3) return;
+    p = b1;
+    for (int i = 0; i < n; i++) {
+      float k = f / p[i].z;
+      sx[i] = p[i].x * k, sy[i] = -p[i].y * k;
+    }
+  }
+  float x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f, zsum = 0;
+  for (int i = 0; i < n; i++) {
+    sx[i] += cam.cx, sy[i] += cam.cy;
+    if (sx[i] < x0) x0 = sx[i];
+    if (sx[i] > x1) x1 = sx[i];
+    if (sy[i] < y0) y0 = sy[i];
+    if (sy[i] > y1) y1 = sy[i];
+    zsum += p[i].z;
+  }
+  if (x1 < 0 || x0 >= SCREEN_W || y1 < 0 || y0 >= SCREEN_H) return;
+  float area = 0;
+  for (int i = 0, j = n - 1; i < n; j = i++) area += sx[j] * sy[i] - sx[i] * sy[j];
+  if (area < 0.01f && !(flags & P_TWOSIDED && area < -0.01f)) return;
+  /* the depth plane, by Newell's method (good for any convex polygon): depth = ZK (n . (xs, ys, 1)) / d */
   V3 nm = {0, 0, 0};
   for (int i = 0, j = n - 1; i < n; j = i++) {
     nm.x += (p[j].y - p[i].y) * (p[j].z + p[i].z);
@@ -104,46 +180,117 @@ void r_poly(const V3 *w, int n, uint32_t rgb, int flags, int alpha) {
   }
   float d = nm.x * p[0].x + nm.y * p[0].y + nm.z * p[0].z;
   if (d > -1e-6f && d < 1e-6f) return;   /* seen edge-on */
-  float *px = vx + nverts, *py = vy + nverts;
-  float x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f, zsum = 0;
-  for (int i = 0; i < n; i++) {
-    float k = cam.f / p[i].z;
-    px[i] = cam.cx + p[i].x * k, py[i] = cam.cy - p[i].y * k;
-    if (px[i] < x0) x0 = px[i];
-    if (px[i] > x1) x1 = px[i];
-    if (py[i] < y0) y0 = py[i];
-    if (py[i] > y1) y1 = py[i];
-    zsum += p[i].z;
-  }
-  if (x1 < 0 || x0 >= SCREEN_W || y1 < 0 || y0 >= SCREEN_H) return;
-  float area = 0;
-  for (int i = 0, j = n - 1; i < n; j = i++) area += px[j] * py[i] - px[i] * py[j];
-  if (area < 0.01f && !(flags & P_TWOSIDED && area < -0.01f)) return;
   Poly *q = &polys[npolys];
-  float s = ZK / d, f = cam.f;
+  float s = ZK / d;
   q->a = s * nm.x / f;
   q->b = -s * nm.y / f;
   q->c = s * (nm.z - nm.x * cam.cx / f + nm.y * cam.cy / f);
   if (flags & P_DECAL) q->c += 3;
   if (flags & P_DECAL2) q->c += 6;
   if (flags & P_DECAL3) q->c += 9;
-  if (!(flags & P_NOHAZE)) {
-    float zm = zsum / (float)n;
-    if (zm > r_haze0) {
-      float h = (zm - r_haze0) / (r_haze1 - r_haze0);
-      rgb = r_mix888(rgb, r_haze_rgb, h >= 1 ? 240 : (int)(h * 240));
+  float zm = zsum / (float)n;
+  q->kind = (uint8_t)kind;
+  q->extra = 0;
+  if (kind == K_PERSP) {
+    /* far off, a picture is only its average colour (color already holds it when kind comes back flat) */
+    const Texture *t = r_tex[color];
+    if (zm > r_haze0 * 0.85f || nuv >= MAXT) {
+      uint32_t avg = 0;
+      /* (the palette's first useful colour stands for it: the tool puts the average there) */
+      uint16_t c = t->pal[t->clear ? 1 : 0];
+      avg = (uint32_t)(c >> 11) * 255 / 31 << 16 | (uint32_t)((c >> 5) & 63) * 255 / 63 << 8 | (uint32_t)(c & 31) * 255 / 31;
+      color = r_565(r_mix888(avg, 0, 256 - alpha * 8 > 256 ? 0 : 256 - alpha * 8));
+      kind = K_FLAT;
+      q->kind = K_FLAT;
+      alpha = 255;
+      flags &= ~P_NOHAZE;
+      if (zm > r_haze0) {
+        float h = (zm - r_haze0) / (r_haze1 - r_haze0);
+        uint32_t c8 = (uint32_t)(color >> 11) * 255 / 31 << 16 | (uint32_t)((color >> 5) & 63) * 255 / 63 << 8 | (uint32_t)(color & 31) * 255 / 31;
+        color = r_565(r_mix888(c8, r_haze_rgb, h >= 1 ? 240 : (int)(h * 240)));
+      }
+    } else {
+      /* u and v over the depth, as planes: the three corners spanning the most */
+      int best = 1;
+      float ba = 0;
+      for (int i = 1; i + 1 < n; i++) {
+        float ar = (sx[i] - sx[0]) * (sy[i + 1] - sy[0]) - (sx[i + 1] - sx[0]) * (sy[i] - sy[0]);
+        if (ar < 0) ar = -ar;
+        if (ar > ba) ba = ar, best = i;
+      }
+      float px[3] = {sx[0], sx[best], sx[best + 1]}, py[3] = {sy[0], sy[best], sy[best + 1]};
+      const CV *c3[3] = {&p[0], &p[best], &p[best + 1]};
+      float wu[3], wv[3];
+      for (int i = 0; i < 3; i++) wu[i] = c3[i]->u * ZK / c3[i]->z, wv[i] = c3[i]->v * ZK / c3[i]->z;
+      UV *u = &uvs[nuv];
+      if (!fit(px, py, wu, &u->ua, &u->ub, &u->uc) || !fit(px, py, wv, &u->va, &u->vb, &u->vc)) return;
+      q->extra = (uint8_t)nuv++;
     }
   }
-  q->color = r_565(rgb);
-  q->alpha = flags & P_ALPHA ? (uint8_t)(alpha > 255 ? 255 : alpha < 0 ? 0 : alpha) : 255;
+  if (kind == K_FLAT && !(flags & P_NOHAZE) && zm > r_haze0) {
+    float h = (zm - r_haze0) / (r_haze1 - r_haze0);
+    uint32_t c8 = (uint32_t)(color >> 11) * 255 / 31 << 16 | (uint32_t)((color >> 5) & 63) * 255 / 63 << 8 | (uint32_t)(color & 31) * 255 / 31;
+    color = r_565(r_mix888(c8, r_haze_rgb, h >= 1 ? 240 : (int)(h * 240)));
+  }
+  q->color = color;
+  q->alpha = (uint8_t)(kind == K_PERSP ? alpha : flags & P_ALPHA ? (alpha > 255 ? 255 : alpha < 0 ? 0 : alpha) : 255);
   q->v0 = (uint16_t)nverts, q->n = (uint8_t)n;
-  q->y0 = (int16_t)(y0 < 0 ? 0 : (int)(y0 + 0.5f));
-  q->y1 = (int16_t)(y1 >= SCREEN_H ? SCREEN_H : (int)(y1 + 0.5f));
-  if (q->y0 >= q->y1) return;
+  for (int i = 0; i < n; i++) pos[nverts + i] = (Pos){(int16_t)(sx[i] * SUB + 0.5f), (int16_t)(sy[i] * SUB + 0.5f)};
+  if (kind == K_SHADE || kind == K_TEX) {
+    q->at = (uint16_t)nattr;
+    for (int i = 0; i < n; i++)
+      attr[nattr + i] = (Attr){(uint8_t)(p[i].s + 0.5f), (uint8_t)(p[i].u + 0.5f), (uint8_t)(p[i].v + 0.5f), 0};
+    nattr += n;
+  }
+  int iy0 = y0 < 0 ? 0 : (int)(y0 + 0.5f), iy1 = y1 >= SCREEN_H ? SCREEN_H : (int)(y1 + 0.5f);
+  if (iy0 >= iy1) return;
+  q->y0 = (uint8_t)iy0, q->y1 = (uint8_t)iy1;
   nverts += n;
-  if (flags & P_ALPHA) nalpha++;
+  if (q->alpha != 255 && kind != K_PERSP) nalpha++;
   order[npolys] = (uint16_t)npolys;
   npolys++;
+}
+
+void r_poly(const V3 *w, int n, uint32_t rgb, int flags, int alpha) {
+  if (n < 3 || n > MAXN - 4) return;
+  CV c[MAXN];
+  int far = 0;
+  for (int i = 0; i < n; i++) {
+    V3 v = r_view(w[i]);
+    c[i] = (CV){v.x, v.y, v.z, 0, 0, 0};
+    far += v.z > FAR;
+  }
+  if (far == n) return;
+  emit(c, n, K_FLAT, r_565(rgb), flags, alpha);
+}
+
+void r_poly_tex(const V3 *w, const float *uv, int n, int tex, int light, int flags) {
+  if (n < 3 || n > MAXN - 4) return;
+  CV c[MAXN];
+  int far = 0;
+  for (int i = 0; i < n; i++) {
+    V3 v = r_view(w[i]);
+    c[i] = (CV){v.x, v.y, v.z, 0, uv[2 * i], uv[2 * i + 1]};
+    far += v.z > FAR;
+  }
+  if (far == n) return;
+  int l = light >> 3;
+  emit(c, n, K_PERSP, (uint16_t)tex, flags, l > 32 ? 32 : l < 0 ? 0 : l);
+}
+
+void r_mesh(const RV *v, int nv, const Tri *t, int nt, const uint16_t *pal, int tex) {
+  for (int i = 0; i < nt; i++) {
+    const RV *a = &v[t[i].a], *b = &v[t[i].b], *c = &v[t[i].c];
+    CV p[3] = {{a->x, a->y, a->z, a->s, a->u, a->v}, {b->x, b->y, b->z, b->s, b->u, b->v}, {c->x, c->y, c->z, c->s, c->u, c->v}};
+    /* (quick: a triangle turned away is left out before anything else) */
+    if (a->z > NEAR && b->z > NEAR && c->z > NEAR) {
+      float ax = a->x / a->z, ay = a->y / a->z, bx = b->x / b->z, by = b->y / b->z, cx = c->x / c->z, cy = c->y / c->z;
+      if ((bx - ax) * (cy - ay) - (cx - ax) * (by - ay) >= 0) continue;
+    }
+    if (t[i].col == TEX_COL) emit(p, 3, K_TEX, (uint16_t)tex, 0, 255);
+    else emit(p, 3, K_SHADE, pal[t[i].col], 0, 255);
+  }
+  (void)nv;
 }
 
 static V3 add3(V3 a, V3 b, V3 c, V3 d) { return (V3){a.x + b.x + c.x + d.x, a.y + b.y + c.y + d.y, a.z + b.z + c.z + d.z}; }
@@ -189,39 +336,55 @@ void r_cube(float x0, float y0, float z0, float x1, float y1, float z1, uint32_t
 }
 
 /* ---------------------------------------------------------------- drawing a band */
+/* an edge crossing the band: where it starts, its slope, and its light and texture place likewise */
+typedef struct {
+  float y0, y1, x, dx, s, ds, u, du, v, dv;
+} Edge;
+
 static void raster(const Poly *q) {
   int ya = q->y0 > r_y0 ? q->y0 : r_y0, yb = q->y1 < r_y1 ? q->y1 : r_y1;
   if (ya >= yb) return;
-  const float *px = vx + q->v0, *py = vy + q->v0;
+  const Pos *pp = pos + q->v0;
+  const Attr *at = q->kind == K_SHADE || q->kind == K_TEX ? attr + q->at : NULL;
   int n = q->n;
-  /* the edges crossing the band: where they start and their slope */
-  float ey0[MAXN], ey1[MAXN], ex[MAXN], es[MAXN];
+  Edge e[MAXN];
   int ne = 0;
   for (int i = 0, j = n - 1; i < n; j = i++) {
-    float a = py[j], b = py[i];
-    if (a == b) continue;
-    float xa = px[j], xb = px[i];
-    if (a > b) {
-      float t = a; a = b, b = t;
-      t = xa; xa = xb, xb = t;
+    float ay = pp[j].y * (1 / SUB), by = pp[i].y * (1 / SUB);
+    if (ay == by) continue;
+    int ka = j, kb = i;
+    if (ay > by) {
+      float t = ay;
+      ay = by, by = t;
+      ka = i, kb = j;
     }
-    if (b <= ya || a >= yb) continue;
-    ey0[ne] = a, ey1[ne] = b, es[ne] = (xb - xa) / (b - a), ex[ne] = xa - a * es[ne];
-    ne++;
+    if (by <= (float)ya || ay >= (float)yb) continue;
+    Edge *E = &e[ne++];
+    float h = 1 / (by - ay), xa = pp[ka].x * (1 / SUB), xb = pp[kb].x * (1 / SUB);
+    E->y0 = ay, E->y1 = by;
+    E->dx = (xb - xa) * h, E->x = xa - ay * E->dx;
+    if (at) {
+      E->ds = ((float)at[kb].s - at[ka].s) * h, E->s = at[ka].s - ay * E->ds;
+      E->du = ((float)at[kb].u - at[ka].u) * h, E->u = at[ka].u - ay * E->du;
+      E->dv = ((float)at[kb].v - at[ka].v) * h, E->v = at[ka].v - ay * E->dv;
+    }
   }
   if (ne < 2) return;
   uint16_t col = q->color;
+  int kind = q->kind;
+  const Texture *tx = kind == K_TEX || kind == K_PERSP ? r_tex[q->color] : NULL;
   int alpha = q->alpha >> 3;
   int32_t da = (int32_t)(q->a * 65536.0f);
   for (int y = ya; y < yb; y++) {
     float yc = (float)y + 0.5f, xl = 1e9f, xr = -1e9f;
-    for (int e = 0; e < ne; e++) {
-      if (yc < ey0[e] || yc >= ey1[e]) continue;
-      float x = ex[e] + yc * es[e];
-      if (x < xl) xl = x;
-      if (x > xr) xr = x;
+    const Edge *L = NULL, *R = NULL;
+    for (int k = 0; k < ne; k++) {
+      if (yc < e[k].y0 || yc >= e[k].y1) continue;
+      float x = e[k].x + yc * e[k].dx;
+      if (x < xl) xl = x, L = &e[k];
+      if (x > xr) xr = x, R = &e[k];
     }
-    if (xl > xr) continue;
+    if (!L || xl > xr) continue;
     int x0 = xl <= -1 ? 0 : (int)(xl + 0.5f), x1 = xr >= SCREEN_W ? SCREEN_W : (int)(xr + 0.5f);
     if (x0 < 0) x0 = 0;
     if (x0 >= x1) continue;
@@ -230,14 +393,76 @@ static void raster(const Poly *q) {
     if (zf > 65535) zf = 65535;
     uint32_t z = (uint32_t)(zf * 65536.0f);
     uint16_t *zb = zbuf + (y - r_y0) * SCREEN_W, *cb = r_col + (y - r_y0) * SCREEN_W;
-    if (alpha >= 31) {
-      for (int x = x0; x < x1; x++, z += (uint32_t)da) {
+    if (kind == K_FLAT) {
+      if (alpha >= 31) {
+        for (int x = x0; x < x1; x++, z += (uint32_t)da) {
+          uint16_t zz = (uint16_t)(z >> 16);
+          if (zz > zb[x]) zb[x] = zz, cb[x] = col;
+        }
+      } else {
+        for (int x = x0; x < x1; x++, z += (uint32_t)da)
+          if ((uint16_t)(z >> 16) > zb[x]) cb[x] = r_mix565(cb[x], col, alpha);
+      }
+      continue;
+    }
+    if (kind == K_PERSP) {
+      const UV *w = &uvs[q->extra];
+      uint32_t wm = (1u << tx->wl) - 1, hm = (1u << tx->hl) - 1;
+      int wl = tx->wl, light = q->alpha, clear = tx->clear;
+      const uint8_t *px = tx->px;
+      const uint16_t *pal = tx->pal;
+      /* u and v exactly every 8 pixels, straight lines between */
+      float fx = (float)x0 + 0.5f;
+      float qz = q->a * fx + q->b * yc + q->c, qu = w->ua * fx + w->ub * yc + w->uc, qv = w->va * fx + w->vb * yc + w->vc;
+      float iz = qz > 1 ? 1 / qz : 1;
+      int32_t u = (int32_t)(qu * iz * 65536.0f), v = (int32_t)(qv * iz * 65536.0f);
+      for (int x = x0; x < x1;) {
+        int n8 = x1 - x < 8 ? x1 - x : 8;
+        float qz2 = qz + q->a * (float)n8, qu2 = qu + w->ua * (float)n8, qv2 = qv + w->va * (float)n8;
+        float iz2 = qz2 > 1 ? 1 / qz2 : 1;
+        int32_t u2 = (int32_t)(qu2 * iz2 * 65536.0f), v2 = (int32_t)(qv2 * iz2 * 65536.0f);
+        int32_t du = (u2 - u) / n8, dv = (v2 - v) / n8;
+        for (int k = 0; k < n8; k++, x++, z += (uint32_t)da, u += du, v += dv) {
+          uint16_t zz = (uint16_t)(z >> 16);
+          if (zz <= zb[x]) continue;
+          uint8_t t = px[(((uint32_t)v >> 16) & hm) << wl | (((uint32_t)u >> 16) & wm)];
+          if (clear && !t) continue;
+          uint16_t c = pal[t];
+          zb[x] = zz, cb[x] = light >= 32 ? c : r_mix565(0, c, light);
+        }
+        qz = qz2, qu = qu2, qv = qv2, u = u2, v = v2;
+      }
+      continue;
+    }
+    /* shaded, and maybe textured: the light and the texture place from the edges, across */
+    float sl = L->s + yc * L->ds, sr = R->s + yc * R->ds, span = xr - xl > 0.01f ? 1 / (xr - xl) : 0;
+    float off = (float)x0 + 0.5f - xl;
+    float dsx = (sr - sl) * span;
+    int32_t s = (int32_t)((sl + dsx * off) * 65536.0f), ds = (int32_t)(dsx * 65536.0f);
+    if (kind == K_SHADE) {
+      for (int x = x0; x < x1; x++, z += (uint32_t)da, s += ds) {
         uint16_t zz = (uint16_t)(z >> 16);
-        if (zz > zb[x]) zb[x] = zz, cb[x] = col;
+        if (zz <= zb[x]) continue;
+        int k = s >> 19;   /* 0..255 to 0..32 */
+        zb[x] = zz, cb[x] = k >= 32 ? col : r_mix565(0, col, k < 0 ? 0 : k);
       }
     } else {
-      for (int x = x0; x < x1; x++, z += (uint32_t)da)
-        if ((uint16_t)(z >> 16) > zb[x]) cb[x] = r_mix565(cb[x], col, alpha);
+      float ul = L->u + yc * L->du, ur = R->u + yc * R->du, vl = L->v + yc * L->dv, vr = R->v + yc * R->dv;
+      float dux = (ur - ul) * span, dvx = (vr - vl) * span;
+      /* (texture places are in 1/4 texels) */
+      int32_t u = (int32_t)((ul + dux * off) * 16384.0f), du = (int32_t)(dux * 16384.0f);
+      int32_t v = (int32_t)((vl + dvx * off) * 16384.0f), dv = (int32_t)(dvx * 16384.0f);
+      uint32_t wm = (1u << tx->wl) - 1, hm = (1u << tx->hl) - 1;
+      int wl = tx->wl, clear = tx->clear;
+      for (int x = x0; x < x1; x++, z += (uint32_t)da, s += ds, u += du, v += dv) {
+        uint16_t zz = (uint16_t)(z >> 16);
+        if (zz <= zb[x]) continue;
+        uint8_t t = tx->px[(((uint32_t)v >> 16) & hm) << wl | (((uint32_t)u >> 16) & wm)];
+        if (clear && !t) continue;
+        int k = s >> 19;
+        uint16_t c = tx->pal[t];
+        zb[x] = zz, cb[x] = k >= 32 ? c : r_mix565(0, c, k < 0 ? 0 : k);
+      }
     }
   }
 }
@@ -247,9 +472,9 @@ void r_render(r_band_fn bg, r_band_fn overlay) {
   if (nalpha) {
     int k = 0;
     for (int i = 0; i < npolys; i++)
-      if (polys[i].alpha == 255) order[k++] = (uint16_t)i;
+      if (polys[i].alpha == 255 || polys[i].kind == K_PERSP) order[k++] = (uint16_t)i;
     for (int i = 0; i < npolys; i++)
-      if (polys[i].alpha != 255) order[k++] = (uint16_t)i;
+      if (polys[i].alpha != 255 && polys[i].kind != K_PERSP) order[k++] = (uint16_t)i;
   }
   for (int band = 0; band < NBANDS; band++) {
     r_y0 = band * BAND_H, r_y1 = r_y0 + BAND_H;
