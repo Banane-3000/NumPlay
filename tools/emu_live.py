@@ -12,6 +12,7 @@ To run:
     python tools/emu_live.py path/to/NumPlay.nwa
 
 The calculator skin does not depend on emu_live_skin.py; emu.py is still needed.
+V10 adds firmware text fallback and corrects off-screen display rectangle clipping.
 V9 keeps the V8 virtual-time SVC yields and optimizes full-width display transfers.
 An optional --profile-speed report distinguishes host CPU bottlenecks from pacing.
 Without SVC yields,
@@ -24,6 +25,7 @@ import argparse
 import os
 import queue
 import shutil
+import struct
 import sys
 import threading
 import time
@@ -34,7 +36,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 import numpy as np
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw, ImageFont
 
 try:
     from tkinterdnd2 import DND_FILES, TkinterDnD
@@ -121,6 +123,11 @@ def validate_layout():
 def find_nwas() -> list[Path]:
     """Quick bounded discovery: local builds and the user's normal download folder."""
     patterns = (
+        REPO_ROOT / "dist" / "live" / "*.nwa",
+        REPO_ROOT / "dist" / "*.nwa",
+        REPO_ROOT / "dist" / "games" / "*.nwa",
+        REPO_ROOT / "dist" / "variants" / "*.nwa",
+        REPO_ROOT / "dist" / "languages" / "*.nwa",
         REPO_ROOT / "build" / "*.nwa",
         REPO_ROOT / "build" / "apps" / "*.nwa",
         REPO_ROOT / "games" / "*" / "output" / "*.nwa",
@@ -162,6 +169,111 @@ def rgb565_to_photo_bytes(pixels: bytes) -> Image.Image:
     return Image.fromarray(rgb, "RGB")
 
 
+class FidelityFont:
+    """Draw EADK firmware text with real glyphs, even without EPSILON_FONTS.
+
+    emu.Font used empty glyph dictionaries whenever EPSILON_FONTS was unset,
+    and only populated ASCII 32..126 when it was set. That rendered valid
+    firmware draw_string calls as blank foreground-free rectangles. We prefer
+    locally supplied Epsilon TTFs and use installed system fonts otherwise.
+    No fonts are downloaded or redistributed.
+    """
+
+    def __init__(self):
+        configured = Path(emu.FONT_DIR).expanduser() if emu.FONT_DIR else None
+        repo_fonts = (REPO_ROOT / "tools" / "fonts", REPO_ROOT / "fonts",
+                      Path.home() / ".numplay-emulator" / "fonts")
+        system_fonts = (
+            Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts" / "segoeui.ttf",
+            Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts" / "arial.ttf",
+            Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        )
+        self.cells = {}
+        self.cache = {}
+        self.sources = []
+        for large, (filename, size, width, height) in (
+            (False, ("SmallFont.ttf", 12, 7, 14)),
+            (True, ("LargeFont.ttf", 16, 10, 18)),
+        ):
+            candidates = []
+            if configured:
+                candidates.append(configured / filename)
+            candidates.extend(folder / filename for folder in repo_fonts)
+            candidates.extend(system_fonts)
+            # Pillow ships/locates DejaVu Sans on most installations. Prefer
+            # this over the 1-bit PIL fallback if no system font can be found.
+            candidates.append("DejaVuSans.ttf")
+            font = None
+            source = None
+            for location in candidates:
+                try:
+                    font = ImageFont.truetype(str(location), size)
+                    source = str(location)
+                    break
+                except (OSError, ValueError):
+                    pass
+            if font is None:
+                try:
+                    font = ImageFont.load_default(size=size)
+                except TypeError:
+                    font = ImageFont.load_default()
+                source = "Pillow default fallback"
+            self.cells[large] = (width, height, font)
+            self.cache[large] = {}
+            self.sources.append(f"{'large' if large else 'small'}: {source}")
+        print("[NumPlay fonts] " + " | ".join(self.sources), file=sys.stderr, flush=True)
+        if not configured:
+            print("[NumPlay fonts] Exact Epsilon fonts are optional: set EPSILON_FONTS "
+                  "to a directory containing SmallFont.ttf and LargeFont.ttf.",
+                  file=sys.stderr, flush=True)
+
+    def _glyph(self, char: str, large: bool) -> bytes:
+        cache = self.cache[large]
+        if char not in cache:
+            w, h, f = self.cells[large]
+            img = Image.new("L", (w, h), 0)
+            asc = f.getmetrics()[0] if hasattr(f, "getmetrics") else h - 2
+            # Maintain the baseline used by emu.Font; match fixed EADK cells.
+            y = h - 3 - asc + (1 if large else 0)
+            if char not in ("\n", "\r", "\t"):
+                ImageDraw.Draw(img).text((0, y), char, font=f, fill=255)
+            if len(cache) >= 512:
+                cache.clear()
+            cache[char] = img.tobytes()
+        return cache[char]
+
+    def draw(self, screen: bytearray, text: str, x: int, y: int,
+             large: bool, fg: int, bg: int) -> int:
+        w, h, _ = self.cells[large]
+        fg &= 0xffff
+        bg &= 0xffff
+        # Precalculate the 256 RGB565 alpha blends once per call, not once
+        # per pixel; retain the backend's own interpolation semantics.
+        palette = []
+        for t in range(256):
+            out = 0
+            for shift, mask in ((11, 31), (5, 63), (0, 31)):
+                a = (bg >> shift) & mask
+                b = (fg >> shift) & mask
+                out |= ((a * (255 - t) + b * t) // 255) << shift
+            palette.append(struct.pack("<H", out))
+        cx = int(x)
+        for char in text:
+            if cx >= 320:
+                break
+            x0, x1 = max(0, -cx), min(w, 320 - cx)
+            y0, y1 = max(0, -y), min(h, 240 - y)
+            if x0 < x1 and y0 < y1:
+                glyph = self._glyph(char, large)
+                for j in range(y0, y1):
+                    beg = j * w + x0
+                    end = j * w + x1
+                    dst = ((y + j) * 320 + cx + x0) * 2
+                    screen[dst:dst + (end - beg) * 2] = b"".join(palette[v] for v in glyph[beg:end])
+            cx += w
+        return cx
+
+
 class TracedCalculator(emu.Calculator):
     """Keep the headless emulator intact, but yield on time-changing syscalls.
 
@@ -194,6 +306,8 @@ class TracedCalculator(emu.Calculator):
         self.complete_display_frames = 0
         self.fullwidth_copy_seconds = 0.0
         super().__init__(*args, **kwargs)
+        self.font = FidelityFont()
+        self.clipped_display_rects = 0
 
     def _fast_fullwidth_display(self, uc, svc: int) -> bool:
         """Byte-copy a whole screen-width strip in one operation.
@@ -235,6 +349,66 @@ class TracedCalculator(emu.Calculator):
         self.fullwidth_copy_seconds += time.perf_counter() - started
         return True
 
+    def _draw_string(self, uc, addr, size, data):
+        """Render firmware EADK strings; include Unicode and longer labels.
+
+        The emulator base class read 256 bytes regardless of the string's
+        length and silently blanked any non-ASCII glyphs. Respect the NUL
+        terminator while limiting input to 2 KiB for a faulty application.
+        """
+        regs = (emu.UC_ARM_REG_R0, emu.UC_ARM_REG_R1,
+                emu.UC_ARM_REG_R2, emu.UC_ARM_REG_R3)
+        ptr, point, large, fg = (uc.reg_read(r) for r in regs)
+        sp = uc.reg_read(emu.UC_ARM_REG_SP)
+        bg = int.from_bytes(uc.mem_read(sp, 2), "little")
+        raw = bytearray()
+        for offset in range(0, 2048, 32):
+            block = bytes(uc.mem_read(ptr + offset, 32))
+            nul = block.find(b"\x00")
+            raw.extend(block if nul < 0 else block[:nul])
+            if nul >= 0:
+                break
+        text = raw.decode("utf-8", "replace")
+        self.font.draw(self.screen, text, point & 0xFFFF, point >> 16,
+                       bool(large & 0xFF), fg & 0xFFFF, bg)
+        uc.reg_write(emu.UC_ARM_REG_PC, uc.reg_read(emu.UC_ARM_REG_LR))
+
+    def _clipped_display(self, uc, svc: int) -> bool:
+        """Keep original input-buffer row stride when an EADK rect is clipped.
+
+        The backend reduces w before stepping across source rows. With a
+        clipped rectangle, that mistakenly pulls pixels from the next row,
+        looking like wrong colors/corrupt graphics at the screen edges.
+        """
+        r0 = uc.reg_read(emu.UC_ARM_REG_R0)
+        r1 = uc.reg_read(emu.UC_ARM_REG_R1)
+        x, y = r0 & 0xFFFF, r0 >> 16
+        src_w, src_h = r1 & 0xFFFF, r1 >> 16
+        if x + src_w <= 320 and y + src_h <= 240:
+            return False   # fast path or the backend already handles this.
+        self.clipped_display_rects += 1
+        if self.clipped_display_rects <= 4:
+            print(f"[NumPlay display] Clipped SVC {svc}: rect "
+                  f"({x}, {y}, {src_w}, {src_h})", file=sys.stderr)
+        if x >= 320 or y >= 240 or src_w == 0 or src_h == 0:
+            self.svc_counts[svc] = self.svc_counts.get(svc, 0) + 1
+            return True
+        w, h = min(src_w, 320 - x), min(src_h, 240 - y)
+        pointer = uc.reg_read(emu.UC_ARM_REG_R2)
+        for row in range(h):
+            dst = ((y + row) * 320 + x) * 2
+            length = w * 2
+            if svc == 19:  # Push rows, preserving the ORIGINAL rectangle width.
+                self.screen[dst:dst + length] = uc.mem_read(pointer + row * src_w * 2, length)
+            elif svc == 18:  # Pull rows, likewise preserve destination stride.
+                uc.mem_write(pointer + row * src_w * 2, bytes(self.screen[dst:dst + length]))
+            elif svc == 20:
+                color = pointer & 0xFFFF
+                self.screen[dst:dst + length] = color.to_bytes(2, "little") * w
+        self.svc_counts[svc] = self.svc_counts.get(svc, 0) + 1
+        self.insns += w * h // 4
+        return True
+
     def _intr(self, uc, intno, data):
         # The backend registers self._intr during Calculator.__init__.
         if intno != 2:
@@ -242,8 +416,9 @@ class TracedCalculator(emu.Calculator):
         pc = uc.reg_read(emu.UC_ARM_REG_PC)
         op = int.from_bytes(uc.mem_read(pc - 2, 2), "little")
         svc = op & 0xFF
-        if svc in (18, 19, 20) and self._fast_fullwidth_display(uc, svc):
-            return
+        if svc in (18, 19, 20):
+            if self._fast_fullwidth_display(uc, svc) or self._clipped_display(uc, svc):
+                return
         start_ms = float(self.now_ms)
         requested_ms = None
         used_ms = None
