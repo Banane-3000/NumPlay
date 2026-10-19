@@ -10,12 +10,15 @@ This writes OUT/rooms.inc, the rooms packed for src/main.c.
 
 A room, packed:
   its modes (R_*) and where the runner starts (x, y: the corner of its 16 x 16 picture),
-  its ground: rectangles of tiles (x, y, w, h),
-  its objects: kind (K_*) and turn, flags (F_*), the event a trigger sets off, centre x and y,
-    half its width and height (pixels),
-  its script: steps (op, object, event and which time of it, frame, three numbers), in order of
-    event then time. Event 0 is the room starting; 1 to 8 its triggers (the runner touching a
+  its ground: 33 columns of 15 tiles, a bit a tile,
+  its objects, in spans (so many alike in a row, 16 pixels apart, across or down): kind (K_*) and
+    turn, flags (F_*), the event a trigger sets off, the first one's centre x and y, half its width
+    and height (pixels) and how many,
+  its script: steps (event, frame, op, the first object and how many, which times of the event,
+    three numbers, and how many 256ths of a step later each next object goes), in order of event
+    then time. Event 0 is the room starting; 1 to 8 its triggers (the runner touching a
     Trigger_N); EV_KEY the jump key (once a step has armed it), EV_MOVE the first step taken.
+All of it is written column by column: each field of all the rooms, then the next.
 
 Usage: rooms.py OUT
 """

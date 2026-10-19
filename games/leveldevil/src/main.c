@@ -249,15 +249,17 @@ static int step_axis(int32_t *p, int32_t d, int axis) {
   return 0;
 }
 /* out of what it is in, a pixel at a time, the nearest way; false when it cannot get out */
-static int unstick(void) {
+static int unstick(void) { /* the nearest free place, up, down, left or right first */
   for (int d = 0; d < 64; d++)
-    for (int i = 0; i < 4; i++) {
-      int x = (hx >> 8) + (i == 2 ? -d : i == 3 ? d : 0), y = (hy >> 8) + (i == 0 ? -d : i == 1 ? d : 0);
-      if (!blocked(x, y, -1)) {
-        hx = x * 256 + (hx & 255), hy = y * 256 + (hy & 255);
-        return 1;
+    for (int j = 0; j <= d; j++)
+      for (int i = 0; i < 8; i++) {
+        int a = i & 4 ? -j : j, b = i & 1 ? d : -d;
+        int x = (hx >> 8) + (i & 2 ? b : a), y = (hy >> 8) + (i & 2 ? a : b);
+        if (!blocked(x, y, -1)) {
+          hx = x * 256 + (hx & 255), hy = y * 256 + (hy & 255);
+          return 1;
+        }
       }
-    }
   return 0;
 }
 

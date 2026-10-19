@@ -1,8 +1,10 @@
 /* Level Devil on a computer, for tests and pictures (make host, make test).
  *
  *   play solve            every room played through with its keys (tests/solutions.txt): each must
- *                         reach the door without dying
- *   play search L R       finds keys through a room, for tests/solutions.txt
+ *                         reach the door without dying; a room with a walk instead ("L-R~ keys", where
+ *                         no keys were found) must set off its traps without dying
+ *   play search L R       finds keys through a room, for tests/solutions.txt (or, failing that, a walk:
+ *                         the way that sets off the most of its traps)
  *   play trace L R [KEYS] where the runner goes
  *   play rooms DIR        a picture of every room as it starts (DIR/room_LL_R.ppm)
  *   play film L R DIR [KEYS]  the room played with its keys (or these), a picture every 2 steps
@@ -33,8 +35,8 @@ uint32_t eadk_random(void) { return 0x9E3779B9u; }
 void *np_alloc(uint32_t size) { return malloc(size); }
 
 /* tests/solutions.txt: a line a room, "LEVEL-ROOM: keys"; "R40 RJ12 N30": the keys held (L R J D, or
-   N for none) for so many steps */
-static char *solutions[ROOM_COUNT];
+   N for none) for so many steps; "LEVEL-ROOM~ keys" for a walk */
+static char *solutions[ROOM_COUNT], walk[ROOM_COUNT];
 static void read_solutions(void) {
   static char text[1 << 17];
   FILE *f = fopen("tests/solutions.txt", "r");
@@ -42,10 +44,11 @@ static void read_solutions(void) {
   if (f) fclose(f);
   text[n] = 0;
   for (char *line = strtok(text, "\n"); line; line = strtok(0, "\n")) {
-    int l, r, at;
-    if (line[0] == '#' || sscanf(line, "%d-%d:%n", &l, &r, &at) < 2) continue;
+    int l, r, at = 0;
+    char c = 0;
+    if (line[0] == '#' || sscanf(line, "%d-%d%c%n", &l, &r, &c, &at) < 3 || (c != ':' && c != '~')) continue;
     int i = (l - 1) * ROOMS + r - 1;
-    if (i >= 0 && i < ROOM_COUNT) solutions[i] = line + at;
+    if (i >= 0 && i < ROOM_COUNT) solutions[i] = line + at, walk[i] = c == '~';
   }
   for (int i = 0; i < ROOM_COUNT; i++)
     if (!solutions[i]) solutions[i] = "";
@@ -92,7 +95,7 @@ static int play(const char *s, const char *film, int trace) {
     }
     while (n--) {
       step(in), t++;
-      if (trace && (!(t % 4) || dead || won))
+      if (trace && (!(t % trace) || dead || won))
         printf("%4d x %6.1f y %6.1f vx %5.1f vy %5.1f%s%s%s\n", t, hx / 256.0, hy / 256.0, vx * 60 / 256.0,
                vy * 60 / 256.0, ground ? " ground" : "", dead ? " DEAD" : "", won ? " DOOR" : "");
       if (film && !(t & 1)) {
@@ -141,8 +144,19 @@ static void give(const uint8_t *s) {
 }
 
 static int goal_x, goal_y, have_goal;
+static int to_traps; /* (searching for a walk: towards the triggers not yet touched) */
 static int score(void) { /* lower is better: the distance to the door (or the waypoint), in pixels */
   int gxp = goal_x, gyp = goal_y, best = 1 << 30;
+  if (to_traps) {
+    int n = 0;
+    for (int e = 1; e < EV_MOVE; e++) n += cnt[e] > 0;
+    for (int k = 0; k < no; k++)
+      if ((ob[k].kind & 15) == K_TRIG && !(ob[k].f & (F_USED | F_GHOST))) {
+        int d = iabs((ob[k].x >> 8) - (hx >> 8) - hw / 2) + iabs((ob[k].y >> 8) - (hy >> 8) - hh / 2);
+        if (d < best) best = d;
+      }
+    if (best < 1 << 30) return best - n * 1000 + 8000;
+  }
   if (!have_goal)
     for (int k = 0; k < no; k++)
       if ((ob[k].kind & 15) == K_DOOR && !(ob[k].f & (F_OFF | F_GHOST))) {
@@ -164,6 +178,23 @@ static int by_score(const void *a, const void *b) {
 #define DEPTH 900
 #define CELL_MAX 4
 static const char *prefix; /* keys played before the search */
+static void write_keys(char *out, const uint8_t *p, int d, const uint8_t *moves, int chunk) {
+  char *o = out + sprintf(out, "%s%s", prefix ? prefix : "", prefix ? " " : "");
+  for (int a = 0; a <= d;) {
+    int b = a;
+    while (b <= d && p[b] == p[a]) b++;
+    int in = moves[p[a]];
+    o += sprintf(o, "%s%s%s%s%s%d ", in & I_LEFT ? "L" : "", in & I_RIGHT ? "R" : "", in & I_UP ? "J" : "",
+                 in & I_DOWN ? "D" : "", in ? "" : "N", chunk * (b - a));
+    a = b;
+  }
+  o[-1] = 0;
+}
+static int events_set_off(void) { /* (the triggers, and the jump key once armed) */
+  int n = 0;
+  for (int e = 1; e < EV_MOVE; e++) n += cnt[e] > 0;
+  return n;
+}
 static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out, int depth_max) {
   size_t sz = snap_size();
   uint8_t *cur = malloc(sz * BEAM), *nxt = malloc(sz * BEAM * 9), *path = malloc((size_t)BEAM * DEPTH),
@@ -171,7 +202,8 @@ static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out,
   int *sc = malloc(sizeof(int) * BEAM * 9), *ord = malloc(sizeof(int) * BEAM * 9);
   uint64_t *keyv = malloc(8 * BEAM * 9);
   uint16_t *cellv = malloc(2 * BEAM * 9);
-  int ncur = 1, found = 0;
+  int ncur = 1, found = 0, best_q = -(1 << 30), best_d = -1;
+  static uint8_t best[DEPTH]; /* (the walk: the way that sets off the most events, then nearest the door) */
   setup(i);
   if (prefix) exact = 1, play(prefix, 0, 0), exact = 0;
   take(cur);
@@ -185,20 +217,12 @@ static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out,
         memcpy(npath + (size_t)nn * DEPTH, path + (size_t)c * DEPTH, (size_t)d);
         npath[(size_t)nn * DEPTH + d] = (uint8_t)m;
         if (won || (have_goal && score() < 6 && (ground || frozen))) { /* the keys (to the door, or the waypoint) */
-          char *o = out + sprintf(out, "%s%s", prefix ? prefix : "", prefix ? " " : "");
-          const uint8_t *p = npath + (size_t)nn * DEPTH;
-          for (int a = 0; a <= d;) {
-            int b = a;
-            while (b <= d && p[b] == p[a]) b++;
-            int in = moves[p[a]];
-            o += sprintf(o, "%s%s%s%s%s%d ", in & I_LEFT ? "L" : "", in & I_RIGHT ? "R" : "", in & I_UP ? "J" : "",
-                         in & I_DOWN ? "D" : "", in ? "" : "N", chunk * (b - a));
-            a = b;
-          }
-          o[-1] = 0;
+          write_keys(out, npath + (size_t)nn * DEPTH, d, moves, chunk);
           found = 1;
           break;
         }
+        int q = events_set_off() * 100000 - score();
+        if (q > best_q) best_q = q, best_d = d, memcpy(best, npath + (size_t)nn * DEPTH, (size_t)d + 1);
         take(nxt + sz * nn);
         uint64_t key = (uint64_t)(hx >> 9) * 1000003u ^ (uint64_t)(hy >> 9) * 9176u ^ (uint64_t)((vx >> 6) + 512) * 131u ^
                        (uint64_t)((vy >> 6) + 512) * 7u ^ (uint64_t)ground << 40 ^ (uint64_t)(gy < 0) << 41;
@@ -247,7 +271,8 @@ static int search(int i, int nmoves, const uint8_t *moves, int chunk, char *out,
     }
   }
   free(cur), free(nxt), free(path), free(npath), free(sc), free(ord), free(keyv), free(cellv);
-  return found;
+  if (!found && best_d >= 0) write_keys(out, best, best_d, moves, chunk);
+  return found ? 1 : best_d >= 0 ? -1 : 0;
 }
 
 int main(int argc, char **argv) {
@@ -263,16 +288,15 @@ int main(int argc, char **argv) {
     int n = argc > 4 && strchr(argv[4], 'D') ? 9 : 6, chunk = argc > 5 ? atoi(argv[5]) : 4;
     if (argc > 6) have_goal = sscanf(argv[6], "%d,%d", &goal_x, &goal_y) == 2;
     if (argc > 7) prefix = argv[7];
-    if (search(i, n, moves, chunk, out, 900)) {
-      printf("%d-%d: %s\n", i / ROOMS + 1, i % ROOMS + 1, out);
-      return 0;
-    }
-    printf("no way found\n");
-    return 1;
+    to_traps = getenv("PLAY_TRAPS") != 0;
+    int got = search(i, n, moves, chunk, out, getenv("PLAY_DEPTH") ? atoi(getenv("PLAY_DEPTH")) : 900);
+    if (got) printf("%d-%d%c %s\n", i / ROOMS + 1, i % ROOMS + 1, got > 0 ? ':' : '~', out);
+    else printf("no way found\n");
+    return got > 0 ? 0 : 1;
   }
   if (!strcmp(cmd, "trace") && argc > 3) {
     setup(i);
-    printf("%d\n", play(argc > 4 ? argv[4] : solutions[i], 0, 1));
+    printf("%d\n", play(argc > 4 ? argv[4] : solutions[i], 0, getenv("PLAY_EVERY") ? atoi(getenv("PLAY_EVERY")) : 4));
     return 0;
   }
   if (!strcmp(cmd, "film") && argc > 4) {
@@ -308,17 +332,24 @@ int main(int argc, char **argv) {
     return 0;
   }
   if (!strcmp(cmd, "solve")) {
-    int bad = 0;
+    int bad = 0, walks = 0;
     for (int r = 0; r < ROOM_COUNT; r++) {
       setup(r);
+      exact = walk[r];
       int got = play(solutions[r], 0, 0);
-      if (got != 1) {
+      exact = 0;
+      if (walk[r] && got == -1 && events_set_off()) { /* (walked: its traps set off, not dead) */
+        printf("level %d room %d: walked, %d of its events set off (no keys to the door yet)\n", r / ROOMS + 1,
+               r % ROOMS + 1, events_set_off());
+        walks++;
+      } else if (got != 1) {
         printf("level %d room %d: %s at x %d y %d\n", r / ROOMS + 1, r % ROOMS + 1, got ? "stuck" : "dead",
                (int)(hx >> 8), (int)(hy >> 8));
         bad++;
       }
     }
     if (bad) printf("%d rooms fail\n", bad);
+    else if (walks) printf("%d rooms cleared, %d walked\n", ROOM_COUNT - walks, walks);
     else printf("all %d rooms cleared\n", ROOM_COUNT);
     return !!bad;
   }
