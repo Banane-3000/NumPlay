@@ -285,17 +285,23 @@ Doom comes as its own app, `Doom.nwa`: it is too big to share the calculator wit
 | **Up** / **Down** | Walk forward / back |
 | **Left** / **Right** | Turn |
 | **OK** | Fire |
-| **EXE** or **⌫** | Use: open doors, press switches |
+| **Back** | Use: open doors, press switches |
+| **EXE** or **⌫** | Menu and pause |
 | **shift** (held) | Strafe with left and right |
 | **x,n,t** / **var** | Strafe left / right |
 | **alpha** (held) | Run |
 | **1** to **7** | Choose a weapon |
-| **toolbox** | Automap (**+** and **−** zoom, **×** follows you, **÷** shows the grid, **0** the whole map) |
+| **toolbox** | Automap: the map, the map over the game, the game |
+| **+** / **−** | Screen size; on the automap, zoom |
+| **×** / **÷** / **0** | Automap: follow, grid, the whole map |
+| **8** / **9** | Automap: mark, clear the marks |
 | **√** | Brightness |
-| **Back** | Menu and pause |
+| **ln** / **log** | Quick Save / Quick Load |
+| **π** | Pause |
+| **ans** | Type a cheat code |
 | **Home** | Keep the moment and quit |
 
-Press a key on the title screen for the menu, then choose New Game, Knee-Deep in the Dead and a skill. In menus, **OK** or **EXE** confirms and **Back** goes back; when the game asks a question, **OK** says yes and **Back** says no. Read This! shows the keys. Home keeps the moment you were at, and the next start puts you back there. Save Game has six slots; your saves are also copied into `doom_saves.py`, so installing the app again doesn't erase them.
+Press a key on the title screen for the menu, then choose New Game, Knee-Deep in the Dead and a skill. In menus, **OK** or **EXE** confirms and **Back** goes back; when the game asks a question, **OK** says yes and **Back** says no. Read This! shows the keys as they are: Options, Keys gives any key any action, and Options, Cheats has every cheat code. Home keeps the moment you were at, and the next start puts you back there. Save Game has six slots; your saves are also copied into `doom_saves.py`, so installing the app again doesn't erase them. You can also build `Doom.nwa` from your own WAD (Doom, Doom II, Freedoom...): see the [game's page](../games/doom/README.md#doom-from-your-own-wad).
 
 <br clear="right">
 
