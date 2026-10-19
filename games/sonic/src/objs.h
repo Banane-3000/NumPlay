@@ -154,6 +154,23 @@ void BigSpikeBall(Obj *o);
 void BossSpringYard(Obj *o);
 void BossBlock(Obj *o);
 
+/* obj_lz.c */
+void DrownCount(Obj *o);
+void Splash(Obj *o);
+void WaterSurface(Obj *o);
+void Bubble(Obj *o);
+void Pole(Obj *o);
+void FlapDoor(Obj *o);
+void Harpoon(Obj *o);
+void Jaws(Obj *o);
+void Burrobot(Obj *o);
+void Orbinaut(Obj *o);
+void LabyrinthBlock(Obj *o);
+void Gargoyle(Obj *o);
+void LabyrinthConvey(Obj *o);
+void Waterfall(Obj *o);
+void BossLabyrinth(Obj *o);
+
 /* screens.c */
 void TitleSonic(Obj *o);
 void PSBTM(Obj *o);

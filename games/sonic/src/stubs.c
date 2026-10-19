@@ -3,8 +3,6 @@
 #include "game.h"
 
 void DebugMode(Obj *o) { (void)o; }
-void ResumeMusic(void) { V.air = 30; }
-void LZWaterFeatures(void) {}
 void PalCycle_SS(void) {}
 void GM_Special(void) { V.gamemode = id_Level; }
 void GM_Continue(void) { V.gamemode = id_Sega; }

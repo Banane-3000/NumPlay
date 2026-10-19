@@ -352,6 +352,17 @@ for f in sorted(os.listdir(os.path.join(REF, "objpos"))):
     at = put("OBJPOS_START_" + ident(f[:-4]).upper(), struct.pack("<HHBB", 0xFFFF, 0, 0, 0) + o, 2)
     defs.append(("D_OBJPOS_" + ident(f[:-4].replace(" (REV01)", "")).upper(), at + 6))
 
+# the platforms on Labyrinth's and Scrap Brain's conveyors, in the order of ObjPosLZPlatform_Index and
+# ObjPosSBZPlatform_Index: a count less one, then x, y and subtype words (little-endian here)
+pf = ["lz1pf1", "lz1pf2", "lz2pf1", "lz2pf2", "lz3pf1", "lz3pf2", "lz1pf1", "lz1pf2",
+      "sbz1pf1", "sbz1pf2", "sbz1pf3", "sbz1pf4", "sbz1pf5", "sbz1pf6", "sbz1pf1", "sbz1pf2"]
+pf_at = {}
+for name in sorted(set(pf)):
+    d = rd(os.path.join("objpos", "platforms", name + ".bin"))
+    n = struct.unpack(">H", d[:2])[0] + 1
+    pf_at[name] = put("D_PF_" + name.upper(), struct.pack("<%dH" % (1 + n * 3), *struct.unpack(">%dH" % (1 + n * 3), d[:2 + n * 6])), 2)
+put("D_PLATFORMS", struct.pack("<16I", *(pf_at[p] for p in pf)), 4)
+
 for f in sorted(os.listdir(os.path.join(REF, "startpos"))):
     if f.endswith(".bin"):
         d = rd(os.path.join("startpos", f))

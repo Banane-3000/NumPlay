@@ -68,9 +68,10 @@ void host_frame(void) {
     host_shot(p);
   }
   if (trace)
-    printf("f%d mode %02x zone %d.%d sonic %d,%d r%d st%02x an%02x v%d,%d in%d rings %d lives %d cam %d,%d\n", frame,
+    printf("f%d mode %02x zone %d.%d sonic %d,%d r%d st%02x an%02x v%d,%d in%d rings %d lives %d cam %d,%d water %d/%d\n", frame,
            V.gamemode, V.zone, V.act, player->x.w.i, player->y.w.i, player->routine, player->status, player->angle,
-           player->vx, player->vy, player->inertia, V.rings, V.lives, V.cam[0].x.w.i, V.cam[0].y.w.i);
+           player->vx, player->vy, player->inertia, V.rings, V.lives, V.cam[0].x.w.i, V.cam[0].y.w.i, V.waterpos1,
+           V.hblank_line);
   if (frame == dump)
     for (int i = 0; i < NOBJ; i++)
       if (objs[i].id)
