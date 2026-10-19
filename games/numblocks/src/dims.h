@@ -51,7 +51,12 @@ bool gen_stronghold_near(int x, int z, int *out);   /* (gen.c) where an eye of e
 int gen_stronghold_chest(int x, int y, int z);      /* (gen.c) a stronghold's chest there: its list (0: none) */
 int gen_stronghold_find(int s, int *out);           /* (gen.c, tests) stronghold s: where, its portal */
 extern uint8_t *gen_hi;                             /* (gen.c) the ninth bits of the slab gen_slab fills */
-void pearl_land(float x, float y, float z);        /* (mob.c) the player's ender pearl lands there */
+void pearl_land(float x, float y, float z);
+void dims_explode(float x, float y, float z, float power, bool fire);   /* (mob.c) */
+void dims_spawners_tick(void);                                         /* (mob.c) the fortresses' blaze spawners */
+int gen_fortress_spawners(int x, int z, int *out, int n);              /* (gen.c) theirs near there: x, y, z */        /* (mob.c) the player's ender pearl lands there */
 enum { SKIN_CRYSTAL = 16, SKIN_DRAGON = 17 };   /* (the big skins: data.h's skin_crystal_px, skin_dragon_px) */
 void dims_credits(void);
+void credits_open(void);   /* (gui.c) GuiWinGame */
+static inline bool is_iron_door(int b) { return b >= B_IRON_DOOR_LOWER_E && b <= B_IRON_DOOR_LOWER_N_OPEN; }   /* (lower) */
 #endif

@@ -314,7 +314,11 @@ enum {
   B_STONE_BUTTON_W = 303,   /* 77:2 */
   B_STONE_BUTTON_S = 304,   /* 77:3 */
   B_STONE_BUTTON_N = 305,   /* 77:4 */
-  B_ALL = 306
+  B_FLOWING_LAVA_1 = 306,   /* 10:1 */
+  B_FLOWING_LAVA_3 = 307,   /* 10:3 */
+  B_FLOWING_LAVA_5 = 308,   /* 10:5 */
+  B_FLOWING_LAVA_7 = 309,   /* 10:7 */
+  B_ALL = 310
 };
 enum { M_PORTAL = 19, M_FRAME = 20, M_ENDPORTAL = 21, M_EGG = 22, M_BUTTON = 23 };
 #define B_N B_ALL

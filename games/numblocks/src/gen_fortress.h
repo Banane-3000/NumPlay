@@ -652,3 +652,16 @@ int gen_fortress_find(int x, int z, int *out) {
 }
 #undef NB
 #undef FENCE
+
+/* the blaze spawners of the fortress whose pieces reach (x, z): in its thrones, up to n of them (x, y, z) */
+int gen_fortress_spawners(int x, int z, int *out, int n) {
+    if (gd_dim != DIM_NETHER || !fort_near(x >> 4, z >> 4)) return 0;
+    int k = 0;
+    for (int i = 0; i < FT->n && k < n; i++) {
+        const FPiece *p = &FT->p[i];
+        if (p->type != FP_THRONE) continue;
+        out[k * 3] = fb_x(p, 3, 5), out[k * 3 + 1] = p->y0 + 5, out[k * 3 + 2] = fb_z(p, 3, 5);
+        k++;
+    }
+    return k;
+}

@@ -1056,3 +1056,61 @@ void pearl_land(float x, float y, float z) {
   player_hurt(5, DMG_FALL);
 }
 #endif
+#if NB_DIMS
+void dims_explode(float x, float y, float z, float power, bool fire) { explode_fire(x, y, z, power, true, fire); }
+
+/* MobSpawnerBaseLogic, for the blaze spawners of the fortresses (the Nether's thrones): with the player within
+ * 16, after 200 to 800 ticks, four tries within 4 of it, while fewer than six blazes are about, where it is
+ * dark enough (EntityMob.getBlockPathWeight: block light up to 11) and there is room */
+static struct {
+  int16_t x, z;
+  uint8_t y, on;
+  int16_t delay;
+} spw[2];
+void dims_spawners_tick(void) {
+  extern uint32_t ticks_run;
+  if (dim != DIM_NETHER) {
+    spw[0].on = spw[1].on = 0;
+    return;
+  }
+  if (ticks_run % 20 == 0) {
+    int at[6], n = gen_fortress_spawners((int)floorf(pl.x), (int)floorf(pl.z), at, 2);
+    for (int i = 0; i < 2; i++) {
+      bool same = spw[i].on && i < n && spw[i].x == at[i * 3] && spw[i].y == at[i * 3 + 1] && spw[i].z == at[i * 3 + 2];
+      if (same) continue;
+      spw[i].on = (uint8_t)(i < n);
+      if (i < n) spw[i].x = (int16_t)at[i * 3], spw[i].y = (uint8_t)at[i * 3 + 1], spw[i].z = (int16_t)at[i * 3 + 2], spw[i].delay = -1;
+    }
+  }
+  for (int i = 0; i < 2; i++) {
+    int x = spw[i].x, y = spw[i].y, z = spw[i].z;
+    if (!spw[i].on || world_get(x, y, z) != B_MOB_SPAWNER) continue;
+    float dx = x + 0.5f - pl.x, dy = y + 0.5f - pl.y, dz = z + 0.5f - pl.z;
+    if (dx * dx + dy * dy + dz * dz > 16 * 16) continue;
+    if (spw[i].delay < 0) spw[i].delay = (int16_t)(200 + rnd(600));
+    if (spw[i].delay > 0) {
+      spw[i].delay--;
+      continue;
+    }
+    bool any = false;
+    for (int k = 0; k < 4; k++) {
+      int near = 0;
+      for (int j = 0; j < N_ENT; j++) {
+        const Entity *e = &ents[j];
+        if (e->type == E_BLAZE && e->x > x - 4 && e->x < x + 5 && e->y > y - 4 && e->y < y + 5 && e->z > z - 4 && e->z < z + 5) near++;
+      }
+      if (near >= 6) break;
+      float bx = x + (rndf() - rndf()) * 4 + 0.5f, by = (float)(y + rnd(3) - 1), bz = z + (rndf() - rndf()) * 4 + 0.5f;
+      int lx = (int)floorf(bx), ly = (int)floorf(by), lz = (int)floorf(bz);
+      if (!opt.difficulty || light_there(lx, ly, lz) > 11 || !room_for(bx, by, bz, info[E_BLAZE].w, info[E_BLAZE].h) ||
+          blk_model[world_get(lx, ly, lz)] == M_LIQUID)
+        continue;
+      Entity *e = spawn(E_BLAZE, bx, by, bz);
+      if (!e) break;
+      for (int q = 0; q < 12; q++) particle_add(bx + rndf() - 0.5f, by + rndf() * 1.8f, bz + rndf() - 0.5f, 0, 0.02f, 0, 0xC618, 15);
+      any = true;
+    }
+    spw[i].delay = any ? (int16_t)(200 + rnd(600)) : 0;
+  }
+}
+#endif

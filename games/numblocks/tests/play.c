@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
   const char *out = "build/play", *shots = "";
   int give = 0, showcase = 0, title_screen = 0, mobs = 0, animals = 0, start_time = -1, torches = 0, water = 0, creative = 0, build = 0, rain = 0;
   float hurt = 0;
-  int frames = 60, mspf = 50, go_dim = 0, portal = 0, at = 0, fortress = 0, hold = -1;
+  int frames = 60, mspf = 50, go_dim = 0, portal = 0, at = 0, fortress = 0, hold = -1, credits = 0;
   float at_v[5] = {0};
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "--frames") && i + 1 < argc) frames = atoi(argv[++i]);
@@ -60,6 +60,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--portal")) portal = 1;
     else if (!strcmp(argv[i], "--fortress")) go_dim = 1, fortress = 1;
     else if (!strcmp(argv[i], "--stronghold") && i + 1 < argc) hold = atoi(argv[++i]);   /* 0-2: in its portal room */
+    else if (!strcmp(argv[i], "--credits")) credits = 1;   /* the End poem and the credits, as after the End */
     else if (!strcmp(argv[i], "--at") && i + 1 < argc)   /* x,y,z,yaw,pitch: there, flying (Creative) */
       at = sscanf(argv[++i], "%f,%f,%f,%f,%f", &at_v[0], &at_v[1], &at_v[2], &at_v[3], &at_v[4]) >= 3;
     else if (!strcmp(argv[i], "--storm")) rain = 2;
@@ -160,6 +161,7 @@ int main(int argc, char **argv) {
     printf("\n");
   }
   if (go_dim) printf("at %.2f %.2f %.2f: feet %d head %d below %d (cache y %d)\n", pl.x, pl.y, pl.z, world_get((int)floorf(pl.x), (int)floorf(pl.y), (int)floorf(pl.z)), world_get((int)floorf(pl.x), (int)floorf(pl.y) + 1, (int)floorf(pl.z)), world_get((int)floorf(pl.x), (int)floorf(pl.y) - 1, (int)floorf(pl.z)), vc_y0);
+  if (credits) credits_open();
   if (rain) {
     /* raining (and storming) from the start, for long enough */
     weather.raining = 1, weather.rain_time = 24000, rain_str = 1;

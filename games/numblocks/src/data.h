@@ -382,9 +382,10 @@ extern const uint16_t img_row0[], img_pal[][16];
 #define TX_PORTAL_24 245
 #define TX_PORTAL_28 246
 #define TX_END_SKY 247
-#define SP_BOSS_BG 487
-#define SP_BOSS 488
+#define SP_BOSS_BG 491
+#define SP_BOSS 492
 enum { SKIN_ZOMBIE_PIGMAN = 9, SKIN_GHAST = 10, SKIN_GHAST_SHOOTING = 11, SKIN_BLAZE = 12, SKIN_MAGMACUBE = 13, SKIN_ENDERMAN = 14, SKIN_WITHER_SKELETON = 15 };
+extern const char end_text[];   /* the End poem, then the credits */
 extern const uint8_t skin_crystal_px[];   /* endercrystal/endercrystal.png, 4 bits a texel */
 extern const uint16_t skin_crystal_pal[16];
 extern const uint8_t skin_dragon_px[];   /* enderdragon/dragon.png, 4 bits a texel */

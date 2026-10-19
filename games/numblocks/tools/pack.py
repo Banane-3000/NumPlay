@@ -829,11 +829,68 @@ def generate(jar, dims):
     return out, info
 
 
+class JavaRandom:
+    """java.util.Random, for GuiWinGame's draws"""
+
+    def __init__(self, seed):
+        self.s = (seed ^ 0x5DEECE66D) & ((1 << 48) - 1)
+
+    def next(self, bits):
+        self.s = (self.s * 0x5DEECE66D + 0xB) & ((1 << 48) - 1)
+        return self.s >> (48 - bits)
+
+    def next_int(self, n):
+        if n & -n == n:
+            return (n * self.next(31)) >> 31
+        while True:
+            bits = self.next(31)
+            val = bits % n
+            if bits - val + (n - 1) < 1 << 31:
+                return val
+
+
+def end_texts(jar):
+    """GuiWinGame.initGui's text: the End poem (the player's name in it, its hidden words as 1.8.8 draws their
+    lengths), eight empty lines, the credits; a line after each line. Colour codes as escape and the code's letter,
+    letters past ASCII without their accents; wrapped as it is drawn (gui.c)."""
+    import unicodedata
+    rnd = JavaRandom(8124371)
+    lines = []
+    def read(name):
+        t = jar.z.read('assets/minecraft/texts/' + name).decode('utf-8').split('\n')
+        return t[:-1] if t and t[-1] == '' else t   # (as BufferedReader.readLine reads it)
+    for s in read('end.txt'):
+        s = s.rstrip('\r').replace('PLAYERNAME', 'Player')
+        while '\u00a7f\u00a7k\u00a7a\u00a7b' in s:
+            j = s.index('\u00a7f\u00a7k\u00a7a\u00a7b')
+            s = s[:j] + '\u00a7f\u00a7k' + 'XXXXXXXX'[:rnd.next_int(4) + 3] + s[j + 8:]
+        lines += [s, '']
+    lines += [''] * 8
+    for s in read('credits.txt'):
+        lines += [s.rstrip('\r').replace('PLAYERNAME', 'Player').replace('\t', '    '), '']
+    out = ['/* GuiWinGame: the End poem and the credits (texts/end.txt, texts/credits.txt), a line a row */',
+           'const char end_text[] =']
+    for s in lines:
+        s = unicodedata.normalize('NFKD', s)
+        t = ''
+        for c in s:
+            if c == '\u00a7':
+                t += '\\033'
+            elif c in '"\\':
+                t += '\\' + c
+            elif 32 <= ord(c) < 127:
+                t += c
+        out.append(f'    "{t}\\n"')
+    out[-1] += ';'
+    return out
+
+
 def main():
     jar = Jar(sys.argv[1])
     out, info = generate(jar, False)
     open(os.path.join(ROOT, 'src', 'data.c'), 'w').write('\n'.join(out) + '\n')
     dout, dinfo = generate(jar, True)
+    dout += end_texts(jar)
     open(os.path.join(ROOT, 'src', 'data_dims.c'), 'w').write('\n'.join(dout) + '\n')
     names, extra, first_gui, gui_names = info['names'], info['extra'], info['first_gui'], info['gui_names']
 
@@ -902,6 +959,7 @@ def main():
             h.append(f'#define SP_{n.upper()} {i}')
     h.append('enum { ' + ', '.join(f'SKIN_{n.split("/")[-1].upper()} = {len(SKINS) + k}'
                                    for k, n in enumerate(SKINS_DIMS)) + ' };')
+    h.append('extern const char end_text[];   /* the End poem, then the credits */')
     for n, f in BIG_SKINS:
         h.append(f'extern const uint8_t skin_{n}_px[];   /* {f}.png, 4 bits a texel */')
         h.append(f'extern const uint16_t skin_{n}_pal[16];')

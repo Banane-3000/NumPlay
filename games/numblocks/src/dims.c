@@ -114,6 +114,17 @@ int dims_can_stay(int b, int x, int y, int z) {
     return 1;   /* (gone already, or staying) */
   }
   if (b >= B_NETHER_WART_0 && b <= B_NETHER_WART_3) return world_get(x, y - 1, z) == B_SOUL_SAND;
+  /* BlockDoor (iron): a half needs the other, the lower one ground under it */
+  if (b == B_IRON_DOOR_UPPER) return is_iron_door(world_get(x, y - 1, z));
+  if (is_iron_door(b)) {
+    int u = world_get(x, y - 1, z);
+    return world_get(x, y + 1, z) == B_IRON_DOOR_UPPER && ((blk_flags[u] & BF_OPAQUE) || u == B_GLASS);
+  }
+  /* BlockButton: on a whole block behind it */
+  if (b >= B_STONE_BUTTON_E && b <= B_STONE_BUTTON_N) {
+    static const int8_t bx[4] = {-1, 1, 0, 0}, bz[4] = {0, 0, -1, 1};   /* (facing east, west, south, north) */
+    return (blk_flags[world_get(x + bx[b - B_STONE_BUTTON_E], y, z + bz[b - B_STONE_BUTTON_E])] & BF_OPAQUE) != 0;
+  }
   return -1;
 }
 
@@ -267,6 +278,7 @@ void dims_player_tick(void) {
     wither_ticks--;
   }
   end_tick();
+  dims_spawners_tick();
   bool nether = false, end = false;
   int px = 0, pz = 0, pax = 0;
   for (int y = ifl(pl.y + 0.001f); y <= ifl(pl.y + 1.799f); y++)
@@ -338,11 +350,14 @@ void dims_respawn(void) {
   memset(ents, 0, sizeof ents);
 }
 
+/* the End's portal: the End poem and the credits, then the player at the Overworld's spawn
+ * (EntityPlayerMP.travelToDimension from the End to it, GuiWinGame) */
 void dims_credits(void) {
   loading_screen();
   if (!world_dim(DIM_OVERWORLD)) return;
   memset(ents, 0, sizeof ents);
   player_to_spawn();
   camera_reset();
+  credits_open();
 }
 #endif

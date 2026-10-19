@@ -506,6 +506,8 @@ for d in 'EWSN':
 for d in ['E', 'S', 'W', 'N', 'E_OPEN', 'S_OPEN', 'W_OPEN', 'N_OPEN']:
     DITEM_OF[f'IRON_DOOR_LOWER_{d}'] = 'IRON_DOOR'
 DITEM_OF['IRON_DOOR_UPPER'] = None
+for lv in (1, 3, 5, 7):
+    DITEM_OF[f'FLOWING_LAVA_{lv}'] = None
 
 
 def resolve_dims(n):

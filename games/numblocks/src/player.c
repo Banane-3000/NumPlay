@@ -929,6 +929,12 @@ void player_tick(uint32_t keys, uint32_t pressed) {
       if (at == B_COBWEB) pl.vx *= 0.25f, pl.vy *= 0.05f, pl.vz *= 0.25f;
       float bvx = pl.vx, bvz = pl.vz;
       move(pl.vx, pl.vy, pl.vz);
+#if NB_DIMS
+      /* BlockSoulSand.onEntityCollidedWithBlock: in it, slow */
+      for (int sx = ifloor(pl.x - 0.299f); sx <= ifloor(pl.x + 0.299f); sx++)
+        for (int sz = ifloor(pl.z - 0.299f); sz <= ifloor(pl.z + 0.299f); sz++)
+          if (world_get(sx, ifloor(pl.y + 0.001f), sz) == B_SOUL_SAND) pl.vx *= 0.4f, pl.vz *= 0.4f, sx = sz = 1 << 20;
+#endif
       if (ladder && (bvx != pl.vx || bvz != pl.vz)) pl.vy = 0.2f;
       pl.vy -= 0.08f;
       pl.vy *= 0.98f;
@@ -946,6 +952,7 @@ void player_tick(uint32_t keys, uint32_t pressed) {
   hazards(y0);
 #if NB_DIMS
   dims_player_tick();
+  buttons_tick();
 #endif
   effects_tick();
   if (pl.mode == 0) food_tick();

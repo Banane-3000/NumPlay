@@ -54,12 +54,92 @@ static void end_ring(int x, int y, int z) {
   }
 }
 
+/* ItemDoor (iron): its lower half where the player looks from, facing away, the upper over it */
+static bool place_iron_door(void) {
+  int f = pl.hit_face, x = pl.hit_x, y = pl.hit_y, z = pl.hit_z, at = world_get(x, y, z);
+  if (!(replaceable(at) && at != B_AIR)) x += NX[f], y += NY[f], z += NZ[f];
+  if (y < 1 || y + 1 >= WORLD_H || !world_loaded(x, y, z) || !replaceable(world_get(x, y, z)) ||
+      !replaceable(world_get(x, y + 1, z)) || !solid_top(world_get(x, y - 1, z)) || !box_free(x, y, z) || !box_free(x, y + 1, z))
+    return false;
+  static const uint16_t door[4] = {B_IRON_DOOR_LOWER_S, B_IRON_DOOR_LOWER_W, B_IRON_DOOR_LOWER_N, B_IRON_DOOR_LOWER_E};
+  world_set(x, y + 1, z, B_IRON_DOOR_UPPER);
+  set_block(x, y, z, door[(int)floorf(pl.yaw / 90 + 0.5f) & 3]);
+  return true;
+}
+
+/* BlockButton: pressed, it powers the block behind it and its neighbours; the doors there open
+ * (BlockDoor.onNeighborBlockChange) until it lets go, 20 ticks on */
+static struct {
+  int16_t x, z;
+  uint8_t y, t;
+} presses[4];
+static void doors_powered(int x, int y, int z, int b, bool open) {
+  static const int8_t bx[4] = {-1, 1, 0, 0}, bz[4] = {0, 0, -1, 1};
+  int k = b - B_STONE_BUTTON_E, at[2][3] = {{x, y, z}, {x + bx[k], y, z + bz[k]}};
+  for (int p = 0; p < 2; p++)
+    for (int f = 0; f < 6; f++) {
+      int dx = at[p][0] + NX[f], dy = at[p][1] + NY[f], dz = at[p][2] + NZ[f], d = world_get(dx, dy, dz);
+      if (d == B_IRON_DOOR_UPPER || d == B_DOOR_OAK_UPPER) d = world_get(dx, --dy, dz);
+      int st = is_iron_door(d) ? d - B_IRON_DOOR_LOWER_E
+               : d == B_DOOR_OAK_LOWER ? 0 : is_door_lower(d) ? d - B_DOOR_OAK_LOWER_S + 1 : -1;
+      if (st < 0 || (st >= 4) == open) continue;
+      st = open ? st | 4 : st & 3;
+      if (is_iron_door(d)) world_set(dx, dy, dz, B_IRON_DOOR_LOWER_E + st);
+      else world_set(dx, dy, dz, st == 0 ? B_DOOR_OAK_LOWER : B_DOOR_OAK_LOWER_S + st - 1);
+    }
+}
+static void button_press(int x, int y, int z, int b) {
+  for (int i = 0; i < 4; i++)
+    if (presses[i].t && presses[i].x == x && presses[i].y == y && presses[i].z == z) return;   /* (already down) */
+  for (int i = 0; i < 4; i++)
+    if (!presses[i].t) {
+      presses[i].x = (int16_t)x, presses[i].y = (uint8_t)y, presses[i].z = (int16_t)z, presses[i].t = 20;
+      doors_powered(x, y, z, b, true);
+      return;
+    }
+}
+static void buttons_tick(void) {
+  for (int i = 0; i < 4; i++)
+    if (presses[i].t && !--presses[i].t) {
+      int b = world_get(presses[i].x, presses[i].y, presses[i].z);
+      if (b >= B_STONE_BUTTON_E && b <= B_STONE_BUTTON_N) doors_powered(presses[i].x, presses[i].y, presses[i].z, b, false);
+    }
+}
+
 /* using an item of the Nether or the End (true: done) */
 static bool dims_use(int k, bool on_block, int x, int y, int z, int b) {
   Stack *h = held();
   if (on_block && b == B_DRAGON_EGG && !pl.sneaking) {
     egg_teleport(x, y, z);
     player_swing();
+    return true;
+  }
+  if (on_block && (b == B_BED_FOOT || b == B_BED_HEAD) && dim != DIM_OVERWORLD) {
+    /* BlockBed.onBlockActivated: no sleeping here, it blows up (5, with fire) */
+    for (int f = 2; f < 6; f++)
+      if (world_get(x + NX[f], y, z + NZ[f]) == (b == B_BED_FOOT ? B_BED_HEAD : B_BED_FOOT)) world_set(x + NX[f], y, z + NZ[f], B_AIR);
+    world_set(x, y, z, B_AIR);
+    dims_explode(x + 0.5f, y + 0.5f, z + 0.5f, 5, true);
+    return true;
+  }
+  if (k == IK_WATER_BUCKET && dim == DIM_NETHER) {
+    /* ItemBucket.tryPlaceContainedLiquid: the water boils away (the bucket is emptied) */
+    if (on_block) {
+      int f = pl.hit_face, px = x + NX[f], py = y + NY[f], pz = z + NZ[f];
+      if (replaceable(world_get(px, py, pz))) {
+        for (int i = 0; i < 8; i++) particle_add(px + rndf(), py + rndf(), pz + rndf(), 0, 0.05f, 0, 0x8C51, 20);
+        if (pl.mode == 0) h->id = I_BUCKET, h->aux = 1;
+      }
+    }
+    return true;
+  }
+  if (on_block && b >= B_STONE_BUTTON_E && b <= B_STONE_BUTTON_N && !pl.sneaking) {
+    button_press(x, y, z, b);
+    player_swing();
+    return true;
+  }
+  if (k == IK_PLACER && it_place[h->id - 256] == B_IRON_DOOR_LOWER_E) {
+    if (on_block && place_iron_door()) use_up(), player_swing();
     return true;
   }
   switch (k) {
@@ -69,6 +149,11 @@ static bool dims_use(int k, bool on_block, int x, int y, int z, int b) {
       int way = (int)floorf(pl.yaw / 90 + 0.5f) & 3;
       static const int8_t st[4] = {2, 1, 3, 0};
       if (pb == B_NETHER_BRICK_STAIRS_E || pb == B_QUARTZ_STAIRS_E) pb += st[way];
+      if (pb == B_STONE_BUTTON_E) {   /* (on a side: 1.8.8's on floors and ceilings are not here) */
+        static const uint16_t bt[6] = {0, 0, B_STONE_BUTTON_N, B_STONE_BUTTON_S, B_STONE_BUTTON_W, B_STONE_BUTTON_E};
+        if (pl.hit_face < 2 || world_get(x, y, z) == B_AIR) return true;
+        pb = bt[pl.hit_face];
+      }
       if (pb == B_PILLAR_QUARTZ && pl.hit_face >= 0) {
         int a = pl.hit_face >> 1;
         pb += a == 2 ? 1 : a == 1 ? 2 : 0;

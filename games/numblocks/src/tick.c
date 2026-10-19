@@ -31,7 +31,12 @@ void fluid_schedule(int x, int y, int z) {
     if (pend[i].x == x && pend[i].y == y && pend[i].z == z) return;
   if (npend >= N_PENDING) return;
   /* water moves every 5 ticks, lava every 30 */
+#if NB_DIMS
+  int rate = is_lava(b) ? (dim != DIM_OVERWORLD ? 10 : 30) : 5;   /* (BlockLiquid.tickRate: lava 10 without a sky) */
+  pend[npend++] = (Pending){(int16_t)x, (int16_t)z, (uint8_t)y, 0, (uint16_t)(ticks_run + rate)};
+#else
   pend[npend++] = (Pending){(int16_t)x, (int16_t)z, (uint8_t)y, 0, (uint16_t)(ticks_run + (is_lava(b) ? 30 : 5))};
+#endif
 }
 
 static int level_of(int b) { return blk_meta[b]; }   /* 0 source, 1-7 flowing, 8 falling */
@@ -43,6 +48,9 @@ static int liquid(int water, int level) {
   }
   if (level == 0) return B_LAVA;
   if (level >= 8) return B_FALLING_LAVA;
+#if NB_DIMS
+  if (level & 1) return B_FLOWING_LAVA_1 + level / 2;   /* (the Nether's) */
+#endif
   return level <= 2 ? B_FLOWING_LAVA : level <= 4 ? B_FLOWING_LAVA_4 : B_FLOWING_LAVA_6;
 }
 static bool same(int water, int b) { return water ? is_water(b) : is_lava(b); }
@@ -112,6 +120,9 @@ static void fluid_update(int x, int y, int z) {
   int water = is_water(b);
   if (mix(x, y, z, b)) return;
   int level = level_of(b), decay = water ? 1 : 2;
+#if NB_DIMS
+  if (dim == DIM_NETHER) decay = 1;   /* (WorldProviderHell.doesWaterVaporize: lava runs as far as water) */
+#endif
   if (level > 0) {
     /* the level it should have: from the lowest neighbour, or falling from above */
     int lowest = -1, sources = 0;
@@ -152,6 +163,9 @@ static void fluid_update(int x, int y, int z) {
     int next = level >= 8 ? decay : level + decay;
     if (next >= 8) return;
     int dist[4], best = 1000, max = water ? 4 : 2;
+#if NB_DIMS
+    if (dim == DIM_NETHER) max = 4;
+#endif
     for (int f = 2; f < 6; f++) {
       int nx = x + NX[f], nz = z + NZ[f];
       int n = world_get(nx, y, nz);
@@ -259,6 +273,10 @@ static void fire_update(int x, int y, int z, int age) {
   }
   if (age < 15) age += rnd(3) / 2;
   fire_schedule(x, y, z, age);
+#if NB_DIMS
+  int under = world_get(x, y - 1, z);
+  if (under == B_NETHERRACK || (dim == DIM_END && under == B_BEDROCK)) goto spread;   /* (it burns for ever) */
+#endif
   if (!fire_near(x, y, z)) {
     /* nothing to burn: out, soon (at once off a solid top) */
     if (!(blk_flags[world_get(x, y - 1, z)] & BF_OPAQUE) || age > 3) world_set(x, y, z, B_AIR);
@@ -268,6 +286,9 @@ static void fire_update(int x, int y, int z, int age) {
     world_set(x, y, z, B_AIR);
     return;
   }
+#if NB_DIMS
+spread:
+#endif
   for (int f = 0; f < 6; f++) catch_fire(x + NX[f], y + NY[f], z + NZ[f], f < 2 ? 250 : 300, age);
   /* the air about it, above more than below: where it is next to something that burns */
   for (int dy = -1; dy <= 4; dy++)
@@ -367,6 +388,21 @@ static void random_tick(int x, int y, int z) {
     lava_fire(x, y, z);
     return;
   }
+#if NB_DIMS
+  if (b >= B_NETHER_WART_0 && b < B_NETHER_WART_3) {   /* BlockNetherWart: any light */
+    if (rnd(10) == 0) world_set(x, y, z, b + 1);
+    return;
+  }
+  if ((b == B_PORTAL_X || b == B_PORTAL_Z) && dim == DIM_OVERWORLD && rule(GR_MOB_SPAWNING) && rnd(2000) < opt.difficulty) {
+    /* BlockPortal.updateTick: a zombie pigman comes out, on the ground under the portal */
+    while (!(blk_flags[world_get(x, y, z)] & BF_OPAQUE) && y > 0) y--;
+    if (!(blk_flags[world_get(x, y + 1, z)] & BF_OPAQUE)) {
+      Entity *e = mob_summon(E_PIGMAN, x + 0.5f, y + 1.1f, z + 0.5f);
+      (void)e;
+    }
+    return;
+  }
+#endif
   int i = VC_I(x - vc_x0, y - vc_y0, z - vc_z0);
   int above = world_get(x, y + 1, z);
   int light = i + VCX * VCZ < VCY * VCZ * VCX && y + 1 - vc_y0 < VCY ? light_at(i + VCX * VCZ) : 15;

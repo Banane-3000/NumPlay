@@ -299,6 +299,9 @@ bd('IRON_DOOR_UPPER', 71, 8, model='door', tex='door_iron_upper', hard=5.0, tool
 for v, d, bx in [(1, 'E', (0, 6, 5, 2, 10, 11)), (2, 'W', (14, 6, 5, 16, 10, 11)), (3, 'S', (5, 6, 0, 11, 10, 2)),
                  (4, 'N', (5, 6, 14, 11, 10, 16))]:
     bd(f'STONE_BUTTON_{d}', 77, v, model='button', tex='stone', hard=0.5, box=[bx])
+# the Nether's lava runs a level a block (BlockDynamicLiquid), so it has the odd levels too
+for lv in (1, 3, 5, 7):
+    bd(f'FLOWING_LAVA_{lv}', 10, lv, model='liquid', tex='lava_flow', light=15, hard=100)
 
 MODELS_DIMS = MODELS + ['portal', 'frame', 'endportal', 'egg', 'button']
 # every state of NumBlocks.nwa, by number: S, unused numbers (never a block), then D

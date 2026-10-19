@@ -203,6 +203,9 @@ bool game_frame(void) {
     if (pl.pitch < -90) pl.pitch = -90;
   }
   bool paused = gui == GUI_PAUSE || gui == GUI_OPTIONS || gui == GUI_CONTROLS || gui == GUI_LAN || gui == GUI_KEYS;
+#if NB_DIMS
+  paused = paused || gui == GUI_CREDITS;   /* (the player is in no world while they roll) */
+#endif
   if (!paused) acc += dt;
   /* a key pressed on a frame between ticks waits for the next tick (else that press is lost) */
   static uint32_t game_pressed;
@@ -247,6 +250,13 @@ bool game_frame(void) {
   if (!pl.dead) player_look(c.x, c.y, c.z, c.yaw, c.pitch);
   if (pl.dead) c.y = pl.y + 0.3f;
   if (pl.sleep_timer) c.y = pl.y + 0.3f;
+#if NB_DIMS
+  if (gui == GUI_CREDITS) {
+    render_frame(NULL, game_time);
+    perf_frames++;
+    return true;
+  }
+#endif
   render_frame(&c, game_time);
   perf_frames++;
   return true;
