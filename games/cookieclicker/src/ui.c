@@ -152,7 +152,8 @@ void draw_prompt(void) {
 }
 
 /* ------------------------------------------------------------------ the news */
-#define NEWS_X 22
+/* where the news starts: past the sugar lump and its count, once there are lumps */
+#define NEWS_X (can_lumps() ? 38 : 4)
 void ui_news_next(void) {
   char t[sizeof U.news[0]];
   news_next(t, sizeof t);
@@ -218,16 +219,16 @@ void draw_news(void) {
     gfx_rect(NEWS_X - 2, 0, SCREEN_W - NEWS_X + 2, NEWS_H - 2, RGB(255, 238, 200), 200);
     gfx_fill_alpha(NEWS_X - 1, 1, SCREEN_W - NEWS_X, NEWS_H - 4, WHITE, 20);
   }
-  /* the sugar lump */
+  /* the sugar lump, growing, and how many there are */
   if (can_lumps()) {
     int icon, icon2;
     float o;
     lump_icons(&icon, &icon2, &o);
-    gfx_icon_scaled(icon, 1, 0, 18, 256);
-    if (o > 0 && o < 1) gfx_icon_scaled(icon2, 1, 0, 18, (int)(o * 256));
+    gfx_icon_scaled(icon, 0, -1, 20, 256);
+    if (o > 0 && o < 1) gfx_icon_scaled(icon2, 0, -1, 20, (int)(o * 256));
     char t[16];
     snprintf(t, sizeof t, "%.0f", S.lumps);
-    gfx_text_outline_center(F_SMALL, 10, NEWS_H - 2, t, WHITE, 256);
+    gfx_text_outline(F_NAME_SMALL, 20, 13, t, WHITE, 256);
   }
 }
 

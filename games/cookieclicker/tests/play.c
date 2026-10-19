@@ -112,7 +112,7 @@ static void preset(const char *name) {
     buy_upgrades(2000);
     S.cookies = 1400;
   } else if (!strcmp(name, "mid") || !strcmp(name, "golden") || !strcmp(name, "wrath") || !strcmp(name, "grimoire") ||
-             !strcmp(name, "wrinklers") || !strcmp(name, "pantheon")) {
+             !strcmp(name, "wrinklers") || !strcmp(name, "pantheon") || !strcmp(name, "show")) {
     S.cookies_earned = 6.2e9, S.cookie_clicks = 5400, S.handmade_cookies = 2.1e7;
     static const int n[] = {80, 70, 50, 40, 35, 25, 20, 15, 8, 3};
     for (int b = 0; b < 10; b++) own(b, n[b]);
@@ -134,6 +134,12 @@ static void preset(const char *name) {
       S.elder_wrath = 2;
       bit_set(S.upgrades_bought, U_ONE_MIND, true), bit_set(S.upgrades_bought, U_COMMUNAL_BRAINSWEEP, true);
       for (int i = 0; i < 6; i++) S.wrinklers[i].phase = 2, S.wrinklers[i].close = 1, S.wrinklers[i].hp = 2.1f;
+    }
+    if (!strcmp(name, "show")) {   /* (for the pictures: a golden cookie soon, the Grimoire ready) */
+      S.buildings[B_WIZARD_TOWER].level = 1;
+      extern void grimoire_reset(bool hard);
+      grimoire_reset(true);
+      S.golden_time = S.golden_max;
     }
     if (!strcmp(name, "pantheon")) {
       S.buildings[B_TEMPLE].level = 1;

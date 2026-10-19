@@ -29,11 +29,12 @@ import struct
 import sys
 
 import numpy as np
-from PIL import Image, ImageFont
+from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT_BIN = os.path.join(HERE, "..", "src", "data.bin")
 OUT_H = os.path.join(HERE, "..", "src", "data.h")
+OUT_ICON = os.path.join(HERE, "..", "src", "icon.png")
 S = 0.37            # the left column's pictures (the big cookie: 256 -> 95 pixels)
 
 # the characters past ASCII the texts and fonts have, from 0x80 on
@@ -952,6 +953,20 @@ def main(ref, game_json):
     for name, i in P.names.items():
         defs.append(f"#define IM_{name} {i}")
     defs.append(f"#define DATA_SIZE {len(P.blob)}")
+
+    # ---- the app's icon: the big cookie on the blue background, its shine and shadow, rounded corners
+    icon = Image.new("RGBA", (55, 56))
+    bg = load(ref, "bgBlue.jpg").resize((110, 110), Image.LANCZOS).crop((27, 27, 82, 83))
+    icon.alpha_composite(bg)
+    icon.alpha_composite(premul_resize(load(ref, "shadedBordersSoft.png"), (55, 56)))
+    shine = premul_resize(load(ref, "flare.png"), (60, 60))
+    icon.alpha_composite(shine, (-3, -2))
+    icon.alpha_composite(premul_resize(load(ref, "cookieShadow.png"), (46, 46)), (5, 9))
+    icon.alpha_composite(premul_resize(load(ref, "perfectCookie.png"), (45, 45)), (5, 5))
+    mask = Image.new("L", (55 * 4, 56 * 4), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, 55 * 4 - 1, 56 * 4 - 1), radius=40, fill=255)
+    icon.putalpha(Image.fromarray(np.minimum(np.asarray(icon)[..., 3], np.asarray(mask.resize((55, 56), Image.LANCZOS)))))
+    icon.save(OUT_ICON)
 
     with open(OUT_BIN, "wb") as f:
         f.write(P.blob)
