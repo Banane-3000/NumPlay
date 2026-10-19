@@ -3,6 +3,7 @@
 #   make check      link it like the calculator does (output/doom.bin)
 #   make host       build/play: the game on a computer, for tests and screenshots
 #   make test       the game played on a computer (tests/check.py, with the sanitizers)
+#   make media      the pictures of docs/ and the animations of the repository's docs/media (tools/media.py)
 #   make data       src/doom1.whx from the shareware DOOM1.WAD (tools/fetch.py downloads it; WAD=its path)
 Q ?= @
 # the ARM toolchain on the PATH, or in TOOLCHAIN=<its bin folder>
@@ -41,7 +42,7 @@ comma = ,
 
 OBJ = $(patsubst src/%.c,$(BUILD_DIR)/obj/%.o,$(ENGINE) $(NW) src/nw/plat_eadk.c) $(BUILD_DIR)/obj/pd_render.o
 
-.PHONY: build check clean host test data
+.PHONY: build check clean host test data media
 build: $(BUILD_DIR)/doom.nwa
 
 # apps get 133652 bytes of RAM on custom builds of Epsilon 25.2 (148928 or more on official ones)
@@ -75,7 +76,7 @@ $(BUILD_DIR):
 	$(Q) mkdir -p $@
 
 # on a computer: tests/play.c plays it with scripted keys and saves screenshots
-HOST_FLAGS = -O1 -g -fwrapv -DHOST=1 $(INC) -I../common
+HOST_FLAGS = -O1 -g -fwrapv -DHOST=1 $(INC) -I../common $(HOST_EXTRA)
 HOST_SAN = -fsanitize=address,undefined -fno-sanitize=shift -fno-sanitize-recover=undefined
 HOST_OBJ = $(patsubst src/%.c,build/host/%.o,$(ENGINE) $(NW) src/nw/plat_host.c) build/host/pd_render.o \
   build/host/play.o build/host/data.o
@@ -98,6 +99,9 @@ build/play: $(HOST_OBJ)
 
 test: build/play
 	python3 tests/check.py build/play
+
+media: build/play
+	python3 tools/media.py build/play
 
 # the packed WAD: whd_gen (RP2040 Doom's converter) built on the computer, without the sounds and music
 WHD_GEN = build/whd_gen

@@ -3,8 +3,12 @@
 #define DOOM_NW_H
 #include "doomtype.h"
 
-/* the zone on a computer: as much as the calculator's own software leaves */
-#define NW_HOST_ZONE (60 * 1024)
+/* the zone on a computer: the calculator's (about 53 KB), larger as the computer's pointers are 64-bit where
+ * the calculator's levels use 16-bit ones (its levels take 1.7 to 1.8 times as much) */
+#define NW_HOST_ZONE (96 * 1024)
+
+/* tests: the level to start in (15 for E1M5), or 0 for the title (built with NW_WARP=15, or play --warp) */
+extern int nw_warp;
 
 /* i_system.c: Home, On/Off and Quit end the main loop; I_Error and I_Quit jump back to main
  * (__builtin_setjmp and __builtin_longjmp on nw_exit) */
@@ -28,4 +32,5 @@ void nw_resume_save(void);          /* the game as it is now, if there is one to
 void nw_resume_done(void);          /* the moment was read back: it goes */
 void nw_settings_load(void);
 void nw_settings_save(void);
+extern boolean nw_first_start;     /* no settings yet: the first game starts with a word on the keys */
 #endif

@@ -59,6 +59,9 @@ void M_SaveGame(int choice);
 void M_ClearMenus (void);
 
 extern uint8_t			inhelpscreens;
+#if NUMWORKS
+void M_DrawKeys(void); // (Read This!'s first page, inhelpscreens 4)
+#endif
 extern isb_int8_t detailLevel;
 extern isb_int8_t screenblocks;
 

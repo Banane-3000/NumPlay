@@ -155,9 +155,12 @@ void nw_resume_done(void) {
 }
 
 /* ------------------------------------------------------------------ settings */
+boolean nw_first_start;
+
 void nw_settings_load(void) {
     uint32_t len;
     const uint8_t *d = plat_load(CFG_NAME, &len);
+    nw_first_start = !d;
     if (!d || len < 4 || d[0] != 'D' || d[1] != 1) return;
     showMessages = d[2] ? 1 : 0;
     usegamma = d[3] <= 4 ? d[3] : 0;

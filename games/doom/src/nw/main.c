@@ -10,6 +10,11 @@
 
 void D_DoomMain(void);
 
+#ifndef NW_WARP
+#define NW_WARP 0
+#endif
+int nw_warp = NW_WARP;
+
 #if !defined(HOST)
 const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name"))) = "Doom";
 const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level"))) = 0;

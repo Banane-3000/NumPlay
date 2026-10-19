@@ -175,7 +175,7 @@ extern "C" {
 extern uint8_t *nw_band;
 extern int nw_band_y0, nw_band_y1;
 extern boolean nw_direct;
-void nw_band_begin(int y0, int y1);
+void nw_band_begin(uint8_t *band, int y0, int y1);
 void nw_band_end(void);
 void nw_frame_begin(void);
 void nw_frame_end(void);
@@ -358,16 +358,19 @@ static flat_run nw_flat_runs[NW_FLAT_RUNS];
 static int16_t nw_flat_run_count;
 #define flat_runs nw_flat_runs
 // for each column of a band, the next of its framedrawable (the column lists' own links stay as they are,
-// for the next band), and the framedrawable itself (its field holds the column's x)
-static int16_t fd_next[RENDER_COL_MAX];
-static uint8_t col_fd[RENDER_COL_MAX];
+// for the next band), and the framedrawable itself (its field holds the column's x); both on the stack of
+// pd_end_frame, which has room to spare where the zone has none
+static int16_t *fd_next;
+static uint8_t *col_fd;
 #else
 #define flat_runs ((flat_run *)list_buffer)
 #endif
 static int16_t render_col_free;
 
 #if NUMWORKS
-extern "C" { uint32_t nw_col_overflows, nw_col_peak; } // (tests read these)
+// (tests read these: the most columns a frame had, the columns that found no room, how many frames had
+// 0-249 columns, 250-499...)
+extern "C" { uint32_t nw_col_overflows, nw_col_peak, nw_col_frames[40]; }
 #endif
 static int16_t alloc_pd_column(int x) {
     if (render_col_free < 0) {
@@ -3195,6 +3198,25 @@ static void nw_clear_uncovered(int y0, int y1) {
     }
 }
 
+// a flat tiled over the band (behind the ending's text, and darker behind the keys page)
+static void nw_tile_flat(const char *name, int y0, int y1, int light = 0) {
+    int flatnum = W_GetNumForName(name) - firstflat;
+    uint8_t *flat_data = nullptr;
+    for (int slot = 0; slot < cached_flat_slots; slot++) {
+        if (cached_flat_picnum[slot] == flatnum) flat_data = cached_flat0 - slot * 4096;
+    }
+    if (!flat_data) flat_data = decode_flat_to_slot(0, flatnum);
+    uint8_t *dest = nw_band;
+    for (int y = y0; y < y1; y++) {
+        const uint8_t *src = flat_data + (y & 63);
+        for (int i = 0; i < SCREENWIDTH; i++) *dest++ = src[(i & 63) * 64];
+    }
+    if (light) {
+        const lighttable_t *map = xcolormaps + 256 * light;
+        for (uint8_t *p = nw_band; p < dest; p++) *p = map[*p];
+    }
+}
+
 // a full screen picture behind everything when there is no level to see
 static void nw_draw_background(int y0, int y1) {
     int patch_num = 0;
@@ -3203,6 +3225,7 @@ static void nw_draw_background(int y0, int y1) {
             case 1: patch_num = W_GetNumForName("HELP1"); break;
             case 2: patch_num = W_GetNumForName("HELP2"); break;
             case 3: patch_num = W_GetNumForName("HELP"); break;
+            case 4: nw_tile_flat("FLOOR4_8", y0, y1, 22); return;
         }
     } else {
         switch (gamestate) {
@@ -3214,18 +3237,7 @@ static void nw_draw_background(int y0, int y1) {
                 break;
             case GS_FINALE:
                 if (finalestage == F_STAGE_TEXT) {
-                    // the tiled flat behind the text
-                    int flatnum = W_GetNumForName(finaleflat) - firstflat;
-                    uint8_t *flat_data = nullptr;
-                    for (int slot = 0; slot < cached_flat_slots; slot++) {
-                        if (cached_flat_picnum[slot] == flatnum) flat_data = cached_flat0 - slot * 4096;
-                    }
-                    if (!flat_data) flat_data = decode_flat_to_slot(0, flatnum);
-                    uint8_t *dest = nw_band;
-                    for (int y = y0; y < y1; y++) {
-                        const uint8_t *src = flat_data + (y & 63);
-                        for (int i = 0; i < SCREENWIDTH; i++) *dest++ = src[(i & 63) * 64];
-                    }
+                    nw_tile_flat(finaleflat, y0, y1); // (the tiled flat behind the text)
                     return;
                 } else if (finalestage == F_STAGE_ARTSCREEN) {
                     const char *ln = F_ArtScreenLumpName();
@@ -3263,7 +3275,14 @@ void pd_end_frame(int wipe_start) {
     if (new_cache_flat_slots < 1) new_cache_flat_slots = 1;
     for (int i = cached_flat_slots; i < new_cache_flat_slots; i++) cached_flat_picnum[i] = 0xff;
     cached_flat_slots = new_cache_flat_slots;
-    if (view) nw_freeze_columns();
+    int16_t fd_next_here[RENDER_COL_MAX];
+    uint8_t col_fd_here[RENDER_COL_MAX];
+    fd_next = fd_next_here;
+    col_fd = col_fd_here;
+    if (view) {
+        nw_col_frames[render_col_count / 250 < 40 ? render_col_count / 250 : 39]++;
+        nw_freeze_columns();
+    }
 
     // what is drawn over the picture, gathered once
     nw_patches[0].header.max = count_of(nw_patches) - 1;
@@ -3284,9 +3303,10 @@ void pd_end_frame(int wipe_start) {
     if (pre_wipe_state == PRE_WIPE_EXTRA_FRAME_NEEDED) pre_wipe_state = PRE_WIPE_EXTRA_FRAME_DONE;
 
     nw_frame_begin();
+    uint8_t __aligned(8) band[SCREENWIDTH * NW_BAND_H];
     for (int y0 = 0; y0 < SCREENHEIGHT; y0 += NW_BAND_H) {
         int y1 = y0 + NW_BAND_H;
-        nw_band_begin(y0, y1);
+        nw_band_begin(band, y0, y1);
         render_frame_buffer = nw_band - y0 * SCREENWIDTH;
         I_VideoBuffer = render_frame_buffer;
         if (view) {
@@ -3314,6 +3334,10 @@ void pd_end_frame(int wipe_start) {
             if (gamestate == GS_FINALE && finalestage == F_STAGE_TEXT && !showing_help) {
                 nw_direct = true;
                 F_TextWrite();
+                nw_direct = false;
+            } else if ((inhelpscreens & 127) == 4) {
+                nw_direct = true;
+                M_DrawKeys();
                 nw_direct = false;
             }
         }

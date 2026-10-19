@@ -989,12 +989,51 @@ void M_DrawReadThis1(void)
         return;
     }
 #endif
+#if NUMWORKS
+    inhelpscreens = 4; // the calculator's keys (M_DrawKeys)
+#else
     inhelpscreens = 2;
+#endif
 
 #if !USE_WHD
     V_DrawPatchDirect(0, 0, W_CacheLumpName(DEH_String("HELP2"), PU_CACHE));
 #endif
 }
+
+#if NUMWORKS
+// the first page of Read This!: the calculator's keys, drawn by the renderer over a flat, band by band
+static const char *const keys_page[][2] = {
+    {"UP, DOWN", "WALK FORWARD, BACK"},
+    {"LEFT, RIGHT", "TURN"},
+    {"OK", "FIRE"},
+    {"EXE, BACKSPACE", "USE: DOORS, SWITCHES"},
+    {"HOLD SHIFT", "STRAFE WITH LEFT, RIGHT"},
+    {"X,N,T   VAR", "STRAFE LEFT, RIGHT"},
+    {"HOLD ALPHA", "RUN"},
+    {"1 TO 7", "WEAPONS"},
+    {"TOOLBOX", "AUTOMAP"},
+    {"   +  -", "ZOOM IN, OUT"},
+    {"   *  /  0", "FOLLOW, GRID, WHOLE MAP"},
+    {"SQUARE ROOT", "BRIGHTNESS"},
+    {"BACK", "MENU AND PAUSE"},
+    {"HOME", "KEEP THE MOMENT AND QUIT"},
+};
+
+void M_DrawKeys(void)
+{
+    static const char title[] = "THE CALCULATOR'S KEYS";
+    static const char menus[] = "IN MENUS: ARROWS, OK AND BACK";
+    int y = 22;
+
+    M_WriteText((SCREENWIDTH - M_StringWidth(title)) / 2, 6, title);
+    for (unsigned i = 0; i < sizeof(keys_page) / sizeof(keys_page[0]); i++, y += 11)
+    {
+        M_WriteText(20, y, keys_page[i][0]);
+        M_WriteText(128, y, keys_page[i][1]);
+    }
+    M_WriteText(20, y + 6, menus);
+}
+#endif
 
 
 
@@ -1009,7 +1048,11 @@ void M_DrawReadThis2(void)
         return;
     }
 #endif
+#if NUMWORKS
+    inhelpscreens = 2; // (the order page: HELP1's keys are a PC's)
+#else
     inhelpscreens = 1;
+#endif
 
     // We only ever draw the second page if this is 
     // gameversion == exe_doom_1_9 and gamemode == registered

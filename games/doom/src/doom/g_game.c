@@ -773,7 +773,7 @@ void G_DoLoadLevel (void)
     {
         players[consoleplayer].message = "Press escape to quit.";
     }
-} 
+}
 
 #if !NO_USE_JOYSTICK
 static void SetJoyButtons(unsigned int buttons_mask)
@@ -2026,8 +2026,15 @@ void G_DoNewGame(boolean net)
     fastparm = false;
     nomonsters = false;
     G_InitNew (d_skill, d_episode, d_map);
-    gameaction = ga_nothing; 
-} 
+    gameaction = ga_nothing;
+#if NUMWORKS
+    if (nw_first_start)
+    {
+        players[consoleplayer].message = "OK FIRES, EXE OPENS DOORS, BACK: MENU";
+        nw_first_start = false;
+    }
+#endif
+}
 
 
 void

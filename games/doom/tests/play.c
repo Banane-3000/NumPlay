@@ -15,6 +15,7 @@
 
 #include "doomtype.h"
 #include "z_zone.h"
+#include "doom/doomstat.h"
 #include "nw.h"
 #include "plat.h"
 
@@ -69,7 +70,14 @@ static void shot(uint32_t ms) {
 }
 
 /* the script, as time goes by (plat_host.c calls it) */
+static uint32_t exit_at[16];
+static int nexits, next_exit;
+void G_ExitLevel(void);
 void host_tick(void) {
+    if (next_exit < nexits && host_time >= exit_at[next_exit]) {
+        next_exit++;
+        G_ExitLevel(); /* (as if the exit switch was pressed) */
+    }
     uint64_t k = 0;
     for (int i = 0; i < nholds; i++)
         if (host_time >= holds[i].a && host_time < holds[i].b) k |= (uint64_t)1 << holds[i].key;
@@ -106,6 +114,13 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--out") && i + 1 < argc) snprintf(out, sizeof out, "%s", argv[++i]);
         else if (!strcmp(argv[i], "--saves") && i + 1 < argc) saves = argv[++i];
         else if (!strcmp(argv[i], "--stats")) stats = 1;
+        else if (!strcmp(argv[i], "--warp") && i + 1 < argc) nw_warp = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--exit-at") && i + 1 < argc) {
+            for (char *s = argv[++i]; *s && nexits < 16;) {
+                exit_at[nexits++] = (uint32_t)strtoul(s, &s, 10);
+                if (*s == ',') s++;
+            }
+        }
         else {
             fprintf(stderr, "play: unknown option %s\n", argv[i]);
             return 2;
@@ -115,7 +130,15 @@ int main(int argc, char **argv) {
     mkdir(saves, 0755);
     host_save_dir(saves);
     int r = nw_main();
-    if (stats) printf("STATS zone_free %d\n", Z_FreeMemory());
-    printf("END time %u quit %d\n", host_time, (int)nw_quit);
+    if (stats) {
+        extern uint32_t nw_col_overflows, nw_col_peak, nw_col_frames[40], nw_zone_peak, nw_zone_size;
+        printf("STATS zone_free %d columns peak %u overflows %u zone peak %u of %u frames by 250 columns:",
+               Z_FreeMemory(), nw_col_peak, nw_col_overflows, nw_zone_peak, nw_zone_size);
+        for (int i = 0; i < 40; i++) printf(" %u", nw_col_frames[i]);
+        printf("\n");
+    }
+    printf("END time %u quit %d state %d map E%dM%d leveltime %d health %d kills %d\n", host_time, (int)nw_quit,
+           (int)gamestate, gameepisode, gamemap, leveltime, players[consoleplayer].health,
+           players[consoleplayer].killcount);
     return r;
 }

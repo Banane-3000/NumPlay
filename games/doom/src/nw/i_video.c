@@ -28,17 +28,12 @@ int mouse_threshold = 10;
 uint8_t next_video_type, next_frame_index, next_overlay_index;
 semaphore_t render_frame_ready, display_frame_freed;
 
-#define BAND_H 40
-static uint8_t __attribute__((aligned(8))) band[SCREENWIDTH * BAND_H];
 static uint16_t palette[256];
 static int8_t next_pal = 0; /* the palette to use from the next frame, -1 when it is the one in use */
 static int8_t last_gamma = -1;
 
 void pd_init(void);
-void I_InitGraphics(void) {
-    nw_band = band;
-    pd_init();
-}
+void I_InitGraphics(void) { pd_init(); }
 void I_ShutdownGraphics(void) {}
 void I_StartFrame(void) {}
 void I_UpdateNoBlit(void) {}
@@ -102,7 +97,7 @@ void nw_frame_end(void) { host_frame(); }
 void nw_frame_end(void) {}
 #endif
 
-void nw_band_begin(int y0, int y1) {
+void nw_band_begin(uint8_t *band, int y0, int y1) {
     nw_band = band;
     nw_band_y0 = y0;
     nw_band_y1 = y1;
@@ -112,7 +107,7 @@ void nw_band_begin(int y0, int y1) {
 void nw_band_end(void) {
     uint16_t lines[SCREENWIDTH * 6];
     for (int y = nw_band_y0; y < nw_band_y1; y += 5) {
-        const uint8_t *src = band + (y - nw_band_y0) * SCREENWIDTH;
+        const uint8_t *src = nw_band + (y - nw_band_y0) * SCREENWIDTH;
         uint16_t *d = lines;
         for (int j = 0; j < 5; j++) {
             for (int i = 0; i < SCREENWIDTH; i++) d[i] = palette[src[i]];

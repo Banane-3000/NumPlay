@@ -98,7 +98,9 @@
 /* the renderer (pd_render.cpp), with room for this many runs of pixels in the view each frame */
 #define PICODOOM_RENDER_NEWHOPE 1
 #define MERGE_DISTSCALE0_INTO_VIEWCOSSINANGLE 1
-#define NW_RENDER_COL_MAX 3000
+#ifndef NW_RENDER_COL_MAX
+#define NW_RENDER_COL_MAX 3600
+#endif
 
 /* the calculator: no speaker, one core, files in Epsilon's file system */
 #define NO_USE_SOUND 1
