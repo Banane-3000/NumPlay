@@ -414,6 +414,49 @@ Drive as far as you can before the fuel runs out or Bill lands on his head. Pick
 
 <br clear="right">
 
+## Cookie Clicker
+
+<img src="media/cookieclicker.gif" width="320" align="right" alt="Cookie Clicker: a golden cookie caught for a Frenzy, upgrades bought, the Grimoire, then an ascension">
+
+Cookie Clicker comes as its own app, `CookieClicker.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **OK** | Click the big cookie |
+| **Arrows** | Choose in the store (up from its top: the news ticker) |
+| **EXE** | Buy or sell what is chosen; press the ticker |
+| **÷** / **×** | Buy or sell / 1, 10, 100 (all, to sell) |
+| **shift** | Click a golden cookie or a reindeer |
+| **var** | Pop a wrinkler |
+| **x,n,t** | Harvest the sugar lump |
+| **alpha** | The buildings' rows: EXE levels one up or opens its minigame |
+| **toolbox** | Statistics |
+| **⌫** | Close a note |
+| **Back** | Menu: Options, Statistics, Info, Legacy, Santa, Krumblor, Keys, Save |
+| **Home** | Save and quit |
+
+Click the cookie, buy buildings that bake for you and upgrades that make them bake more. Golden cookies give Frenzies, Lucky!, Click frenzies and more; when the elders awaken, wrath cookies and wrinklers come. Level your buildings up with sugar lumps to unlock the Grimoire's spells and the Pantheon's spirits. When you have baked enough, ascend from the Legacy menu: your cookies become heavenly chips to spend on the heavenly upgrades, then you start again stronger. The calculator has no clock, so the bakery only bakes while the game is open, and sugar lumps grow 24 times faster to make up for it. Your bakery is also copied into `cookieclicker_saves.py`, so installing the app again doesn't erase it.
+
+<br clear="right">
+
+## Level Devil
+
+<img src="media/leveldevil.gif" width="320" align="right" alt="Level Devil: the floor drops away under the runner; a button makes it grow, another shrinks it; spikes come up in its way">
+
+Level Devil comes as its own app, `LevelDevil.nwa`: install it on its own.
+
+| Key | What it does |
+| --- | --- |
+| **Left / Right** (or 4 / 6) | Run |
+| **Up**, **OK** or **EXE** (or 8 / 5) | Jump (in Gravity: turn gravity round; in Flappy: flap) |
+| **Down** (or 2) | Jump, in the room that says so |
+| **Any key**, once dead | Try again |
+| **Back** | Pause: Resume, Restart, Levels, Quit game |
+
+Run to the door. These are the game's 80 rooms in its order: sixteen worlds of five (Pits, Spikes, Push, Coins, Controls, Platforms, Springs, Warps, Scale, Doors, Saws, Flappy, Gravity, Movement, Wraparound and the Boss), each with its own traps and timing. Clear a world's five rooms to open the next one on the map. Your deaths are counted, with your best for each world. The game keeps a copy of its save in `leveldevil_saves.py`, so installing apps again doesn't erase your progress.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">
@@ -579,20 +622,6 @@ Google's brick breaker: seven bricks across in blue, red, yellow and green, wall
 
 <br clear="right">
 
-## Level Devil
-
-<img src="media/leveldevil.gif" width="320" align="right" alt="Level Devil: the floor drops away under the runner, then spikes come up in front of the door">
-
-| Key | What it does |
-| --- | --- |
-| **Left / Right** (or 4 / 6) | Run |
-| **Up**, **OK** or **EXE** | Jump; hold it to jump higher |
-| **Back** | Pause: Resume, Restart, Levels, How to play, Quit game |
-
-Run to the door. Floors drop away, spikes pop up, walls slide out and the door runs off, each trap waiting for you to reach its spot, and some rooms change again after you die in them. Sixteen levels of five rooms, picked on a map of doors; your deaths are counted, and the fewest you cleared each level with is kept.
-
-<br clear="right">
-
 ## 2 Players
 
 <img src="../games/twoplayer/docs/games.png" width="320" align="right" alt="2 Players: Pong, Air Hockey, Tanks and Light Cycles">
@@ -608,21 +637,64 @@ Pong (first to 11), Air Hockey (first to 7), Tanks in a new maze every round and
 
 <br clear="right">
 
-## Cookie Clicker
+## Space Invaders
 
-<img src="../games/cookieclicker/docs/shot.png" width="320" align="right" alt="Cookie Clicker">
+<img src="media/invaders.gif" width="320" align="right" alt="Space Invaders: the score advance table, then the rack marching over the bunkers">
 
 | Key | What it does |
 | --- | --- |
-| **OK** | Click the big cookie |
-| **shift** | Catch a golden cookie |
-| **Up, Down** | Choose a building, an upgrade or an achievement |
-| **Left, Right** | Upgrades, Buildings, Stats |
-| **EXE** | Buy it |
-| **×** | Buy 1, 10 or 100 buildings at a time |
-| **Back** | Menu (with How to play and Quit) |
+| **Left / Right** (or 4 / 6) | Move the cannon |
+| **OK**, **EXE** or **Up** (or 8) | Fire: a new press each shot, as in the arcade |
+| **Back** | Pause (Resume, Quit game) |
 
-Click the cookie, buy buildings that bake for you and upgrades that make them bake more; the store lists what you can buy, cheapest first. Catch a golden cookie for a Frenzy (production ×7), Lucky! (a share of your bank) or now and then a Click frenzy. Achievements fill your milk, which kittens turn into more cookies. Your bakery is saved, but it only bakes while the game is open.
+The arcade's game, pixel for pixel, under the Midway cabinet's red and green film. Squids are worth 30, crabs 20 and octopuses 10; the mystery saucer 50 to 300, from how many shots you have fired (the 23rd, then every 15th, gets 300). The rack speeds up as it thins out, drops at each edge and starts lower every wave; shots and invaders wear the bunkers away. A new cannon at 1500 points; the game ends when the invaders land. Your best score is kept.
+
+<br clear="right">
+
+## Sudoku
+
+<img src="media/sudoku.gif" width="320" align="right" alt="Sudoku: a Medium game, notes in two cells, a mistake undone, then hints">
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** | Pick a cell |
+| **1** to **9** | Write that digit (a note in notes mode) |
+| **OK** or **EXE** | Notes on and off |
+| **0** | Erase the cell |
+| **⌫** | Undo |
+| **shift** | Hint |
+| **Back** | Pause (Resume, New game, How to play, Quit game) |
+
+Fill the grid so every row, column and 3×3 box holds 1 to 9 once. The row, column and box of the cell you pick light up, and so does every cell with its digit; wrong digits turn red and count as mistakes. Notes are small pencil digits, and a digit you write takes its note off the cells it sees. Easy and Medium need only singles, Hard needs pointing, Expert more; every puzzle is made on the calculator, and each level keeps its best time.
+
+<br clear="right">
+
+## Ultimate Tic-Tac-Toe
+
+<img src="media/uttt.gif" width="320" align="right" alt="Ultimate Tic-Tac-Toe: a game against the computer">
+
+| Key | What it does |
+| --- | --- |
+| **1** to **9** | Take that cell of the small board you must play in (the number pad is a small board, 7 at the top left). On a free move, the first number picks the board |
+| **Arrows**, then **OK** or **EXE** | Move over the cells, then take one |
+| **Back** | Menu: Resume, New game (**Left / Right** choose a friend or the computer: easy, normal, hard), Quit game |
+
+Nine small boards make a big one. The cell you take sends the other player to the small board in the same place; a small board won or full is closed, and a player sent there plays anywhere. Win three small boards in a row. The boards you may play in light up in your colour, and the games won and drawn are kept for every opponent.
+
+<br clear="right">
+
+## Sokoban
+
+<img src="media/sokoban.gif" width="320" align="right" alt="Sokoban: Microban's second and fourth levels solved, the crates turning green on their goals">
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** (or 8 4 6 2) | Walk, and push a crate; hold to keep going |
+| **⌫** | Undo a step (hold to undo more) |
+| **OK** or **EXE** | Choose |
+| **Back** | Pause: Resume, Restart, Levels, How to play, Quit game |
+
+Push every crate onto a goal: the keeper pushes one at a time and can't pull, so a crate in a corner stays there. Microban's 155 levels by David W. Skinner, the first 35 inside NumPlay and all of them in Sokoban.nwa; solved levels turn green on the level list, and the fewest moves for each are kept.
 
 <br clear="right">
 

@@ -5,8 +5,8 @@
 <h1 align="center">NumPlay</h1>
 
 <p align="center">
-  <b>21 free games for your NumWorks calculator, in one app.</b><br>
-  Plus 13 big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
+  <b>23 free games for your NumWorks calculator, in one app.</b><br>
+  Plus 15 big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
 </p>
 
 <p align="center">
@@ -60,11 +60,13 @@ All of these come in one app, **NumPlay.nwa**.
     <td align="center"><a href="games/g2048/README.md"><img src="docs/media/thumb_g2048.png" width="120" alt="2048"><br><b>2048</b></a></td>
     <td align="center"><a href="games/minesweeper/README.md"><img src="docs/media/thumb_minesweeper.png" width="120" alt="Minesweeper"><br><b>Minesweeper</b></a></td>
     <td align="center"><a href="games/breakout/README.md"><img src="docs/media/thumb_breakout.png" width="120" alt="Block Breaker"><br><b>Block Breaker</b></a></td>
-    <td align="center"><a href="games/leveldevil/README.md"><img src="docs/media/thumb_leveldevil.png" width="120" alt="Level Devil"><br><b>Level Devil</b></a></td>
     <td align="center"><a href="games/twoplayer/README.md"><img src="docs/media/thumb_twoplayer.png" width="120" alt="2 Players"><br><b>2 Players</b></a></td>
+    <td align="center"><a href="games/invaders/README.md"><img src="docs/media/thumb_invaders.png" width="120" alt="Space Invaders"><br><b>Space Invaders</b></a></td>
   </tr>
   <tr>
-    <td align="center"><a href="games/cookieclicker/README.md"><img src="docs/media/thumb_cookieclicker.png" width="120" alt="Cookie Clicker"><br><b>Cookie Clicker</b></a></td>
+    <td align="center"><a href="games/sudoku/README.md"><img src="docs/media/thumb_sudoku.png" width="120" alt="Sudoku"><br><b>Sudoku</b></a></td>
+    <td align="center"><a href="games/uttt/README.md"><img src="docs/media/thumb_uttt.png" width="120" alt="Ultimate Tic-Tac-Toe"><br><b>Ultimate Tic-Tac-Toe</b></a></td>
+    <td align="center"><a href="games/sokoban/README.md"><img src="docs/media/thumb_sokoban.png" width="120" alt="Sokoban"><br><b>Sokoban</b></a></td>
     <td align="center"><a href="games/numvisuals/README.md"><img src="docs/media/thumb_numvisuals.png" width="120" alt="NumVisuals"><br><b>NumVisuals</b></a></td>
   </tr>
 </table>
@@ -98,6 +100,10 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
   </tr>
   <tr>
     <td align="center"><a href="games/hillclimb/README.md"><img src="docs/media/thumb_hillclimb.png" width="200" alt="Hill Climb Racing"><br><b>Hill Climb Racing</b></a><br><sub>Ten stages, eight vehicles and all their upgrades</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/HillClimbRacing.nwa">Download</a></td>
+    <td align="center"><a href="games/cookieclicker/README.md"><img src="docs/media/thumb_cookieclicker.png" width="200" alt="Cookie Clicker"><br><b>Cookie Clicker</b></a><br><sub>The whole game with its own pictures: ascension, the dragon, the Grimoire and the Pantheon</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/CookieClicker.nwa">Download</a></td>
+    <td align="center"><a href="games/leveldevil/README.md"><img src="docs/media/thumb_leveldevil.png" width="200" alt="Level Devil"><br><b>Level Devil</b></a><br><sub>Unept's troll platformer: the game's 80 rooms, with their own traps</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/LevelDevil.nwa">Download</a></td>
+  </tr>
+  <tr>
     <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Super Mario 64, the Nether and the End in NumBlocks and more: see the roadmap</sub></td>
   </tr>
 </table>
@@ -201,6 +207,11 @@ Filmed on my own calculator, no emulator.
 - [x] Sonic the Hedgehog: the whole 1991 game, Green Hill to the Final Zone, with the Special Stages
 - [x] Subway Surfers
 - [x] Hill Climb Racing
+- [x] Space Invaders
+- [x] Sokoban
+- [x] Sudoku
+- [x] Ultimate Tic-Tac-Toe
+- [ ] Super Mario 64
 - [ ] The Nether and the End in NumBlocks
 - [ ] Full Minecraft 1.18.2 as a standalone app
 - [ ] A customizer website: pick the games you want in your launcher, with Enlarged Extra Apps support to fit several big games, or big and small ones together
@@ -227,9 +238,15 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 - **Sonic the Hedgehog** by Sonic Team inspired NumPlay's Sonic the Hedgehog, which reads the game's art, levels and demos from the [Sonic Retro disassembly](https://github.com/sonicretro/s1disasm) and follows the [Sonic Physics Guide](https://info.sonicretro.org/Sonic_Physics_Guide). Not affiliated with SEGA.
 - **Subway Surfers** by SYBO and Kiloo inspired NumPlay's Subway Surfers: its people are fitted to the game's own 3D models and wear their textures, and its logo and item icons are the game's, as the [Subway Surfers Wiki](https://subwaysurf.fandom.com) shows them; the yard and the trains are drawn after the game. It is lettered in the **Lilita One** font by Juan Montoreano (SIL Open Font License, [license](LICENSES/OFL-1.1-LilitaOne.txt)). Not affiliated with them.
 - **Hill Climb Racing** by Fingersoft inspired NumPlay's Hill Climb Racing, which uses the game's own pictures from the [Hill Climb Racing Wiki](https://hillclimbracing.fandom.com) and the **Teko** font (SIL Open Font License, [license](LICENSES/OFL-1.1-Teko.txt)). Not affiliated with Fingersoft.
-- **[Level Devil](https://store.steampowered.com/app/3242750/)** by Unept inspired NumPlay's Level Devil, written in C for NumPlay with no code or art from it: its look and its traps follow the game, and its 80 rooms are made for the calculator's screen.
+- **[Level Devil](https://store.steampowered.com/app/3242750/)** by Unept: NumPlay's Level Devil is written in C with no code from the game, but its 80 rooms (their tiles, traps and timing) are the game's own, taken from its web build by games/leveldevil/tools/fetch.py, and its runner is drawn from the game's sprites.
+
 - **Pong** by Atari (1972) inspired NumPlay's 2 Players, with air hockey, tanks in a maze in the spirit of Tank Trouble and the light cycles of Tron. All four are written in C for NumPlay and drawn from shapes, with no code or art from them.
-- **[Cookie Clicker](https://orteil.dashnet.org/cookieclicker/)** by Orteil (DashNet) inspired NumPlay's Cookie Clicker, written in C for NumPlay with no code or art from it: its numbers and the names of its buildings, upgrades, achievements and news follow the game.
+- **[Cookie Clicker](https://orteil.dashnet.org/cookieclicker/)** by Orteil and Opti (DashNet) inspired NumPlay's Cookie Clicker, which uses the game's own pictures, texts and numbers (version 2.058, from its public mirror [ozh/cookieclicker](https://github.com/ozh/cookieclicker)) and the **Merriweather**, **Kavoon** and **Noto Sans** fonts (SIL Open Font License: [Merriweather](LICENSES/OFL-1.1-Merriweather.txt), [Kavoon](LICENSES/OFL-1.1-Kavoon.txt), [Noto Sans](LICENSES/OFL-1.1-NotoSans.txt)). Not affiliated with Orteil or DashNet.
+- **Space Invaders** by Tomohiro Nishikado and Taito (1978, Midway in America) inspired NumPlay's Space Invaders, written in C for NumPlay from the arcade's rules with its pictures redrawn from the arcade's, under the Midway cabinet's coloured film.
+- **Sokoban** by Hiroyuki Imabayashi (Thinking Rabbit, 1982) inspired NumPlay's Sokoban, written in C for NumPlay with no code or art from any Sokoban. Its levels are **Microban** by David W. Skinner (2000), used with credit to him.
+- **Sudoku**, the number place puzzle (Dell Magazines, 1979; named by Nikoli), is written in C for NumPlay: its puzzles are made on the calculator, and its look and controls follow the phone apps.
+- **Ultimate tic-tac-toe** is a folk game, made widely known by [Ben Orlin's 2013 article](https://mathwithbaddrawings.com/2013/06/16/ultimate-tic-tac-toe/); NumPlay's is written in C for it.
+
 - **[The Powder Toy](https://powdertoy.co.uk)** inspired NumPowder, which ports its materials' behaviour, its font and its icons from [its source code](https://github.com/The-Powder-Toy/The-Powder-Toy) (GNU GPL v3.0), by Stanislaw K Skowronek, Simon Robertshaw and its contributors. Not affiliated with them.
 - **[The Final Earth 2](https://store.steampowered.com/app/1180130/The_Final_Earth_2/)** by [Florian van Strien](https://florianvanstrien.nl) inspired NumPlay's The Final Earth 2, which uses the game's own pictures, fonts and texts, with additional sprites by LukXD99. Not affiliated with him.
 - **Buckshot Roulette** by Mike Klubnika inspired NumPlay's Buckshot Roulette, whose scenes are rendered from the game through the Open Buckshot Roulette project (1503Dev). Fonts: Fake Receipt by Ray Larabie and Dot Matrix by Dionaea.
@@ -247,7 +264,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 
 NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyright (c) 2026 Mason Chen. Code and fonts from others keep their own licenses: the `UNLICENSE` files in the games' folders and the [LICENSES](LICENSES) folder. The names, artwork and music of the games NumPlay is inspired by belong to their makers and are not covered by it.
 
-<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media and Sonic the Hedgehog of SEGA.</sub>
+<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog of SEGA and Space Invaders of Taito.</sub>
 
 ## Gallery
 
@@ -308,8 +325,16 @@ NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyri
     <td align="center"><img src="docs/media/gallery/hillclimb.gif" width="100%" alt="Hill Climb Racing: a rope bridge in the Desert, then the Forest's pine trees"><br><a href="games/hillclimb/README.md"><b>Hill Climb Racing</b></a></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/media/gallery/leveldevil.gif" width="100%" alt="Level Devil: spikes come up under a low ceiling, a fake wall hides a pit, a spring throws the runner into spikes, a saw gives chase"><br><a href="games/leveldevil/README.md"><b>Level Devil</b></a></td>
+    <td align="center"><img src="docs/media/gallery/leveldevil.gif" width="100%" alt="Level Devil: platforms give way, a saw comes out of the floor, the ice slides the runner onto a spring, gravity flips past the saws"><br><a href="games/leveldevil/README.md"><b>Level Devil</b></a></td>
     <td align="center"><img src="docs/media/gallery/twoplayer.gif" width="100%" alt="2 Players: Pong, Air Hockey, Tanks and Light Cycles against the computer"><br><a href="games/twoplayer/README.md"><b>2 Players</b></a></td>
-    <td align="center"><img src="docs/media/gallery/cookieclicker.gif" width="100%" alt="Cookie Clicker: a golden cookie caught for a Frenzy, then a grandma upgrade bought"><br><a href="games/cookieclicker/README.md"><b>Cookie Clicker</b></a></td>
+    <td align="center"><img src="docs/media/gallery/cookieclicker.gif" width="100%" alt="Cookie Clicker: a golden cookie caught for a Frenzy, the store's upgrades, then an ascension: the cookie bursts and the heavens open"><br><a href="games/cookieclicker/README.md"><b>Cookie Clicker</b></a></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/media/gallery/invaders.gif" width="100%" alt="Space Invaders: the rack marches down, the saucer is hit for 100"><br><a href="games/invaders/README.md"><b>Space Invaders</b></a></td>
+    <td align="center"><img src="docs/media/gallery/sudoku.gif" width="100%" alt="Sudoku: notes in two cells, a mistake undone, then hints"><br><a href="games/sudoku/README.md"><b>Sudoku</b></a></td>
+    <td align="center"><img src="docs/media/gallery/uttt.gif" width="100%" alt="Ultimate Tic-Tac-Toe: a game against the computer, which wins the middle board"><br><a href="games/uttt/README.md"><b>Ultimate Tic-Tac-Toe</b></a></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/media/gallery/sokoban.gif" width="100%" alt="Sokoban: Microban's ninth level, pushed through to its goals"><br><a href="games/sokoban/README.md"><b>Sokoban</b></a></td>
   </tr>
 </table>
