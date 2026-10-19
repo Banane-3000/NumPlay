@@ -96,8 +96,6 @@ Block Breaker	打砖块
 Break every brick	打碎每一块砖
 2 Players	双人对战
 Pong and more, side by side	Pong 等游戏，两人并肩玩
-Cookie Clicker	Cookie Clicker
-Click the cookie, bake billions	点击饼干，烤出亿万饼干
 Backgrounds, clocks, timers	背景、时钟、计时器
 Reach the door, trust nothing	走到门口，什么都别相信
 # (names that stay as they are)
@@ -114,7 +112,6 @@ Inspired by Tatone26's All the Apps	灵感来自 Tatone26 的 All the Apps
 Based on 2048 by Gabriele Cirulli	改编自 Gabriele Cirulli 的 2048
 Based on Block Blast! by Hungry Studio	改编自 Hungry Studio 的 Block Blast!
 Based on Level Devil by Unept	改编自 Unept 的 Level Devil
-Based on Cookie Clicker by Orteil	改编自 Orteil 的 Cookie Clicker
 # a game the RAM of the calculator's software is too small for
 Needs 	内存还差 
  KB more memory	 KB

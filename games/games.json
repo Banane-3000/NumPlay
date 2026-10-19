@@ -381,24 +381,6 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/twoplayer"
   },
   {
-    "id": "cookieclicker",
-    "title": "Cookie Clicker",
-    "tagline": "Click the cookie, bake billions",
-    "credit": "Based on Cookie Clicker by Orteil",
-    "top": "0x2E5480",
-    "bottom": "0x14263F",
-    "accent": "0xD9A25E",
-    "colors": 6,
-    "records": [
-      "cookieclicker.sav"
-    ],
-    "shots": [
-      "docs/shot.png"
-    ],
-    "app": "CookieClicker.nwa",
-    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/cookieclicker"
-  },
-  {
     "id": "numvisuals",
     "title": "NumVisuals",
     "tagline": "Backgrounds, clocks, timers",
