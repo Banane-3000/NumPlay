@@ -489,7 +489,7 @@ static void draw_object(const obj_t *o, int blocks) {
     for (int e = 0; e < 2; e++) {
       int ex = (e ? r[3] : x) * G + 8, ey = (e ? r[4] : y) * G + 12;
       gfx_rrect(ex - 8, ey - 12, 16, 24, 8, WHITE, 256);
-      gfx_rrect(ex - 5, ey - 9, 10, 18, 5, fg, 256);
+      gfx_rrect(ex - 5, ey - 9, 10, 18, 5, bg, 256);
     }
   } else if (kind == K_BUTTON) { /* (a ghost one: on a ceiling) */
     int down = touching(o), up = r[0] & F_GHOST;

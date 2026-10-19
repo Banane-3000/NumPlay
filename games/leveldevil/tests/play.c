@@ -268,6 +268,23 @@ int main(int argc, char **argv) {
     return 0;
   }
   if (argc < 2) return 2;
+  if (!strcmp(argv[1], "screens") && argc > 2) { /* the map, the menus and the end, with some progress */
+    static const struct {
+      int scr, ov, sel;
+      const char *name;
+    } screens[] = {{SC_HUB, OV_NONE, 0, "map"},  {SC_HUB, OV_HELP, 0, "help"},      {SC_PLAY, OV_PAUSE, 1, "pause"},
+                   {SC_PLAY, OV_QUIT, 1, "quit"}, {SC_HUB, OV_END, 0, "end"},       {SC_HUB, OV_NONE, 0, "banner"}};
+    setup(15, 4, 0);
+    sv.open = 12, sv.done = 0x7FF, sv.deaths = 173, sv.sel = 6, sv.run = 4;
+    for (int i = 0; i < LEVELS; i++) sv.best[i] = (uint16_t)(i * 3 % 7);
+    for (unsigned i = 0; i < sizeof screens / sizeof screens[0]; i++) {
+      scr = screens[i].scr, ov = screens[i].ov, sel = screens[i].sel, banner = i == 5 ? 4 : 0;
+      gfx_render(scr == SC_HUB ? hub_scene : play_scene, 0, 0, SCREEN_H);
+      snprintf(path, sizeof path, "%s/%s.ppm", argv[2], screens[i].name);
+      picture(path);
+    }
+    return 0;
+  }
   if (!strcmp(argv[1], "rooms") && argc > 2) {
     for (int i = 0; i < ROOM_COUNT; i++) {
       setup(i / ROOMS, i % ROOMS, 0);
