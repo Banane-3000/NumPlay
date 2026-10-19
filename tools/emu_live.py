@@ -12,17 +12,18 @@ To run:
     python tools/emu_live.py path/to/NumPlay.nwa
 
 The calculator skin does not depend on emu_live_skin.py; emu.py is still needed.
-V15 builds on V13's PC-key highlights and original framebuffer behavior.
-It reduces horizontal tears by presenting completed drawing bursts instead of
-publishing arbitrary partial screen writes; V14's LCD scanout is NOT included.
-V12 adds a Calculator / Screen only view toggle: a native 320x240, pixel-for-pixel LCD.
-V11 adds two clear file/live modes and runs the native Windows build watcher inside the app.
-V10 adds firmware text fallback and corrects off-screen display rectangle clipping.
-V9 keeps the V8 virtual-time SVC yields and optimizes full-width display transfers.
-An optional --profile-speed report distinguishes host CPU bottlenecks from pacing.
-Without SVC yields,
-Unicorn can execute hundreds of 16ms sleeps in one 1ms instruction-count batch,
-leaping seconds into the future before the GUI can process input.
+
+NumPlay Live Emulator V20 (stable):
+- Single file / Live development, automatic native Windows builds and reloads;
+- calculator skin / pixel-exact 320x240 screen, keyboard highlights;
+- tear-reduced frame presentation, usable Epsilon firmware text;
+- N0120 display-transfer timings calibrated using physical NumWorks results;
+- fixed 550 MHz N0120 / 216 MHz older-model baseline (approximate timing);
+- optional host-adaptive clock and opt-in speed diagnostics.
+
+This is not a cycle-accurate Cortex-M7 emulator: demanding NumDrive scenes can
+still be host-CPU-limited. This release excludes the experimental SRAM hooks and
+LCD scanout simulation. Saves and crash logs remain outside build/ and dist/.
 """
 from __future__ import annotations
 
@@ -73,6 +74,17 @@ LCD_UPDATE_INTERVAL_S = 1.0 / 40.0  # At most 40 displayed frames per second.
 LCD_QUIET_INTERVAL_S = 0.045  # Fallback: don't capture in the middle of a drawing burst.
 LCD_STALE_FRAME_S = 0.35  # Fallback for games with no obvious end-of-frame signal.
 WATCH_MS = 1000
+# First-pass N0120 measurements from the same Speed Probe on real hardware.
+# Solid fills: 24 * 320 * 152 pixels took 85 ms.
+# Pixel pushes: 120 * 320 * 16 pixels took 45 ms.
+# These two independent tests agree to within 0.6%: ~13.7 Mpix/s.
+# Charge a single shared LCD transfer time without sleeping the host thread.
+LCD_MS_PER_PIXEL = (85.0 / (24 * 320 * 152) + 45.0 / (120 * 320 * 16)) / 2
+# 120 18-character 7x14-pixel Epsilon text draws took 44 ms.
+# Partition approximate per-call and per-character cost; this is not a
+# replacement for a firmware-specific glyph rasterizer cycle model.
+FONT_CALL_MS = 0.030
+FONT_CHAR_MS = (44.0 / 120.0 - FONT_CALL_MS) / 18
 BG = "#151b24"
 PANEL = "#222c3b"
 PANEL_2 = "#2b3849"
@@ -331,6 +343,30 @@ class TracedCalculator(emu.Calculator):
         super().__init__(*args, **kwargs)
         self.font = FidelityFont()
         self.clipped_display_rects = 0
+        self.lcd_bus_ms = 0.0
+        self._lcd_unyielded_ms = 0.0
+
+    def _charge_lcd(self, uc, ms: float, svc: int):
+        """Account for real LCD transfers in virtual time, not host wall time.
+
+        The backend adds one virtual millisecond at the end of each Unicorn
+        instruction batch. If a display transfer exhausts the front-end's
+        2-ms time slice, exit the batch at the drawing call boundary so input,
+        reset and window events stay responsive. The -1 compensates for the
+        backend's unconditional +1 immediately after the Unicorn stop.
+        """
+        if ms <= 0:
+            return
+        self.now_ms += ms
+        self.lcd_bus_ms += ms
+        self._lcd_unyielded_ms += ms
+        if self._lcd_unyielded_ms >= 1.0:
+            elapsed = self._lcd_unyielded_ms
+            self._lcd_unyielded_ms = 0.0
+            self.last_svc_yield = (svc, uc.reg_read(emu.UC_ARM_REG_PC), elapsed)
+            self.svc_yield_count += 1
+            self.now_ms -= 1.0
+            uc.emu_stop()
 
     def _lcd_changed(self, complete_frame: bool = False):
         """Record a completed EADK write, but don't expose a partial redraw.
@@ -401,6 +437,7 @@ class TracedCalculator(emu.Calculator):
         self.fullwidth_blits += 1
         self.fullwidth_bytes += length
         self.fullwidth_copy_seconds += time.perf_counter() - started
+        self._charge_lcd(uc, w * h * LCD_MS_PER_PIXEL, svc)
         if svc in (19, 20):
             # Drawing one final full-width image strip is an actual application
             # frame boundary. A uniform color fill may be an initial clear,
@@ -432,6 +469,10 @@ class TracedCalculator(emu.Calculator):
                        bool(large & 0xFF), fg & 0xFFFF, bg)
         uc.reg_write(emu.UC_ARM_REG_PC, uc.reg_read(emu.UC_ARM_REG_LR))
         self._lcd_changed()
+        chars = len(text)
+        w, h = (10, 18) if (large & 0xFF) else (7, 14)
+        self._charge_lcd(uc, (FONT_CALL_MS + chars * FONT_CHAR_MS *
+                              (w * h) / (7 * 14)), -1)
 
     def _clipped_display(self, uc, svc: int) -> bool:
         """Keep original input-buffer row stride when an EADK rect is clipped.
@@ -467,6 +508,7 @@ class TracedCalculator(emu.Calculator):
                 self.screen[dst:dst + length] = color.to_bytes(2, "little") * w
         self.svc_counts[svc] = self.svc_counts.get(svc, 0) + 1
         self.insns += w * h // 4
+        self._charge_lcd(uc, w * h * LCD_MS_PER_PIXEL, svc)
         if svc in (19, 20) and w and h:
             self._lcd_changed(complete_frame=(svc == 19 and x == 0 and
                                               w == LCD_WIDTH and y + h == LCD_HEIGHT))
@@ -497,6 +539,11 @@ class TracedCalculator(emu.Calculator):
         # Run the backend's real SVC implementation: preserves keyboard,
         # flash, display, register returns, and all other NumPlay semantics.
         result = super()._intr(uc, intno, data)
+        if svc in (18, 19, 20):
+            # The backend performed an in-bounds partial-width transfer.
+            r1 = uc.reg_read(emu.UC_ARM_REG_R1)
+            pixels = (r1 & 0xFFFF) * (r1 >> 16)
+            self._charge_lcd(uc, pixels * LCD_MS_PER_PIXEL, svc)
         if svc in (19, 20):
             # The backend handles ordinary partial-width display writes.
             # Don't send Tk a half-drawn framebuffer at this SVC boundary.
@@ -703,7 +750,7 @@ class EmulatorWorker(threading.Thread):
                     profile_start_copy_seconds = app.fullwidth_copy_seconds
                     profile_cpu_seconds = profile_wait_seconds = 0.0
 
-                emu.CPU_HZ = max(27, min(216, int(self.clock_mhz[0]))) * 1_000_000
+                emu.CPU_HZ = max(27, min(550, int(self.clock_mhz[0]))) * 1_000_000
                 started = time.monotonic()
                 self.set_phase("running ARM CPU")
                 before_ms = float(app.now_ms)
@@ -838,7 +885,20 @@ class EmulatorWorker(threading.Thread):
                 self.emit("ended", "Application exited — press Power or Reload to restart")
         except Exception:
             self.set_phase("error")
-            self.emit("error", traceback.format_exc())
+            error_report = traceback.format_exc()
+            # Preserve the complete traceback even if the GUI dialog is closed.
+            # Never allow a diagnostic logging error to hide the original fault.
+            try:
+                error_log = SAVE_DIR.parent / "last-error.txt"
+                error_log.parent.mkdir(parents=True, exist_ok=True)
+                error_log.write_text(error_report, encoding="utf-8")
+            except OSError:
+                error_log = None
+            print(error_report, file=sys.stderr, flush=True)
+            if error_log is not None:
+                print(f"[NumPlay emulator] Full traceback: {error_log}",
+                      file=sys.stderr, flush=True)
+            self.emit("error", error_report)
         finally:
             if not app or not app.exited:
                 if self.phase != "error":
@@ -859,8 +919,13 @@ class LiveApp:
         self.model, self.system = model, system
         self.max_sleep_ms = max_sleep_ms
         self.profile_speed = profile_speed
-        self.clock_mhz = [216]   # Shared with the worker. Auto-controller updates this.
-        self.auto_clock = [True] # Can be toggled from the skinned sidebar.
+        # Match the requested calculator model by default. For N0120 the
+        # measured integer test was 58ms at 550MHz (52ms on physical hardware).
+        # This is a stable virtual-clock baseline, not a cycle-accurate model.
+        self.clock_mhz = [550 if model == "n0120" else 216]
+        # Host-adaptive mode dynamically changes the virtual clock and can
+        # distort game timing; make it opt-in, not the release default.
+        self.auto_clock = [False]
         self.powered_off = False
         self._power_key_held = False
         self.root.title("NumPlay Live Emulator")
@@ -1488,17 +1553,20 @@ class CalculatorSkinApp(LiveApp):
         self._options_menu.add_command(label="Build log…", command=self._show_build_log)
         self._options_menu.add_command(label="Open compiled files folder", command=self._open_dist)
         self._options_menu.add_separator()
-        self.auto_clock_var = tk.BooleanVar(master=self.root, value=True)
-        self.clock_option = tk.StringVar(master=self.root, value="216 MHz  (default)")
+        self.auto_clock_var = tk.BooleanVar(master=self.root, value=self.auto_clock[0])
+        self.clock_option = tk.StringVar(master=self.root, value=(
+            "550 MHz  (N0120 calibrated)" if self.model == "n0120"
+            else "216 MHz  (N0110 / N0115)"))
         clock_submenu = tk.Menu(self._options_menu, tearoff=0)
-        clock_submenu.add_checkbutton(label="Automatic CPU clock", variable=self.auto_clock_var,
-                                      command=self.toggle_auto_clock)
+        clock_submenu.add_checkbutton(label="Adaptive clock (host performance; less accurate)",
+                                      variable=self.auto_clock_var, command=self.toggle_auto_clock)
         clock_submenu.add_separator()
         self._manual_clock_menu = tk.Menu(clock_submenu, tearoff=0)
-        for clock in ("216 MHz  (default)", "108 MHz", "54 MHz", "27 MHz"):
+        for clock in ("550 MHz  (N0120 calibrated)", "216 MHz  (N0110 / N0115)",
+                      "108 MHz", "54 MHz", "27 MHz"):
             self._manual_clock_menu.add_radiobutton(label=clock, variable=self.clock_option,
                                                     value=clock, command=lambda value=clock: self.change_clock(value))
-        clock_submenu.add_cascade(label="Manual clock", menu=self._manual_clock_menu, state="disabled")
+        clock_submenu.add_cascade(label="Manual clock", menu=self._manual_clock_menu, state="normal")
         self._clock_submenu = clock_submenu
         self._options_menu.add_cascade(label="CPU settings", menu=clock_submenu)
         self._options_menu.add_command(label="Calculator artwork license ↗",
@@ -1936,7 +2004,10 @@ class CalculatorSkinApp(LiveApp):
         self.auto_clock[0] = bool(self.auto_clock_var.get())
         self._clock_submenu.entryconfigure("Manual clock", state="disabled" if self.auto_clock[0] else "normal")
         if self.auto_clock[0]:
-            self.set_status("Automatic CPU clock enabled; adjusts gradually.")
+            # The adaptive heuristic was tuned around 216MHz. Start it there
+            # to avoid a disruptive 550-to-216 jump on its first adjustment.
+            self.clock_mhz[0] = 216
+            self.set_status("Adaptive clock enabled; game timing may differ from hardware.")
         else:
             self.clock_mhz[0] = int(self.clock_option.get().split()[0])
             self.set_status(f"Manual CPU clock: {self.clock_mhz[0]} MHz")
@@ -2154,7 +2225,8 @@ class CalculatorSkinApp(LiveApp):
             # If a real .nwa still wedges, this tells us *where*, without
             # printing private save data or flooding PowerShell each frame.
             now = time.monotonic()
-            if now - self._last_stall_log_wall > 5.0:
+            if ((self.profile_speed or (phase == "running ARM CPU" and age >= 3.0))
+                    and now - self._last_stall_log_wall > 5.0):
                 self._last_stall_log_wall = now
                 print(f"[NumPlay emulator diagnostic] no frame for "
                       f"{now-self._last_frame_wall:.1f}s; phase={phase}; "
