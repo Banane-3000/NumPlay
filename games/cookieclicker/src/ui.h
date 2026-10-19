@@ -47,6 +47,7 @@ typedef struct {
   float asc_x, asc_y, asc_tx, asc_ty;   /* where the heavens are (and are going) */
   bool store_dirty;
   bool news_long;            /* the news goes by (too long for two lines) */
+  bool on_ticker;            /* the news ticker chosen (up from the top of the store) */
   int dirty;                 /* frames still to draw whole */
 } Ui;
 extern Ui U;

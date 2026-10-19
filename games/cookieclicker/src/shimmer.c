@@ -209,6 +209,7 @@ Shimmer *shimmer_new(int type, int force, bool no_count) {
   if (!m) return NULL;
   memset(m, 0, sizeof *m);
   m->used = 1, m->type = (uint8_t)type, m->force = (uint8_t)force, m->id = G.shimmers_id++;
+  m->pad[1] = (uint8_t)rnd_int(8);   /* (the season's picture: which heart, egg or familiar) */
   m->spawn_lead = 0;
   if (!no_count) {
     if (type == SHIMMER_GOLDEN) G.nshimmers_golden++;

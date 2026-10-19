@@ -120,7 +120,7 @@ typedef struct {
   uint16_t permanent[5], pad2;
   double lumps, lumps_total;
   double lump_t, lump_refill;   /* play time (ms) the current lump started, the refill was used */
-  uint8_t lump_type, pad3[7];
+  uint8_t lump_type, fortune_gc, fortune_cps, pad3[5];   /* fortune_*: the ticker's fortunes had this run */
   double start_date, full_date, play_time;   /* play time (ms): this ascension began, the game began, now */
   Building buildings[NB];
   uint8_t upgrades_unlocked[UBITS], upgrades_bought[UBITS], upgrades_vaulted[UBITS], achievements[ABITS];

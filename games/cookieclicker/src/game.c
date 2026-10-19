@@ -59,6 +59,7 @@ void game_new(void) {
   S.magic = 0x314B4343u, S.version = 1;
   S.prefs = (Prefs){.particles = 1, .numbers = 1, .milk = 1, .fancy = 1, .cursors = 1, .wobbly = 1, .notes_on = 0};
   S.research_t = -1, S.season_t = -1;
+  S.swaps = 3;
   S.bakery_name1 = (uint8_t)rnd_int(256), S.bakery_name2 = (uint8_t)rnd_int(256);
   for (int i = 0; i < MAX_BUFFS; i++) S.buffs[i].used = 0;
   for (int i = 0; i < 16; i++) G.effs[i] = 1;

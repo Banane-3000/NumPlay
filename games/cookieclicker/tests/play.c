@@ -6,7 +6,7 @@
  * Keys: left right up down ok exe back shift home alpha mul div toolbox var del xnt 0-9. "a-b:key" holds the
  * key from frame a to b, "a:key" for one frame (frames are thirtieths of a second; one is drawn every frame).
  * Presets set a bakery up before the keys play: start (a new game), early, mid, late, ascend (on the heavens),
- * grimoire (the wizard towers' minigame open), golden (a golden cookie on screen), wrath, wrinklers.
+ * grimoire and pantheon (the minigames open), golden (a golden cookie on screen), wrath, wrinklers.
  * --bot plays by itself: it clicks, buys the cheapest of what it can afford, catches golden cookies, and so on;
  * it prints what the bakery got to. Screenshots are DIR/shot_<frame>.ppm; --raw saves the frames drawn as RGB565
  * (DIR/frame_<ms>.raw, for NumPlay's tools/record.py --frames). The end prints the game's state. */
@@ -112,7 +112,7 @@ static void preset(const char *name) {
     buy_upgrades(2000);
     S.cookies = 1400;
   } else if (!strcmp(name, "mid") || !strcmp(name, "golden") || !strcmp(name, "wrath") || !strcmp(name, "grimoire") ||
-             !strcmp(name, "wrinklers")) {
+             !strcmp(name, "wrinklers") || !strcmp(name, "pantheon")) {
     S.cookies_earned = 6.2e9, S.cookie_clicks = 5400, S.handmade_cookies = 2.1e7;
     static const int n[] = {80, 70, 50, 40, 35, 25, 20, 15, 8, 3};
     for (int b = 0; b < 10; b++) own(b, n[b]);
@@ -134,6 +134,12 @@ static void preset(const char *name) {
       S.elder_wrath = 2;
       bit_set(S.upgrades_bought, U_ONE_MIND, true), bit_set(S.upgrades_bought, U_COMMUNAL_BRAINSWEEP, true);
       for (int i = 0; i < 6; i++) S.wrinklers[i].phase = 2, S.wrinklers[i].close = 1, S.wrinklers[i].hp = 2.1f;
+    }
+    if (!strcmp(name, "pantheon")) {
+      S.buildings[B_TEMPLE].level = 1;
+      S.gods[0] = GOD_INDUSTRY + 1, S.gods[2] = GOD_AGES + 1, S.swaps = 2;
+      S.on_minigame = B_TEMPLE + 1;
+      U.view = VIEW_ROWS;
     }
     if (!strcmp(name, "grimoire")) {
       S.buildings[B_WIZARD_TOWER].level = 1;

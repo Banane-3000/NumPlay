@@ -154,10 +154,13 @@ void draw_prompt(void) {
 /* ------------------------------------------------------------------ the news */
 #define NEWS_X 22
 void ui_news_next(void) {
-  U.news_cur ^= 1;
-  news_next(U.news[U.news_cur], sizeof U.news[0]);
-  U.news_fade = FPS / 2;
+  char t[sizeof U.news[0]];
+  news_next(t, sizeof t);
   U.news_t = 0;
+  if (!t[0]) return;   /* (nothing to say: the last news stays) */
+  U.news_cur ^= 1;
+  memcpy(U.news[U.news_cur], t, sizeof t);
+  U.news_fade = FPS / 2;
 }
 
 static int news_lines(const char *s, char lines[2][200], int w) {
@@ -211,6 +214,10 @@ void draw_news(void) {
     news_text(U.news[U.news_cur], (int)((1 - k) * 256), (int)(k * 8));
   } else
     news_text(U.news[U.news_cur], 256, 0);
+  if (U.on_ticker) {   /* (chosen: EXE presses it) */
+    gfx_rect(NEWS_X - 2, 0, SCREEN_W - NEWS_X + 2, NEWS_H - 2, RGB(255, 238, 200), 200);
+    gfx_fill_alpha(NEWS_X - 1, 1, SCREEN_W - NEWS_X, NEWS_H - 4, WHITE, 20);
+  }
   /* the sugar lump */
   if (can_lumps()) {
     int icon, icon2;
@@ -331,9 +338,20 @@ void ui_keys(uint32_t pressed, uint32_t held) {
     rows_keys(pressed);
     return;
   }
+  if (U.on_ticker) {   /* the news ticker, above the store */
+    if (pressed & K_DOWN) U.on_ticker = false, U.tip_t = TIP_TIME;
+    if (pressed & K_EXE) {
+      extern void ticker_click(void);
+      ticker_click();
+      ui_news_next();
+    }
+    return;
+  }
   if (pressed & (K_LEFT | K_RIGHT | K_UP | K_DOWN)) {
+    int sec = U.sec, idx = U.idx;
     store_move(pressed & K_LEFT ? -1 : pressed & K_RIGHT ? 1 : 0, pressed & K_UP ? -1 : pressed & K_DOWN ? 1 : 0);
-    U.tip_t = TIP_TIME;
+    if (pressed & K_UP && sec == U.sec && idx == U.idx) U.on_ticker = true, U.tip_t = 0;   /* (up past the top) */
+    else U.tip_t = TIP_TIME;
     scroll_to_selection();
   }
   if (pressed & K_EXE) {
@@ -411,7 +429,8 @@ void ui_tick(void) {
 void ui_frame(void) {
   ui_store_layout();
   bool page = U.overlay == OV_OPTIONS || U.overlay == OV_STATS || U.overlay == OV_INFO || U.overlay == OV_KEYS;
-  bool full = U.dirty > 0 || G.on_ascend || G.ascend_timer > 0 || G.reincarnate_timer > 0 ||
+  bool reindeer = G.nshimmers_reindeer > 0;   /* (it crosses the whole screen) */
+  bool full = U.dirty > 0 || G.on_ascend || G.ascend_timer > 0 || G.reincarnate_timer > 0 || reindeer ||
               G.draw_t % (page ? 10 : 6) == 0;
   if (U.dirty > 0) U.dirty--;
   if (full) gfx_render(0, 0, SCREEN_W, SCREEN_H, draw_all);

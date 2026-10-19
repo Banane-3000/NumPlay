@@ -295,6 +295,344 @@ def cname(s):
     return s
 
 
+# ------------------------------------------------------------------ the news ticker
+# The game's getNewTicker, read from main.js: each list.push(...) of its English branches becomes a template
+# (choices nested in \x10 ... \x11 ... \x12, the bakery's name and numbers as \x13 codes, random numbers as
+# \x14<n>:<add>;) with what makes it come up (NEWS_KINDS, read by news.c).
+NEWS_KINDS = ["GRANDMA", "GRANDMA_THREAT", "GRANDMA_ANGRY", "GRANDMA_RETURN", "SOLD_GRANDMA", "BUILDING", "SEASON",
+              "RARE_ACHIEV", "RARE_UPGRADE", "DUDE_SWEET", "WILL_WRIGHT", "MISC", "BUSINESS", "LORE", "WRATH",
+              "FOOLS", "FOOLS_RARE", "FOOLS_BUILDING", "FOOLS_LORE"]
+
+
+def js_tokens(src):
+    toks = []
+    i, n = 0, len(src)
+    while i < n:
+        c = src[i]
+        if c in " \t\r\n":
+            i += 1
+        elif src.startswith("//", i):
+            while i < n and src[i] != "\n":
+                i += 1
+        elif src.startswith("/*", i):
+            i = src.index("*/", i) + 2
+        elif c in "'\"":
+            j, out = i + 1, []
+            while src[j] != c:
+                if src[j] == "\\":
+                    nx = src[j + 1]
+                    out.append({"n": "\n", "t": "\t"}.get(nx, nx))
+                    j += 2
+                else:
+                    out.append(src[j])
+                    j += 1
+            toks.append(("s", "".join(out)))
+            i = j + 1
+        elif c.isalpha() or c == "_":
+            j = i
+            while j < n and (src[j].isalnum() or src[j] in "_."):
+                j += 1
+            toks.append(("i", src[i:j]))
+            i = j
+        elif c.isdigit():
+            j = i
+            while j < n and (src[j].isdigit() or src[j] == "."):
+                j += 1
+            toks.append(("n", src[i:j]))
+            i = j
+        else:
+            two = src[i:i + 2]
+            if two in ("==", "!=", ">=", "<=", "&&", "||"):
+                toks.append(("p", src[i:i + 3] if src[i:i + 3] in ("===", "!==") else two))
+                i += 3 if src[i:i + 3] in ("===", "!==") else 2
+            else:
+                toks.append(("p", c))
+                i += 1
+    return toks
+
+
+class NewsParser:
+    """the ticker's expressions: strings, +, choose([...]), loc(...), the few variables it uses"""
+
+    def __init__(self, toks, en_lists, animals):
+        self.t, self.i, self.en, self.animals = toks, 0, en_lists, animals
+
+    def peek(self, k=0):
+        return self.t[self.i + k] if self.i + k < len(self.t) else ("p", "")
+
+    def take(self, v=None):
+        tok = self.t[self.i]
+        if v is not None and tok[1] != v:
+            raise SystemExit(f"news: expected {v}, got {tok} near {self.t[self.i - 3:self.i + 3]}")
+        self.i += 1
+        return tok
+
+    def args(self):
+        self.take("(")
+        out = []
+        while self.peek()[1] != ")":
+            out.append(self.expr())
+            if self.peek()[1] == ",":
+                self.take(",")
+        self.take(")")
+        return out
+
+    def expr(self):
+        e = self.add()
+        if self.peek()[1] == "?":   # (EN ? a : b, or a plural)
+            self.take("?")
+            a = self.expr()
+            self.take(":")
+            b = self.expr()
+            if e == ("EN",):
+                return a
+            if e == ("PLURAL1",):
+                return ["\x13P"]
+            raise SystemExit(f"news: a ? b : c on {e}")
+        return e
+
+    def add(self):
+        parts = self.prim()
+        while self.peek()[1] == "+":
+            self.take("+")
+            parts = self.cat(parts, self.prim())
+        while self.peek()[1] in ("==", "<", ">"):   # (a comparison: only the plural's)
+            op = self.take()[1]
+            rhs = self.prim()
+            if parts == ["\x13Y"] and op == "==" and rhs == ["1"]:
+                parts = ("PLURAL1",)
+            else:
+                raise SystemExit(f"news: comparison {parts} {op} {rhs}")
+        return parts
+
+    @staticmethod
+    def cat(a, b):
+        if isinstance(a, tuple) or isinstance(b, tuple):
+            raise SystemExit(f"news: can't join {a} and {b}")
+        return a + b
+
+    def choice(self, alts):
+        return ["\x10" + "\x11".join("".join(x) for x in alts) + "\x12"]
+
+    def prim(self):
+        kind, v = self.take()
+        if kind == "s":   # (a grandma's words: "...", signed)
+            return [clean(v.replace("<sig>", " \u2013 ").replace("</sig>", "").replace("<q>", "\u201c")
+                          .replace("</q>", "\u201d"), False)]
+        if kind == "n":
+            return [v]
+        if v == "(":
+            e = self.expr()
+            self.take(")")
+            return e
+        if v == "[":
+            items = []
+            while self.peek()[1] != "]":
+                items.append(self.expr())
+                if self.peek()[1] == ",":
+                    self.take(",")
+            self.take("]")
+            return ("LIST", items)
+        if v == "choose":
+            (a,) = self.args()
+            if isinstance(a, tuple) and a[0] == "LIST":
+                return self.choice(a[1])
+            if isinstance(a, tuple) and a[0] == "LOCLIST":
+                return self.choice([[x] for x in a[1]])
+            if isinstance(a, list) and len(a) == 1 and a[0].startswith("\x10"):   # (choose(animals))
+                return a
+            raise SystemExit(f"news: choose of {a}")
+        if v == "loc":
+            a = self.args()
+            key = "".join(a[0])
+            if key in self.en and isinstance(self.en[key], list):
+                return ("LOCLIST", [clean(x, False) for x in self.en[key]])
+            text = self.en.get(key, key)
+            if isinstance(text, list):
+                text = text[0]
+            if text == "/":   # (EN.js: the key itself)
+                text = key
+            for k, arg in enumerate(a[1:]):
+                text = text.replace(f"%{k + 1}", "".join(arg))
+            return [clean(text, False)]
+        if v == "EN":
+            return ("EN",)
+        if v == "NEWS":
+            return ["News : "]
+        if v == "animals":
+            return self.choice([[clean(x, False)] for x in self.animals])
+        if v == "Game.bakeryName":
+            return ["\x13B"]
+        if v == "Game.Objects":   # (only Game.Objects['Grandma'].single)
+            self.take("[")
+            self.take()
+            self.take("]")
+            self.take(".")
+            assert self.take()[1] == "single"
+            return ["grandma"]
+        if v == "Beautify":
+            (a,) = self.args()
+            return a
+        if v == "Game.cookiesEarned":
+            return ["\x13E"]
+        if v == "Math.ceil":   # (Math.ceil(Game.cookiesEarned/8000000000))
+            self.take("(")
+            assert self.take()[1] == "Game.cookiesEarned" and self.take()[1] == "/" and self.take()[1] == "8000000000"
+            self.take(")")
+            return ["\x13Y"]
+        if v == "Math.floor":   # (Math.floor(Math.random()*n+add))
+            self.take("(")
+            assert self.take()[1] == "Math.random"
+            self.take("(")
+            self.take(")")
+            self.take("*")
+            n = self.take()[1]
+            self.take("+")
+            add = self.take()[1]
+            self.take(")")
+            return [f"\x14{n}:{add};"]
+        raise SystemExit(f"news: unknown {kind} {v}")
+
+
+def news_templates(ref):
+    """[(kind, arg, template)] of the game's English ticker"""
+    src = open(os.path.join(ref, "main.js"), encoding="utf-8").read()
+    a = src.index("Game.getNewTicker=function(manual)")
+    b = src.index("for (var i=0;i<Game.modHooks['ticker'].length;i++)", a)
+    body = src[a:b]
+    en_src = open(os.path.join(ref, "loc", "EN.js"), encoding="utf-8").read()
+    en = {}
+    for m in re.finditer(r'"(Ticker \([^"]*\))":\s*\[(.*?)\]', en_src, re.S):
+        en[m.group(1)] = [x for _, x in js_tokens("[" + m.group(2) + "]") if _ == "s"]
+    for m in re.finditer(r'^\s*"([^"]+)":\s*"((?:[^"\\]|\\.)*)"', en_src, re.M):
+        en.setdefault(m.group(1), m.group(2).replace('\\"', '"'))
+    animals = re.search(r"var animals=\[(.*?)\];", body).group(1)
+    animals = [v for k, v in js_tokens("[" + animals + "]") if k == "s"]
+    toks = js_tokens(body)
+    out = []
+    # walk the tokens: the blocks the pushes are in (their conditions), and each push's own condition
+    stack, pending, cond = [], None, []
+    i = 0
+    while i < len(toks):
+        k, v = toks[i]
+        if v == "if":
+            # the condition's tokens
+            j, depth = i + 1, 0
+            while True:
+                if toks[j][1] == "(":
+                    depth += 1
+                elif toks[j][1] == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            cond = toks[i + 2:j]
+            i = j + 1
+            if toks[i][1] == "{":
+                stack.append(cond)
+                cond = []
+                i += 1
+            continue
+        if v == "else":
+            i += 1
+            if toks[i][1] == "{":
+                stack.append([("i", "ELSE")])
+                i += 1
+            continue
+        if v == "{":
+            stack.append([])
+            i += 1
+            continue
+        if v == "}":
+            stack.pop()
+            i += 1
+            continue
+        if v == "list.push":
+            js = lambda ts: "".join("'" + t[1] + "'" if t[0] == "s" else t[1] for t in ts)
+            ctx = " ".join(js(c) for c in stack)
+            own = js(cond)
+            cond = []
+            if "!EN" in ctx or own.startswith("!EN"):   # (the other languages' lists: past them)
+                j, depth = i + 1, 0
+                while True:
+                    if toks[j][0] == "p":
+                        depth += {"(": 1, ")": -1}.get(toks[j][1], 0)
+                    j += 1
+                    if depth == 0:
+                        break
+                i = j
+                continue
+            p = NewsParser(toks, en, animals)
+            p.i = i + 1
+            args = p.args()
+            i = p.i
+            for arg in args:
+                if isinstance(arg, tuple) and arg[0] == "LOCLIST":
+                    arg = p.choice([[x] for x in arg[1]])
+                if isinstance(arg, tuple):
+                    raise SystemExit(f"news: push of {arg}")
+                kind, karg = news_kind(ctx, own)
+                if kind:
+                    out.append((kind, karg, "".join(arg)))
+            continue
+        if v == ";":
+            cond = []
+        i += 1
+    return out
+
+
+def news_kind(ctx, own):
+    """what makes a push come up: its block (ctx) and its own condition"""
+    fools = "Game.season=='fools'" in ctx and "EN&&" in ctx
+    m = re.search(r"Game\.Objects\['([^']+)'\]\.amount>0", own)
+    if fools:
+        if "Game.TickerN%2==0" in ctx and m:
+            return "FOOLS_BUILDING", m.group(1)
+        lm = re.match(r"loreProgress<=(\d+)$", own)
+        if lm:
+            return "FOOLS_LORE", int(lm.group(1))
+        if own == "Game.cookiesEarned>=1000":
+            return "FOOLS", 0
+        if own == "Game.cookiesEarned>=1000&&Math.random()<0.05":
+            return "FOOLS_RARE", 0
+        raise SystemExit(f"news: fools push under {own}")
+    if "Game.elderWrath>0" in ctx:
+        wm = re.match(r"Game\.elderWrath==(\d)$", own)
+        return "WRATH", int(wm.group(1))
+    if "list.length==0" in ctx:
+        lm = re.match(r"loreProgress<=(\d+)$", own)
+        return "LORE", int(lm.group(1))
+    if own.startswith("Game.Objects['Grandma'].amount>0"):
+        return "GRANDMA", 0
+    if own == "!Game.prefs.notScary&&Game.Objects['Grandma'].amount>=50":
+        return "GRANDMA_THREAT", 0
+    if own == "EN&&Game.HasAchiev('Just wrong')&&Math.random()<0.05":
+        return "SOLD_GRANDMA", 0
+    if own == "!Game.prefs.notScary&&Game.HasAchiev('Just wrong')&&Math.random()<0.4":
+        return "GRANDMA_ANGRY", 0
+    if own.startswith("!Game.prefs.notScary&&Game.Objects['Grandma'].amount>=1&&Game.pledges>0"):
+        return "GRANDMA_RETURN", 0
+    if m:
+        return "BUILDING", m.group(1)
+    sm = re.match(r"Game\.season=='(\w+)'&&Game\.cookiesEarned>=1000$", own)
+    if sm:
+        return "SEASON", sm.group(1)
+    if "Math.random()<0.05" in ctx:
+        am = re.match(r"Game\.HasAchiev\('([^']+)'\)$", own)
+        if am:
+            return "RARE_ACHIEV", am.group(1)
+        um = re.match(r"Game\.Has\('([^']+)'\)$", own)
+        if um:
+            return "RARE_UPGRADE", um.group(1)
+    if own == "Game.HasAchiev('Dude, sweet')&&Math.random()<0.2":
+        return "DUDE_SWEET", 0
+    if "Math.random()<0.001" in ctx:
+        return "WILL_WRIGHT", 0
+    if own == "Game.cookiesEarned>=10000":
+        return "MISC", 0
+    raise SystemExit(f"news: a push under '{ctx}' / '{own}'")
+
+
 ROW_FRAMES = {"javascriptconsole": 2, "idleverse": 4, "cortex": 4}
 
 
@@ -580,6 +918,26 @@ def main(ref, game_json):
                                u16(u["requireAch"]), SEASONS.get(u["season"], 0)) for u in L["unlockAt"])
     defs.append(f"#define OFF_UNLOCK_AT {P.put(rec, 8)}")
     defs.append(f"#define N_UNLOCK_AT {len(L['unlockAt'])}")
+
+    # ---- the news ticker: its templates, and what brings each up (news.c)
+    news = news_templates(ref)
+    objects = [o["name"] for o in G["objects"]]
+    ach_by_name = {a["name"]: a["id"] for a in G["achievements"]}
+    nrec = bytearray()
+    for kind, arg, text in news:
+        if kind in ("BUILDING", "FOOLS_BUILDING"):
+            arg = objects.index(arg)
+        elif kind == "SEASON":
+            arg = SEASONS[arg]
+        elif kind == "RARE_ACHIEV":
+            arg = ach_by_name[arg]
+        elif kind == "RARE_UPGRADE":
+            arg = up_by_name[arg]
+        nrec += struct.pack("<IBBH", T.add(text), NEWS_KINDS.index(kind), 0, arg)
+    defs.append(f"#define OFF_NEWS {P.put(bytes(nrec))}")
+    defs.append(f"#define N_NEWS {len(news)}")
+    for i, k in enumerate(NEWS_KINDS):
+        defs.append(f"#define NK_{k} {i}")
 
     # ---- the texts, the pictures' table
     text_off = P.put(bytes(T.blob))

@@ -71,13 +71,15 @@ Buff *find_buff(int type) {
 bool has_buff(int type) { return find_buff(type) != NULL; }
 
 /* the Pantheon and the dragon: their effects, once their parts are in */
-int hasgod(int god) {
-  for (int i = 0; i < 3; i++)
-    if (S.gods[i] == god + 1 && G.s.buildings[B_TEMPLE].level > 0 && S.ascension_mode != 1) return i + 1;
-  return 0;
-}
 extern float dragon_aura_mult(int aura);
 float aura_mult(int aura) { return dragon_aura_mult(aura); }
+int hasgod(int god) {
+  for (int i = 0; i < 3; i++)
+    if (S.gods[i] == god + 1 && G.s.buildings[B_TEMPLE].level > 0 && S.ascension_mode != 1)
+      return aura_mult(AURA_SUPREME_INTELLECT) > 0 ? (i > 1 ? i : 1) : i + 1;   /* (Supreme Intellect: a slot up) */
+  return 0;
+}
+
 
 /* ------------------------------------------------------------------ prices */
 static double modify_building_price(int b, double price) {

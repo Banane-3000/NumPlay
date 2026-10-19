@@ -185,7 +185,7 @@ void game_reset(bool hard) {
   S.start_date = S.play_time;
   S.cookies_sucked = 0, S.wrinklers_popped = 0;
   memset(S.wrinklers, 0, sizeof S.wrinklers);
-  S.santa_level = 0, S.reindeer_clicked = 0;
+  S.santa_level = 0, S.reindeer_clicked = 0, S.fortune_gc = 0, S.fortune_cps = 0;
   S.dragon_level = 0, S.dragon_aura = 0, S.dragon_aura2 = 0;
   S.ticker_clicks = 0;
   if (!hard && gained_prestige > 0) S.resets++;

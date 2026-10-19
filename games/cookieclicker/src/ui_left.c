@@ -203,6 +203,10 @@ static const char *const name_b[] = {"Cookie", "Machine", "Robot", "Headbanger",
                                      "Space Cowboy", "Toast", "Spaghetti", "Turtle", "Cat", "Kitten", "Dog", "Puppy",
                                      "Cookies", "Fungus", "Stew", "Machete", "Biscuit", "Crumb", "Fruitcake", "Saga",
                                      "Melon", "Pancake", "Waffle", "Mittens", "Feline", "Nose", "Nugget"};
+void bakery_name_short(char *out, int size) {
+  int a = S.bakery_name1 % (sizeof name_a / sizeof name_a[0]), b = S.bakery_name2 % (sizeof name_b / sizeof name_b[0]);
+  snprintf(out, size, "%s %s", name_a[a], name_b[b]);
+}
 void bakery_name(char *out, int size) {
   int a = S.bakery_name1 % (sizeof name_a / sizeof name_a[0]), b = S.bakery_name2 % (sizeof name_b / sizeof name_b[0]);
   snprintf(out, size, "%s %s's bakery", name_a[a], name_b[b]);
@@ -296,10 +300,31 @@ void draw_left(void) {
 }
 
 /* golden cookies, wrath cookies, the cookie storm's drops */
+/* the golden cookie's picture: the season's (wreaths, hearts, eggs, familiars) */
+static int golden_pic(const Shimmer *m) {
+  int w = m->wrath, k = m->pad[1];
+  switch (S.season) {
+    case SEASON_CHRISTMAS: return w ? IM_WRATH_WREATH : IM_GOLD_WREATH;
+    case SEASON_VALENTINES: return (w ? IM_HEART1_0 : IM_HEART0_0) + k % 8;
+    case SEASON_EASTER: return (w ? IM_BUNNY1_0 : IM_BUNNY0_0) + k % 4;
+    case SEASON_HALLOWEEN: return (w ? IM_FAMILIAR1_0 : IM_FAMILIAR0_0) + k % 4;
+    default: return w ? IM_WRATH_COOKIE : IM_GOLD_COOKIE;
+  }
+}
+
 void draw_shimmers(void) {
   for (int i = 0; i < MAX_SHIMMERS; i++) {
     const Shimmer *m = &G.shimmers[i];
-    if (!m->used || m->type != SHIMMER_GOLDEN) continue;
+    if (!m->used) continue;
+    if (m->type == SHIMMER_REINDEER) {   /* across the screen, bouncing */
+      float t = (float)m->life / (FPS * m->dur), k = t * 2 - 1;
+      float curve = 1 - powf(k, 12);
+      float x = m->x + (SCREEN_W + 62) * (1 - t), y = m->y - fabsf(sinf(m->life * 0.1f)) * 128 * 0.37f;
+      float sc = m->size_mult * (1 + sinf(m->id * 0.53f) * 0.1f);
+      gfx_image_rotated(IM_REINDEER, x + 31, y + 39, 62 * sc, 78 * sc, sinf(m->life * 0.2f + 0.3f) * 10 * (float)M_PI / 180,
+                        (int)(curve * 256));
+      continue;
+    }
     float k = (float)m->life / (FPS * m->dur) * 2 - 1;
     float curve = 1 - k * k * k * k;
     int id = m->id;
@@ -310,8 +335,7 @@ void draw_shimmers(void) {
               (1 + (0.06f + sinf(id * 0.41f) * 0.05f) * sinf(G.real_t * (0.25f + sinf(id * 0.73f) * 0.15f) + id));
     }
     float s = 36 * scale;
-    gfx_image_rotated(m->wrath ? IM_WRATH_COOKIE : IM_GOLD_COOKIE, m->x + 18, m->y + 18, s, s,
-                      rot * (float)M_PI / 180, (int)(curve * 256));
+    gfx_image_rotated(golden_pic(m), m->x + 18, m->y + 18, s, s, rot * (float)M_PI / 180, (int)(curve * 256));
   }
 }
 

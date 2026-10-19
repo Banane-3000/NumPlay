@@ -54,19 +54,27 @@ double garden_drop_price(int u, double price) {
 extern void grimoire_draw(void);
 extern void grimoire_keys(uint32_t pressed);
 extern int grimoire_tip(int x, int y, int w, bool draw);
+extern void pantheon_draw(void);
+extern void pantheon_keys(uint32_t pressed);
+extern int pantheon_tip(int x, int y, int w, bool draw);
 
-bool minigame_available(int b) { return b == B_WIZARD_TOWER && S.buildings[b].level > 0 && S.ascension_mode != 1; }
+bool minigame_available(int b) {
+  return (b == B_WIZARD_TOWER || b == B_TEMPLE) && S.buildings[b].level > 0 && S.ascension_mode != 1;
+}
 const char *minigame_name(int b) {
   return b == B_WIZARD_TOWER ? "Grimoire" : b == B_TEMPLE ? "Pantheon" : b == B_FARM ? "Garden" : "Stock Market";
 }
 void draw_minigame(int b) {
   if (b == B_WIZARD_TOWER) grimoire_draw();
+  else if (b == B_TEMPLE) pantheon_draw();
 }
 void minigame_keys(int b, uint32_t pressed) {
   if (b == B_WIZARD_TOWER) grimoire_keys(pressed);
+  else if (b == B_TEMPLE) pantheon_keys(pressed);
 }
 /* the tooltip of what is chosen in the panel: its height (0: none) */
 int minigame_tip(int b, int x, int y, int w, bool draw) {
   if (b == B_WIZARD_TOWER) return grimoire_tip(x, y, w, draw);
+  if (b == B_TEMPLE) return pantheon_tip(x, y, w, draw);
   return 0;
 }
