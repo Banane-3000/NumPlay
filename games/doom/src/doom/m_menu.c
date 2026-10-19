@@ -381,6 +381,10 @@ menu_t  NewDef =
 
 
 
+#if NUMWORKS
+#include "nw/nw_menu.inc"
+#endif
+
 //
 // OPTIONS MENU
 //
@@ -395,6 +399,12 @@ enum
     detail,
     scrnsize,
     option_empty1,
+#endif
+#if NUMWORKS
+    nw_bright,
+    nw_keys,
+    nw_cheats,
+    nw_more,
 #endif
 #if !NO_USE_MOUSE
     mousesens,
@@ -422,7 +432,12 @@ static const menuitem_t OptionsMenu[]=
     {2,VPATCH_NAME(M_MSENS),'m',	M_ChangeSensitivity},
     {-1,VPATCH_NAME_INVALID,'\0',0},
 #endif
-#if !NUMWORKS
+#if NUMWORKS
+    {2,VPATCH_NAME_INVALID,'b',	M_NwBrightness},
+    {1,VPATCH_NAME_INVALID,'k',	M_NwKeys},
+    {1,VPATCH_NAME_INVALID,'c',	M_NwCheats},
+    {1,VPATCH_NAME_INVALID,'o',	M_NwMore},
+#else
     {1,VPATCH_NAME(M_SVOL),'s',	M_Sound}
 #endif
 };
@@ -1005,37 +1020,49 @@ void M_DrawReadThis1(void)
 }
 
 #if NUMWORKS
-// the first page of Read This!: the calculator's keys, drawn by the renderer over a flat, band by band
-static const char *const keys_page[][2] = {
-    {"UP, DOWN", "WALK FORWARD, BACK"},
-    {"LEFT, RIGHT", "TURN"},
-    {"OK", "FIRE"},
-    {"EXE, BACKSPACE", "USE: DOORS, SWITCHES"},
-    {"HOLD SHIFT", "STRAFE WITH LEFT, RIGHT"},
-    {"X,N,T   VAR", "STRAFE LEFT, RIGHT"},
-    {"HOLD ALPHA", "RUN"},
-    {"1 TO 7", "WEAPONS"},
-    {"TOOLBOX", "AUTOMAP"},
-    {"   +  -", "ZOOM IN, OUT"},
-    {"   *  /  0", "FOLLOW, GRID, WHOLE MAP"},
-    {"SQUARE ROOT", "BRIGHTNESS"},
-    {"BACK", "MENU AND PAUSE"},
-    {"HOME", "KEEP THE MOMENT AND QUIT"},
+// the first page of Read This!: the calculator's keys as they are (the options can change them), drawn by the
+// renderer over a flat, band by band
+static const struct { const char *what; uint8_t actions[4]; } keys_page[] = {
+    {"WALK FORWARD, BACK", {NA_FORWARD, NA_BACKWARD}},
+    {"TURN", {NA_TURNLEFT, NA_TURNRIGHT}},
+    {"FIRE", {NA_FIRE}},
+    {"USE: DOORS, SWITCHES", {NA_USE}},
+    {"STRAFE (HELD)", {NA_STRAFE}},
+    {"STRAFE LEFT, RIGHT", {NA_STRAFELEFT, NA_STRAFERIGHT}},
+    {"RUN (HELD)", {NA_RUN}},
+    {"AUTOMAP", {NA_AUTOMAP}},
+    {"SCREEN SIZE, MAP ZOOM", {NA_BIGGER, NA_SMALLER}},
+    {"MAP: FOLLOW, GRID, ALL", {NA_FOLLOW, NA_GRID, NA_WHOLEMAP}},
+    {"BRIGHTNESS", {NA_GAMMA}},
+    {"QUICK SAVE, LOAD", {NA_QUICKSAVE, NA_QUICKLOAD}},
+    {"TYPE A CHEAT", {NA_CHEAT}},
+    {"MENU (PAUSES)", {NA_MENU}},
 };
 
 void M_DrawKeys(void)
 {
     static const char title[] = "THE CALCULATOR'S KEYS";
-    static const char menus[] = "IN MENUS: ARROWS, OK AND BACK";
-    int y = 22;
+    static const char weapons[] = "WEAPONS: THEIR NUMBERS. HOME KEEPS THE MOMENT.";
+    static const char menus[] = "IN MENUS: ARROWS, OK, BACK. OPTIONS: KEYS.";
+    int y = 20;
 
     M_WriteText((SCREENWIDTH - M_StringWidth(title)) / 2, 6, title);
-    for (unsigned i = 0; i < sizeof(keys_page) / sizeof(keys_page[0]); i++, y += 11)
+    for (unsigned i = 0; i < sizeof(keys_page) / sizeof(keys_page[0]); i++, y += 10)
     {
-        M_WriteText(20, y, keys_page[i][0]);
-        M_WriteText(128, y, keys_page[i][1]);
+        char keys[64], one[32];
+        keys[0] = 0;
+        for (int j = 0; j < 4 && keys_page[i].actions[j]; j++)
+        {
+            nw_keys_of(keys_page[i].actions[j], one, sizeof one);
+            if (!one[0]) continue;
+            if (keys[0]) M_StringConcat(keys, ", ", sizeof keys);
+            M_StringConcat(keys, one, sizeof keys);
+        }
+        M_WriteText(16, y, keys[0] ? keys : "-");
+        M_WriteText(160, y, keys_page[i].what);
     }
-    M_WriteText(20, y + 6, menus);
+    M_WriteText(16, y + 4, weapons);
+    M_WriteText(16, y + 14, menus);
 }
 #endif
 
@@ -1276,6 +1303,15 @@ void M_DrawOptions(void)
 #if !DOOM_TINY
     M_DrawThermo(OptionsDef.x,OptionsDef.y+LINEHEIGHT*(scrnsize+1),
 		 9,screenSize);
+#endif
+#if NUMWORKS
+    {
+        static const char *const levels[] = {"OFF", "1", "2", "3", "4"};
+        M_NwLine(&OptionsDef, nw_bright, "BRIGHTNESS", levels[usegamma]);
+        M_NwLine(&OptionsDef, nw_keys, "KEYS", NULL);
+        M_NwLine(&OptionsDef, nw_cheats, "CHEATS", NULL);
+        M_NwLine(&OptionsDef, nw_more, "MORE OPTIONS", NULL);
+    }
 #endif
 }
 
@@ -2273,6 +2309,10 @@ boolean M_Responder (event_t* ev)
 
     // Keys usable within menu
 
+#if NUMWORKS
+    if (M_NwSide(key))
+        return true;
+#endif
     if (key == key_menu_down)
     {
         // Move down to next item

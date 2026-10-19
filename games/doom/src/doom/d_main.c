@@ -276,7 +276,11 @@ boolean D_Display (void)
     // not sure what the reason for not drawing when gametic == 0 (i.e. the first frame of the game), however it means we
     // don't draw anything in a network game until the sync is done, which screws up what we see during the wipe. I haven't
     // seen any downside to doing the drawing.
+#if NUMWORKS
+    if (gamestate == GS_LEVEL && (!automapactive || am_overlay))
+#else
     if (gamestate == GS_LEVEL && !automapactive)
+#endif
 #endif
 	    R_RenderPlayerView (&players[displayplayer]);
 

@@ -41,6 +41,10 @@ void AM_Drawer (void);
 // Called to force the automap to quit
 // if the level is completed while it is up.
 void AM_Stop (void);
+#if NUMWORKS
+extern boolean am_overlay;
+extern int nw_map_overlay, nw_map_secrets;
+#endif
 
 
 extern cheatseq_t cheat_amap;

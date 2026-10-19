@@ -83,6 +83,10 @@
 #define THINGCOLORS	GREENS
 #define THINGRANGE	GREENRANGE
 #define SECRETWALLCOLORS WALLCOLORS
+#if NUMWORKS
+// (the options: secret doors and the edges of secret places in purple, until they are found)
+#define NW_SECRETCOLOR 252
+#endif
 #define SECRETWALLRANGE WALLRANGE
 #define GRIDCOLORS	(GRAYS + GRAYSRANGE/2)
 #define GRIDRANGE	0
@@ -560,8 +564,26 @@ void AM_LevelInit(void)
 //
 //
 //
+#if NUMWORKS
+// the automap over the game view, its black left out (the automap key goes from the view to the map, to the
+// map over the view if the options have it, and back); the options' choices (doom.cfg)
+boolean am_overlay;
+int nw_map_overlay = 1, nw_map_secrets;
+#endif
+
+#if NUMWORKS
+// the Cheats menu's IDDT: the whole map, then the things too, then as it was
+void AM_NwCheat(void)
+{
+    cheating = (cheating + 1) % 3;
+}
+#endif
+
 void AM_Stop (void)
 {
+#if NUMWORKS
+    am_overlay = false;
+#endif
     static event_t st_notify = { 0, ev_keyup, AM_MSGEXITED, 0 };
 
     AM_unloadPics();
@@ -693,9 +715,19 @@ AM_Responder
         }
         else if (key == key_map_toggle)
         {
+#if NUMWORKS
+            if (!am_overlay && nw_map_overlay)
+            {
+                am_overlay = true;
+                viewactive = true;
+            }
+            else
+#endif
+            {
             bigstate = 0;
             viewactive = true;
             AM_Stop ();
+            }
         }
         else if (key == key_map_maxzoom)
         {
@@ -1208,6 +1240,13 @@ void AM_drawWalls(void)
 		{ // teleporters
 		    AM_drawMline(&l, WALLCOLORS+WALLRANGE/2);
 		}
+#if NUMWORKS
+		else if (nw_map_secrets && ((line_flags(li) & ML_SECRET) || line_frontsector(li)->special == 9
+		                            || line_backsector(li)->special == 9))
+		{
+		    AM_drawMline(&l, NW_SECRETCOLOR);
+		}
+#endif
 		else if (line_flags(li) & ML_SECRET) // secret door
 		{
 		    if (cheating) AM_drawMline(&l, SECRETWALLCOLORS + lightlev);
@@ -1414,6 +1453,9 @@ void AM_Drawer (void)
     if (!automapactive) return;
     fb = I_VideoBuffer;
 
+#if NUMWORKS
+    if (!am_overlay)
+#endif
     AM_clearFB(BACKGROUND);
     if (grid)
 	AM_drawGrid(GRIDCOLORS);

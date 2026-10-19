@@ -76,8 +76,8 @@ save_png(thumb, os.path.join(media, "thumb_doom.png"))
 
 # Hangar: through the courtyard, the automap, the menu over the game, then the exit and the intermission
 walk = ("1500-2200:up,2200-2500:right,1700:ok,2700-3400:up,3400-3700:right,2900:ok,3900-4600:up,4600-4900:right,"
-        "4100:ok,5100-5800:up,5800-6100:right,6300-7000:up,7000-7300:right,9000:toolbox,10500:toolbox,11500:back,"
-        "13000:back,21000:ok")
+        "4100:ok,5100-5800:up,5800-6100:right,6300-7000:up,7000-7300:right,9000:toolbox,10500:toolbox,"
+        "10800:toolbox,11500:exe,13000:back,21000:ok")
 hangar_shots = {"hangar": 5200, "automap": 9800, "menu": 12400, "intermission": 19600}
 pics = play(["--warp", "11", "--exit-at", "14000", "--keys", walk], hangar_shots.values(), 20000)
 for name, t in hangar_shots.items():

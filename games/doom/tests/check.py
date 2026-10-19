@@ -89,7 +89,7 @@ if e:
     check(e["state"] == GS_FINALE, "E1M8's exit: the ending")
 
 # a new game from the menus: title, menu, New Game, the episode, Hurt Me Plenty; then the menus and the automap
-keys = "2000:ok,2700:ok,3400:ok,4100:ok,6000-8000:up,9000:toolbox,10000:plus,11000:toolbox,12000:back,12600:down," \
+keys = "2000:ok,2700:ok,3400:ok,4100:ok,6000-8000:up,9000:toolbox,10000:plus,11000:toolbox,12000:exe,12600:down," \
        "13000:down,13400:back,14000:back"
 e = run(["--keys", keys, "--ms", "16000"], what="a new game")
 if e:
@@ -98,7 +98,7 @@ if e:
 # saving in a slot from the menu, then loading it; Home keeps the moment, and the next start is back there
 saves = tempfile.mkdtemp(prefix="doom_saves_")
 # (the menu: Save Game is the fourth line; the first slot; its name is the level's: OK saves)
-save = "2000:ok,2700:ok,3400:ok,4100:ok,6000-7000:up,8000:back,8500:down,8800:down,9100:down,9600:ok,10200:ok,10800:ok"
+save = "2000:ok,2700:ok,3400:ok,4100:ok,6000-7000:up,8000:exe,8500:down,8800:down,9100:down,9600:ok,10200:ok,10800:ok"
 e = run(["--keys", save, "--ms", "13000"], saves=saves, what="a save in a slot")
 if e:
     check("doomsav0.dsg" in e["files"] and "doomres.sav" in e["files"] and "doom_saves.py" in e["files"],

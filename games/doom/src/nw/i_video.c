@@ -138,7 +138,8 @@ void nw_frame_end(void) {
  * with a margin each side for the clock (1 ms steps) and the panel's blanking time. */
 #define NW_SYNC_MARGIN (2 * 256)
 static int32_t nw_sync_period, nw_sync_t0;
-static int32_t nw_band_ms, nw_push_ms; /* (how long a band takes to make and to send, on average) */
+/* how long each band takes to make (the most it took lately: a frame late for its refresh tears) and to send */
+static int32_t nw_band_ms[SCREENWIDTH / NW_BAND_W], nw_push_ms;
 static int32_t nw_frame_r; /* the refresh this frame keeps to (its start) */
 static uint32_t nw_band_start;
 
@@ -190,7 +191,7 @@ static void nw_sync_band(int j) {
         while (nw_window_close(r, 0) < now) r += nw_sync_period;
         int32_t p = now > nw_window_open(r, 0) ? now : nw_window_open(r, 0);
         for (int k = 1; k < 5; k++) {
-            p += nw_band_ms + nw_push_ms;
+            p += nw_band_ms[k] + nw_push_ms;
             if (p < nw_window_open(r, k)) p = nw_window_open(r, k);
         }
         if (p > nw_window_close(r, 4)) r += nw_sync_period;
@@ -252,7 +253,8 @@ void nw_band_end(int x0, int x1) {
 #endif
     int j = nw_band_index++;
     int32_t made = (int32_t)(plat_millis() - nw_band_start) * 256;
-    nw_band_ms += (made - nw_band_ms) / 4;
+    int32_t *est = &nw_band_ms[j < SCREENWIDTH / NW_BAND_W ? j : 0];
+    *est = made > *est ? made : *est - (*est - made) / 16;
     if (nw_sync_period && !nw_sync_off) nw_sync_band(j);
     uint32_t t = plat_millis();
     if (nw_melting) {

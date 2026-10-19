@@ -74,10 +74,18 @@ class Panel(emu.Calculator):
         if self.ref * T < a.t0 or not self.frames:
             return
         self.refreshes += 1
-        best = min(int(np.count_nonzero(self.comp != f)) for f in self.frames + [self.mem])
+        cands = self.frames + [self.mem]
+        best = min(int(np.count_nonzero(self.comp != f)) for f in cands)
         if best:
             self.torn += 1
             self.torn_pixels.append(best)
+            # which of the frames each band of 64 columns shows (-1: none of them)
+            bands = []
+            for b in range(5):
+                cols = slice(64 * b, 64 * b + 64)
+                m = [k for k, f in enumerate(cands) if not np.count_nonzero(self.comp[:, cols] != f[:, cols])]
+                bands.append(m[-1] - len(cands) + 1 if m else None)
+            print(f"torn at {self.ref * T:.0f} ms: bands show frames {bands} (0 the last sent)", flush=True)
             if a.out and self.saved < 6:
                 from PIL import Image
                 c = self.comp.astype(np.uint32)

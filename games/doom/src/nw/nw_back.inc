@@ -438,7 +438,7 @@ static void nw_draw_band(uint8_t *band, int x0, int x1, bool view, int help, boo
     I_VideoBuffer = render_frame_buffer;
     nw_band_begin(band, x0, x1);
     if (view) {
-        if (automapactive) {
+        if (automapactive && !am_overlay) {
             nw_direct = true;
             AM_Drawer();
             nw_direct = false;
@@ -462,6 +462,12 @@ static void nw_draw_band(uint8_t *band, int x0, int x1, bool view, int help, boo
             nw_draw_view(x0, x1);
             nw_strip_x0 = 0;
             nw_strip_x1 = SCREENWIDTH;
+            if (automapactive) {
+                // (the map over the view)
+                nw_direct = true;
+                AM_Drawer();
+                nw_direct = false;
+            }
         }
         for (int y = viewheight; y < SCREENHEIGHT; y++) memset(render_frame_buffer + y * NW_STRIDE + x0, 0, x1 - x0);
     } else {
@@ -493,7 +499,7 @@ static void nw_draw_frame() {
     if (nw_scan_right_to_left) {
         // (a frame drawn band by band has its visplanes in each band's pass: the spans' starts in the bands
         // on the left are not known, and are taken where the band starts)
-        bool edges = view && !automapactive && !strips;
+        bool edges = view && (!automapactive || am_overlay) && !strips;
         if (edges) nw_plane_edges(band);
         for (int k = bands - 1; k >= 0; k--) {
             if (edges && k) {
@@ -578,7 +584,8 @@ void pd_end_frame(int wipe_start) {
     }
     if (force_strips) nw_overflowed = true;
 #endif
-    bool strips = view && !automapactive && nw_overflowed;
+    bool view3d = view && (!automapactive || am_overlay);
+    bool strips = view3d && nw_overflowed;
     nw_flats_ready();
     int fuzz_end = fuzzpos;
 #if HOST
@@ -595,7 +602,7 @@ void pd_end_frame(int wipe_start) {
     }
     if (view && getenv("FUZZTRACE")) printf("FUZZ %d %d %d%d\n", leveltime, fuzzpos, gameepisode, gamemap);
 #endif
-    if (view && !automapactive) {
+    if (view3d) {
         nw_col_frames[render_col_count / 250 < 40 ? render_col_count / 250 : 39]++;
         fuzz_end = nw_fuzz_prepass(fuzzpos);
     }

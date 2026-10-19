@@ -28,7 +28,9 @@ int nw_main(void);
 
 static const struct { const char *name; int key; } names[] = {
     {"left", 0}, {"up", 1}, {"down", 2}, {"right", 3}, {"ok", 4}, {"back", 5}, {"home", 6}, {"onoff", 8},
-    {"shift", 12}, {"alpha", 13}, {"xnt", 14}, {"var", 15}, {"toolbox", 16}, {"backspace", 17}, {"sqrt", 28},
+    {"shift", 12}, {"alpha", 13}, {"xnt", 14}, {"var", 15}, {"toolbox", 16}, {"backspace", 17}, {"exp", 18},
+    {"ln", 19}, {"log", 20}, {"i", 21}, {"comma", 22}, {"power", 23}, {"sin", 24}, {"cos", 25}, {"tan", 26},
+    {"pi", 27}, {"sqrt", 28}, {"square", 29}, {"lparen", 33}, {"rparen", 34}, {"ee", 50}, {"ans", 51},
     {"7", 30}, {"8", 31}, {"9", 32}, {"4", 36}, {"5", 37}, {"6", 38}, {"mul", 39}, {"div", 40}, {"1", 42},
     {"2", 43}, {"3", 44}, {"plus", 45}, {"minus", 46}, {"0", 48}, {"dot", 49}, {"exe", 52},
 };

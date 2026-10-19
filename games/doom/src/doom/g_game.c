@@ -2033,7 +2033,12 @@ void G_DoNewGame(boolean net)
 #if NUMWORKS
     if (nw_first_start)
     {
-        players[consoleplayer].message = "OK FIRES, EXE OPENS DOORS, BACK: MENU";
+        // (the keys as they are: the options can change them)
+        static char hint[80];
+        char fire[24], use[24], menu[24];
+        M_snprintf(hint, sizeof hint, "%s FIRES, %s OPENS DOORS, %s: MENU", nw_keys_of(NA_FIRE, fire, 12),
+                   nw_keys_of(NA_USE, use, 12), nw_keys_of(NA_MENU, menu, 12));
+        players[consoleplayer].message = hint;
         nw_first_start = false;
     }
 #endif
