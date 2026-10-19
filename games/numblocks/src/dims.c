@@ -345,4 +345,8 @@ void dims_credits(void) {
   player_to_spawn();
   camera_reset();
 }
+bool gen_stronghold_near(int x, int z, int *out) {
+  (void)x, (void)z, (void)out;
+  return false;
+}
 #endif

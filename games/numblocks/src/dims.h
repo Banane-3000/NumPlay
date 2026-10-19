@@ -47,6 +47,8 @@ bool dragon_beam(float *from, float *to);
 void dragon_offsets(int i, float pt, float *yaw, float *y);
 float dragon_anim(float pt);
 void throw_eye(int tx, int ty, int tz);   /* (mob.c) an eye of ender towards there */
+bool gen_stronghold_near(int x, int z, int *out);   /* (gen.c) where an eye of ender flies to from there */
+void pearl_land(float x, float y, float z);        /* (mob.c) the player's ender pearl lands there */
 enum { SKIN_CRYSTAL = 16, SKIN_DRAGON = 17 };   /* (the big skins: data.h's skin_crystal_px, skin_dragon_px) */
 void dims_credits(void);
 #endif

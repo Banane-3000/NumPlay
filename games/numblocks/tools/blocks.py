@@ -287,7 +287,20 @@ bd('NETHER_BRICK_SLAB', 44, 6, model='slab', tex='nether_brick', hard=2.0, tool=
 bd('QUARTZ_SLAB', 44, 7, model='slab', tex=tsb('quartz_block_top', 'quartz_block_side', 'quartz_block_bottom'),
    hard=2.0, tool='pickaxe')
 
-MODELS_DIMS = MODELS + ['portal', 'frame', 'endportal', 'egg']
+# what strongholds are built of past NumPlay's blocks (StructureStrongholdPieces): iron bars, stone brick
+# stairs, iron doors (as oak doors: lower half facing 0 east 1 south 2 west 3 north, + 4 open) and stone
+# buttons on a wall (BlockButton: 1 east, 2 west, 3 south, 4 north: the way it faces)
+bd('IRON_BARS', 101, model='pane', tex='iron_bars', hard=5.0, tool='pickaxe')
+for v, d in [(0, 'E'), (1, 'W'), (2, 'S'), (3, 'N')]:
+    bd(f'STONE_BRICK_STAIRS_{d}', 109, v, model='stairs', tex='stonebrick', hard=1.5, tool='pickaxe')
+for v, d in [(0, 'E'), (1, 'S'), (2, 'W'), (3, 'N'), (4, 'E_OPEN'), (5, 'S_OPEN'), (6, 'W_OPEN'), (7, 'N_OPEN')]:
+    bd(f'IRON_DOOR_LOWER_{d}', 71, v, model='door', tex='door_iron_lower', hard=5.0, tool='pickaxe')
+bd('IRON_DOOR_UPPER', 71, 8, model='door', tex='door_iron_upper', hard=5.0, tool='pickaxe')
+for v, d, bx in [(1, 'E', (0, 6, 5, 2, 10, 11)), (2, 'W', (14, 6, 5, 16, 10, 11)), (3, 'S', (5, 6, 0, 11, 10, 2)),
+                 (4, 'N', (5, 6, 14, 11, 10, 16))]:
+    bd(f'STONE_BUTTON_{d}', 77, v, model='button', tex='stone', hard=0.5, box=[bx])
+
+MODELS_DIMS = MODELS + ['portal', 'frame', 'endportal', 'egg', 'button']
 # every state of NumBlocks.nwa, by number: S, unused numbers (never a block), then D
 S_ALL = S + [dict(S[0], name=f'UNUSED_{i}') for i in range(len(S), FIRST_DIMS)] + D
 

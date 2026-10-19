@@ -29,6 +29,7 @@ static const MobInfo info[] = {
 #endif
 };
 #if NB_DIMS
+void ender_tp_random_(Entity *e);
 static bool fire_immune(int t);
 static bool neutral(int t);
 static float rnd_gauss(void);
@@ -601,6 +602,14 @@ static void arrow_tick(Entity *e) {
       if (fabsf(mx) < w && fabsf(mz) < w && ny > m->y - 0.1f && ny < m->y + info[m->type].h) {
         /* EntityArrow: damage 2 x speed, rounded up (a full draw sometimes more) */
         float dmg = arrow ? ceilf(sp * 2) + (sp > 2.9f ? rnd((int)(sp * 2) / 2 + 2) : 0) : 0;
+#if NB_DIMS
+        if (m->type == E_ENDERMAN && arrow) {   /* (EntityEnderman: arrows send it away) */
+          ender_tp_random_(m);
+          e->type = E_NONE;
+          return;
+        }
+        if (e->item.id == I_ENDER_PEARL) pearl_land(e->x, e->y, e->z);
+#endif
         hurt(m, dmg, e->vx, e->vz);
         if (!arrow && dmg == 0) m->vx += e->vx * 0.2f, m->vz += e->vz * 0.2f;
         e->type = E_NONE;
@@ -612,6 +621,9 @@ static void arrow_tick(Entity *e) {
     if (!arrow) {
       /* EntityEgg: one in eight hatches a chick (a chicken here) */
       if (e->item.id == I_EGG && rnd(8) == 0) spawn(E_CHICKEN, e->x, e->y, e->z);
+#if NB_DIMS
+      if (e->item.id == I_ENDER_PEARL) pearl_land(e->x, e->y, e->z);
+#endif
       e->type = E_NONE;
       return;
     }
@@ -1030,5 +1042,17 @@ void dims_hurt_(Entity *e, float dmg, float kx, float kz) {
   if (e->type == E_DRAGON) dragon_hurt(e, dmg);
   else if (e->type == E_CRYSTAL) crystal_gone(e);
   else dims_hurt(e, kx, kz);
+}
+#endif
+#if NB_DIMS
+void ender_tp_random_(Entity *e) { ender_tp_random(e); }
+/* EntityEnderPearl.onImpact: the player there, 5 of falling's harm */
+void pearl_land(float x, float y, float z) {
+  if (pl.dead || pl.sleep_timer) return;
+  for (int k = 0; k < 16; k++)
+    particle_add(x + (rndf() - 0.5f), y + rndf() * 2, z + (rndf() - 0.5f), 0, 0.05f, 0, 0xA01F, 20);
+  pl.x = x, pl.y = y, pl.z = z, pl.fall = 0;
+  pl.vx = pl.vy = pl.vz = 0;
+  player_hurt(5, DMG_FALL);
 }
 #endif

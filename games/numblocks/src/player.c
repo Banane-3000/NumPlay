@@ -575,6 +575,10 @@ static void sleep_in(int x, int y, int z) {
   pl.sleep_timer = 1;
 }
 
+#if NB_DIMS
+#include "player_dims.h"
+#endif
+
 /* OK pressed: use the block looked at, else the held item */
 static void use(uint32_t pressed) {
   Stack *h = held();
@@ -611,6 +615,9 @@ static void use(uint32_t pressed) {
       return;
     }
   }
+#if NB_DIMS
+  if (dims_use(k, on_block, x, y, z, b)) return;
+#endif
   switch (k) {
     case IK_BLOCK:
       if (on_block && place(h->id)) use_up(), player_swing();
@@ -970,6 +977,13 @@ void player_tick(uint32_t keys, uint32_t pressed) {
   /* PlayerControllerMP.onPlayerDamageBlock: looking at another block starts over */
   static int bx_ = -1, by_, bz_;
   if (pl.hit_x != bx_ || pl.hit_y != by_ || pl.hit_z != bz_) pl.breaking = 0, bx_ = pl.hit_x, by_ = pl.hit_y, bz_ = pl.hit_z;
+#if NB_DIMS
+  /* BlockDragonEgg.onBlockClicked: it goes elsewhere */
+  if ((pressed & K_ATTACK) && pl.hit_face >= 0 && pl.mode == 0 && world_get(pl.hit_x, pl.hit_y, pl.hit_z) == B_DRAGON_EGG) {
+    egg_teleport(pl.hit_x, pl.hit_y, pl.hit_z);
+    keys &= ~K_ATTACK;
+  }
+#endif
   if ((keys & K_ATTACK) && pl.hit_face >= 0 && !break_cooldown) {
     player_swing();
     int b = world_get(pl.hit_x, pl.hit_y, pl.hit_z);

@@ -473,7 +473,9 @@ DBLOCKS = [('NETHERRACK', 'Netherrack', 'NETHERRACK'), ('SOUL_SAND', 'Soul Sand'
                                                                    'CHISELED_QUARTZ'),
            ('PILLAR_QUARTZ', 'Pillar Quartz Block', 'PILLAR_QUARTZ'), ('QUARTZ_STAIRS', 'Quartz Stairs',
                                                                       'QUARTZ_STAIRS_E'),
-           ('QUARTZ_SLAB', 'Quartz Slab', 'QUARTZ_SLAB')]
+           ('QUARTZ_SLAB', 'Quartz Slab', 'QUARTZ_SLAB'), ('IRON_BARS', 'Iron Bars', 'IRON_BARS'),
+           ('STONE_BRICK_STAIRS', 'Stone Brick Stairs', 'STONE_BRICK_STAIRS_E'),
+           ('STONE_BUTTON', 'Button', 'STONE_BUTTON_E')]
 for n, lab, st in DBLOCKS:
     ditem(n, lab, None, 'dblock', place=st, icon_block=st)
 ditem('NETHERBRICK', 'Nether Brick', 'netherbrick')
@@ -486,6 +488,7 @@ ditem('MAGMA_CREAM', 'Magma Cream', 'magma_cream')
 ditem('ENDER_PEARL', 'Ender Pearl', 'ender_pearl', 'ender_pearl', stack=16)
 ditem('ENDER_EYE', 'Eye of Ender', 'ender_eye', 'ender_eye')
 ditem('FIRE_CHARGE', 'Fire Charge', 'fireball', 'fire_charge')
+ditem('IRON_DOOR', 'Iron Door', 'door_iron', 'placer', place='IRON_DOOR_LOWER_E')
 IDNAMES = [x['name'] for x in ID]
 I_ALL = I + ID
 DBNAMES = [s['name'] for s in blocks.D]
@@ -497,6 +500,12 @@ for d in 'EWSN':
     DITEM_OF[f'QUARTZ_STAIRS_{d}'] = 'QUARTZ_STAIRS'
 for age in range(4):
     DITEM_OF[f'NETHER_WART_{age}'] = 'NETHER_WART'
+for d in 'EWSN':
+    DITEM_OF[f'STONE_BRICK_STAIRS_{d}'] = 'STONE_BRICK_STAIRS'
+    DITEM_OF[f'STONE_BUTTON_{d}'] = 'STONE_BUTTON'
+for d in ['E', 'S', 'W', 'N', 'E_OPEN', 'S_OPEN', 'W_OPEN', 'N_OPEN']:
+    DITEM_OF[f'IRON_DOOR_LOWER_{d}'] = 'IRON_DOOR'
+DITEM_OF['IRON_DOOR_UPPER'] = None
 
 
 def resolve_dims(n):
@@ -540,10 +549,14 @@ RD.append(('MAGMA_CREAM', 1, None, ['BLAZE_POWDER', 'SLIME_BALL']))
 RD.append(('ENDER_EYE', 1, None, ['ENDER_PEARL', 'BLAZE_POWDER']))
 RD.append(('FIRE_CHARGE', 3, None, ['GUNPOWDER', 'BLAZE_POWDER', 'COAL']))
 RD.append(('FIRE_CHARGE', 3, None, ['GUNPOWDER', 'BLAZE_POWDER', 'CHARCOAL']))
+RD.append(('IRON_BARS', 16, ['###', '###'], {'#': 'IRON_INGOT'}))
+RD.append(('IRON_DOOR', 3, ['##', '##', '##'], {'#': 'IRON_INGOT'}))
+RD.append(('STONE_BRICK_STAIRS', 4, ['#  ', '## ', '###'], {'#': 'STONE_BRICKS'}))
+RD.append(('STONE_BUTTON', 1, None, ['STONE']))
 # the creative tabs: building blocks, decoration, materials, brewing, miscellaneous
 TAB_D = {'NETHER_BRICK_FENCE': 1, 'END_PORTAL_FRAME': 1, 'DRAGON_EGG': 1, 'NETHERBRICK': 10, 'QUARTZ': 10,
          'BLAZE_ROD': 10, 'NETHER_WART': 9, 'BLAZE_POWDER': 9, 'GHAST_TEAR': 9, 'MAGMA_CREAM': 9, 'ENDER_PEARL': 4,
-         'ENDER_EYE': 4, 'FIRE_CHARGE': 4}
+         'ENDER_EYE': 4, 'FIRE_CHARGE': 4, 'IRON_BARS': 1, 'IRON_DOOR': 2, 'STONE_BUTTON': 2}
 
 
 def tab_of_dims(iid):

@@ -296,9 +296,27 @@ enum {
   B_QUARTZ_STAIRS_N = 285,   /* 156:3 */
   B_NETHER_BRICK_SLAB = 286,   /* 44:6 */
   B_QUARTZ_SLAB = 287,   /* 44:7 */
-  B_ALL = 288
+  B_IRON_BARS = 288,   /* 101:0 */
+  B_STONE_BRICK_STAIRS_E = 289,   /* 109:0 */
+  B_STONE_BRICK_STAIRS_W = 290,   /* 109:1 */
+  B_STONE_BRICK_STAIRS_S = 291,   /* 109:2 */
+  B_STONE_BRICK_STAIRS_N = 292,   /* 109:3 */
+  B_IRON_DOOR_LOWER_E = 293,   /* 71:0 */
+  B_IRON_DOOR_LOWER_S = 294,   /* 71:1 */
+  B_IRON_DOOR_LOWER_W = 295,   /* 71:2 */
+  B_IRON_DOOR_LOWER_N = 296,   /* 71:3 */
+  B_IRON_DOOR_LOWER_E_OPEN = 297,   /* 71:4 */
+  B_IRON_DOOR_LOWER_S_OPEN = 298,   /* 71:5 */
+  B_IRON_DOOR_LOWER_W_OPEN = 299,   /* 71:6 */
+  B_IRON_DOOR_LOWER_N_OPEN = 300,   /* 71:7 */
+  B_IRON_DOOR_UPPER = 301,   /* 71:8 */
+  B_STONE_BUTTON_E = 302,   /* 77:1 */
+  B_STONE_BUTTON_W = 303,   /* 77:2 */
+  B_STONE_BUTTON_S = 304,   /* 77:3 */
+  B_STONE_BUTTON_N = 305,   /* 77:4 */
+  B_ALL = 306
 };
-enum { M_PORTAL = 19, M_FRAME = 20, M_ENDPORTAL = 21, M_EGG = 22 };
+enum { M_PORTAL = 19, M_FRAME = 20, M_ENDPORTAL = 21, M_EGG = 22, M_BUTTON = 23 };
 #define B_N B_ALL
 #else
 #define B_N B_COUNT
