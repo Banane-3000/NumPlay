@@ -184,8 +184,9 @@ static const Key k_spray[2] = {
   {{{0, 0, 0}, {5, 12, 0}, {-6, 12, 0}, AL(6, 74, 0), FL(24), AR(-105, 26, 0), FR(16), LL(-4, 6), SH(4), LR(6, 6), SH(6)}, 0},
 };
 static const Key k_catch[2] = {
-  {{{0, 0, 0}, {8, 0, 0}, {6, 0, 0}, AL(-70, 30, 0), FL(30), AR(-80, 25, 0), FR(25), LL(-10, 6), SH(8), LR(8, 6), SH(10)}, 0},
-  {{{0, 0, 0}, {10, 0, 0}, {10, 0, 0}, AL(-85, 32, 0), FL(40), AR(-70, 28, 0), FR(30), LL(-10, 6), SH(8), LR(8, 6), SH(10)}, 0},
+  /* (arms reaching forward: lowered, then swung up in front) */
+  {{{0, 0, 0}, {8, 0, 0}, {6, 0, 0}, AL(-70, 80, 0), FL(30), AR(-82, 80, 0), FR(25), LL(-10, 6), SH(8), LR(8, 6), SH(10)}, 0},
+  {{{0, 0, 0}, {10, 0, 0}, {10, 0, 0}, AL(-85, 80, 0), FL(40), AR(-68, 80, 0), FR(30), LL(-10, 6), SH(8), LR(8, 6), SH(10)}, 0},
 };
 static const Key k_trip = {
   /* a stumble: arms flung up, the body twisted */
@@ -269,7 +270,7 @@ static M34 body_root(const Model *m, V3 at, const Pose *p) {
   M34 r = translate(at.x, at.y + p->y, at.z), y = rot_y(p->yaw);
   r = mul(&r, &y);
   float a[3] = {p->lean + p->spin, 0, p->tilt};
-  M34 lt = rot_about(a, (V3){0, p->spin != 0 ? hy - 0.12f : p->lean < 0 ? 0.05f : hy, 0});
+  M34 lt = rot_about(a, p->spin != 0 ? (V3){0, hy, 0.1f} : (V3){0, p->lean < 0 ? 0.05f : hy, 0});
   return mul(&r, &lt);
 }
 
@@ -280,6 +281,11 @@ void actor_draw(int who, V3 at, const Pose *p, float lt) {
   M34 root = body_root(m, at, p);
   float a[NBONES][3];
   for (int i = 0; i < NBONES; i++) a[i][0] = p->a[i][0], a[i][1] = p->a[i][1], a[i][2] = p->a[i][2];
+  if (who == WHO_FRESH) {
+    /* his left hand up, holding the boombox on his shoulder */
+    a[BN_ARM_L][0] = 0.2f, a[BN_ARM_L][1] = -0.3f, a[BN_ARM_L][2] = -0.35f;
+    a[BN_FORE_L][0] = 0, a[BN_FORE_L][1] = 0.5f, a[BN_FORE_L][2] = -2.2f;
+  }
   draw_model(m, (const float(*)[3])a, &root, lt);
 }
 

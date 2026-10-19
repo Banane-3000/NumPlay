@@ -5,6 +5,7 @@
 #include <string.h>
 #include "actors.h"
 #include "app.h"
+#include "data.h"
 #include "draw.h"
 #include "game.h"
 #include "icons.h"
@@ -23,8 +24,8 @@ static char note[40];           /* the shop's word on the last try */
 static float note_t;
 static float cam_x, cam_y;      /* the run's camera, smoothed */
 static bool drawn;              /* a screen that does not move is drawn once, then again when something changes */
-#define CAM_Y 6.0f              /* above the ground */
-#define CAM_BACK 7.6f           /* behind the runner */
+#define CAM_Y 4.8f              /* above the ground */
+#define CAM_BACK 5.8f           /* behind the runner */
 
 /* colours of the game's screens */
 #define NAVY 0x0B2A55
@@ -356,11 +357,11 @@ static void draw_sparks(void) {
 static void draw_world(void) {
   r_begin();
   bool title = title_scene();
-  float tx = 0, ty = 2.2f, tz = -6.5f, tp = 0.1f;
+  float tx = 0, ty = 1.5f, tz = -4.9f, tp = 0.0f;
   if (title) scene_camera(tx, ty, tz, tp);
   else {
     /* the camera swings round from the title's view */
-    float k = intro >= 1 ? 1 : intro * intro * (3 - 2 * intro), pitch = 0.34f + (pl.fly > 0 ? 0.05f : 0);
+    float k = intro >= 1 ? 1 : intro * intro * (3 - 2 * intro), pitch = 0.3f + (pl.fly > 0 ? 0.06f : 0);
     /* a shake when the runner crashes */
     float shake = 0;
     if (pl.dead && pl.crash_t < 0.35f) {
@@ -370,8 +371,8 @@ static void draw_world(void) {
     }
     scene_camera(lerp(tx, cam_x, k) + shake, lerp(ty, cam_y, k) + shake * 0.5f, lerp(tz, pl.z - CAM_BACK, k), lerp(tp, pitch, k));
   }
-  scene_draw(clock);
   draw_runner();
+  scene_draw(clock);
   if (!title) draw_sparks();
 }
 
@@ -397,52 +398,69 @@ static void counter(int rx, int y, int which, const char *text) {
   d_label(&font_mid, rx, y, text, C(WHITE), C(NAVY), 2, 1);
 }
 
+/* the game's power-up timer: the picture on a blue tile, a bar of ten steps going down */
+static void timer(int x, int y, int which, float f, uint32_t fill) {
+  if (y > r_y1 || y + 24 < r_y0) return;
+  d_rrect(x, y, 24, 24, 6, C(0xFFFFFF), 255);
+  d_rrect(x + 1, y + 1, 22, 22, 5, C(0x2E8FE0), 255);
+  icon(which, (float)x + 12, (float)y + 12, 20);
+  d_rrect(x + 27, y + 7, 62, 11, 4, C(0xFFFFFF), 230);
+  int n = (int)(f * 10 + 0.99f);
+  for (int i = 0; i < 10; i++) d_fill(x + 29 + i * 6, y + 9, 5, 7, i < n ? C(fill) : C(0xC8CED6));
+}
+
 static void hud(void) {
-  /* the score, top right, the multiplier beside it, the coins under it */
-  d_label(&font_big, 312, 28, s_score, C(WHITE), C(NAVY), 2, 1);
-  int sw = d_text_width(&font_big, s_score);
-  int mx = 312 - sw - 22;
+  /* the pause button, top left (Back) */
   if (r_y0 < 34) {
-    d_panel(mx - 16, 8, 34, 22, 8, 2, NAVY, pl.power[PW_DOUBLE] > 0 ? 0xD58BFF : GOLD_T, pl.power[PW_DOUBLE] > 0 ? 0x8E3BE0 : GOLD_B);
-    d_label(&font_mid, mx + 1, 25, s_mult, C(WHITE), C(NAVY), 1, 0);
+    d_rrect(6, 6, 26, 26, 7, C(0xFFFFFF), 255);
+    d_rrect(8, 8, 22, 22, 6, C(0x4AA8F0), 255);
+    d_fill(14, 13, 4, 12, C(0xFFFFFF));
+    d_fill(20, 13, 4, 12, C(0xFFFFFF));
   }
-  counter(312, 52, ICON_COIN, s_coins);
-  /* power-ups running, top left: their picture and the time left */
-  int y = 10;
+  /* top right, on dark panels: the multiplier in yellow and the score; the coins under them */
+  char sc[16];
+  int n = 0;
+  while (s_score[n]) n++;
+  int pad = n < 6 ? 6 - n : 0;
+  for (int i = 0; i < pad; i++) sc[i] = '0';
+  sc[pad] = 0;
+  cat(sc, s_score);
+  int sw = d_text_width(&font_big, sc), mw = d_text_width(&font_mid, s_mult);
+  bool dbl = pl.power[PW_DOUBLE] > 0;
+  if (r_y0 < 34) {
+    d_rrect(314 - sw - mw - 22, 6, sw + mw + 18, 26, 6, C(0x14141E), 150);
+    d_label(&font_mid, 314 - sw - 10, 26, s_mult, C(dbl ? 0xFF8AF0 : 0xFFD23F), C(0x2A2008), 1, 1);
+    d_label(&font_big, 310, 28, sc, C(WHITE), C(0x14141E), 1, 1);
+  }
+  if (r_y0 < 62 && r_y1 > 34) {
+    int cw = d_text_width(&font_mid, s_coins);
+    d_rrect(314 - cw - 30, 36, cw + 30, 22, 6, C(0x14141E), 150);
+    d_label(&font_mid, 292, 53, s_coins, C(WHITE), C(0x14141E), 1, 1);
+    icon(ICON_COIN, 303, 47, 16);
+  }
+  /* power-ups running, at the bottom: the classic timers, side by side */
   static const uint8_t pics[PW_COUNT] = {ICON_JETPACK, ICON_SNEAKERS, ICON_MAGNET, ICON_DOUBLE};
-  for (int i = 0; i < PW_COUNT; i++) {
-    if (pl.power[i] <= 0) continue;
-    float f = pl.power[i] / power_time(i);
-    if (y < r_y1 && y + 26 > r_y0) {
-      d_rrect(6, y, 74, 24, 8, C(NAVY), 170);
-      icon(pics[i], 18, (float)y + 12, 20);
-      d_rrect(32, y + 9, 42, 7, 3, C(0x061A36), 255);
-      d_rrect(33, y + 10, (int)(40 * f) + 1, 5, 2, C(0x7CFF6A), 255);
-    }
-    y += 28;
+  int count = (pl.hover > 0) + (pl.headstart > 0);
+  for (int i = 0; i < PW_COUNT; i++) count += pl.power[i] > 0;
+  int x = 160 - (count * 98 - 8) / 2;
+  if (r_y1 > 206) {
+    for (int i = 0; i < PW_COUNT; i++)
+      if (pl.power[i] > 0) timer(x, 208, pics[i], pl.power[i] / power_time(i), 0xFFC21F), x += 98;
+    if (pl.headstart > 0) timer(x, 208, ICON_HEADSTART, pl.headstart / 4.5f, 0xFF8A20), x += 98;
+    if (pl.hover > 0) timer(x, 208, ICON_BOARD, pl.hover / 30, 0x7CFF6A);
   }
-  if (pl.headstart > 0 && y < r_y1 && y + 26 > r_y0) {
-    d_rrect(6, y, 74, 24, 8, C(NAVY), 170);
-    icon(ICON_HEADSTART, 18, (float)y + 12, 20);
-    d_rrect(33, y + 10, (int)(40 * pl.headstart / 4.5f) + 1, 5, 2, C(0xFFB020), 255);
-  }
-  /* the hoverboard, bottom right */
+  /* boards to use, bottom right */
   if (r_y1 > 200) {
-    if (pl.hover > 0) {
-      d_rrect(240, 206, 74, 26, 8, C(NAVY), 170);
-      icon(ICON_BOARD, 254, 219, 22);
-      d_rrect(268, 216, 42, 7, 3, C(0x061A36), 255);
-      d_rrect(269, 217, (int)(40 * pl.hover / 30) + 1, 5, 2, C(0x7FE8FF), 255);
-    } else if (pg.boards && !pl.dead) {
+    if (pl.hover <= 0 && pg.boards && !pl.dead && count == 0) {
       char s[12] = "OK x";
       fmt(s + 4, pg.boards, false);
-      d_rrect(236, 206, 78, 26, 8, C(NAVY), 150);
-      icon(ICON_BOARD, 252, 219, 22);
-      d_label(&font_small, 268, 224, s, C(WHITE), C(NAVY), 1, -1);
+      d_rrect(244, 208, 70, 24, 6, C(0x14141E), 150);
+      icon(ICON_BOARD, 258, 220, 20);
+      d_label(&font_small, 272, 225, s, C(WHITE), C(0x14141E), 1, -1);
     }
     /* the first seconds: a headstart (1), a score booster (3) */
     if (run.start_t < 5 && !pl.dead) {
-      int x = 6;
+      x = 6;
       if (pg.headstarts && pl.headstart <= 0) {
         d_panel(x, 204, 100, 30, 8, 2, NAVY, GOLD_T, GOLD_B);
         icon(ICON_HEADSTART, (float)x + 16, 219, 22);
@@ -492,7 +510,7 @@ static void help_overlay(void) {
 }
 
 static void title_overlay(void) {
-  if (r_y0 < 110) d_logo(160 - logo_w / 2, 6);
+  if (r_y0 < 110) d_image(160 - im_logo.w / 2, 2, &im_logo);
   /* coins and keys, top right; the best, top left */
   if (r_y0 < 30) {
     counter(312, 22, ICON_COIN, s_total);

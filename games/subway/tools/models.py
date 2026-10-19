@@ -33,26 +33,27 @@ PEOPLE = {
                  head=(30, 198), neck=190, chest=(192, 302), waist=302, knee=400, ankle=437,
                  arms=(186, 226), clip=56, elbow=118, wrist=166, depth=dict(head=0.98, chest=0.62, hips=0.72),
                  peak=dict(row=95, colour=(450, 106), size=(0.13, 0.11)),
-                 back=[("head", 0, 999, (445, 160)), ("chest", 0, 999, (455, 280)), ("hips", 0, 999, (480, 315)),
-                       ("leg", 446, 999, (455, 514))]),
+                 shoe=(236, 232, 222), logo=dict(box=(455, 33, 550, 66), row=258, width=0.3, height=0.2),
+                 back=[("head", 0, 999, (222, 218, 208)), ("chest", 0, 999, (118, 158, 198)), ("hips", 0, 999, (480, 315))]),
     "tricky": dict(src="3D_Models_5_Trickys.jpg", x=(250, 760), cx=505, height=1.72,
                    head=(18, 200), neck=192, chest=(198, 290), waist=290, knee=420, ankle=468,
                    arms=(182, 210), clip=56, elbow=120, wrist=196, depth=dict(head=0.95, chest=0.7, hips=0.75),
-                   hair_depth=(135, 0.16),
+                   hair_depth=(135, 0.16), shoe=(236, 232, 220),
                    back=[("head", 72, 999, (430, 160)), ("chest", 0, 258, (505, 240))]),
     "fresh": dict(src="3D_Models_Cathy_and_Fresh.jpg", x=(1200, 1800), cx=1500, height=1.78,
                   head=(26, 206), neck=200, chest=(204, 358), waist=358, knee=425, ankle=478,
                   arms=(222, 250), clip=56, elbow=125, wrist=180, depth=dict(head=0.98, chest=0.62, hips=0.75),
+                  shoe=(150, 150, 156), boombox=True,
                   back=[("head", 92, 186, (1458, 60)), ("head", 186, 999, (1470, 196))]),
     "spike": dict(src="3D_Models_Amira_and_Spike.jpg", x=(1200, 1800), cx=1498, height=1.85,
                   head=(25, 214), neck=208, chest=(212, 350), waist=350, knee=410, ankle=446,
                   arms=(240, 264), clip=50, elbow=110, wrist=168, depth=dict(head=0.98, chest=0.65, hips=0.75),
-                  mohawk=(106, 0.2), side=(104, (1499, 40)),
+                  mohawk=(106, 0.2), side=(104, (1499, 40)), shoe=(34, 30, 32),
                   back=[("head", 106, 186, (1484, 111)), ("head", 186, 999, (1470, 205)), ("chest", 0, 999, (1460, 300))]),
     "inspector": dict(src="3D_Models_Ballerina_Tricky_and_Guard_King.jpg", x=(1200, 1800), cx=1498, height=1.95,
                       head=(9, 206), neck=200, chest=(204, 385), waist=385, knee=455, ankle=468,
                       arms=(206, 250), clip=84, elbow=140, wrist=192, depth=dict(head=0.95, chest=0.9, hips=0.8),
-                      sym=True, belly=0.05,
+                      sym=True, belly=0.05, shoe=(70, 68, 72),
                       peak=dict(row=128, colour=(1470, 125), size=(0.15, 0.12)),
                       back=[("head", 0, 118, (1450, 85)), ("head", 118, 999, (1448, 146)), ("chest", 0, 999, (1440, 300))]),
 }
@@ -411,6 +412,17 @@ class Person:
             rings.append(((X((a + b) / 2), Y(py), cz), "y", rx, rz, bones))
         tube(head, rings, L(12, 9))
         self.parts.append(head)
+        if sp.get("boombox"):
+            # Fresh's boombox on his left shoulder: silver, its red speakers facing out, a dark handle
+            box = Part("boombox")
+            ax = joints["arm_l"][0]
+            cy = Y(sp["arms"][0]) + 0.2
+            blob(box, (ax - 0.1, cy, -0.02), (0.2, 0.13, 0.085), 4, 10, one("chest"), e1=0.3, e2=0.3)
+            blob(box, (ax - 0.1, cy + 0.15, -0.02), (0.13, 0.035, 0.025), 2, 6, one("chest"), e1=0.5, e2=0.5)
+            red, silver, dark = self.colour((214, 70, 40)), self.colour((168, 174, 182)), self.colour((40, 40, 46))
+            box.colour_fn = lambda m, n: (dark if m[1] > cy + 0.12 else
+                                          red if abs(n[2]) > 0.6 and abs(m[0] - ax + 0.1) < 0.15 and abs(m[1] - cy) < 0.09 else silver)
+            self.parts.append(box)
         if "peak" in sp:
             pk = sp["peak"]
             r = run_at(self.row(pk["row"]), cx - self.x0)
@@ -435,6 +447,38 @@ class Person:
             rings.append(((X((a + b) / 2), Y(py), belly), "y", rx, rx * dep["chest"] + belly, bones))
         tube(chest, rings, L(10, 8))
         self.parts.append(chest)
+
+        # Jake's vest: the cap's "Sub Surf" graffiti across its back (the game's), cut from the head's picture
+        if "logo" in sp:
+            lg = sp["logo"]
+            logo = Part("logo", "head")
+            logo.fixed_uv = True
+            py0 = lg["row"]
+            r = self.across(py0, py0 + 1, 1, clip=sp["clip"])[0]
+            rx = (r[2] - r[1]) / 2 * self.s
+            rz = rx * dep["chest"]
+            x0, y0, x1, y1 = lg["box"]
+            w, h = lg["width"], lg["height"]
+            grid = []
+            for j in range(3):
+                row = []
+                for i in range(5):
+                    u, v = i / 4, j / 2
+                    Xp = (u - 0.5) * w
+                    Yp = Y(py0) + (0.5 - v) * h
+                    Zp = -(rz * math.sqrt(max(0.0, 1 - (Xp / rx) ** 2)) + 0.012)
+                    k = logo.vert((Xp, Yp, Zp), one("chest"))
+                    tu = (x0 + u * (x1 - x0) - self.hx0) / (self.hx1 - self.hx0) * HEAD_TEX[0]
+                    tv = (y0 + v * (y1 - y0) - self.hy0) / (self.hy1 - self.hy0) * HEAD_TEX[1]
+                    logo.v[k][9], logo.v[k][10] = round(tu * 4), round(tv * 4)
+                    row.append(k)
+                grid.append(row)
+            for j in range(2):
+                for i in range(4):
+                    a, b, c, d = grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]
+                    add_tri(logo, a, b, c, 0, (0, Y(py0), 0))
+                    add_tri(logo, a, c, d, 0, (0, Y(py0), 0))
+            self.parts.append(logo)
 
         # the hips
         hips = Part("hips", "body")
@@ -529,11 +573,18 @@ class Person:
         backs = sp.get("back", [])
         for p in self.parts:
             smooth_normals(p)
-            for v in p.v:
-                v[9], v[10] = self.uv(p, v[0], v[1]) if p.tex else (0, 0)
+            if not getattr(p, "fixed_uv", False):
+                for v in p.v:
+                    v[9], v[10] = self.uv(p, v[0], v[1]) if p.tex else (0, 0)
             for t in p.t:
                 if not p.tex:
-                    t[3] = p.solid
+                    if hasattr(p, "colour_fn"):
+                        ps = [p.v[k] for k in t[:3]]
+                        m = [sum(q[k] for q in ps) / 3 for k in range(3)]
+                        n = norm([sum(q[3 + k] for q in ps) for k in range(3)])
+                        t[3] = p.colour_fn(m, n)
+                    else:
+                        t[3] = p.solid
                     continue
                 ps = [p.v[k] for k in t[:3]]
                 m = [sum(q[k] for q in ps) / 3 for k in range(3)]
@@ -542,11 +593,19 @@ class Person:
                 nx = sum(q[3] for q in ps) / 3
                 if "side" in sp and abs(nx) > 0.45 and p.name == "head" and self.py(m[1]) < sp["side"][0]:
                     t[3] = self.colour(self.sample((sp["side"][1][0], max(sp["side"][1][1], int(self.py(m[1]))))))
+                elif "shoe" in sp and p.name.startswith("leg") and self.py(m[1]) > sp["ankle"] + 4:
+                    # shoes: their heels from behind, their sides the colour a little in from the outline
+                    if nz < -0.3:
+                        t[3] = self.colour(sp["shoe"])
+                    elif abs(nx) > 0.45:
+                        lc = self.leg_centre(1 if p.name.endswith("_l") else -1)
+                        px = self.px(m[0])
+                        t[3] = self.colour(self.sample((int(lc + (px - lc) * 0.55), int(self.py(m[1])))))
                 elif nz < -0.15:
                     py = self.py(m[1])
                     for (name, r0, r1, pt) in backs:
                         if p.name.startswith(name) and r0 <= py < r1:
-                            t[3] = TEX if pt is None else self.colour(self.sample(pt))
+                            t[3] = TEX if pt is None else self.colour(pt if len(pt) == 3 else self.sample(pt))
                             break
         return self
 
@@ -580,7 +639,7 @@ DOG_PARENT = [-1, 0, 0, 0, 0, 0, 0]
 
 def dog():
     """The Inspector's dog (a stocky cream bull terrier with a red spiked collar), built of rounded shapes:
-    its own bones are the body, the head, four legs and the tail. Its colours are the game's (Dog.png)."""
+    its own bones are the body, the head, four legs and the tail, its colours those of the game's render of it."""
     pal = [0xE8D3B0, 0xC8A882, 0x5A2A22, 0xC8281E, 0xE4E4EA, 0x2A1410, 0xE89C94, 0xB08A66]
     FUR, FUR2, NOSE, COLLAR, STUD, EYE, EAR, SHADE = range(8)
     joints = [(0, 0.44, 0), (0, 0.6, 0.26), (-0.1, 0.36, 0.17), (0.1, 0.36, 0.17), (-0.09, 0.36, -0.19),

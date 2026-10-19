@@ -19,6 +19,7 @@ from PIL import Image, ImageDraw
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import models  # noqa: E402
+import scenery  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 REF = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "tools" / "ref"
@@ -55,6 +56,7 @@ class Out:
         rgb = Image.fromarray(px[..., :3].astype(np.uint8), "RGB")
         q = rgb.quantize(colors=n, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
         pal = q.getpalette()[:3 * n]
+        pal += [0] * (3 * n - len(pal))
         idx = np.asarray(q).astype(np.int32) + first
         seen = alpha >= 128
         if clear:
@@ -119,14 +121,15 @@ def sneaker_icon(size):
     im = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     k = S / 32
-    d.polygon([(2 * k, 25 * k), (4 * k, 12 * k), (12 * k, 10 * k), (16 * k, 16 * k), (28 * k, 18 * k), (30 * k, 25 * k)],
-              fill=(120, 40, 120))
-    d.polygon([(3.5 * k, 24 * k), (5.5 * k, 13.5 * k), (11.5 * k, 12 * k), (15 * k, 17.5 * k), (27 * k, 19.5 * k), (28.5 * k, 24 * k)],
-              fill=(214, 70, 200))
-    d.rectangle((2 * k, 24 * k, 30 * k, 29 * k), fill=(250, 246, 236))
-    d.rectangle((2 * k, 27.5 * k, 30 * k, 29 * k), fill=(190, 182, 170))
-    d.polygon([(22 * k, 2 * k), (29 * k, 9 * k), (25 * k, 9 * k), (25 * k, 16 * k), (19 * k, 16 * k), (19 * k, 9 * k), (15 * k, 9 * k)],
-              fill=(120, 220, 60), outline=(30, 110, 20))
+    # (the game's: a green sneaker on a yellow sole, a green arrow up over it, a dark outline)
+    d.polygon([(1 * k, 26 * k), (3 * k, 11 * k), (12 * k, 9 * k), (16 * k, 15 * k), (28 * k, 17 * k), (31 * k, 26 * k)],
+              fill=(20, 50, 30))
+    d.polygon([(3 * k, 24 * k), (5 * k, 12.5 * k), (11.5 * k, 11 * k), (15 * k, 17 * k), (27 * k, 19 * k), (29 * k, 24 * k)],
+              fill=(96, 196, 48))
+    d.polygon([(5 * k, 14 * k), (11 * k, 12.5 * k), (13 * k, 16 * k), (6 * k, 18 * k)], fill=(170, 236, 90))
+    d.rectangle((2 * k, 23.5 * k, 30 * k, 29 * k), fill=(250, 200, 40), outline=(20, 50, 30), width=int(k))
+    d.polygon([(22 * k, 1 * k), (30 * k, 9 * k), (25.5 * k, 9 * k), (25.5 * k, 16 * k), (18.5 * k, 16 * k), (18.5 * k, 9 * k),
+               (14 * k, 9 * k)], fill=(120, 230, 60), outline=(20, 50, 30), width=int(k))
     return im.resize((size, size), Image.LANCZOS)
 
 
@@ -180,18 +183,20 @@ def main():
                    ("double", "2x_Multiplier.png"), ("mystery", "Mystery_Box.png")):
         o.texture(f"tx_{key}", icon(REF / f, 32), clear=True, colors=48)
     o.texture("tx_sneakers", sneaker_icon(32), clear=True, colors=32)
+    # the world (tools/scenery.py)
+    see_through = {"tree", "graffiti_0", "graffiti_1", "graffiti_2", "graffiti_3", "tunnel"}
+    for name, draw in scenery.ALL.items():
+        o.texture(f"tx_{name}", draw(), clear=name in see_through, colors=64)
     # the screens' icons, at the sizes they are drawn
-    for key, f in (("coin", "Coin.png"), ("key", "Key.png"), ("double", "2x_Multiplier.png"), ("magnet", "Coin_Magnet.png"),
-                   ("jetpack", "Jetpack.png"), ("mystery", "Mystery_Box.png"), ("board", "Hoverboard.png"),
-                   ("headstart", "Headstart.png"), ("booster", "Score_Booster.png")):
-        o.image(f"im_{key}", icon(REF / f, 24))
-    o.image("im_sneakers", sneaker_icon(24))
-    o.image("im_coin_s", icon(REF / "Coin.png", 16))
-    o.image("im_key_s", icon(REF / "Key.png", 16))
+    for key, f in (("coin", "Coin.png"), ("key", "Key.png"), ("board", "Hoverboard.png"), ("jetpack", "Jetpack.png"),
+                   ("sneakers", None), ("magnet", "Coin_Magnet.png"), ("double", "2x_Multiplier.png"),
+                   ("mystery", "Mystery_Box.png"), ("headstart", "Headstart.png"), ("booster", "Score_Booster.png")):
+        for size, suffix in ((24, ""), (16, "_s")):
+            o.image(f"im_{key}{suffix}", icon(REF / f, size) if f else sneaker_icon(size))
     # the logo
     lg = Image.open(REF / "Logo_001.png").convert("RGBA")
     lg = lg.crop(lg.getbbox())
-    o.image("im_logo", lg.resize((190, round(lg.height * 190 / lg.width)), Image.LANCZOS), colors=32)
+    o.image("im_logo", lg.resize((156, round(lg.height * 156 / lg.width)), Image.LANCZOS), colors=32)
     # the textures' table
     o.h.append("")
     o.h.append("enum {")

@@ -4,6 +4,8 @@
 #   make host       build/play: the game on a computer, for tests and screenshots
 #   make test       the game played on a computer (tests/check.py, with the sanitizers)
 #   make assets     src/assets.c and src/icon.png again (tools/assets.py, tools/icon.py: Python + Pillow + NumPy)
+#   make data       src/data.c and src/data.h again: the people, the world's pictures, the icons and the logo, from the
+#                   Subway Surfers Wiki's pictures (tools/fetch.py gets them, tools/pack.py makes them)
 Q ?= @
 # the ARM toolchain on the PATH, or in TOOLCHAIN=<its bin folder>
 TOOLCHAIN ?=
@@ -26,7 +28,7 @@ LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
 LDFLAGS += -Wl,-e,main -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
 LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
 
-.PHONY: build check clean host test assets
+.PHONY: build check clean host test assets data
 build: $(BUILD_DIR)/subway.nwa
 
 # apps get 133652 bytes of RAM on custom builds of Epsilon 25.2 (148928 or more on official ones)
@@ -63,6 +65,10 @@ test: build/play
 assets:
 	python3 tools/assets.py src/assets.c
 	python3 tools/icon.py src/icon.png
+
+data:
+	python3 tools/fetch.py tools/ref
+	python3 tools/pack.py tools/ref
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) build

@@ -226,3 +226,22 @@ void d_logo(int x, int y) {
     }
   }
 }
+
+void d_image(int x, int y, const Image *im) {
+  int y0 = imax(y, r_y0), y1 = imin(y + im->h, r_y1);
+  for (int j = y0; j < y1; j++) {
+    const uint8_t *r = im->runs + im->rows[j - y], *e = im->runs + im->rows[j - y + 1];
+    uint16_t *p = row(j);
+    int i = x;
+    for (; r < e; r += 2) {
+      int n = r[0], v = r[1], a = v >> 5;
+      if (a) {
+        uint16_t c = im->pal[v & 31];
+        int t = a * 32 / 7;
+        for (int k = 0; k < n; k++)
+          if ((unsigned)(i + k) < SCREEN_W) p[i + k] = t >= 32 ? c : r_mix565(p[i + k], c, t);
+      }
+      i += n;
+    }
+  }
+}

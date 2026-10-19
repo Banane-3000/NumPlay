@@ -15,17 +15,25 @@ extern const Model model_inspector;
 extern const Model model_inspector_lo;
 extern const Model model_dog;
 extern const Image im_coin;
-extern const Image im_key;
-extern const Image im_double;
-extern const Image im_magnet;
-extern const Image im_jetpack;
-extern const Image im_mystery;
-extern const Image im_board;
-extern const Image im_headstart;
-extern const Image im_booster;
-extern const Image im_sneakers;
 extern const Image im_coin_s;
+extern const Image im_key;
 extern const Image im_key_s;
+extern const Image im_board;
+extern const Image im_board_s;
+extern const Image im_jetpack;
+extern const Image im_jetpack_s;
+extern const Image im_sneakers;
+extern const Image im_sneakers_s;
+extern const Image im_magnet;
+extern const Image im_magnet_s;
+extern const Image im_double;
+extern const Image im_double_s;
+extern const Image im_mystery;
+extern const Image im_mystery_s;
+extern const Image im_headstart;
+extern const Image im_headstart_s;
+extern const Image im_booster;
+extern const Image im_booster_s;
 extern const Image im_logo;
 
 enum {
@@ -46,6 +54,29 @@ enum {
   TX_DOUBLE = 14,
   TX_MYSTERY = 15,
   TX_SNEAKERS = 16,
+  TX_TRAIN_A_SIDE = 17,
+  TX_TRAIN_B_SIDE = 18,
+  TX_TRAIN_C_SIDE = 19,
+  TX_TRAIN_A_FRONT = 20,
+  TX_TRAIN_B_FRONT = 21,
+  TX_TRAIN_C_FRONT = 22,
+  TX_BOXCAR_SIDE = 23,
+  TX_BOXCAR_END = 24,
+  TX_ROOF_A = 25,
+  TX_ROOF_B = 26,
+  TX_ROOF_C = 27,
+  TX_ROOF_BOX = 28,
+  TX_ARCH_WALL = 29,
+  TX_CONCRETE = 30,
+  TX_TREE = 31,
+  TX_GRAFFITI_0 = 32,
+  TX_GRAFFITI_1 = 33,
+  TX_GRAFFITI_2 = 34,
+  TX_GRAFFITI_3 = 35,
+  TX_BARRIER = 36,
+  TX_CHEVRONS = 37,
+  TX_RAMP = 38,
+  TX_TUNNEL = 39,
 };
 #endif
 

@@ -6,6 +6,7 @@
  * before), and a row only reads its table at a steady step: no flicker on the far rails. The sleepers come
  * one row in so many: rows that see part of one get a table with them mixed in. */
 #include "actors.h"
+#include "data.h"
 #include "scene.h"
 
 #define GROUND_W 384               /* entries of the sharpest table: 12 m at 32 a metre */
@@ -36,7 +37,7 @@ static GroundRow rows[SCREEN_H];
 
 /* ---------------------------------------------------------------- the ground's colours */
 static uint32_t ground_at(float x, int kind) {
-  uint32_t edge = 0x9C8B78, bed = 0x86735F, ballast = 0x7A6957, wood = 0x5E4433, rail = 0xC9CFD6, rail_side = 0x6E7378;
+  uint32_t edge = 0x9A6A48, bed = 0x8E6E52, ballast = 0x7C624C, wood = 0x5A3A26, rail = 0xBCC0C6, rail_side = 0x55585E;
   uint32_t c = x < -4.2f || x > 4.2f ? edge : bed;
   for (int l = 0; l < 3; l++) {
     float d = x - LANE_X(l);
@@ -44,7 +45,7 @@ static uint32_t ground_at(float x, int kind) {
     if (d < 1.3f) c = ballast;
     if (d < 1.12f && kind == G_SLEEPER) c = wood;
     if (d >= 0.70f && d < 0.86f) c = d < 0.73f || d >= 0.83f ? rail_side : rail;
-    else if (d >= 0.86f && d < 0.92f && kind != G_SLEEPER) c = 0x4F4338;   /* the rail's shadow */
+    else if (d >= 0.86f && d < 0.92f && kind != G_SLEEPER) c = 0x5A4434;   /* the rail's shadow */
   }
   /* a little grain */
   uint32_t h = world_hash((uint32_t)((x + 8) * 32)) & 15;
@@ -227,100 +228,33 @@ static void cube(float x0, float y0, float z0, float x1, float y1, float z1, uin
   r_cube(x0, y0, z0, x1, y1, z1, L(rgb), skip);
 }
 
-/* ---------------------------------------------------------------- graffiti */
-static const uint32_t spray[8] = {0xFF4FA3, 0xFFD23F, 0x3FD0FF, 0x6BE04A, 0xFF8A2B, 0x9B5CFF, 0xFF3B3B, 0xF4F4F4};
-
-/* a 2D polygon (u along the wall, v up) put on the wall at x facing dir; mirrored on the right so that
- * it reads the same way round */
-static void on_wall(float x, int dir, float z0, float w, const float *uv, int n, uint32_t rgb, int flags) {
-  V3 v[8];
-  for (int i = 0; i < n; i++) {
-    float u = uv[2 * i];
-    v[i] = (V3){x, uv[2 * i + 1], dir > 0 ? z0 + u : z0 + w - u};
-  }
-  if (dir < 0)
-    for (int i = 0; i < n / 2; i++) {
-      V3 t = v[i];
-      v[i] = v[n - 1 - i], v[n - 1 - i] = t;
-    }
-  r_poly(v, n, L(r_shade(rgb, (V3){(float)dir, 0, 0})), flags, 0);
+/* ---------------------------------------------------------------- textured faces */
+/* a rectangle's corners a, b, c, d (clockwise as the camera sees them) with the picture's u0..u1 from a
+ * to b and v0..v1 from a to d, in texels (they repeat) */
+static void tquad(V3 a, V3 b, V3 c, V3 d, int tex, float u0, float v0, float u1, float v1, int flags) {
+  V3 v[4] = {a, b, c, d};
+  float uv[8] = {u0, v0, u1, v0, u1, v1, u0, v1};
+  r_poly_tex(v, uv, 4, tex, (int)lit, flags);
 }
-
-/* letters for the tags, on a grid 3 wide and 5 tall: their strokes as boxes (x0, y0, x1, y1) */
-typedef struct {
-  char c;
-  uint8_t n;
-  uint8_t bar[5][4];
-} Letter;
-static const Letter letters[] = {
-  {'S', 5, {{0, 4, 3, 5}, {0, 2, 1, 5}, {0, 2, 3, 3}, {2, 0, 3, 3}, {0, 0, 3, 1}}},
-  {'U', 3, {{0, 0, 1, 5}, {2, 0, 3, 5}, {0, 0, 3, 1}}},
-  {'B', 5, {{0, 0, 1, 5}, {0, 4, 2, 5}, {0, 2, 3, 3}, {0, 0, 3, 1}, {2, 0, 3, 5}}},
-  {'W', 3, {{0, 0, 1, 5}, {2, 0, 3, 5}, {1, 0, 2, 3}}},
-  {'A', 4, {{0, 0, 1, 5}, {2, 0, 3, 5}, {0, 4, 3, 5}, {0, 2, 3, 3}}},
-  {'Y', 3, {{0, 2, 1, 5}, {2, 2, 3, 5}, {0, 2, 3, 3}}},
-  {'R', 5, {{0, 0, 1, 5}, {0, 4, 3, 5}, {2, 2, 3, 5}, {0, 2, 3, 3}, {2, 0, 3, 2}}},
-  {'F', 3, {{0, 0, 1, 5}, {0, 4, 3, 5}, {0, 2, 2, 3}}},
-  {'E', 4, {{0, 0, 1, 5}, {0, 4, 3, 5}, {0, 2, 2, 3}, {0, 0, 3, 1}}},
-  {'J', 3, {{2, 0, 3, 5}, {0, 0, 3, 1}, {0, 0, 1, 2}}},
-  {'K', 4, {{0, 0, 1, 5}, {0, 2, 2, 3}, {2, 3, 3, 5}, {2, 0, 3, 2}}},
-  {'O', 4, {{0, 0, 1, 5}, {2, 0, 3, 5}, {0, 4, 3, 5}, {0, 0, 3, 1}}},
-  {'N', 3, {{0, 0, 1, 5}, {2, 0, 3, 5}, {0, 4, 3, 5}}},
-  {'C', 3, {{0, 0, 1, 5}, {0, 4, 3, 5}, {0, 0, 3, 1}}},
-  {'L', 2, {{0, 0, 1, 5}, {0, 0, 3, 1}}},
-  {'T', 2, {{0, 4, 3, 5}, {1, 0, 2, 5}}},
-  {'H', 3, {{0, 0, 1, 5}, {2, 0, 3, 5}, {0, 2, 3, 3}}},
-  {'I', 1, {{1, 0, 2, 5}}},
-  {'D', 4, {{0, 0, 1, 5}, {0, 4, 2, 5}, {0, 0, 2, 1}, {2, 1, 3, 4}}},
-  {'P', 4, {{0, 0, 1, 5}, {0, 4, 3, 5}, {2, 2, 3, 5}, {0, 2, 3, 3}}},
-  {'G', 5, {{0, 0, 1, 5}, {0, 4, 3, 5}, {0, 0, 3, 1}, {2, 0, 3, 3}, {2, 2, 3, 3}}},
-  {'!', 2, {{1, 2, 2, 5}, {1, 0, 2, 1}}},
-};
-static const char *const words[] = {"SURF", "SUBWAY", "JAKE", "YO!", "RUN", "COOL", "WOW", "FRESH", "TRICKY", "SPIKE",
-                                    "HEY", "RAD", "GO!", "FUN", "TAG", "HOP", "BOLT", "YEAH", "PARK", "DASH"};
-
-static const Letter *letter(char c) {
-  for (unsigned i = 0; i < sizeof letters / sizeof letters[0]; i++)
-    if (letters[i].c == c) return &letters[i];
-  return NULL;
+/* a textured wall at x facing +x (dir 1) or -x (dir -1), from (z0, y0) to (z1, y1), u along z and v
+ * down: it reads the right way round from the tracks */
+static void side_tex(float x, int dir, float z0, float z1, float y0, float y1, int tex, float u0, float u1, float v0, float v1,
+                     int flags) {
+  uint32_t keep = lit;
+  if (dir > 0) tquad((V3){x, y1, z0}, (V3){x, y1, z1}, (V3){x, y0, z1}, (V3){x, y0, z0}, tex, u0, v0, u1, v1, flags);
+  else tquad((V3){x, y1, z1}, (V3){x, y1, z0}, (V3){x, y0, z0}, (V3){x, y0, z1}, tex, u0, v0, u1, v1, flags);
+  lit = keep;
 }
-
-/* a piece of graffiti, w metres wide and h tall, from its number: a word in bubble-bright letters leaning
- * forward, with a shadow, on a cloud of another colour */
-static void graffiti(float x, int dir, float z0, float w, float h, uint32_t seed, float dist) {
-  uint32_t s = world_hash(seed);
-  const char *word = words[s % (sizeof words / sizeof words[0])];
-  int n = 0;
-  while (word[n]) n++;
-  uint32_t cloud = (s >> 5) & 1 ? 0x1D1D2B : 0xF8F8F8, shadow = (s >> 5) & 1 ? 0x0A0A12 : 0x30304A;
-  uint32_t fill = spray[(s >> 8) % 7], second = spray[((s >> 8) % 7 + 1 + (s >> 12) % 5) % 7];
-  /* the letters' size: the word fills the width, at most the height */
-  float cell = w / ((float)n * 4.2f + 1), lh = cell * 5;
-  if (lh > h * 0.7f) lh = h * 0.7f, cell = lh / 5;
-  float ww = cell * ((float)n * 4.2f - 1.2f), u0 = (w - ww) / 2, v0 = (h - lh) / 2 + 0.25f, lean = 0.22f;
-  /* the cloud behind: a rounded box */
-  float cu0 = u0 - cell * 1.1f, cu1 = u0 + ww + cell * 1.1f + lean * lh, cv0 = v0 - cell * 1.2f, cv1 = v0 + lh + cell * 1.1f, r = cell * 1.2f;
-  float c[16] = {cu0 + r, cv1, cu1 - r, cv1, cu1, cv1 - r, cu1, cv0 + r, cu1 - r, cv0, cu0 + r, cv0, cu0, cv0 + r, cu0, cv1 - r};
-  on_wall(x, dir, z0, w, c, 8, cloud, P_DECAL);
-  if (dist > 85 * detail) return;
-  for (int i = 0; i < n; i++) {
-    const Letter *L = letter(word[i]);
-    if (!L) continue;
-    float lu = u0 + (float)i * cell * 4.2f;
-    uint32_t col = i & 1 ? second : fill;
-    for (int b = 0; b < L->n; b++) {
-      float x0 = lu + L->bar[b][0] * cell, x1 = lu + L->bar[b][2] * cell;
-      float y0 = v0 + L->bar[b][1] * cell, y1 = v0 + L->bar[b][3] * cell;
-      /* leaning: the higher, the further along */
-      float q[8] = {x0 + lean * (y1 - v0), y1, x1 + lean * (y1 - v0), y1, x1 + lean * (y0 - v0), y0, x0 + lean * (y0 - v0), y0};
-      if (dist < 50 * detail) {
-        float d = cell * 0.35f;
-        float sh[8] = {q[0] + d, q[1] - d, q[2] + d, q[3] - d, q[4] + d, q[5] - d, q[6] + d, q[7] - d};
-        on_wall(x, dir, z0, w, sh, 4, shadow, P_DECAL2);
-      }
-      on_wall(x, dir, z0, w, q, 4, col, P_DECAL3);
-    }
-  }
+/* facing the camera (-z) */
+static void front_tex(float z, float x0, float x1, float y0, float y1, int tex, float u0, float u1, float v0, float v1, int flags) {
+  uint32_t keep = lit;
+  tquad((V3){x0, y1, z}, (V3){x1, y1, z}, (V3){x1, y0, z}, (V3){x0, y0, z}, tex, u0, v0, u1, v1, flags);
+  lit = keep;
+}
+/* a picture standing up, facing the camera, see-through where it is (trees) */
+static void billboard(float x, float y, float z, float hw, float h, int tex, int size) {
+  tquad((V3){x - hw, y + h, z}, (V3){x + hw, y + h, z}, (V3){x + hw, y, z}, (V3){x - hw, y, z}, tex, 0, 0, (float)size,
+        (float)size, P_TWOSIDED);
 }
 
 /* ---------------------------------------------------------------- the yard */
@@ -331,12 +265,19 @@ static void building(int dir, float z0, float z1, float near_x, float depth, flo
   cube(x0, 0, z0, x1, h, z1, col, 2);
   if (dist > 110 * detail) return;
   /* windows, floor by floor, on the side facing the tracks and the end facing the camera */
-  uint32_t glass = L(0x2C4A6E);
+  uint32_t glass = L(0x2C4A6E), sill = L(0xF4EEDC);
   float wx = dir > 0 ? x1 : x0;
   for (float y = 3.6f; y + 1.6f < h - 0.8f; y += 3.2f) {
-    side(wx, dir, z0 + 0.8f, z1 - 0.8f, y, y + 1.5f, glass, P_DECAL);
+    if (dist < 60 * detail)
+      for (float wz = z0 + 1.0f; wz + 1.4f < z1 - 0.6f; wz += 2.6f) {
+        side(wx, dir, wz - 0.12f, wz + 1.52f, y - 0.2f, y + 1.7f, sill, P_DECAL);
+        side(wx, dir, wz, wz + 1.4f, y, y + 1.5f, glass, P_DECAL2);
+      }
+    else side(wx, dir, z0 + 0.8f, z1 - 0.8f, y, y + 1.5f, glass, P_DECAL);
     if (dist < 70 * detail) front(z0, x0 + 0.8f, x1 - 0.8f, y, y + 1.5f, glass, P_DECAL);
   }
+  /* the roof's edge */
+  cube(x0 - 0.2f, h, z0 - 0.2f, x1 + 0.2f, h + 0.4f, z1 + 0.2f, r_mix888(col, 0, 70), 2);
 }
 
 /* a station: platforms on both sides under a roof on pillars, tiles, posters and the station's sign */
@@ -353,10 +294,9 @@ static void station_side(int dir, float z0, float dist, uint32_t hs) {
   if (dist < 100 * detail) {
     for (int k = 0; k < 3; k++) {
       float pz = z0 + 2.5f + (float)k * 8;
-      uint32_t c = spray[(hs >> (k * 3)) % 7];
-      side(back + 0.01f * -s, dir, pz, pz + 2.2f, 2.0f, 4.2f, L(0x2A2A30), P_DECAL);
-      side(back + 0.01f * -s, dir, pz + 0.12f, pz + 2.08f, 2.12f, 4.08f, L(c), P_DECAL2);
-      side(back + 0.01f * -s, dir, pz + 0.4f, pz + 1.8f, 2.5f, 3.0f, L(0xF8F8F8), P_DECAL3);
+      side(back + 0.01f * -s, dir, pz, pz + 2.6f, 2.0f, 4.2f, L(0x2A2A30), P_DECAL);
+      side_tex(back + 0.02f * -s, dir, pz + 0.12f, pz + 2.48f, 2.12f, 4.08f, TX_GRAFFITI_0 + (int)((hs >> (k * 3)) % 4), 0, 64, 0, 32,
+               P_DECAL2);
     }
     side(back + 0.01f * -s, dir, z0 + 9.6f, z0 + 14.4f, 4.6f, 5.6f, L(0x2E5FA8), P_DECAL);
     side(back + 0.01f * -s, dir, z0 + 10.0f, z0 + 14.0f, 4.9f, 5.3f, L(0xF4F4F4), P_DECAL2);
@@ -372,62 +312,120 @@ static void station_side(int dir, float z0, float dist, uint32_t hs) {
   cube(r0, 6.4f, z0, r1, 7.0f, z0 + BLOCK, 0x2E5FA8, 1 | 2 | 4 | 8 | 32);
 }
 
+/* the orange viaduct of the classic yard: arches, its coping, bushy trees over it */
+#define VIADUCT_H 4.3f
+static void viaduct(int dir, float z0, float dist, uint32_t hs) {
+  float wx = dir > 0 ? -WALL_X : WALL_X, back = dir > 0 ? -WALL_X - 1.4f : WALL_X + 1.4f;
+  side_tex(wx, dir, z0, z0 + BLOCK, 0, VIADUCT_H, TX_ARCH_WALL, 0, 128, 0, 64, 0);
+  /* the coping's top */
+  float a = dir > 0 ? back : wx, b = dir > 0 ? wx : back;
+  quad((V3){a, VIADUCT_H, z0 + BLOCK}, (V3){b, VIADUCT_H, z0 + BLOCK}, (V3){b, VIADUCT_H, z0}, (V3){a, VIADUCT_H, z0}, L(0xF58A4A), 0);
+  if (dist > 110 * detail) return;
+  /* the trees beyond it, in two rows */
+  for (int k = 0; k < 5; k++) {
+    uint32_t g = world_hash(hs + (uint32_t)k * 977u);
+    float tz = z0 + 2.0f + (float)k * 4.8f + (float)(g & 7) * 0.2f;
+    float far = (float)((g >> 3) & 1);
+    float tx = (8.2f + far * 4.0f + (float)((g >> 4) & 3) * 0.5f) * (dir > 0 ? -1.0f : 1.0f);
+    float size = 7.0f + (float)((g >> 6) & 3) * 0.9f + far * 1.5f;
+    billboard(tx, VIADUCT_H - 2.8f + far * 0.6f, tz, size * 0.55f, size, TX_TREE, 64);
+  }
+}
+
+/* a grey wall of concrete with graffiti, buildings behind */
+static void concrete(int dir, float z0, float dist, uint32_t hs, bool buildings) {
+  float wx = dir > 0 ? -WALL_X : WALL_X, wh = 4.0f;
+  float outer = dir > 0 ? wx - 0.5f : wx + 0.5f;
+  side_tex(wx, dir, z0, z0 + BLOCK, 0, wh, TX_CONCRETE, 0, 128, 0, 32, 0);
+  float a = dir > 0 ? outer : wx, b = dir > 0 ? wx : outer;
+  quad((V3){a, wh, z0 + BLOCK}, (V3){b, wh, z0 + BLOCK}, (V3){b, wh, z0}, (V3){a, wh, z0}, L(0xC8C2B6), 0);
+  if (dist < 110 * detail)
+    for (int k = 0; k < 2; k++) {
+      uint32_t g = world_hash(hs + (uint32_t)k * 31);
+      if (g % 4 == 0) continue;
+      float gz = z0 + 1.5f + (float)k * 12 + (float)(g >> 8 & 3) * 0.5f, gw = 7.0f + (float)(g >> 12 & 3) * 0.6f;
+      side_tex(wx + (dir > 0 ? 0.02f : -0.02f), dir, gz, gz + gw, 0.3f, 0.3f + gw * 0.5f, TX_GRAFFITI_0 + (int)((g >> 16) & 3), 0, 64,
+               0, 32, P_DECAL);
+    }
+  for (int k = 0; k < 2 && buildings; k++) {
+    uint32_t g = world_hash(hs * 3 + (uint32_t)k);
+    float bh = 9 + (float)(g % 14), depth = 8 + (float)(g >> 4 & 7);
+    float bz = z0 + (float)k * 12 + 0.6f;
+    building(dir, bz, bz + 10.8f, 7.0f + (float)(g >> 8 & 3), depth, bh, house[(g >> 12) & 7], dist);
+  }
+}
+
+/* a bridge over water: blue steel trusses on both sides, beams across overhead */
+static void bridge(float z0, float dist) {
+  uint32_t water = L(0x2F86C8), shine = L(0x6FB6E6), steel = 0x2F6FB4;
+  for (int dir = -1; dir <= 1; dir += 2) {
+    float s = (float)-dir, e = 4.5f * s;
+    /* the water, and the deck's edge */
+    float xa = s < 0 ? -90 : e, xb = s < 0 ? e : 90;
+    quad((V3){xa, -1.2f, z0 + BLOCK}, (V3){xb, -1.2f, z0 + BLOCK}, (V3){xb, -1.2f, z0}, (V3){xa, -1.2f, z0}, water, 0);
+    if (dist < 60) {
+      float xc = s < 0 ? -30 : 12, xd = s < 0 ? -12 : 30;
+      quad((V3){xc, -1.19f, z0 + 14}, (V3){xd, -1.19f, z0 + 14}, (V3){xd, -1.19f, z0 + 13}, (V3){xc, -1.19f, z0 + 13}, shine, P_DECAL);
+    }
+    side(e, -dir, z0, z0 + BLOCK, -1.2f, 0.02f, L(0x6E6A64), 0);
+    /* the truss: posts, diagonals, the top chord */
+    float tx = 5.3f * s;
+    for (int k = 0; k < 4; k++) {
+      float pz = z0 + (float)k * 6;
+      cube(tx - 0.25f, 0, pz, tx + 0.25f, 8.0f, pz + 0.4f, steel, 2);
+      if (dist < 120 * detail) {
+        V3 dg[4] = {{tx, 7.6f, pz + 0.4f}, {tx, 7.6f, pz + 1.0f}, {tx, 0.2f, pz + 6.0f}, {tx, 0.2f, pz + 5.4f}};
+        r_poly(dg, 4, L(r_shade(steel, (V3){-s, 0, 0})), P_TWOSIDED, 0);
+      }
+    }
+    cube(tx - 0.3f, 7.6f, z0, tx + 0.3f, 8.3f, z0 + BLOCK, steel, 0);
+    cube(tx - 0.3f, 0, z0, tx + 0.3f, 0.6f, z0 + BLOCK, steel, 2);
+  }
+  /* beams across, overhead */
+  for (int k = 0; k < 2; k++) cube(-5.3f, 7.7f, z0 + (float)k * 12, 5.3f, 8.2f, z0 + (float)k * 12 + 0.4f, 0x2A62A4, 0);
+}
+
+/* the overhead line: a gantry across the tracks and a wire over each one */
+static void catenary(float z0, float dist) {
+  float gz = z0 + 12;
+  uint32_t pole = 0x4E5A66;
+  cube(-5.2f, 0, gz, -4.85f, 7.8f, gz + 0.35f, pole, 2);
+  cube(4.85f, 0, gz, 5.2f, 7.8f, gz + 0.35f, pole, 2);
+  cube(-5.4f, 7.4f, gz, 5.4f, 7.8f, gz + 0.35f, 0x3A4450, 0);
+  if (dist > 90 * detail) return;
+  for (int l = 0; l < 3; l++) {
+    float x = LANE_X(l);
+    cube(x - 0.06f, 6.9f, gz + 0.1f, x + 0.06f, 7.4f, gz + 0.25f, 0x26262A, 2);
+    V3 w[4] = {{x - 0.03f, 6.9f, z0 + BLOCK}, {x + 0.03f, 6.9f, z0 + BLOCK}, {x + 0.03f, 6.9f, z0}, {x - 0.03f, 6.9f, z0}};
+    r_poly(w, 4, L(0x2A2A2E), P_TWOSIDED, 0);
+  }
+}
+
+/* the scenery's plan, beside the game's: now and then three blocks of bridge */
+static bool bridge_at(int b) {
+  if (b < 12) return false;
+  int g = b / 10, k = b % 10;
+  uint32_t h = world_hash((uint32_t)g * 2654435761u + 17 + world_seed) % 100;
+  return h >= 45 && h < 72 && k >= 4 && k <= 6;
+}
+
 static void open_block(int b, float z0, float dist) {
   uint32_t h = world_hash((uint32_t)b * 7919u + 3 + world_seed);
   bool before_tunnel = world_tunnel(z0 + BLOCK + 1);
+  catenary(z0, dist);
+  if (bridge_at(b)) {
+    bridge(z0, dist);
+    return;
+  }
   /* now and then a station: two blocks in a row */
   bool station = !before_tunnel && !world_tunnel(z0 - 1) && world_hash((uint32_t)(b / 2) * 31u + world_seed) % 9 == 0 && z0 > 200;
+  /* the classic yard: mostly the orange viaduct, now and then a stretch of concrete wall and houses */
+  bool walls = world_hash((uint32_t)(b / 3) * 131u + world_seed) % 3 == 0;
   for (int dir = -1; dir <= 1; dir += 2) {
     uint32_t hs = world_hash(h + (uint32_t)(dir + 1));
-    if (station) {
-      station_side(dir, z0, dist, hs);
-      continue;
-    }
-    float wx = dir > 0 ? -WALL_X : WALL_X;   /* the wall's face towards the tracks: the left one faces +x */
-    float wh = 3.4f + (float)(hs % 3) * 0.4f;
-    static const uint32_t walls[6] = {0xB9B1A3, 0xA9A39A, 0xA65A42, 0xC9BFA8, 0x8E9AA3, 0xB46B4E};
-    uint32_t wc = walls[(hs >> 4) % 6];
-    float outer = dir > 0 ? wx - 0.5f : wx + 0.5f;
-    cube(dir > 0 ? outer : wx, 0, z0, dir > 0 ? wx : outer, wh, z0 + BLOCK, wc, 2 | (dir > 0 ? 4 : 8));
-    /* pillars */
-    for (int k = 0; k < 2; k++) {
-      float pz = z0 + (float)k * 12;
-      float px0 = dir > 0 ? wx - 0.2f : wx - 0.25f, px1 = dir > 0 ? wx + 0.25f : wx + 0.2f;
-      cube(px0, 0, pz, px1, wh + 0.3f, pz + 0.7f, 0x8E877D, 2);
-    }
-    if (dist < 110 * detail) {
-      for (int k = 0; k < 2; k++) {
-        uint32_t g = world_hash(hs + (uint32_t)k * 31);
-        if (g % 4 == 0) continue;
-        float gw = 7 + (float)(g >> 8 & 3), gz = z0 + 1.2f + (float)k * 12;
-        graffiti(wx + (dir > 0 ? 0.01f : -0.01f), dir, gz, gw > 9.8f ? 9.8f : gw, wh - 0.4f, g, dist + (float)k * 12);
-      }
-    }
-    /* the buildings behind (not right before a tunnel: its face is there) */
-    for (int k = 0; k < 2 && !before_tunnel; k++) {
-      uint32_t g = world_hash(hs * 3 + (uint32_t)k);
-      float bh = 9 + (float)(g % 16), depth = 8 + (float)(g >> 4 & 7);
-      float bz = z0 + (float)k * 12 + 0.6f;
-      building(dir, bz, bz + 10.8f, 7.5f + (float)(g >> 8 & 3), depth, bh, house[(g >> 12) & 7], dist);
-      if ((g >> 16) % 3 == 0 && dist < 80 * detail) {
-        /* a water tank on the roof */
-        float cx = dir > 0 ? -12 : 12;
-        cube(cx - 1.2f, bh, bz + 3, cx + 1.2f, bh + 2.2f, bz + 5.4f, 0x8A5A3C, 2);
-      }
-    }
-  }
-  /* a gantry with signals over the tracks, now and then */
-  if (h % 4 == 0 && !before_tunnel) {
-    float gz = z0 + 6;
-    cube(-5.2f, 0, gz, -4.8f, 7.6f, gz + 0.4f, 0x6B7A86, 2);
-    cube(4.8f, 0, gz, 5.2f, 7.6f, gz + 0.4f, 0x6B7A86, 2);
-    cube(-5.4f, 7.0f, gz - 0.1f, 5.4f, 7.6f, gz + 0.5f, 0x7D8B96, 0);
-    for (int l = 0; l < 3; l++) {
-      float lx = LANE_X(l);
-      cube(lx - 0.3f, 5.9f, gz - 0.2f, lx + 0.3f, 7.0f, gz + 0.2f, 0x2A2D33, 2);
-      uint32_t lamp = (h >> (4 + l)) & 1 ? 0xFF3B30 : 0x3CFF6A;
-      front(gz - 0.21f, lx - 0.15f, lx + 0.15f, 6.5f, 6.8f, L(lamp), P_DECAL | P_NOHAZE);
-    }
+    if (station) station_side(dir, z0, dist, hs);
+    else if (walls) concrete(dir, z0, dist, hs, !before_tunnel);
+    else viaduct(dir, z0, dist, hs);
   }
 }
 
@@ -446,174 +444,122 @@ static void tunnel_block(float z0, float dist) {
       side(WALL_X - 0.01f, -1, lz - 2, lz - 1.6f, 0, ROOF, scene_lit(dark, z0), P_DECAL);
     }
   if (first) {
-    /* the way in: a big face of brick round the opening, with a frame */
-    uint32_t brick = 0x9A5A44, trim = 0x6E6A64, line = 0x84493A, top = 0x6E3E30;
-    front(z0, -60, -WALL_X, 0, 14, brick, 0);
-    front(z0, WALL_X, 60, 0, 14, brick, 0);
-    front(z0, -WALL_X, WALL_X, ROOF, 14, brick, 0);
-    /* courses of brick, a darker band on top, a frame round the opening */
-    if (dist < 110 * detail) {
-      for (int i = 1; i <= 4; i++) {
-        float y = 1.5f * (float)i;
-        front(z0, -60, -WALL_X - 0.9f, y, y + 0.12f, line, P_DECAL);
-        front(z0, WALL_X + 0.9f, 60, y, y + 0.12f, line, P_DECAL);
-      }
-      front(z0, -60, 60, 12.0f, 12.12f, line, P_DECAL);
-    }
-    front(z0, -60, 60, 12.6f, 14, top, P_DECAL);
-    front(z0, -WALL_X - 0.9f, -WALL_X, 0, ROOF + 0.9f, trim, P_DECAL);
-    front(z0, WALL_X, WALL_X + 0.9f, 0, ROOF + 0.9f, trim, P_DECAL);
-    front(z0, -WALL_X - 0.9f, WALL_X + 0.9f, ROOF, ROOF + 0.9f, trim, P_DECAL);
-    /* the subway's sign over it */
-    front(z0, -3.0f, 3.0f, 9.8f, 11.8f, 0x1A1A22, P_DECAL);
-    front(z0, -2.8f, 2.8f, 10.0f, 11.6f, 0x2E5FA8, P_DECAL2);
-    for (int i = 0; i < 3; i++) front(z0, -2.2f + 1.6f * (float)i, -1.2f + 1.6f * (float)i, 10.4f, 11.2f, 0xF4F4F4, P_DECAL3);
+    /* the way in: a face of brick round the arched opening, the subway's sign over it */
+    lit = 256;
+    front_tex(z0, -15, 15, 0, 14, TX_TUNNEL, 0, 128, 0, 64, 0);
+    front(z0, -60, -15, 0, 14, 0x965038, 0);
+    front(z0, 15, 60, 0, 14, 0x965038, 0);
+    front(z0, -60, 60, 14, 15, 0x6E3A28, 0);
   }
 }
 
 /* ---------------------------------------------------------------- trains, barriers, coins */
-static const uint32_t livery[8] = {0x9EC3DD, 0xD8433A, 0xF2C230, 0x4FAE5B, 0x2FB5B5, 0xE4E7EA, 0xF07F2D, 0x6D7BD8};
-static const uint32_t stripe[8] = {0xF07F2D, 0xF4F4F4, 0x2E5FA8, 0xF2C230, 0xF4F4F4, 0xD8433A, 0x2E2E36, 0xF2C230};
+/* the trains' looks: the classic commuter train (most), the silver one, the red, white and blue one,
+ * the green box car */
+enum { TR_CLASSIC, TR_SILVER, TR_RWB, TR_BOX };
+static const uint8_t train_kind[8] = {TR_CLASSIC, TR_CLASSIC, TR_SILVER, TR_RWB, TR_CLASSIC, TR_SILVER, TR_BOX, TR_RWB};
+static const uint32_t train_top[4] = {0xCEDE2C, 0xC8CED4, 0xD62C26, 0x288064};
 
 static void car(float lx, float z0, float z1, int look, bool head, bool moving, float dist) {
-  uint32_t body = livery[look & 7], band = stripe[look & 7];
-  float x0 = lx - TRAIN_W, x1 = lx + TRAIN_W;
-  cube(x0, 0.5f, z0, x1, 3.3f, z1, body, 2);
-  cube(x0 + 0.1f, 3.3f, z0 + 0.25f, x1 - 0.1f, TRAIN_H, z1 - 0.25f, r_mix888(body, 0xBFC4C9, 150), 2);
-  cube(lx - 0.85f, 0.18f, z0 + 0.6f, lx + 0.85f, 0.5f, z1 - 0.6f, 0x2B2B30, 1 | 2);
-  cube(lx - 1.0f, 0.0f, z0 + 0.8f, lx + 1.0f, 0.55f, z0 + 3.0f, 0x232327, 1 | 2);
-  cube(lx - 1.0f, 0.0f, z1 - 3.0f, lx + 1.0f, 0.55f, z1 - 0.8f, 0x232327, 1 | 2);
-  if (dist > 120 * detail) return;
-  uint32_t glass = L(0x2B4260), door = L(r_mix888(body, 0, 60)), b = L(band);
-  for (int s = -1; s <= 1; s += 2) {
-    float x = s < 0 ? x0 - 0.005f : x1 + 0.005f;
-    int dir = s;
-    side(x, dir, z0 + 0.2f, z1 - 0.2f, 1.25f, 1.55f, b, P_DECAL);
-    float len = z1 - z0;
-    /* two doors, windows between */
-    for (int d = 0; d < 2; d++) {
-      float dz = z0 + len * (d ? 0.68f : 0.22f);
-      side(x, dir, dz, dz + 1.3f, 0.6f, 3.0f, door, P_DECAL);
-      side(x, dir, dz + 0.2f, dz + 1.1f, 1.9f, 2.8f, glass, P_DECAL2);
-    }
-    if (dist < 80 * detail)
-      for (int w = 0; w < 4; w++) {
-        float wz = z0 + len * (0.05f + 0.115f * (float)w) + (w >= 2 ? len * 0.36f : 0);
-        side(x, dir, wz, wz + len * 0.09f, 1.95f, 2.8f, glass, P_DECAL);
-      }
-    if (dist < 70 && (look >> 1) % 3 == 0) graffiti(x, dir, z0 + len * 0.33f, len * 0.3f, 1.25f, (uint32_t)look * 13 + (uint32_t)(z0 * 3), dist);
+  int kind = train_kind[look & 7];
+  float x0 = lx - TRAIN_W, x1 = lx + TRAIN_W, bt = kind == TR_BOX ? 3.4f : 3.3f;
+  /* underneath: the frame and two bogies */
+  cube(lx - 0.95f, 0.3f, z0 + 0.4f, lx + 0.95f, 0.55f, z1 - 0.4f, 0x2B2B30, 1 | 2);
+  cube(lx - 1.0f, 0.0f, z0 + 1.0f, lx + 1.0f, 0.5f, z0 + 3.2f, 0x232327, 1 | 2);
+  cube(lx - 1.0f, 0.0f, z1 - 3.2f, lx + 1.0f, 0.5f, z1 - 1.0f, 0x232327, 1 | 2);
+  /* the sides */
+  int side_t = kind == TR_BOX ? TX_BOXCAR_SIDE : TX_TRAIN_A_SIDE + kind, front_t = kind == TR_BOX ? TX_BOXCAR_END : TX_TRAIN_A_FRONT + kind;
+  side_tex(x0, -1, z0, z1, 0.55f, bt, side_t, 0, 128, 0, 32, 0);
+  side_tex(x1, 1, z0, z1, 0.55f, bt, side_t, 0, 128, 0, 32, 0);
+  /* the roof: curved down to the sides (flat on a box car) */
+  uint32_t top = train_top[kind];
+  float r0 = x0 + 0.32f, r1 = x1 - 0.32f;
+  if (kind == TR_BOX) r0 = x0, r1 = x1;
+  else {
+    quad((V3){x0, bt, z1}, (V3){r0, TRAIN_H, z1}, (V3){r0, TRAIN_H, z0}, (V3){x0, bt, z0}, L(r_shade(top, (V3){-0.5f, 0.86f, 0})), 0);
+    quad((V3){r1, TRAIN_H, z1}, (V3){x1, bt, z1}, (V3){x1, bt, z0}, (V3){r1, TRAIN_H, z0}, L(r_shade(top, (V3){0.5f, 0.86f, 0})), 0);
   }
-  if (head) {
-    /* the cab's face */
-    uint32_t face = (look & 3) == 2 ? 0x2E5FA8 : 0xF2C230;
-    front(z0 - 0.005f, x0 + 0.05f, x1 - 0.05f, 0.6f, 3.25f, L(face), P_DECAL);
-    front(z0 - 0.01f, x0 + 0.25f, lx - 0.08f, 1.9f, 2.9f, glass, P_DECAL2);
-    front(z0 - 0.01f, lx + 0.08f, x1 - 0.25f, 1.9f, 2.9f, glass, P_DECAL2);
-    uint32_t lamp = moving ? 0xFFFFE0 : 0xD8D2B0;
-    front(z0 - 0.01f, x0 + 0.25f, x0 + 0.65f, 0.95f, 1.3f, moving ? lamp : L(lamp), P_DECAL2 | (moving ? P_NOHAZE : 0));
-    front(z0 - 0.01f, x1 - 0.65f, x1 - 0.25f, 0.95f, 1.3f, moving ? lamp : L(lamp), P_DECAL2 | (moving ? P_NOHAZE : 0));
-    front(z0 - 0.01f, lx - 0.7f, lx + 0.7f, 3.0f, 3.2f, L(0x1E1E24), P_DECAL2);
-    if (moving) {
-      /* the headlights' glow */
-      V3 g[4] = {{x0 - 0.6f, 2.0f, z0 - 0.3f}, {x1 + 0.6f, 2.0f, z0 - 0.3f}, {x1 + 0.6f, 0.2f, z0 - 0.3f}, {x0 - 0.6f, 0.2f, z0 - 0.3f}};
-      r_poly(g, 4, 0xFFF6C0, P_ALPHA | P_NOHAZE, 70);
-    }
+  tquad((V3){r0, TRAIN_H, z1}, (V3){r1, TRAIN_H, z1}, (V3){r1, TRAIN_H, z0}, (V3){r0, TRAIN_H, z0}, TX_ROOF_A + kind, 0, 64, 32, 0, 0);
+  /* its end facing the camera: the cab's face, or the gangway */
+  if (dist > 160 * detail) return;
+  V3 f[6] = {{x0, bt, z0}, {r0, TRAIN_H, z0}, {r1, TRAIN_H, z0}, {x1, bt, z0}, {x1, 0.55f, z0}, {x0, 0.55f, z0}};
+  float k = 64 / (TRAIN_H - 0.55f), w = 64 / (x1 - x0);
+  float uv[12] = {0, (TRAIN_H - bt) * k, (r0 - x0) * w, 0, (r1 - x0) * w, 0, 64, (TRAIN_H - bt) * k, 64, 64, 0, 64};
+  uint32_t keep = lit;
+  r_poly_tex(f, uv, 6, head || kind == TR_BOX ? front_t : side_t, (int)lit, 0);
+  lit = keep;
+  if (head && moving) {
+    /* the headlights' glow */
+    V3 g[4] = {{x0 - 0.6f, 2.0f, z0 - 0.3f}, {x1 + 0.6f, 2.0f, z0 - 0.3f}, {x1 + 0.6f, 0.2f, z0 - 0.3f}, {x0 - 0.6f, 0.2f, z0 - 0.3f}};
+    r_poly(g, 4, 0xFFF6C0, P_ALPHA | P_NOHAZE, 70);
   }
 }
 
 static void ramp(float lx, float z0, float z1) {
-  uint32_t steel = L(0x8D969E), dark = L(0x4A5058), yellow = L(0xF2C230);
+  uint32_t dark = L(0x4A5058);
   float x0 = lx - 1.05f, x1 = lx + 1.05f, h = TRAIN_H;
-  V3 slope = {0, (z1 - z0), -h};   /* its normal, up and towards the camera */
-  float l = __builtin_sqrtf(slope.y * slope.y + slope.z * slope.z);
-  slope.y /= l, slope.z /= l;
-  quad((V3){x0, h, z1}, (V3){x1, h, z1}, (V3){x1, 0, z0}, (V3){x0, 0, z0}, r_shade(steel, slope), 0);
-  /* yellow edges and ribs */
-  quad((V3){x0, h, z1}, (V3){x0 + 0.18f, h, z1}, (V3){x0 + 0.18f, 0, z0}, (V3){x0, 0, z0}, r_shade(yellow, slope), P_DECAL);
-  quad((V3){x1 - 0.18f, h, z1}, (V3){x1, h, z1}, (V3){x1, 0, z0}, (V3){x1 - 0.18f, 0, z0}, r_shade(yellow, slope), P_DECAL);
-  for (int i = 1; i < 6; i++) {
-    float t = (float)i / 6, t2 = t + 0.025f;
-    float za = z0 + (z1 - z0) * t, zb = z0 + (z1 - z0) * t2;
-    quad((V3){x0 + 0.18f, h * t2, zb}, (V3){x1 - 0.18f, h * t2, zb}, (V3){x1 - 0.18f, h * t, za}, (V3){x0 + 0.18f, h * t, za},
-         r_shade(dark, slope), P_DECAL);
-  }
-  /* the sides: triangles */
+  uint32_t keep = lit;
+  tquad((V3){x0, h, z1}, (V3){x1, h, z1}, (V3){x1, 0, z0}, (V3){x0, 0, z0}, TX_RAMP, 0, 0, 32, 64, 0);
+  lit = keep;
+  /* the sides: dark plates, a yellow post at the top */
   V3 a[3] = {{x0, 0, z0}, {x0, h, z1}, {x0, 0, z1}};
   V3 b[3] = {{x1, 0, z1}, {x1, h, z1}, {x1, 0, z0}};
   r_poly(a, 3, r_shade(dark, (V3){-1, 0, 0}), 0, 0);
   r_poly(b, 3, r_shade(dark, (V3){1, 0, 0}), 0, 0);
-}
-
-/* red and white stripes across a board facing the camera */
-static void striped(float z, float x0, float x1, float y0, float y1) {
-  front(z, x0, x1, y0, y1, L(0xF4F4F4), 0);
-  float w = (x1 - x0) / 5;
-  for (int i = 0; i < 5; i += 2) front(z - 0.005f, x0 + w * (float)i, x0 + w * (float)(i + 1), y0, y1, L(0xE23B2E), P_DECAL);
+  cube(x0 - 0.08f, 0, z1 - 0.3f, x0 + 0.08f, h, z1, 0xF2B81E, 2);
+  cube(x1 - 0.08f, 0, z1 - 0.3f, x1 + 0.08f, h, z1, 0xF2B81E, 2);
 }
 
 static void barrier(const Obstacle *o) {
   float lx = LANE_X(o->lane), z = o->z0;
   if (o->type == O_HURDLE) {
-    cube(lx - 1.0f, 0, z + 0.05f, lx - 0.86f, 1.15f, z + 0.2f, 0xDADDE0, 2);
-    cube(lx + 0.86f, 0, z + 0.05f, lx + 1.0f, 1.15f, z + 0.2f, 0xDADDE0, 2);
-    cube(lx - 1.1f, 0.62f, z, lx + 1.1f, 1.15f, z + 0.12f, 0xF4F4F4, 2);
-    striped(z - 0.003f, lx - 1.1f, lx + 1.1f, 0.62f, 1.15f);
-    /* feet */
-    cube(lx - 1.05f, 0, z - 0.25f, lx - 0.8f, 0.08f, z + 0.5f, 0x8A8F95, 2);
-    cube(lx + 0.8f, 0, z - 0.25f, lx + 1.05f, 0.08f, z + 0.5f, 0x8A8F95, 2);
+    /* a striped board on two posts with lamps, on a blue base */
+    cube(lx - 1.15f, 0, z - 0.25f, lx + 1.15f, 0.1f, z + 0.45f, 0x3C78C8, 2);
+    cube(lx - 1.0f, 0.1f, z + 0.05f, lx - 0.84f, 1.2f, z + 0.2f, 0xD9C7A2, 2);
+    cube(lx + 0.84f, 0.1f, z + 0.05f, lx + 1.0f, 1.2f, z + 0.2f, 0xD9C7A2, 2);
+    cube(lx - 1.1f, 0.62f, z, lx + 1.1f, 1.12f, z + 0.1f, 0xF4F4F4, 2 | 16);
+    front_tex(z, lx - 1.1f, lx + 1.1f, 0.62f, 1.12f, TX_BARRIER, 0, 64, 0, 16, 0);
+    cube(lx - 1.06f, 1.12f, z + 0.0f, lx - 0.78f, 1.4f, z + 0.26f, 0x7A8088, 2);
+    cube(lx + 0.78f, 1.12f, z + 0.0f, lx + 1.06f, 1.4f, z + 0.26f, 0x7A8088, 2);
   } else if (o->type == O_HIGHBAR) {
-    cube(lx - 1.12f, 0, z + 0.05f, lx - 0.96f, 2.45f, z + 0.22f, 0xDADDE0, 2);
-    cube(lx + 0.96f, 0, z + 0.05f, lx + 1.12f, 2.45f, z + 0.22f, 0xDADDE0, 2);
-    cube(lx - 1.12f, 1.4f, z, lx + 1.12f, 2.35f, z + 0.12f, 0xF4F4F4, 2);
-    striped(z - 0.003f, lx - 1.12f, lx + 1.12f, 1.4f, 1.75f);
-    /* a sign: an arrow down */
-    front(z - 0.003f, lx - 0.5f, lx + 0.5f, 1.8f, 2.3f, L(0x2E5FA8), P_DECAL);
-    V3 arrow[3] = {{lx - 0.3f, 2.2f, z - 0.006f}, {lx + 0.3f, 2.2f, z - 0.006f}, {lx, 1.86f, z - 0.006f}};
-    r_poly(arrow, 3, L(0xF4F4F4), P_DECAL2, 0);
+    /* a frame with a striped sign up high: roll under it */
+    cube(lx - 1.12f, 0, z + 0.05f, lx - 0.96f, 2.45f, z + 0.22f, 0xD9C7A2, 2);
+    cube(lx + 0.96f, 0, z + 0.05f, lx + 1.12f, 2.45f, z + 0.22f, 0xD9C7A2, 2);
+    cube(lx - 1.12f, 1.45f, z, lx + 1.12f, 2.35f, z + 0.12f, 0xF4F4F4, 2 | 16);
+    front_tex(z, lx - 1.12f, lx + 1.12f, 1.45f, 2.35f, TX_CHEVRONS, 0, 64, 0, 26, 0);
   } else {
-    /* the big one: yellow and black, lamps on top */
-    cube(lx - 1.15f, 0, z, lx + 1.15f, 2.6f, z + 0.45f, 0xF2C230, 2);
-    for (int i = 0; i < 4; i++) {
-      float x = lx - 1.15f + 0.575f * (float)i;
-      V3 chev[4] = {{x + 0.1f, 2.4f, z - 0.004f}, {x + 0.4f, 2.4f, z - 0.004f}, {x + 0.4f, 0.3f, z - 0.004f}, {x + 0.1f, 0.3f, z - 0.004f}};
-      r_poly(chev, 4, L(r_shade(0x232327, (V3){0, 0, -1})), P_DECAL, 0);
-    }
+    /* the big one: a wall of chevrons on a frame, lamps on top */
+    cube(lx - 1.15f, 0, z, lx + 1.15f, 2.6f, z + 0.45f, 0xF4F4F4, 2 | 16);
+    front_tex(z, lx - 1.15f, lx + 1.15f, 0.25f, 2.6f, TX_CHEVRONS, 0, 32, 0, 36, 0);
+    front(z - 0.004f, lx - 1.15f, lx + 1.15f, 0, 0.25f, L(0x3A3A40), P_DECAL);
     cube(lx - 0.9f, 2.6f, z + 0.1f, lx - 0.5f, 2.95f, z + 0.35f, 0xFF3B30, 2);
     cube(lx + 0.5f, 2.6f, z + 0.1f, lx + 0.9f, 2.95f, z + 0.35f, 0xFF3B30, 2);
   }
 }
 
-/* a coin: a gold disc turning about its upright axis */
+/* a coin: the game's gold coin with its star, turning; far away a gold disc */
 static void coin(const Item *it, float t) {
-  float s, c, r = 0.38f;
+  float s, c, r = 0.42f;
   r_sincos(t * 5 + it->z * 0.6f, &s, &c);
-  static const float k[8][2] = {{0, 1}, {0.707f, 0.707f}, {1, 0}, {0.707f, -0.707f}, {0, -1}, {-0.707f, -0.707f}, {-1, 0}, {-0.707f, 0.707f}};
-  V3 v[8], w[8];
-  float lgt = scene_light(it->z);
-  uint32_t gold = 0xFFC21F, face = 0xFFE26A;
-  if (lgt < 1) gold = scene_lit(gold, it->z), face = scene_lit(face, it->z);
-  for (int i = 0; i < 8; i++) {
-    float u = k[i][0] * r, y = k[i][1] * r;
-    v[i] = (V3){it->x + c * u, it->y + y, it->z + s * u};
-    w[i] = (V3){it->x + c * u * 0.62f, it->y + y * 0.62f, it->z + s * u * 0.62f};
+  float d = it->z - cam.z;
+  if (d < 45 * detail) {
+    float hw = r * (c < 0 ? -c : c);
+    if (hw < 0.05f) hw = 0.05f;
+    tquad((V3){it->x - hw, it->y + r, it->z}, (V3){it->x + hw, it->y + r, it->z}, (V3){it->x + hw, it->y - r, it->z},
+          (V3){it->x - hw, it->y - r, it->z}, TX_COIN, c < 0 ? 32 : 0, 0, c < 0 ? 0 : 32, 32, P_TWOSIDED | P_NOHAZE);
+    return;
   }
-  r_poly(v, 8, r_shade(gold, (V3){0, 0.3f, -0.95f}), P_TWOSIDED, 0);
-  r_poly(w, 8, face, P_TWOSIDED | P_DECAL, 0);
+  static const float k[8][2] = {{0, 1}, {0.707f, 0.707f}, {1, 0}, {0.707f, -0.707f}, {0, -1}, {-0.707f, -0.707f}, {-1, 0}, {-0.707f, 0.707f}};
+  V3 v[8];
+  uint32_t gold = scene_lit(0xFFC21F, it->z);
+  for (int i = 0; i < 8; i++) v[i] = (V3){it->x + c * k[i][0] * r * 0.85f, it->y + k[i][1] * r * 0.85f, it->z + s * k[i][0] * r};
+  r_poly(v, 8, gold, P_TWOSIDED, 0);
 }
 
 void scene_draw(float t) {
+  /* (near things first: what they hide is then left out pixel by pixel, without being drawn) */
   float zfar = cam.z + 175 * detail;
   int b0 = (int)(cam.z / BLOCK) - (cam.z < 0), b1 = (int)(zfar / BLOCK);
-  for (int b = b1; b >= b0; b--) {
-    float z0 = (float)b * BLOCK, dist = z0 - cam.z;
-    if (world_tunnel(z0 + 1)) {
-      lit = 256;
-      tunnel_block(z0, dist);
-    } else {
-      lit = 256;
-      open_block(b, z0, dist);
-    }
-  }
   for (int i = 0; i < nobs; i++) {
     const Obstacle *o = &obs[i];
     if (o->z0 > zfar || o->z1 < cam.z) continue;
@@ -631,8 +577,15 @@ void scene_draw(float t) {
   for (int i = 0; i < nitems; i++) {
     const Item *it = &items[i];
     if (it->z > cam.z + 120 * detail || it->z < cam.z + 1) continue;
+    lit = world_tunnel(it->z) ? 128 : 256;
     if (it->kind == I_COIN) coin(it, t);
     else actors_pickup(it, t);
+  }
+  for (int b = b0; b <= b1; b++) {
+    float z0 = (float)b * BLOCK, dist = z0 - cam.z;
+    lit = 256;
+    if (world_tunnel(z0 + 1)) tunnel_block(z0, dist);
+    else open_block(b, z0, dist);
   }
   lit = 256;
 }

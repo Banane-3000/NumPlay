@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Gathers the public pictures Subway Surfers is drawn from, for tools/pack.py: from the Subway Surfers
 Wiki (subwaysurf.fandom.com), the game's own 3D models of Jake, Tricky, Fresh, Spike and the Inspector seen
-from the front (tools/models.py fits the meshes to them and lays them on as their textures), the dog, the
+from the front (tools/models.py fits the meshes to them and lays them on as their textures), the
 logo, and the icons of coins, keys, power-ups and items. Nothing here is committed: pack.py turns them into
 src/data.c, which is.
 
@@ -15,11 +15,11 @@ import urllib.request
 FILES = [
     # the people, from the front (models.py)
     "3D_Models_5_Jakes.jpg", "3D_Models_5_Trickys.jpg", "3D_Models_Cathy_and_Fresh.jpg",
-    "3D_Models_Amira_and_Spike.jpg", "3D_Models_Ballerina_Tricky_and_Guard_King.jpg", "Dog.png",
+    "3D_Models_Amira_and_Spike.jpg", "3D_Models_Ballerina_Tricky_and_Guard_King.jpg",
     # the logo
     "Logo_001.png",
     # icons and pickups
-    "Coin.png", "Key.png", "2x_Multiplier.png", "Coin_Magnet.png", "Jetpack.png", "Super_Sneakers.png",
+    "Coin.png", "Key.png", "2x_Multiplier.png", "Coin_Magnet.png", "Jetpack.png",
     "Mystery_Box.png", "Hoverboard.png", "Headstart.png", "Score_Booster.png",
 ]
 

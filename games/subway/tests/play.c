@@ -280,6 +280,13 @@ int main(int argc, char **argv) {
       host_shot(p);
     }
   }
+  extern uint32_t r_stat[4], r_stat_tex[64];
+  if (stats)
+    for (int i = 0; i < 64; i++)
+      if (r_stat_tex[i]) printf("texture %d: %u\n", i, r_stat_tex[i] / (unsigned)(f / draw_every + 1));
+  if (stats) printf("pixels a frame: flat %u shaded %u textured %u perspective %u\n", r_stat[0] / (unsigned)(f / draw_every + 1),
+                    r_stat[1] / (unsigned)(f / draw_every + 1), r_stat[2] / (unsigned)(f / draw_every + 1),
+                    r_stat[3] / (unsigned)(f / draw_every + 1));
   if (stats)
     printf("frames %d running %d dead %d dist %.0f score %u coins %u multiplier %d polys %d total_coins %u "
            "best %u runs %u mset %u jumps %d rolls %d stumbles %d\n",

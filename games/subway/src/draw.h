@@ -4,6 +4,7 @@
 #define SS_DRAW_H
 #include <stdint.h>
 #include "assets.h"
+#include "models.h"
 #include "r3d.h"
 
 #define C(rgb) r_565(rgb)
@@ -27,4 +28,6 @@ int d_text_width(const Font *f, const char *s);
  * 1 right of x */
 void d_label(const Font *f, int x, int baseline, const char *s, uint16_t fill, uint16_t outline, int t, int align);
 void d_logo(int x, int y);
+/* one of the game's pictures (data.c), its top-left at (x, y) */
+void d_image(int x, int y, const Image *im);
 #endif
