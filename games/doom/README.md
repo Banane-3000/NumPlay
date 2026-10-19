@@ -102,7 +102,7 @@ In menus, the arrows choose, OK or EXE confirms and Back goes back. When the gam
 
 * **No sound:** the calculator has no speaker, so Doom plays in silence.
 * **Saves:** a save takes a few KB of the calculator's 42 KB of files, and its copy in `doom_saves.py` as much again. If there is no room, the game says so: delete a slot or an old script.
-* **Its own pace:** the game thinks 35 times a second, as Doom always did, and draws up to 35 frames a second. On the N0120, every view of all nine levels is drawn within 1/35 s. On the N0110, about nine views in ten are; where a room is too much, it draws fewer frames (low detail helps), but monsters, doors and you keep their speed.
+* **Its own pace:** the game thinks 35 times a second, as Doom always did, and draws up to 35 frames a second. On the N0120, every view of all nine levels is drawn within 1/35 s (the slowest takes 22 ms). On the N0110, 79% of the views of E1M1 and 90 to 96% of the other levels' are; in low detail (Options, Graphic Detail), 98 to 100%. Where a room is too much, it draws fewer frames, but monsters, doors and you keep their speed. (Measured in an emulator from the middle of every part of each map, looking 8 ways: `tools/fps.py`.)
 * **No tearing:** the calculator's panel refreshes itself from its memory 40 times a second, a column at a time. Each part of a frame is sent once the panel has gone past it and before it comes back, so the panel never shows two frames at once. If your calculator's panel refreshes the other way (some may), choose Right to left in More Options.
 * **Only the shareware episode:** the registered episodes (The Shores of Hell and Inferno) are not part of the free shareware WAD, but you can [build Doom from yours](#doom-from-your-own-wad).
 
