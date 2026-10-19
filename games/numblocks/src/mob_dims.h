@@ -658,7 +658,7 @@ static void ender_tick(Entity *e) {
 }
 
 /* the dimensions' creatures each tick: the ones that are all theirs (true), or what the others do before
- * the zombie's AI runs */
+ * they go on as zombies do */
 void dragon_tick(Entity *e);     /* (end.c) */
 static bool dims_tick(Entity *e) {
     if (e->type == E_FIREBALL) {
