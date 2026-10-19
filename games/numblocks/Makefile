@@ -59,10 +59,19 @@ build/unit: $(GAME_DIMS) src/plat_host.c tests/unit.c $(HEADERS)
 build/unit_np: $(GAME) src/plat_host.c tests/unit.c $(HEADERS)
 	$(Q) mkdir -p build
 	$(Q) cc $(HOST_FLAGS) $(filter-out src/main.c,$(GAME)) src/plat_host.c tests/unit.c tests/stubs.c -lm -o $@
-test: build/unit build/unit_np
+# the Nether and the End played through (dims.c), then that world, saved in the Nether, in NumPlay's (np_load.c)
+build/dims_test: $(GAME_DIMS) src/plat_host.c tests/dims.c $(HEADERS)
+	$(Q) mkdir -p build
+	$(Q) cc $(HOST_FLAGS) -DNB_DIMS=1 $(GAME_DIMS) src/plat_host.c tests/dims.c -lm -o $@
+build/np_load: $(GAME) src/plat_host.c tests/np_load.c $(HEADERS)
+	$(Q) mkdir -p build
+	$(Q) cc $(HOST_FLAGS) $(GAME) src/plat_host.c tests/np_load.c -lm -o $@
+test: build/unit build/unit_np build/dims_test build/np_load
 	@mkdir -p build/unit-saves
 	./build/unit
 	./build/unit_np
+	./build/dims_test
+	./build/np_load
 # every pixel traced: the reference the adaptive picture is checked against
 build/play_ref: $(GAME_DIMS) src/plat_host.c tests/play.c $(HEADERS)
 	$(Q) mkdir -p build

@@ -1079,3 +1079,10 @@ void player_tick(uint32_t keys, uint32_t pressed) {
     if (pressed & (K_SLOT1 << n)) pl.slot = n;
   prev_keys = keys;
 }
+#if NB_DIMS
+/* (tests) the held item used on the block at (x, y, z), its face f, as OK would */
+void player_use_on(int x, int y, int z, int f) {
+  pl.hit_x = x, pl.hit_y = y, pl.hit_z = z, pl.hit_face = f;
+  use(K_USE);
+}
+#endif

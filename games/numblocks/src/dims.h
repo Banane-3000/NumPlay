@@ -58,5 +58,6 @@ int gen_fortress_spawners(int x, int z, int *out, int n);              /* (gen.c
 enum { SKIN_CRYSTAL = 16, SKIN_DRAGON = 17 };   /* (the big skins: data.h's skin_crystal_px, skin_dragon_px) */
 void dims_credits(void);
 void credits_open(void);   /* (gui.c) GuiWinGame */
+void player_use_on(int x, int y, int z, int f);   /* (player.c, tests) the held item used on that block */
 static inline bool is_iron_door(int b) { return b >= B_IRON_DOOR_LOWER_E && b <= B_IRON_DOOR_LOWER_N_OPEN; }   /* (lower) */
 #endif
