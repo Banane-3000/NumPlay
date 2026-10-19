@@ -213,6 +213,9 @@ boolean D_Display (void)
 	oldgamestate = -1;                      // force background redraw
 	borderdrawcount = 3;
     }
+#elif NUMWORKS
+    if (setsizeneeded)
+	R_ExecuteSetViewSize ();
 #endif
 
     // save the current screen if about to wipe
@@ -2157,6 +2160,16 @@ void D_DoomMain (void)
     // the calculator's keys and settings; the moment kept by Home, if there is one, comes back
     nw_input_init();
     nw_settings_load();
+#if HOST
+    if (getenv("NWVIEW"))
+    {
+        // (tests: NWVIEW="blocks detail" plays at that screen size and detail)
+        const char *v = getenv("NWVIEW");
+        screenblocks = atoi(v);
+        detailLevel = strchr(v, ' ') ? atoi(strchr(v, ' ')) : 0;
+        M_NwViewLoaded();
+    }
+#endif
     if (nw_warp)
     {
         // (tests: straight into a level, on Ultra-Violence)

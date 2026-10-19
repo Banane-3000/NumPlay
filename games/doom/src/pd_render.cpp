@@ -421,9 +421,9 @@ static union {
     struct {
         int16_t bidx[NW_BATCH], blink[NW_BATCH];
         flat_run flat_runs[NW_FLAT_RUNS];
-        uint8_t vbit[(NW_BAND_W / 8) * MAIN_VIEWHEIGHT];
-        int8_t edge_plane[SCREENWIDTH / NW_BAND_W - 1][MAIN_VIEWHEIGHT];
-        int16_t edge_start[SCREENWIDTH / NW_BAND_W - 1][MAIN_VIEWHEIGHT];
+        uint8_t vbit[(NW_BAND_W / 8) * SCREENHEIGHT];
+        int8_t edge_plane[SCREENWIDTH / NW_BAND_W - 1][SCREENHEIGHT];
+        int16_t edge_start[SCREENWIDTH / NW_BAND_W - 1][SCREENHEIGHT];
     } band;
 } nw_shared;
 extern "C" { uint8_t (*const nw_plane_used)[SCREENWIDTH / 8] = nw_shared.plane_used; }

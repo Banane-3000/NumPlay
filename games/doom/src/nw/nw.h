@@ -61,6 +61,7 @@ boolean nw_resume_ready(void);
 void nw_resume_save(void);          /* the game as it is now, if there is one to keep */
 void nw_resume_done(void);          /* the moment was read back: it goes */
 void nw_settings_load(void);
+void M_NwViewLoaded(void); /* m_menu.c: the loaded screen size and detail take effect */
 void nw_settings_save(void);
 extern boolean nw_first_start;     /* no settings yet: the first game starts with a word on the keys */
 #endif

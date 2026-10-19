@@ -158,9 +158,11 @@ void nw_resume_done(void) {
 boolean nw_first_start;
 
 /* 'D', the version (2), messages, brightness, the map over the view, secrets on the map, the screen's refresh
- * (left to right, right to left, none), then each calculator key's action (NK_COUNT of them) */
-#define CFG_LEN (7 + NK_COUNT)
+ * (left to right, right to left, none), the detail, the screen size, then each calculator key's action (NK_COUNT
+ * of them) */
+#define CFG_LEN (9 + NK_COUNT)
 extern int nw_map_overlay, nw_map_secrets, nw_scan_right_to_left, nw_sync_off;
+extern isb_int8_t detailLevel, screenblocks;
 
 void nw_settings_load(void) {
     uint32_t len;
@@ -174,13 +176,17 @@ void nw_settings_load(void) {
     nw_map_secrets = d[5] != 0;
     nw_scan_right_to_left = d[6] == 1;
     nw_sync_off = d[6] == 2;
-    for (int k = 0; k < NK_COUNT; k++) nw_binding[k] = d[7 + k] < NA_COUNT ? d[7 + k] : NA_NONE;
+    detailLevel = d[7] == 1;
+    screenblocks = d[8] >= 3 && d[8] <= 11 ? d[8] : 10;
+    for (int k = 0; k < NK_COUNT; k++) nw_binding[k] = d[9 + k] < NA_COUNT ? d[9 + k] : NA_NONE;
+    M_NwViewLoaded();
 }
 
 void nw_settings_save(void) {
     uint8_t d[CFG_LEN] = {'D', 2, (uint8_t)showMessages, (uint8_t)usegamma, (uint8_t)nw_map_overlay,
-                          (uint8_t)nw_map_secrets, (uint8_t)(nw_sync_off ? 2 : nw_scan_right_to_left)};
-    memcpy(d + 7, nw_binding, NK_COUNT);
+                          (uint8_t)nw_map_secrets, (uint8_t)(nw_sync_off ? 2 : nw_scan_right_to_left),
+                          (uint8_t)detailLevel, (uint8_t)screenblocks};
+    memcpy(d + 9, nw_binding, NK_COUNT);
     uint32_t len;
     const uint8_t *old = plat_load(CFG_NAME, &len);
     if (old && len == sizeof d && !memcmp(old, d, sizeof d)) return;

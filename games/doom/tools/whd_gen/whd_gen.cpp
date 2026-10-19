@@ -164,6 +164,8 @@ static std::vector<std::string> named_lumps = {
         "INTERPIC",
         "VICTORY2",
         "BOSSBACK",
+        "FLOOR7_2", // (the border of the smaller screen sizes)
+        "GRNROCK",
         "FLOOR4_8",
         "SFLR6_1",
         "MFLR8_4",
@@ -566,6 +568,14 @@ static std::vector<std::string> run16_misc_vpatches = {
 
 // remaining <64 color graphics ... these are encoded as "pixel runs" for rendering speed
 static std::vector<std::string> run64_misc_vpatches = {
+        "BRDR_T",
+        "BRDR_B",
+        "BRDR_L",
+        "BRDR_R",
+        "BRDR_TL",
+        "BRDR_TR",
+        "BRDR_BL",
+        "BRDR_BR",
         "M_SKULL1",
         "M_SKULL2",
         "M_THERMO",
@@ -5063,12 +5073,7 @@ int main(int argc, const char **argv) {
                 name_required.insert(e.second.name);
             }
         }
-        for (auto &e : wad.get_lumps()) {
-            if (e.second.name.length() > 4 && e.second.name.substr(0, 4) == "BRDR") {
-                touched[e.first] = TOUCHED_UNUSED_GRAPHIC;
-                e.second.data.clear();
-            }
-        }
+        // (the BRDR_ patches are kept: the calculator has vanilla's smaller screen sizes and their border)
         int total_size = 0;
         std::vector<std::string> level_data = {
                 "THINGS", "LINEDEFS", "SIDEDEFS", "VERTEXES", "SEGS", "SSECTORS", "NODES", "SECTORS", "REJECT",

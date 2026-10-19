@@ -395,13 +395,12 @@ enum
 #endif
     endgame,
     messages,
-#if !DOOM_TINY
+#if !DOOM_TINY || NUMWORKS
     detail,
     scrnsize,
     option_empty1,
 #endif
 #if NUMWORKS
-    nw_bright,
     nw_keys,
     nw_cheats,
     nw_more,
@@ -423,7 +422,7 @@ static const menuitem_t OptionsMenu[]=
 #endif
     {1,VPATCH_NAME(M_ENDGAM),'e',	M_EndGame},
     {1,VPATCH_NAME(M_MESSG),	'm',M_ChangeMessages},
-#if !DOOM_TINY
+#if !DOOM_TINY || NUMWORKS
     {1,VPATCH_NAME(M_DETAIL),'g',	M_ChangeDetail},
     {2,VPATCH_NAME(M_SCRNSZ),'s',	M_SizeDisplay},
     {-1,VPATCH_NAME_INVALID,'\0',0},
@@ -433,7 +432,6 @@ static const menuitem_t OptionsMenu[]=
     {-1,VPATCH_NAME_INVALID,'\0',0},
 #endif
 #if NUMWORKS
-    {2,VPATCH_NAME_INVALID,'b',	M_NwBrightness},
     {1,VPATCH_NAME_INVALID,'k',	M_NwKeys},
     {1,VPATCH_NAME_INVALID,'c',	M_NwCheats},
     {1,VPATCH_NAME_INVALID,'o',	M_NwMore},
@@ -1300,14 +1298,15 @@ void M_DrawOptions(void)
 		 10, mouseSensitivity);
 #endif
 
-#if !DOOM_TINY
+#if !DOOM_TINY || NUMWORKS
     M_DrawThermo(OptionsDef.x,OptionsDef.y+LINEHEIGHT*(scrnsize+1),
 		 9,screenSize);
 #endif
 #if NUMWORKS
     {
-        static const char *const levels[] = {"OFF", "1", "2", "3", "4"};
-        M_NwLine(&OptionsDef, nw_bright, "BRIGHTNESS", levels[usegamma]);
+        static const vpatch_handle_large_t detailPatches[2] = {VPATCH_NAME(M_GDHIGH), VPATCH_NAME(M_GDLOW)};
+        V_DrawPatchDirect(OptionsDef.x + 175, OptionsDef.y + LINEHEIGHT * detail,
+                          VPATCH_HANDLE(detailPatches[detailLevel]));
         M_NwLine(&OptionsDef, nw_keys, "KEYS", NULL);
         M_NwLine(&OptionsDef, nw_cheats, "CHEATS", NULL);
         M_NwLine(&OptionsDef, nw_more, "MORE OPTIONS", NULL);
@@ -2180,7 +2179,7 @@ boolean M_Responder (event_t* ev)
     // F-Keys
     if (!menuactive)
     {
-#if !DOOM_TINY
+#if !DOOM_TINY || NUMWORKS
 	if (key == key_menu_decscreen)      // Screen size down
         {
 	    if (automapactive || chat_on)
@@ -2238,7 +2237,7 @@ boolean M_Responder (event_t* ev)
 	    S_StartUnpositionedSound( sfx_swtchn);
 	    return true;
 	}
-#if !DOOM_TINY
+#if !DOOM_TINY || NUMWORKS
         else if (key == key_menu_detail)   // Detail toggle
         {
 	    M_ChangeDetail(0);

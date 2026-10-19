@@ -512,7 +512,17 @@ enum vpatch_type {
     VPATCH_NAME(END3), \
     VPATCH_NAME(END4), \
     VPATCH_NAME(END5), \
-    VPATCH_NAME(END6)
+    VPATCH_NAME(END6), \
+    VPATCH_NAME(M_GDHIGH), \
+    VPATCH_NAME(M_GDLOW), \
+    VPATCH_NAME(BRDR_T), \
+    VPATCH_NAME(BRDR_B), \
+    VPATCH_NAME(BRDR_L), \
+    VPATCH_NAME(BRDR_R), \
+    VPATCH_NAME(BRDR_TL), \
+    VPATCH_NAME(BRDR_TR), \
+    VPATCH_NAME(BRDR_BL), \
+    VPATCH_NAME(BRDR_BR)
 
 // note we must include intermediate flats even if not directly references (since we deal with consecutive ranges)
 #define NAMED_FLAT_LIST \

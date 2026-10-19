@@ -115,7 +115,8 @@ isb_int16_t viewangletox[FINEANGLES / 2];
 // from clipangle to -clipangle.
 angle_t xtoviewangle[SCREENWIDTH + 1];
 #else
-const uint16_t xtoviewangle_[SCREENWIDTH + 1] = {
+#if HOST // (RP2040 Doom's, for the full width: the check, nw_init_texture_mapping)
+const uint16_t ref_xtoviewangle_[SCREENWIDTH + 1] = {
         0x2008, 0x1fe0, 0x1fc0, 0x1fa0, 0x1f80, 0x1f60, 0x1f40, 0x1f18, 0x1ef8, 0x1ed8, 0x1eb0, 0x1e90, 0x1e70, 0x1e48, 0x1e28, 0x1e00,
         0x1de0, 0x1db8, 0x1d98, 0x1d70, 0x1d50, 0x1d28, 0x1d00, 0x1ce0, 0x1cb8, 0x1c90, 0x1c68, 0x1c48, 0x1c20, 0x1bf8, 0x1bd0, 0x1ba8,
         0x1b80, 0x1b58, 0x1b30, 0x1b08, 0x1ae0, 0x1ab8, 0x1a90, 0x1a68, 0x1a38, 0x1a10, 0x19e8, 0x19c0, 0x1990, 0x1968, 0x1940, 0x1910,
@@ -138,7 +139,7 @@ const uint16_t xtoviewangle_[SCREENWIDTH + 1] = {
         0xe220, 0xe200, 0xe1d8, 0xe1b8, 0xe190, 0xe170, 0xe150, 0xe128, 0xe108, 0xe0e8, 0xe0c0, 0xe0a0, 0xe080, 0xe060, 0xe040, 0xe020,
         0xdff8,
 };
-const int16_t viewangletox[FINEANGLES / 2] = {
+const int16_t ref_viewangletox[FINEANGLES / 2] = {
         0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140,
         0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140,
         0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140, 0x0140,
@@ -397,6 +398,7 @@ const int16_t viewangletox[FINEANGLES / 2] = {
         0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 
 };
+#endif
 #endif
 
 #if !USE_LIGHTMAP_INDEXES
@@ -819,11 +821,65 @@ void R_InitTables(void) {
 }
 
 
+#if NUMWORKS
+// the view's tables for its size (vanilla's R_InitTextureMapping and R_ExecuteSetViewSize): viewangletox is
+// worked out when it is needed rather than kept (8 KB)
+static fixed_t nw_focallength;
+uint16_t xtoviewangle_[SCREENWIDTH + 1];
+uint16_t _distscale[SCREENWIDTH];
+
+static int nw_viewangletox_raw(int i) {
+    fixed_t tangent = finetangent(i);
+    int t;
+    if (tangent > FRACUNIT * 2)
+        t = -1;
+    else if (tangent < -FRACUNIT * 2)
+        t = viewwidth + 1;
+    else {
+        t = FixedMul(tangent, nw_focallength);
+        t = (centerxfrac - t + FRACUNIT - 1) >> FRACBITS;
+        if (t < -1)
+            t = -1;
+        else if (t > viewwidth + 1)
+            t = viewwidth + 1;
+    }
+    return t;
+}
+
+// (with the fencepost cases taken out)
+int nw_viewangletox(int i) {
+    int t = nw_viewangletox_raw(i);
+    return t == -1 ? 0 : t == viewwidth + 1 ? viewwidth : t;
+}
+
+static void nw_init_texture_mapping(void) {
+    nw_focallength = FixedDiv(centerxfrac, finetangent(FINEANGLES / 4 + FIELDOFVIEW / 2));
+    // xtoviewangle: the smallest view angle that maps to x (the first i with viewangletox[i] <= x)
+    int i = 0;
+    for (int x = viewwidth; x >= 0; x--) {
+        while (nw_viewangletox_raw(i) > x)
+            i++;
+        xtoviewangle_[x] = (uint16_t)(((angle_t)i << ANGLETOFINESHIFT) - ANG90 >> 16);
+    }
+#if HOST
+    // (the full width's are RP2040 Doom's, worked out the same way)
+    if (viewwidth == SCREENWIDTH) {
+        for (int x = 0; x <= SCREENWIDTH; x++)
+            if (xtoviewangle_[x] != ref_xtoviewangle_[x]) I_Error("xtoviewangle %d", x);
+        for (int j = 0; j < FINEANGLES / 2; j++)
+            if (nw_viewangletox(j) != ref_viewangletox[j]) I_Error("viewangletox %d", j);
+    }
+#endif
+}
+#endif
+
 //
 // R_InitTextureMapping
 //
 void R_InitTextureMapping(void) {
-#if !FIXED_SCREENWIDTH
+#if NUMWORKS
+    nw_init_texture_mapping();
+#elif !FIXED_SCREENWIDTH
     int i;
     int x;
     int t;
@@ -950,7 +1006,7 @@ void R_InitLightTables(void) {
 // The change will take effect next refresh.
 //
 boolean setsizeneeded;
-#if !DOOM_TINY
+#if !DOOM_TINY || NUMWORKS
 int setblocks;
 int setdetail;
 #else
@@ -964,7 +1020,7 @@ R_SetViewSize
         (int blocks,
          int detail) {
     setsizeneeded = true;
-#if !DOOM_TINY
+#if !DOOM_TINY || NUMWORKS
     setblocks = blocks;
     setdetail = detail;
 #endif
@@ -1041,6 +1097,20 @@ void R_ExecuteSetViewSize(void) {
         cosadj = abs(finecosine(xtoviewangle[i] >> ANGLETOFINESHIFT));
         _distscale[i] = FixedDiv(FRACUNIT, cosadj);
     }
+#elif NUMWORKS
+    // (between 1 and 1.5: kept without its integer part)
+    for (i = 0; i < viewwidth; i++) {
+        cosadj = abs(finecosine(x_to_viewangle(i) >> ANGLETOFINESHIFT));
+        fixed_t d = FixedDiv(FRACUNIT, cosadj);
+#if HOST
+        extern const uint16_t ref_distscale[SCREENWIDTH];
+        if (viewwidth == SCREENWIDTH && (d >> 16 != 1 || (uint16_t)d != ref_distscale[i])) I_Error("distscale %d", i);
+#endif
+        _distscale[i] = (uint16_t)d;
+    }
+    // the view's place on the screen (vanilla's R_InitBuffer)
+    viewwindowx = (SCREENWIDTH - scaledviewwidth) >> 1;
+    viewwindowy = scaledviewwidth == SCREENWIDTH ? 0 : (SCREENHEIGHT - 32 - viewheight) >> 1; // (32: the status bar)
 #endif
 
     // Calculate the light levels to use

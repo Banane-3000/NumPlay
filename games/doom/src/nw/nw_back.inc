@@ -132,8 +132,8 @@ static void nw_pass_start() {
 // (its texture position worked out at its start, as R_MapPlane does)
 
 #define nw_vbit (nw_shared.band.vbit)
-static int8_t nw_carry_plane[MAIN_VIEWHEIGHT];
-static int16_t nw_carry_start[MAIN_VIEWHEIGHT];
+static int8_t nw_carry_plane[SCREENHEIGHT];
+static int16_t nw_carry_start[SCREENHEIGHT];
 // (right to left: the carries at the left edge of each band but the first, worked out first, from the left)
 #define nw_edge_plane (nw_shared.band.edge_plane)
 #define nw_edge_start (nw_shared.band.edge_start)
@@ -163,7 +163,7 @@ static void nw_plane_runs(int x0, int x1, bool draw) {
         memset(visplane_heads, -1, numvisplanes * sizeof(visplane_heads[0]));
         nw_flat_run_count = 0;
     }
-    for (int y = 0; y < viewheight && y < MAIN_VIEWHEIGHT; y++) {
+    for (int y = 0; y < viewheight; y++) {
         const uint8_t *vb = nw_vbit + y * (NW_BAND_W / 8);
         const uint8_t *row = render_frame_buffer + y * NW_STRIDE;
         int carry_plane = nw_carry_plane[y];
@@ -203,14 +203,29 @@ static void nw_plane_runs(int x0, int x1, bool draw) {
     if (draw && nw_flat_run_count) nw_flush_planes(numvisplanes);
 }
 
+// the view's columns in the screen's columns x0 to x1 (low detail: one for each two)
+static void nw_view_cols(int x0, int x1, int *v0, int *v1) {
+    int a = (x0 - viewwindowx) >> detailshift, b = (x1 - viewwindowx) >> detailshift;
+    *v0 = a < 0 ? 0 : a > viewwidth ? viewwidth : a;
+    *v1 = b < 0 ? 0 : b > viewwidth ? viewwidth : b;
+}
+
+// where the band's view pixels go: in place, or in low detail at the band's left, to be doubled
+static uint8_t *nw_view_buffer(uint8_t *band, int x0, int v0) {
+    return band + viewwindowy * NW_STRIDE + (detailshift ? -v0 : viewwindowx - x0);
+}
+
 // before drawing right to left: each band's carries from its left neighbour, worked out left to right
 static void nw_plane_edges(uint8_t *band) {
     memset(nw_carry_plane, -1, sizeof nw_carry_plane);
     for (int k = 0; k < SCREENWIDTH / NW_BAND_W - 1; k++) {
-        int x0 = k * NW_BAND_W;
-        render_frame_buffer = band - x0;
-        nw_mark_planes(x0, x0 + NW_BAND_W);
-        nw_plane_runs(x0, x0 + NW_BAND_W, false);
+        int v0, v1;
+        nw_view_cols(k * NW_BAND_W, (k + 1) * NW_BAND_W, &v0, &v1);
+        if (v0 < v1) {
+            render_frame_buffer = nw_view_buffer(band, k * NW_BAND_W, v0);
+            nw_mark_planes(v0, v1);
+            nw_plane_runs(v0, v1, false);
+        }
         memcpy(nw_edge_plane[k], nw_carry_plane, sizeof nw_carry_plane);
         memcpy(nw_edge_start[k], nw_carry_start, sizeof nw_carry_start);
     }
@@ -334,14 +349,18 @@ static void nw_draw_splash(int patch_num, int x0, int x1) {
     }
 }
 
+// a flat's pixels, decoded if they are not kept (flat[x * 64 + y])
+static const uint8_t *nw_flat(const char *name) {
+    int flatnum = W_GetNumForName(name) - firstflat;
+    for (int slot = 0; slot < cached_flat_slots; slot++) {
+        if (FLAT_SLOT_PIC(slot) == flatnum) return FLAT_SLOT_ADDR(slot);
+    }
+    return decode_flat_to_slot(0, flatnum);
+}
+
 // a flat tiled over the band (behind the ending's text, and darker behind the keys page)
 static void nw_tile_flat(const char *name, int x0, int x1, int light = 0) {
-    int flatnum = W_GetNumForName(name) - firstflat;
-    uint8_t *flat_data = nullptr;
-    for (int slot = 0; slot < cached_flat_slots; slot++) {
-        if (FLAT_SLOT_PIC(slot) == flatnum) flat_data = FLAT_SLOT_ADDR(slot);
-    }
-    if (!flat_data) flat_data = decode_flat_to_slot(0, flatnum);
+    const uint8_t *flat_data = nw_flat(name);
     const lighttable_t *map = light ? xcolormaps + 256 * light : nullptr;
     for (int y = 0; y < SCREENHEIGHT; y++) {
         uint8_t *dest = render_frame_buffer + y * NW_STRIDE;
@@ -431,6 +450,50 @@ static void nw_draw_view(int x0, int x1) {
     nw_draw_masked();
 }
 
+// low detail: the view's columns v0 to v1, drawn at the band's left, each made two of the screen's (as
+// R_DrawColumnLow and R_DrawSpanLow draw them), from the right so that none is written over before it is read
+static void nw_double_columns(uint8_t *band, int x0, int v0, int v1) {
+    for (int y = 0; y < viewheight; y++) {
+        uint8_t *row = band + (viewwindowy + y) * NW_STRIDE;
+        for (int v = v1 - 1; v >= v0; v--) {
+            uint8_t *d = row + viewwindowx + 2 * v - x0;
+            d[0] = d[1] = row[v - v0];
+        }
+    }
+}
+
+// the smaller screen sizes: vanilla's R_FillBackScreen, a flat around the view (the bevel's patches are drawn
+// with the others, pd_end_frame)
+static void nw_draw_border(int x0, int x1) {
+    const uint8_t *flat_data = nw_flat(gamemode == commercial ? "GRNROCK" : "FLOOR7_2");
+    int l = viewwindowx, r = viewwindowx + scaledviewwidth;
+    for (int y = 0; y < SCREENHEIGHT - ST_HEIGHT; y++) {
+        uint8_t *dest = render_frame_buffer + y * NW_STRIDE;
+        const uint8_t *src = flat_data + (y & 63);
+        bool beside = y >= viewwindowy && y < viewwindowy + viewheight;
+        for (int x = x0; x < x1; x++) {
+            if (beside && x >= l && x < r) x = r;
+            if (x >= x1) break;
+            dest[x] = src[(x & 63) * 64];
+        }
+    }
+}
+
+static void nw_draw_bezel() {
+    if (scaledviewwidth == SCREENWIDTH) return;
+    int n = scaledviewwidth / 8 - 1;
+    V_DrawPatchN(viewwindowx, viewwindowy - 8, VPATCH_HANDLE(VPATCH_NAME(BRDR_T)), n);
+    V_DrawPatchN(viewwindowx, viewwindowy + viewheight, VPATCH_HANDLE(VPATCH_NAME(BRDR_B)), n);
+    for (int y = 0; y < viewheight; y += 8) {
+        V_DrawPatch(viewwindowx - 8, viewwindowy + y, VPATCH_HANDLE(VPATCH_NAME(BRDR_L)));
+        V_DrawPatch(viewwindowx + scaledviewwidth, viewwindowy + y, VPATCH_HANDLE(VPATCH_NAME(BRDR_R)));
+    }
+    V_DrawPatch(viewwindowx - 8, viewwindowy - 8, VPATCH_HANDLE(VPATCH_NAME(BRDR_TL)));
+    V_DrawPatch(viewwindowx + scaledviewwidth, viewwindowy - 8, VPATCH_HANDLE(VPATCH_NAME(BRDR_TR)));
+    V_DrawPatch(viewwindowx - 8, viewwindowy + viewheight, VPATCH_HANDLE(VPATCH_NAME(BRDR_BL)));
+    V_DrawPatch(viewwindowx + scaledviewwidth, viewwindowy + viewheight, VPATCH_HANDLE(VPATCH_NAME(BRDR_BR)));
+}
+
 static void nw_draw_band(uint8_t *band, int x0, int x1, bool view, int help, bool strips) {
     nw_band_x0 = x0;
     nw_band_x1 = x1;
@@ -443,25 +506,39 @@ static void nw_draw_band(uint8_t *band, int x0, int x1, bool view, int help, boo
             AM_Drawer();
             nw_direct = false;
         } else {
-            if (strips) {
-                // this band's view: the BSP pass again, its columns alone kept
-                pd_begin_frame();
-                nw_strip_x0 = x0;
-                nw_strip_x1 = x1;
-                R_RenderPlayerView(&players[displayplayer]);
-                render_frame_buffer = band - x0;
-                nw_flats_ready();
-                if (nw_overflowed) {
-                    // (not even the band's pieces all found room: what has none is left black)
-                    for (int y = 0; y < viewheight; y++) memset(render_frame_buffer + y * NW_STRIDE + x0, 0, x1 - x0);
+            // (the view's own columns: nw_band_x0 and nw_band_x1 are those while it is drawn)
+            int v0, v1;
+            nw_view_cols(x0, x1, &v0, &v1);
+            if (v0 < v1) {
+                uint8_t *vbuf = nw_view_buffer(band, x0, v0);
+                nw_band_x0 = v0;
+                nw_band_x1 = v1;
+                render_frame_buffer = vbuf;
+                if (strips) {
+                    // this band's view: the BSP pass again, its columns alone kept
+                    pd_begin_frame();
+                    nw_strip_x0 = v0;
+                    nw_strip_x1 = v1;
+                    R_RenderPlayerView(&players[displayplayer]);
+                    render_frame_buffer = vbuf;
+                    nw_flats_ready();
+                    if (nw_overflowed) {
+                        // (not even the band's pieces all found room: what has none is left black)
+                        for (int y = 0; y < viewheight; y++) memset(vbuf + y * NW_STRIDE + v0, 0, v1 - v0);
+                    }
+                    // (the fuzz of the sprites, the same as in the first pass, is where that pass's count left it)
+                    nw_strips++;
                 }
-                // (the fuzz of the sprites, the same as in the first pass, is where that pass's count left it)
-                nw_strips++;
+                nw_scratch_base = render_col_count;
+                nw_draw_view(v0, v1);
+                nw_strip_x0 = 0;
+                nw_strip_x1 = SCREENWIDTH;
+                if (detailshift) nw_double_columns(band, x0, v0, v1);
+                nw_band_x0 = x0;
+                nw_band_x1 = x1;
+                render_frame_buffer = band - x0;
             }
-            nw_scratch_base = render_col_count;
-            nw_draw_view(x0, x1);
-            nw_strip_x0 = 0;
-            nw_strip_x1 = SCREENWIDTH;
+            if (scaledviewwidth != SCREENWIDTH) nw_draw_border(x0, x1);
             if (automapactive) {
                 // (the map over the view)
                 nw_direct = true;
@@ -469,7 +546,8 @@ static void nw_draw_band(uint8_t *band, int x0, int x1, bool view, int help, boo
                 nw_direct = false;
             }
         }
-        for (int y = viewheight; y < SCREENHEIGHT; y++) memset(render_frame_buffer + y * NW_STRIDE + x0, 0, x1 - x0);
+        int below = scaledviewwidth == SCREENWIDTH ? viewheight : SCREENHEIGHT - ST_HEIGHT;
+        for (int y = below; y < SCREENHEIGHT; y++) memset(render_frame_buffer + y * NW_STRIDE + x0, 0, x1 - x0);
     } else {
         nw_draw_background(x0, x1, help);
         if (gamestate == GS_FINALE && finalestage == F_STAGE_TEXT && !help) {
@@ -610,8 +688,9 @@ void pd_end_frame(int wipe_start) {
     // what is drawn over the picture, gathered once
     nw_patches[0].header.max = count_of(nw_patches) - 1;
     V_BeginPatchList(nw_patches);
+    if (view3d) nw_draw_bezel();
     if (!help) {
-        if (gamestate == GS_LEVEL) ST_Drawer(false, true);
+        if (gamestate == GS_LEVEL) ST_Drawer(viewheight == SCREENHEIGHT, true);
         else if (gamestate == GS_INTERMISSION) WI_Drawer();
     } else if (gamestate == GS_LEVEL) {
         ST_doPaletteStuff();

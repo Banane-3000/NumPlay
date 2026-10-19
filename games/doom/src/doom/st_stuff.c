@@ -809,6 +809,10 @@ void ST_drawWidgets(boolean refresh)
 
 void ST_doRefresh(boolean refresh)
 {
+#if NUMWORKS
+    if (!st_statusbaron)
+        return; // (the full screen view)
+#endif
 
 #if !DOOM_TINY
     st_firsttime = false;

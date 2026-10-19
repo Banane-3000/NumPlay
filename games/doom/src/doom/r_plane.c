@@ -94,7 +94,7 @@ int8_t *planezlight;
 #endif
 fixed_t planeheight;
 
-#if !DOOM_TINY
+#if !DOOM_TINY || NUMWORKS
 fixed_t yslope[SCREENHEIGHT];
 #else
 fixed_t yslope[MAIN_VIEWHEIGHT];
@@ -104,7 +104,8 @@ fixed_t _distscale[SCREENWIDTH];
 #else
 static_assert(SCREENWIDTH == 320, "");
 #define DC(x) ((((x)>>16)==1)?(x)&0xffffu:0xffffffff)
-const uint16_t _distscale[SCREENWIDTH] = {
+#if HOST // (RP2040 Doom's, for the full width: the check in R_ExecuteSetViewSize)
+const uint16_t ref_distscale[SCREENWIDTH] = {
         DC(0x00016a75), DC(0x00016912), DC(0x000167fa), DC(0x000166e4), DC(0x000165d0), DC(0x000164bf), DC(0x000163b0), DC(0x00016262), DC(0x00016158), DC(0x00016052), DC(0x00015f0b), DC(0x00015e0b), DC(0x00015d0b), DC(0x00015bce), DC(0x00015ad6), DC(0x0001599f),
         DC(0x000158ab), DC(0x0001577c), DC(0x0001568b), DC(0x00015561), DC(0x00015475), DC(0x00015353), DC(0x00015232), DC(0x0001514e), DC(0x00015034), DC(0x00014f1b), DC(0x00014e08), DC(0x00014d2d), DC(0x00014c1d), DC(0x00014b13), DC(0x00014a0a), DC(0x00014902),
         DC(0x00014800), DC(0x000146ff), DC(0x00014601), DC(0x00014506), DC(0x0001440d), DC(0x00014319), DC(0x00014226), DC(0x00014136), DC(0x00014018), DC(0x00013f2d), DC(0x00013e46), DC(0x00013d60), DC(0x00013c50), DC(0x00013b70), DC(0x00013a91), DC(0x0001398b),
@@ -126,6 +127,7 @@ const uint16_t _distscale[SCREENWIDTH] = {
         DC(0x000147cb), DC(0x000148cf), DC(0x000149d4), DC(0x00014add), DC(0x00014be8), DC(0x00014cf7), DC(0x00014dd0), DC(0x00014ee5), DC(0x00014ffb), DC(0x00015116), DC(0x000151fa), DC(0x00015319), DC(0x0001543b), DC(0x00015527), DC(0x0001564e), DC(0x0001573f),
         DC(0x0001586e), DC(0x00015963), DC(0x00015a97), DC(0x00015b90), DC(0x00015ccc), DC(0x00015dcb), DC(0x00015ecc), DC(0x00016010), DC(0x00016115), DC(0x0001621f), DC(0x0001636d), DC(0x0001647b), DC(0x0001658c), DC(0x0001669e), DC(0x000167b3), DC(0x000168cc),
 };
+#endif
 #endif
 fixed_t basexscale;
 fixed_t baseyscale;

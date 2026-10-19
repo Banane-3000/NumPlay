@@ -207,8 +207,15 @@ extern player_t*	viewplayer;
 extern isb_int16_t	viewangletox[FINEANGLES/2];
 extern angle_t		xtoviewangle[SCREENWIDTH+1];
 #define x_to_viewangle(x) xtoviewangle[x]
+#define viewangletox_at(i) viewangletox[i]
+#elif NUMWORKS
+int nw_viewangletox(int i);
+#define viewangletox_at(i) nw_viewangletox(i)
+extern uint16_t		xtoviewangle_[SCREENWIDTH+1];
+#define x_to_viewangle(x) ((angle_t)xtoviewangle_[x] << 16)
 #else
 extern const int16_t		viewangletox[FINEANGLES/2];
+#define viewangletox_at(i) viewangletox[i]
 extern const uint16_t		xtoviewangle_[SCREENWIDTH+1];
 #define x_to_viewangle(x) (xtoviewangle_[x] << 16)
 #endif

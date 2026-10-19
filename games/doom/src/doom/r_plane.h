@@ -43,13 +43,21 @@ extern floor_ceiling_clip_t ceilingclip[SCREENWIDTH];
 #if !DOOM_TINY
 extern fixed_t		yslope[SCREENHEIGHT];
 #else
+#if NUMWORKS
+extern fixed_t		yslope[SCREENHEIGHT];
+#else
 extern fixed_t		yslope[MAIN_VIEWHEIGHT];
+#endif
 #endif
 #if !FIXED_SCREENWIDTH
 extern fixed_t		_distscale[SCREENWIDTH];
 #define distscale(x) _distscale[x]
 #else
+#if NUMWORKS
+extern uint16_t		_distscale[SCREENWIDTH];
+#else
 extern const uint16_t		_distscale[SCREENWIDTH];
+#endif
 #define distscale(x) (_distscale[x] | (fixed_t)0x10000)
 #endif
 extern fixed_t      basexscale;
