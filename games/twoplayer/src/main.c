@@ -124,7 +124,8 @@ static const int8_t SEG[8] = {-10, -7, -4, 0, 0, 4, 7, 10}; /* tenths of the spe
 static int py[2], bx, by, bvx, bvy, aim, hits;
 static uint32_t serve_at; /* the ball waits in the middle until then (0: in play) */
 
-static int pong_speed(void) { return hits >= 12 ? clampi(46 + hits, 58, 84) : hits >= 4 ? 48 : 38; } /* 150 px/s */
+/* the ball's speed across, in 256ths of a pixel a millisecond (38: 150 pixels a second) */
+static int pong_speed(void) { return hits >= 12 ? clampi(46 + hits, 58, 84) : hits >= 4 ? 48 : 38; }
 static void pong_start(void) { /* the ball is served towards the one who lost the point */
   int to = winner < 2 ? 1 - winner : rn(2);
   hits = aim = 0;
@@ -257,7 +258,10 @@ static void hockey_paint(void) {
   box(RX0 - 5, RY0 - 5, RX1 - RX0 + 10, RY1 - RY0 + 10, 14, RIM);
   box(RX0, RY0, RX1 - RX0, RY1 - RY0, 10, ICE);
   gfx_fill(159, RY0, 3, RY1 - RY0, RED);
-  for (int k = 0; k < 3; k++) gfx_rrect_outline(k * 150 - 30 + RX0 * !k, RYM - 30 - 10 * !!k, 60 + 20 * !!k, 60 + 20 * !!k, 40, 2, k == 1 ? RED : BLUE, 220);
+  for (int k = 0; k < 3; k++) { /* the creases round the goals, and the circle in the middle */
+    int c = k == 1, d = 80 - 20 * c;
+    gfx_rrect_outline(k * 150 - 30 + 10 * c, RYM - d / 2, d, d, d / 2, 2, c ? RED : BLUE, 220);
+  }
   for (int k = 0; k < 2; k++) { /* the rim over the creases, and the goals in it */
     gfx_fill(k ? RX1 + 5 : 0, RY0, k ? SCREEN_W - RX1 - 5 : RX0 - 5, RY1 - RY0, INK);
     gfx_fill(k ? RX1 : RX0 - 5, RY0, 5, RY1 - RY0, RIM);
@@ -502,10 +506,10 @@ static bool crashed[2];
 static uint32_t tick_t, round_t;
 static const int8_t DX[4] = {1, 0, -1, 0}, DY[4] = {0, 1, 0, -1}; /* right, down, left, up */
 
-static void cycles_start(void) {
+static void cycles_start(void) { /* side by side, each on its own lane, the other's way */
   for (uint8_t *c = &cell[0][0]; c < &cell[0][0] + CW * CH; c++) *c = 0;
   for (int p = 0; p < 2; p++) {
-    hx[p] = p ? CW - 17 : 16, hy[p] = CH / 2, hd[p] = p ? 2 : 0, nturns[p] = 0, crashed[p] = false;
+    hx[p] = p ? CW - 17 : 16, hy[p] = p ? CH / 2 + 8 : CH / 2 - 8, hd[p] = p ? 2 : 0, nturns[p] = 0, crashed[p] = false;
     cell[hy[p]][hx[p]] = (uint8_t)(p + 1);
   }
   tick_t = round_t = now;
@@ -731,12 +735,12 @@ static void scene(void *ctx) {
     } else if (screen == S_OVER) {
       static const char *const WON[2][2] = {{T("Player 1 wins!"), T("Player 2 wins!")}, {T("You win!"), T("The computer wins")}};
       static const char *const ITEM[2] = {T("Rematch"), T("Other games")};
-      card(30, 190, WON[cpu > 0][score[1] > score[0]], ITEM, 2, 156);
+      card(46, 158, WON[cpu > 0][score[1] > score[0]], ITEM, 2, 140);
       for (int p = 0; p < 2; p++) {
         num(s, (uint32_t)score[p]);
-        say(&np_font_title, 124 + 72 * p, 112, s, light[p]);
+        say(&np_font_title, 124 + 72 * p, 118, s, light[p]);
       }
-      say(&np_font_title, 160, 112, "-", WHITE);
+      say(&np_font_title, 160, 118, "-", WHITE);
     }
   }
   if (screen == S_ASK) {
