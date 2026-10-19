@@ -358,11 +358,10 @@
 #define BG_POOL 3
 #define BG_FOG 4
 #define BG_ROOF 5
-#define BG_ROOF_NIGHT 6
-#define BG_MENU 7
-#define BG_AWARD 8
-#define BG_ALMANAC 9
-#define BG_SHOP 10
+#define BG_MENU 6
+#define BG_AWARD 7
+#define BG_ALMANAC 8
+#define BG_SHOP 9
 
 #define F_BIG 0
 #define F_HEAD 1

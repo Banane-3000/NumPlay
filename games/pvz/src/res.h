@@ -14,7 +14,7 @@ static inline uint16_t rd16(const uint8_t *p) { return (uint16_t)(p[0] | p[1] <<
 static inline int16_t rds16(const uint8_t *p) { return (int16_t)rd16(p); }
 static inline uint32_t rd32(const uint8_t *p) { return p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24; }
 static inline const uint8_t *table(int t) { return pvz_bin + rd32(pvz_bin + 4 + 4 * t); }
-enum { T_ANIMS, T_FRAMES, T_PALS, T_BACKS, T_FONTS };
+enum { T_ANIMS, T_FRAMES, T_PALS, T_BACKS, T_FONTS, T_BOSS };
 
 typedef struct {
   uint16_t first, pal, cycle, base;   /* base: the animation an overlay is drawn over, 0xFFFF none */

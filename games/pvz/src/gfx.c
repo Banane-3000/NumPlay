@@ -127,6 +127,8 @@ static const uint16_t *palette(int pal, int tint) {
 
 /* ---------------------------------------------------------------- the background */
 
+uint32_t gfx_scratch[640 * 16 / 4];
+
 bool gfx_load_back_rows(int b, int src_x, int y0, int y1, int x0, int x1) {
   Back bk = back_info(b);
   if (y1 <= y0) y0 = 0, y1 = bk.h;
@@ -134,14 +136,14 @@ bool gfx_load_back_rows(int b, int src_x, int y0, int y1, int x0, int x1) {
   int n;
   const uint16_t *pal = pal_colors(bk.pal, &n);
   for (int i = 0; i < n && i < 256; i++) gfx_bg_pal[i] = pal[i];
-  static uint8_t chunk[640 * 16];
+  uint8_t *chunk = (uint8_t *)gfx_scratch;
   uint8_t tables[3600];
-  if (np_inflate_tables_size() > sizeof tables || bk.w * bk.rows > (int)sizeof chunk) return false;
+  if (np_inflate_tables_size() > sizeof tables || bk.w * bk.rows > (int)sizeof gfx_scratch) return false;
   for (int c = 0; c < bk.nchunks; c++) {
     int ry = c * bk.rows;
     if (ry + bk.rows <= y0 || ry >= y1) continue;
     uint32_t a = rd32(bk.chunks + 4 * c), e = rd32(bk.chunks + 4 * c + 4);
-    int got = np_inflate(chunk, sizeof chunk, pvz_bin + a, e - a, (np_inflate_tables_t *)(void *)tables);
+    int got = np_inflate(chunk, sizeof gfx_scratch, pvz_bin + a, e - a, (np_inflate_tables_t *)(void *)tables);
     if (got < bk.w) return false;
     for (int r = 0; r < bk.rows && ry + r < SCREEN_H; r++) {
       int y = ry + r;

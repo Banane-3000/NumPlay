@@ -208,15 +208,6 @@ typedef struct {
   int16_t storm_in;
   uint8_t storm_flash;
   int16_t fog_blown, pool_frozen;
-  /* the things on the lawn */
-  int nplants, nzombies, nshots, nsuns, ncoins, nfx, nrollers;
-  Plant plants[MAX_PLANTS];
-  Zombie zombies[MAX_ZOMBIES];
-  Shot shots[MAX_SHOTS];
-  Sun suns[MAX_SUNS];
-  Coin coins[MAX_COINS];
-  Fx fx[MAX_FX];
-  Roller rollers[MAX_ROLLERS];
   Mower mowers[MAX_ROWS];
   uint8_t ngraves, ncraters, nladders, nvases, ndrops;
   Cell graves[16];
@@ -235,6 +226,16 @@ typedef struct {
   /* the last zombie's place: where the reward drops */
   float last_x, last_y;
   uint8_t has_boss;
+  struct { uint8_t on, row, col; int16_t age; } rake;   /* on: 1 waiting, 2 a zombie on its way */
+  /* the things on the lawn (a level's save keeps what is before them, then them as many as there are) */
+  int nplants, nzombies, nshots, nsuns, ncoins, nfx, nrollers;
+  Plant plants[MAX_PLANTS];
+  Zombie zombies[MAX_ZOMBIES];
+  Shot shots[MAX_SHOTS];
+  Sun suns[MAX_SUNS];
+  Coin coins[MAX_COINS];
+  Fx fx[MAX_FX];
+  Roller rollers[MAX_ROLLERS];
 } Board;
 
 extern Board B;
@@ -278,6 +279,9 @@ bool has_conveyor(void);
 int waves_flag_every(void);
 bool is_flag_wave(int wave);
 void board_drop_reward(void);
+void board_set_seeds(const uint8_t *seeds, int n);
+void board_next_vase_stage(void);
+void whack_graves(int count);
 
 /* ---------------------------------------------------------------- zombies.c */
 Zombie *spawn_zombie(int kind, int row, float x, int wave);
@@ -299,6 +303,8 @@ void plant_new(Plant *p, int kind, int col, int row);
 
 /* ---------------------------------------------------------------- boss.c */
 #define BOSS_HEALTH 40000
+enum { BS_ENTER, BS_IDLE, BS_SPAWN, BS_STOMP, BS_BUNGEE, BS_BUNGEE_WAIT, BS_BUNGEE_LEAVE, BS_HEAD_ENTER, BS_HEAD_BEFORE,
+       BS_SPIT, BS_RV, BS_HEAD_AFTER, BS_HEAD_LEAVE, BS_DEATH };
 typedef struct {
   int32_t health;
   uint8_t phase, clip, mode, row, column, ball_kind;

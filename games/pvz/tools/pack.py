@@ -5,7 +5,7 @@
 
 The game is drawn at 0.4 of its own size: its 800 x 600 screen becomes the calculator's 320 x 240.
 
-data.bin: "PVZ1", the offsets (u32) of its 5 tables, the number of animations, frames, and the file's size (u32 x 3),
+data.bin: "PVZ1", the offsets (u32) of its 6 tables, the number of animations, frames, and the file's size (u32 x 3),
 then the tables (offsets are from the start of the file):
 - ANIMS: 12 bytes each (A_* and I_* in data.h): first frame, palette, the time a loop takes in hundredths of a
   second, the animation it is drawn over (u16 x 4; 0xFFFF none: an overlay holds only what differs from the
@@ -21,6 +21,13 @@ then the tables (offsets are from the start of the file):
   offsets (u32). Each chunk (one offset more for the end) is w x rows colour indices, raw DEFLATE
 - FONTS: the offset (u32) of each (F_*): first character, count, ascent, descent (u8 x 4), then 8 bytes a glyph
   (w, h, x, y, advance, 0, its data's offset u16 from the glyphs' end): 4-bit coverage, 2 pixels a byte
+- BOSS: Dr. Zomboss's Zombot as the game draws it, from parts the .reanim moves: the parts' table and the 4 rigs'
+  offsets (u32 x 5). Parts: their number (u32), then 12 bytes each: w, h, palette (u16 x 3), 0 (u16), its pixels'
+  offset (u32): rows of 4-bit colour indices (0 transparent), the first pixel lowest. A rig (the Zombot, its driver,
+  the fire ball, the ice ball): tracks, frames kept, the frames' step (from the .reanim's), the track the driver is
+  fixed to (u16 x 4), then a flag for each track (u8: 1 the arm and RV the attacks move), padded to 4, then for each
+  frame its offset (u32): which tracks show (a bit each), then their poses, 14 bytes each: x, y in eighths of a pixel,
+  scales in 4096ths, skews in sixteenths of a degree (s16 x 6), the part, the opacity (u8 x 2)
 """
 import json
 import os
@@ -47,51 +54,51 @@ NONE = 0xFFFF
 DEFAULT_KEEP = 8
 ANIMS = {
     # zombies: a headless body, and the heads and hats over it
-    "zombie-headless": (14, None), "zombie-walk": (14, "zombie-headless"), "cone-walk": (14, "zombie-headless"),
-    "bucket-walk": (14, "zombie-headless"), "flag-walk": (12, None), "zombie-eat": (10, None),
-    "cone-eat": (10, "zombie-eat"), "bucket-eat": (10, "zombie-eat"), "flag-eat": (8, None),
-    "zombie-die": (10, None), "zombie-burn": (6, None),
-    "pole-headless": (12, None), "pole-walk": (12, "pole-headless"), "pole-run": (12, None), "pole-jump": (10, None),
-    "pole-land": (5, None), "pole-eat": (8, None), "pole-die": (8, None), "pole-burn": (6, None),
-    "newspaper-headless": (10, None), "newspaper-walk": (10, "newspaper-headless"),
-    "newspaper-mad-walk": (10, "newspaper-headless"), "newspaper-mad-eat": (8, None),
-    "newspaper-eat": (8, "newspaper-mad-eat"), "newspaper-gasp": (6, None), "newspaper-die": (8, None),
+    "zombie-headless": (12, None), "zombie-walk": (12, "zombie-headless"), "cone-walk": (12, "zombie-headless"),
+    "bucket-walk": (12, "zombie-headless"), "flag-walk": (10, None), "zombie-eat": (8, None),
+    "cone-eat": (8, "zombie-eat"), "bucket-eat": (8, "zombie-eat"), "flag-eat": (7, None),
+    "zombie-die": (8, None), "zombie-burn": (6, None),
+    "pole-headless": (10, None), "pole-walk": (10, "pole-headless"), "pole-run": (10, None), "pole-jump": (8, None),
+    "pole-land": (5, None), "pole-eat": (7, None), "pole-die": (7, None), "pole-burn": (6, None),
+    "newspaper-headless": (8, None), "newspaper-walk": (8, "newspaper-headless"),
+    "newspaper-mad-walk": (8, "newspaper-headless"), "newspaper-mad-eat": (7, None),
+    "newspaper-eat": (7, "newspaper-mad-eat"), "newspaper-gasp": (6, None), "newspaper-die": (7, None),
     "newspaper-burn": (6, None),
-    "door-walk": (10, None), "door-eat": (8, None),
-    "football-headless": (10, None), "football-walk": (10, "football-headless"),
-    "football-bare-walk": (10, "football-headless"), "football-bare-eat": (8, None),
-    "football-eat": (8, "football-bare-eat"), "football-die": (8, None),
-    "dancer-walk": (10, None), "dancer-eat": (8, None), "dancer-summon": (7, None), "dancer-headless": (8, None),
-    "dancer-die": (8, None), "dancer-burn": (6, None),
-    "backup-walk": (10, None), "backup-eat": (8, None), "backup-headless": (8, None), "backup-die": (8, None),
+    "door-walk": (8, None), "door-eat": (7, None),
+    "football-headless": (8, None), "football-walk": (8, "football-headless"),
+    "football-bare-walk": (8, "football-headless"), "football-bare-eat": (7, None),
+    "football-eat": (7, "football-bare-eat"), "football-die": (7, None),
+    "dancer-walk": (8, None), "dancer-eat": (7, None), "dancer-summon": (7, None), "dancer-headless": (8, None),
+    "dancer-die": (7, None), "dancer-burn": (6, None),
+    "backup-walk": (8, None), "backup-eat": (7, None), "backup-headless": (8, None), "backup-die": (7, None),
     "backup-burn": (6, None),
-    "ducky1-walk": (10, None), "ducky2-walk": (10, "ducky1-walk"), "ducky3-walk": (10, "ducky1-walk"),
-    "ducky1-eat": (8, None), "ducky2-eat": (8, "ducky1-eat"), "ducky3-eat": (8, "ducky1-eat"), "ducky-die": (8, None),
-    "snorkel-walk": (10, None), "snorkel-swim": (4, None), "snorkel-eat": (8, None), "snorkel-die": (8, None),
+    "ducky1-walk": (8, None), "ducky2-walk": (8, "ducky1-walk"), "ducky3-walk": (8, "ducky1-walk"),
+    "ducky1-eat": (7, None), "ducky2-eat": (7, "ducky1-eat"), "ducky3-eat": (7, "ducky1-eat"), "ducky-die": (7, None),
+    "snorkel-walk": (8, None), "snorkel-swim": (4, None), "snorkel-eat": (7, None), "snorkel-die": (7, None),
     "zomboni-walk": (4, None), "zomboni-damaged": (3, None), "zomboni-critical": (3, None), "zomboni-die": (4, None),
-    "bobsled-walk": (8, None), "bobsled-eat": (8, None), "bobsled-die": (8, None),
-    "dolphin-walk": (10, None), "dolphin-ride": (4, None), "dolphin-jump": (8, None), "dolphin-swim": (10, None),
-    "dolphin-eat": (8, None), "dolphin-die": (6, None),
-    "jack-walk": (10, None), "jack-eat": (8, None), "jack-open": (8, None), "jack-headless": (8, None),
-    "jack-die": (8, None),
-    "balloon-fly": (8, None), "balloon-pop": (8, None), "balloon-walk": (10, None), "balloon-eat": (8, None),
-    "balloon-die": (8, None),
-    "digger-dig": (6, None), "digger-rise": (8, None), "digger-walk": (10, None), "digger-eat": (8, None),
-    "digger-die": (8, None),
-    "pogo-bounce": (8, None), "pogo-walk": (8, None), "pogo-eat": (8, None), "pogo-die": (8, None),
+    "bobsled-walk": (8, None), "bobsled-eat": (7, None), "bobsled-die": (7, None),
+    "dolphin-walk": (8, None), "dolphin-ride": (4, None), "dolphin-jump": (8, None), "dolphin-swim": (8, None),
+    "dolphin-eat": (7, None), "dolphin-die": (6, None),
+    "jack-walk": (8, None), "jack-eat": (7, None), "jack-open": (8, None), "jack-headless": (8, None),
+    "jack-die": (7, None),
+    "balloon-fly": (8, None), "balloon-pop": (8, None), "balloon-walk": (8, None), "balloon-eat": (7, None),
+    "balloon-die": (7, None),
+    "digger-dig": (6, None), "digger-rise": (8, None), "digger-walk": (8, None), "digger-eat": (7, None),
+    "digger-die": (7, None),
+    "pogo-bounce": (8, None), "pogo-walk": (8, None), "pogo-eat": (7, None), "pogo-die": (7, None),
     "bungee-drop": (4, None), "bungee-idle": (8, None), "bungee-die": (6, None),
-    "ladder-bare": (10, None), "ladder-walk": (10, "ladder-bare"), "ladder-place": (6, None), "ladder-eat": (8, None),
-    "ladder-die": (8, None),
-    "catapult-walk": (5, None), "catapult-idle": (3, None), "catapult-shoot": (8, None), "catapult-die": (5, None),
-    "gargantuar-bare-walk": (8, None), "gargantuar-walk": (8, "gargantuar-bare-walk"),
-    "gargantuar-bare-smash": (7, None), "gargantuar-smash": (7, "gargantuar-bare-smash"), "gargantuar-throw": (7, None),
-    "gargantuar-bare-die": (7, None), "gargantuar-die": (7, "gargantuar-bare-die"),
-    "imp-thrown": (6, None), "imp-land": (4, None), "imp-walk": (10, None), "imp-eat": (8, None), "imp-die": (8, None),
+    "ladder-bare": (8, None), "ladder-walk": (8, "ladder-bare"), "ladder-place": (6, None), "ladder-eat": (7, None),
+    "ladder-die": (7, None),
+    "catapult-walk": (3, None), "catapult-idle": (3, None), "catapult-shoot": (6, None), "catapult-die": (3, None),
+    "gargantuar-bare-walk": (6, None), "gargantuar-walk": (6, "gargantuar-bare-walk"),
+    "gargantuar-bare-smash": (5, None), "gargantuar-smash": (5, "gargantuar-bare-smash"), "gargantuar-throw": (5, None),
+    "gargantuar-bare-die": (5, None), "gargantuar-die": (5, "gargantuar-bare-die"),
+    "imp-thrown": (6, None), "imp-land": (4, None), "imp-walk": (8, None), "imp-eat": (7, None), "imp-die": (7, None),
     # plants
-    "peashooter": (12, None), "sunflower": (12, None), "cherrybomb": (8, None), "wallnut": (8, None),
+    "peashooter": (10, None), "sunflower": (10, None), "cherrybomb": (8, None), "wallnut": (8, None),
     "wallnut-cracked1": (8, "wallnut"), "wallnut-cracked2": (8, "wallnut"), "wallnut-roll": (8, None),
-    "explodenut": (4, None), "potatomine": (6, None), "potatomine-unarmed": (1, None), "snowpea": (10, None),
-    "chomper": (10, None), "chomper-bite": (9, None), "chomper-digest": (6, None), "repeater": (10, None),
+    "explodenut": (4, None), "potatomine": (6, None), "potatomine-unarmed": (1, None), "snowpea": (8, None),
+    "chomper": (8, None), "chomper-bite": (9, None), "chomper-digest": (6, None), "repeater": (8, None),
     "puffshroom": (8, None), "sunshroom": (8, None), "sunshroom-big": (8, None), "fumeshroom": (8, None),
     "fumeshroom-attack": (1, None), "fume-cloud": (6, None), "gravebuster": (8, None), "hypnoshroom": (8, None),
     "scaredyshroom": (8, None), "scaredyshroom-scared": (6, None), "iceshroom": (8, None), "doomshroom": (8, None),
@@ -106,7 +113,7 @@ ANIMS = {
     "kernelpult-attack": (8, None), "coffeebean": (8, None), "garlic": (6, None), "garlic-cracked1": (6, "garlic"),
     "garlic-cracked2": (6, "garlic"), "umbrella": (8, None), "umbrella-block": (4, None), "marigold": (8, None),
     "melonpult": (8, None), "melonpult-attack": (8, None),
-    "sun": (11, None),
+    "sun": (9, None),
 }
 # the plants, in the Almanac's order: their seed packets' pictures and their Almanac portraits
 PLANTS = ["peashooter", "sunflower", "cherrybomb", "wallnut", "potatomine", "snowpea", "chomper", "repeater",
@@ -288,6 +295,7 @@ class Pack:
         self.fonts = []      # (key, bytes)
         self.names = {}
         self.scaled = {}     # name -> its frames before trimming (for overlays)
+        self.boss = b""
 
     def palette(self, pal):
         self.pals.append([rgb565(c) for c in pal])
@@ -316,13 +324,18 @@ class Pack:
     def add_image(self, name, arr, x0=0, y0=0, ncolors=16):
         return self.add_anim("I_" + name.upper().replace("-", "_"), [(arr, x0, y0)], 0, ncolors)
 
-    def add_back(self, name, img, ncolors=128, rows=16):
+    def add_back(self, name, img, ncolors=128, rows=16, shared=None):
+        """shared: (palette, its index) from an earlier background, for pictures drawn into each other"""
         img = img.convert("RGB")
         w, h = img.size
-        px = np.asarray(img).reshape(-1, 3).astype(np.float32)
-        pal = kmeans_palette(px, ncolors, iters=5)
+        if shared:
+            pal, p = shared
+        else:
+            px = np.asarray(img).reshape(-1, 3).astype(np.float32)
+            pal = kmeans_palette(px, ncolors, iters=5)
+            p = self.palette(pal)
         idx = index_pixels(np.asarray(img), pal).astype(np.uint8)
-        p = self.palette(pal)
+        self.last_palette = (pal, p)
         chunks = [deflate(idx[y:y + rows].tobytes()) for y in range(0, h, rows)]
         key = "BG_" + name.upper().replace("-", "_")
         self.names[key] = len(self.backs)
@@ -357,7 +370,7 @@ class Pack:
         print(f"font {key}: cap {cap}, ascent {asc}, descent {desc}, {len(blob)} bytes")
 
     def write(self):
-        out = bytearray(b"PVZ1" + bytes(4 * 8))
+        out = bytearray(b"PVZ1" + bytes(4 * 9))
 
         def align():
             while len(out) % 4:
@@ -404,7 +417,10 @@ class Pack:
             struct.pack_into("<I", out, font_at + 4 * i, len(out))
             out += blob
         align()
-        struct.pack_into("<5I3I", out, 4, *tables, len(self.anims), len(self.frames), len(out))
+        tables.append(len(out))
+        out += self.boss
+        align()
+        struct.pack_into("<6I3I", out, 4, *tables, len(self.anims), len(self.frames), len(out))
         with open(OUT_BIN, "wb") as f:
             f.write(out)
         lines = ["/* Generated by tools/pack.py: what data.bin holds. */", "#ifndef PVZ_DATA_H", "#define PVZ_DATA_H",
@@ -535,9 +551,94 @@ def centred(img, scale, ax=0.5, ay=0.5):
     return premul_resize(img, (sw, sh)), -int(round(sw * ax)), -int(round(sh * ay))
 
 
+BOSS_PART = 0.16   # of the parts' pictures (twice the game's size): drawn 1.25 times bigger
+BOSS_SKIP = ("MULTIPLY", "ADDITIVE", "SUPERGLOW", "HIGHLIGHT", "ICEFIRE_SHADOW")
+
+
+def pack_boss(P, ref):
+    """the Zombot's parts and its rigs' tracks (see BOSS above)"""
+    d = json.load(open(os.path.join(ref, "pvz", "runtime", "boss", "tracks.json")))
+    names = sorted({p[8] for rig in d.values() for t in rig["tracks"] for p in t["poses"] if p[8]})
+    names = [n for n in names if not any(k in n for k in BOSS_SKIP)]
+    part_id = {n: i for i, n in enumerate(names)}
+    parts = []
+    for n in names:
+        im = Image.open(os.path.join(ref, "pvz", "runtime", "boss", n + ".webp")).convert("RGBA")
+        w, h = im.size
+        arr = premul_resize(im, (max(1, int(round(w * BOSS_PART))), max(1, int(round(h * BOSS_PART)))))
+        px = arr[arr[..., 3] >= 0.5][:, :3] * 255
+        pal = kmeans_palette(px, 15)
+        idx = index_pixels(arr[..., :3] * 255, pal) + 1
+        idx[arr[..., 3] < 0.5] = 0
+        p = P.palette(np.concatenate([np.zeros((1, 3), np.float32), pal]))
+        rows = b""
+        for y in range(idx.shape[0]):
+            r = list(idx[y]) + [0]
+            rows += bytes(int(r[i]) | int(r[i + 1]) << 4 for i in range(0, idx.shape[1], 2))
+        parts.append((idx.shape[1], idx.shape[0], p, rows))
+    out = bytearray(bytes(4 * 5))
+
+    def align():
+        while len(out) % 4:
+            out.append(0)
+    struct.pack_into("<I", out, 0, len(out))
+    table = len(out)
+    out += struct.pack("<I", len(parts)) + bytes(12 * len(parts))
+    for i, (w, h, p, rows) in enumerate(parts):
+        align()
+        struct.pack_into("<HHHHI", out, table + 4 + 12 * i, w, h, p, 0, len(out))
+        out += rows
+    for r, key in enumerate(("body", "driver", "fire", "ice")):
+        rig = d[key]
+        tracks = rig["tracks"]
+        nf = len(tracks[0]["poses"])
+        step = 3
+        head = next((i for i, t in enumerate(tracks) if t["name"] == "Boss_head2"), 0xFFFF)
+        align()
+        struct.pack_into("<I", out, 4 + 4 * r, len(out))
+        kept = (nf + step - 1) // step
+        out += struct.pack("<HHHH", len(tracks), kept, step, head)
+        out += bytes(1 if t["name"].startswith(("Boss_innerarm", "Boss_RV")) else 0 for t in tracks)
+        align()
+        offs = len(out)
+        out += bytes(4 * kept)
+        for f in range(kept):
+            align()
+            struct.pack_into("<I", out, offs + 4 * f, len(out))
+            mask = bytearray((len(tracks) + 7) // 8)
+            poses = b""
+            for i, t in enumerate(tracks):
+                x, y, sx, sy, kx, ky, fr, al, img = t["poses"][f * step]
+                if not img or fr < 0 or al <= 0 or img not in part_id:
+                    continue
+                mask[i >> 3] |= 1 << (i & 7)
+                poses += struct.pack("<hhhhhhBB", round(x * 8), round(y * 8), round(sx * 4096), round(sy * 4096),
+                                     round(kx * 16), round(ky * 16), part_id[img], min(255, round(al * 255)))
+            out += bytes(mask) + poses
+    align()
+    P.boss = bytes(out)
+    print(f"boss: {len(parts)} parts, {len(out)} bytes")
+
+
+def make_icon(ref, at):
+    """src/icon.png: a peashooter on the lawn, a zombie's head coming (rounded by NumPlay's tools/round_icons.py)"""
+    lawn = Image.open(os.path.join(ref, "pvz", "lawn.jpg")).convert("RGB")
+    icon = lawn.crop((420, 250, 420 + 165, 250 + 168)).resize((55, 56), Image.LANCZOS).convert("RGBA")
+    for name, scale, x, y in (("zombie-walk", 0.42, 44, 66), ("peashooter", 0.62, 19, 50)):
+        fr, _ = at.frames(name, 1, scale)
+        arr, x0, y0 = fr[0]
+        im = Image.fromarray((np.clip(arr, 0, 1) * 255).astype(np.uint8), "RGBA")
+        icon.alpha_composite(im, (x + x0, y + y0))
+    out = os.path.join(HERE, "..", "src", "icon.png")
+    icon.save(out)
+    import subprocess
+    subprocess.run([sys.executable, os.path.join(HERE, "..", "..", "..", "tools", "round_icons.py"), out], check=True)
+
+
 def main(ref):
     P = Pack()
     at = Atlas(ref)
+    make_icon(ref, at)
     pvz = os.path.join(ref, "pvz")
     for name, (keep, base) in ANIMS.items():
         frames, cycle = at.frames(name, keep)
@@ -617,14 +718,22 @@ def main(ref):
 
     # the lawns, whole (the screen shows 320 pixels of their 560, from 88), and the menus' backgrounds
     lawns = {"lawn": "lawn.jpg", "yard": "yard.jpg", "night": "original/night.jpg", "pool": "original/pool.png",
-             "fog": "original/fog.png", "roof": "original/roof.png", "roof-night": "runtime/boss/background.webp"}
+             "fog": "original/fog.png", "roof": "original/roof.png"}
+    # (the day's lawn and its bare yard share a palette: levels 1-1 to 1-3 roll the lawn's sod over the yard)
+    day = [Image.open(os.path.join(pvz, lawns[n])).convert("RGB").resize((560, 240), Image.LANCZOS) for n in ("lawn", "yard")]
+    both = np.concatenate([np.asarray(im).reshape(-1, 3) for im in day]).astype(np.float32)
+    shared = kmeans_palette(both, 160, iters=5)
+    shared = (shared, P.palette(shared))
     for name, rel in lawns.items():
-        P.add_back(name, Image.open(os.path.join(pvz, rel)).resize((560, 240), Image.LANCZOS))
+        img = day[0] if name == "lawn" else day[1] if name == "yard" else \
+            Image.open(os.path.join(pvz, rel)).resize((560, 240), Image.LANCZOS)
+        P.add_back(name, img, shared=shared if name in ("lawn", "yard") else None)
     for name, rel in [("menu", R + "menu.webp"), ("award", "original/award.jpg"),
                       ("almanac", "runtime/ui/challenge-background.webp"), ("shop", R + "shop-background.webp")]:
         P.add_back(name, Image.open(os.path.join(pvz, rel)).resize((320, 240), Image.LANCZOS))
     backs = sum(sum(len(c) for c in b[6]) for b in P.backs)
 
+    pack_boss(P, ref)
     fonts = os.path.join(ref, "fonts")
     P.add_font("big", os.path.join(fonts, "RammettoOne.ttf"), 12)
     P.add_font("head", os.path.join(fonts, "RammettoOne.ttf"), 8, spacing=1)
@@ -641,6 +750,9 @@ def main(ref):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[2] == "--icon":
+        make_icon(sys.argv[1], Atlas(sys.argv[1]))
+        sys.exit(0)
     if len(sys.argv) != 2:
         raise SystemExit(__doc__)
     main(sys.argv[1])

@@ -540,7 +540,7 @@ static int next_conveyor_seed(void) {
       }
       if (empty <= 5) weight /= empty <= 2 ? 5 : 3;
     }
-    if (B.has_boss && boss.phase == 10 /* the RV */ && kind == P_FLOWERPOT) weight = 500;
+    if (B.has_boss && boss.phase == BS_RV && kind == P_FLOWERPOT) weight = 500;
     w[i] = count >= 4 ? 1 : count >= 3 ? 5 : kind == B.last_conveyor ? weight / 2 : weight;
     total += w[i];
   }

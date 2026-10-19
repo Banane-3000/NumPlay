@@ -39,6 +39,8 @@ extern bool gfx_bg_on;         /* false: the background is black */
 /* unpacks background b (BG_*) into gfx_bg, its columns from src_x on; rows y0 to y1 only, if y1 > y0 */
 bool gfx_load_back(int b, int src_x);
 bool gfx_load_back_rows(int b, int src_x, int y0, int y1, int x0, int x1);
+/* where the backgrounds are unpacked; between two of those, free for a frame's own use */
+extern uint32_t gfx_scratch[640 * 16 / 4];
 
 /* the band: SCREEN_W * GFX_BAND pixels, the caller's (main's stack on the calculator) */
 void gfx_set_band_memory(uint16_t *px);
