@@ -263,6 +263,7 @@ typedef struct {
   uint8_t boss;                                  /* the boss's MON_* */
   bool devil_open, devil_angel, boss_beaten, trapdoor;
   int8_t devil_side;                             /* the wall of the boss's room it opens in */
+  bool golden_key, golden_bomb;                  /* found on this floor: keys and bombs for nothing */
   uint32_t seed;
   Room rooms[MAX_ROOMS];
 } Floor;
@@ -292,6 +293,9 @@ void move_ent(float *x, float *y, float *vx, float *vy, float r, bool flying, bo
 void grid_hit(int c, int r, float dmg);          /* a tear hits a poop or a fire */
 void grid_explode(float x, float y, float radius);
 void grid_draw_row(int r);
+void grid_update(void);
+void grid_break_at(float x, float y);
+extern bool g_ladder;                          /* fire burns, red fire shoots */
 bool door_try_unlock(int d);
 void door_bombed(float x, float y);
 int floor_neighbour(int d);
@@ -323,6 +327,7 @@ extern int g_transition;          /* frames of the dip to black between rooms */
 extern uint8_t g_wins;            /* runs won: Mom, Mom's Heart, Satan, Isaac (progress kept) */
 extern uint16_t g_deaths, g_runs;
 extern uint8_t g_best_stage;
+extern bool g_swap;              /* the number keys walk and the arrows cry (as WASD and the arrows) */
 
 void game_init(void);
 void game_frame(uint32_t keys);

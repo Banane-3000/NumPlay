@@ -38,7 +38,8 @@ void player_stats(void) {
   /* damage ups */
   dmg_up += h[7] * 1.0f + h[51] * 1.0f + h[50] * 1.0f + h[79] * 1.0f + h[70] * 1.0f + h[90] * 1.0f + h[193] * 0.3f
             + h[138] * 0.3f + h[80] * 0.5f + h[4] * 0.5f + h[12] * 0.3f + h[121] * 1.0f + h[197] * 0.5f + h[201] * 0.3f
-            + h[165] * 0.3f + h[101] * 0.3f + h[189] * 0.3f + h[182] * 1.0f + h[122] * 0 + h[154] * 0;
+            + h[165] * 0.3f + h[101] * 0.3f + h[189] * 0.3f + h[182] * 1.0f;
+  flat += h[154] * 1.0f;
   if (h[4]) mult *= 1.5f;
   if (h[12]) mult *= 1.5f;
   if (h[169]) mult *= 2, flat += 4;
@@ -190,6 +191,8 @@ bool player_hurt(int halves, int source) {
     }
   }
   if (pl.has[142] && pl.red + pl.soul <= 1) player_add_soul(2, false), pl.has[142] = 2;   /* Scapular */
+  if (pl.has[117]) mon_spawn(MON_BLUE_FLY, pl.x, pl.y - 12);                            /* Dead Bird's bird */
+  if (pl.has[178]) creep_spawn(pl.x, pl.y, 24, 150, false, 3);                          /* Holy Water */
   if (pl.red == 0 && pl.soul == 0 && pl.eternal == 0) player_kill(source);
   if (pl.has[122]) player_stats();
   return true;
@@ -323,7 +326,10 @@ void player_update(uint32_t keys) {
   if (absf(pl.vx) < 0.05f && !mx) pl.vx = 0;
   if (absf(pl.vy) < 0.05f && !my) pl.vy = 0;
   if (pl.pony > 0 && (mx || my)) pl.vx = mx * 7, pl.vy = my * 7;   /* (A Pony's dash) */
+  g_ladder = pl.has[60];
   move_ent(&pl.x, &pl.y, &pl.vx, &pl.vy, 5, pl.flight, false);
+  g_ladder = false;
+  if (pl.has[147] && (mx || my) && (g_frame & 7) == 0) grid_break_at(pl.x + mx * 9, pl.y + my * 9);
   if (mx || my) {
     pl.walk++;
     if (absf(mx) > absf(my)) pl.face = mx < 0 ? DIR_LEFT : DIR_RIGHT;
@@ -342,7 +348,7 @@ void player_update(uint32_t keys) {
       bdir = dir;
       if (pl.charge < pl.tear_delay) pl.charge++;
     } else if (pl.charge >= pl.tear_delay && pl.charge > 0) {
-      laser_fire(pl.x, pl.y - 10, bdir, 9, pl.damage * 0.33f, 15, 0, false);
+      laser_fire(pl.x, pl.y - 10, bdir, 9, pl.damage * 0.6f, 15, 0, false);
       pl.charge = 0;
     } else
       pl.charge = 0;

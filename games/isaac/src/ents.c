@@ -85,6 +85,7 @@ static void touch_player(Ent *e) {
       return;
     }
     /* half a heart, a whole one from the Womb (and from the Depths' bosses) */
+    if (pl.has[13] && !(e->flags & EF_BOSS)) e->poison = 60, e->poison_dmg = 2;
     player_hurt(fl.stage >= 7 || ((e->flags & EF_BOSS) && fl.stage >= 5) ? 2 : 1, e->type);
   }
 }
@@ -111,6 +112,7 @@ void ents_update(void) {
         if (e->fear) e->fear--;
         if (pl.hourglass > 0 && (g_frame & 1)) break;
         if (e->slow && (g_frame & 1)) break;
+        if (g_room_frames < 10 && !(e->flags & EF_FRIEND)) break;   /* (they wake as he comes in) */
         if (!boss_update(e)) mon_update(e);
         if (e->kind == EK_MON) touch_player(e);
         break;

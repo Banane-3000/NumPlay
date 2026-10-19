@@ -159,7 +159,7 @@ void boss_spawn(int type, float x, float y) {
       return;
     case MON_SATAN:
       e = boss_new(MON_SATAN, x, y - 20, 100);
-      if (e) e->spr = SPR_SATAN, e->state = 0;
+      if (e) e->spr = SPR_FALLEN, e->state = 0;
       return;
     case MON_ENVY: case MON_GLUTTONY: case MON_SLOTH: case MON_LUST: case MON_WRATH: case MON_GREED: case MON_PRIDE:
       sins_count++;

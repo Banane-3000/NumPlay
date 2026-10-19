@@ -136,7 +136,7 @@ static void boss_reward(void) {
     }
     if (side >= 0 && chance(p)) {
       fl.devil_open = true, fl.devil_side = (int8_t)side;
-      fl.devil_angel = !pl.has[79] && !pl.has[80] && rnd(2) == 0 && g_frame > 0 && !pl.has[118] && !pl.has[51];
+      fl.devil_angel = pl.devil_deals == 0 && rnd(2) == 0;
     }
   }
 }
@@ -191,8 +191,8 @@ static void play_update(void) {
   }
   /* the keys of a room */
   if (g_pressed & K_ITEM || (g_pressed & K_OK)) item_use_active();
-  if ((g_pressed & K_BOMB) && pl.bombs > 0 && !pl.has[52]) {
-    pl.bombs--;
+  if ((g_pressed & K_BOMB) && (pl.bombs > 0 || fl.golden_bomb) && !pl.has[52]) {
+    if (!fl.golden_bomb) pl.bombs--;
     bomb_place(pl.x, pl.y + 1, 0);
   }
   if ((g_pressed & K_CARD) && pl.pocket_kind) {
@@ -203,6 +203,7 @@ static void play_update(void) {
   }
   int hp_before = pl.red + pl.soul;
   player_update(k);
+  grid_update();
   ents_update();
   tears_update();
   lasers_update();
@@ -276,15 +277,27 @@ static void draw_title(void) {
   if (g_frame % 50 < 34) gfx_text_c(FONT_UPHEAVAL, 160, 206, "PRESS OK", C_WHITE, 1, true);
 }
 
-static const char *const menu_new[] = {"NEW RUN", "HOW TO PLAY"};
-static const char *const menu_cont[] = {"NEW RUN", "CONTINUE", "HOW TO PLAY"};
+bool g_swap;
+enum { M_NEW, M_CONTINUE, M_CONTROLS, M_HELP };
+/* the menu's lines: Continue only with a run kept */
+static int menu_items(int *ids, const char **names) {
+  static const char *const all[4] = {"NEW RUN", "CONTINUE", "CONTROLS", "HOW TO PLAY"};
+  int n = 0;
+  for (int i = 0; i < 4; i++)
+    if (i != M_CONTINUE || run_saved()) ids[n] = i, names[n] = all[i], n++;
+  return n;
+}
 
 static void draw_menu(void) {
   gfx_backdrop(BD_ISAACS_ROOM);
   gfx_rect(0, 0, SCREEN_W, SCREEN_H, C_BLACK, 12);
-  paper(70, 40, 180, 150);
-  bool cont = run_saved();
-  menu_list(cont ? menu_cont : menu_new, cont ? 3 : 2, menu_sel, 160, 64);
+  paper(70, 30, 180, 170);
+  int ids[4];
+  const char *names[4];
+  int n_items = menu_items(ids, names);
+  menu_list(names, n_items, menu_sel, 160, 48);
+  for (int i = 0; i < n_items; i++)
+    if (ids[i] == M_CONTROLS) gfx_text_c(FONT_UPHEAVAL, 160, 48 + i * 24 + 17, g_swap ? "NUMBERS WALK, ARROWS CRY" : "ARROWS WALK, NUMBERS CRY", INK2, 1, false);
   char s[48];
   int n = 0;
   const char *p = "RUNS ";
@@ -295,19 +308,20 @@ static void draw_menu(void) {
   do digits[nd++] = (char)('0' + v % 10), v /= 10; while (v && nd < 6);
   while (nd) s[n++] = digits[--nd];
   s[n] = 0;
-  gfx_text_c(FONT_UPHEAVAL, 160, 162, s, INK2, 1, false);
+  gfx_text_c(FONT_UPHEAVAL, 160, 172, s, INK2, 1, false);
   /* the bosses beaten: Mom, Mom's Heart, Satan, Isaac */
   static const int16_t marks[4] = {SPR_MOM_EYE, SPR_MOMS_HEART, SPR_SATAN, SPR_ISAAC_BOSS};
   for (int i = 0; i < 4; i++)
-    if (g_wins & (1 << i)) gfx_sprite_scaled(marks[i], 0, 112 + i * 32, 186, 90, 90, 0, 0, 0, 32);
+    if (g_wins & (1 << i)) gfx_sprite_scaled(marks[i], 0, 112 + i * 32, 226, 90, 90, 0, 0, 0, 32);
 }
 
 static void draw_help(void) {
   gfx_rect(0, 0, SCREEN_W, SCREEN_H, rgb565(0x1A1210), 32);
   paper(14, 10, 292, 220);
   gfx_text_c(FONT_UPHEAVAL, 160, 18, "HOW TO PLAY", INK, 2, false);
-  static const char *const rows[][2] = {
-    {"ARROWS", "WALK"}, {"8 4 6 2  (5)", "CRY TEARS UP, LEFT, RIGHT, DOWN"}, {"9 OR SHIFT", "DROP A BOMB"},
+  const char *rows[][2] = {
+    {g_swap ? "8 4 6 5 (2)" : "ARROWS", "WALK"},
+    {g_swap ? "ARROWS" : "8 4 6 2 (5)", "CRY TEARS UP, LEFT, RIGHT, DOWN"}, {"9 OR SHIFT", "DROP A BOMB"},
     {"7 OR OK", "USE THE ACTIVE ITEM"}, {"1 OR 3", "TAKE THE PILL OR CARD"}, {"TOOLBOX", "HOLD FOR THE MAP"},
     {"BACK", "PAUSE"}, {"HOME", "KEEP THE RUN AND QUIT"},
   };
@@ -358,6 +372,22 @@ static void draw_pause(void) {
   /* the items he found */
   for (int i = 0; i < pl.norder && i < 30; i++) gfx_sprite(item_sprite(pl.order[i]), 0, 40 + (i % 10) * 25, 158 + (i / 10) * 24, 0, 32);
   gfx_text_c(FONT_UPHEAVAL, 160, 128, stage_name(fl.stage, fl.alt), INK2, 1, false);
+  char t[40];
+  uint32_t secs = g_frame / FPS, k = 0;
+  static const char seed_chars[] = "ABCDEFGHJKLMNPQRSTWXYZ01234V6789";
+  const char *lbl = "TIME ";
+  while (*lbl) t[k++] = *lbl++;
+  if (secs >= 3600) t[k++] = (char)('0' + secs / 36000 % 10), t[k++] = (char)('0' + secs / 3600 % 10), t[k++] = ':';
+  t[k++] = (char)('0' + secs / 600 % 6), t[k++] = (char)('0' + secs / 60 % 10), t[k++] = ':';
+  t[k++] = (char)('0' + secs / 10 % 6), t[k++] = (char)('0' + secs % 10);
+  lbl = "   SEED ";
+  while (*lbl) t[k++] = *lbl++;
+  for (int i = 0; i < 8; i++) {
+    t[k++] = seed_chars[(g_run_seed >> (i * 4 % 28)) & 31];
+    if (i == 3) t[k++] = ' ';
+  }
+  t[k] = 0;
+  gfx_text_c(FONT_UPHEAVAL, 160, 140, t, INK2, 1, false);
 }
 
 static void draw_stage(void) {
@@ -442,6 +472,7 @@ static int up_down(int sel, int n) {
 }
 
 void game_frame(uint32_t keys) {
+  if (g_swap) keys = (keys & ~(uint32_t)(K_MOVE | K_SHOOT)) | (keys & K_MOVE) << 4 | (keys & K_SHOOT) >> 4;
   g_pressed = keys & ~g_keys;
   g_keys = keys;
   if (keys & K_HOME) {   /* Home and On/Off: the run kept, then out */
@@ -460,14 +491,17 @@ void game_frame(uint32_t keys) {
       break;
     case MODE_MENU: {
       g_frame++;
-      bool cont = run_saved();
-      int n = cont ? 3 : 2;
+      int ids[4];
+      const char *names[4];
+      int n = menu_items(ids, names);
       menu_sel = up_down(menu_sel, n);
       if (g_pressed & K_BACK) g_mode = MODE_TITLE;
-      if (ok) {
-        int pick = cont ? menu_sel : (menu_sel == 0 ? 0 : 2);
-        if (pick == 0) game_new_run();
-        else if (pick == 1) {
+      bool side = g_pressed & (K_LEFT | K_RIGHT | K_SLEFT | K_SRIGHT);
+      if (ok || (side && ids[menu_sel] == M_CONTROLS)) {
+        int pick = ids[menu_sel];
+        if (pick == M_NEW) game_new_run();
+        else if (pick == M_CONTROLS) g_swap = !g_swap, save_progress();
+        else if (pick == M_CONTINUE) {
           if (load_run()) {
             floor_enter_room(fl.cur, DIR_NONE);
             player_stats();

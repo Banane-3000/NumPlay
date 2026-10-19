@@ -346,6 +346,10 @@ void explode(float x, float y, float radius, float dmg, bool hurt_player, int ki
     } else if (e->kind == EK_PICKUP || e->kind == EK_BOMB) {
       e->vx += dx / d * 4, e->vy += dy / d * 4;
       if (e->kind == EK_BOMB && e->t > 2) e->t = 2;   /* (a chain) */
+    } else if (e->kind == EK_MACHINE && e->type == MA_SHOPKEEPER) {
+      for (int k = 0; k < 3 + rnd(4); k++) pickup_spawn(PK_PENNY, 0, e->x, e->y, true);
+      fx_spawn(FX_POOF, e->x, e->y, 10);
+      e->kind = EK_NONE;
     } else if (e->kind == EK_MACHINE && e->type <= MA_BOMB_BUM && e->state != 255) {
       /* a blown-up machine pays out once */
       e->state = 255;

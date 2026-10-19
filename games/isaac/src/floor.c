@@ -185,6 +185,8 @@ static int pick_boss(int stage) {
 }
 
 void floor_new(int stage) {
+  ents_clear();
+  tears_clear();
   memset(&fl, 0, sizeof fl);
   memset(fl.map, -1, sizeof fl.map);
   fl.stage = (uint8_t)stage;
@@ -299,6 +301,7 @@ static int door_lock(int d) {
   if (room_cur()->doors_open & (1 << d)) return 0;
   if ((k == ROOM_TREASURE || k == ROOM_SHOP) && fl.stage > 1) return 1;
   if (k == ROOM_LIBRARY) return 1;
+  if (k == ROOM_CHALLENGE && pl.red < pl.containers * 2 && !(room_cur()->doors_open & (1 << d))) return 3;
   return 0;
 }
 
@@ -319,7 +322,7 @@ static void open_both(int d) {
 /* he walks into a locked door: a key opens it */
 bool door_try_unlock(int d) {
   if (door_lock(d) != 1) return false;
-  if (pl.has[175]) {   /* (Dad's Key opens them all) */
+  if (pl.has[175] || fl.golden_key) {   /* (Dad's Key, a golden key: no key needed) */
     open_both(d);
     return true;
   }
@@ -530,6 +533,14 @@ void floor_enter_room(int index, int from_dir) {
   for (int d = 0; d < 4; d++) {
     int j = room_at(r->mx + DIR_X[d], r->my + DIR_Y[d]);
     if (j >= 0 && fl.rooms[j].kind != ROOM_SECRET && fl.rooms[j].kind != ROOM_SUPERSECRET) fl.rooms[j].state |= RS_SEEN;
+    /* the Spelunker Hat: what the rooms next door are, and the rooms past them */
+    if (j >= 0 && pl.has[91]) {
+      fl.rooms[j].state |= RS_SEEN | RS_FOUND;
+      for (int e = 0; e < 4; e++) {
+        int k = room_at(fl.rooms[j].mx + DIR_X[e], fl.rooms[j].my + DIR_Y[e]);
+        if (k >= 0) fl.rooms[k].state |= RS_SEEN;
+      }
+    }
   }
   if (first) {
     room_build_grid(r);

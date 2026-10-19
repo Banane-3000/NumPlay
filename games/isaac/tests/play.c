@@ -2,12 +2,14 @@
  *
  *   play [--frames N] [--keys "10-40:right,50:ok,..."] [--shots 30,60|all|every:N] [--out DIR] [--saves DIR]
  *        [--seed N] [--run] [--stage S] [--give ID,ID...] [--bot] [--god] [--boss MON] [--goto KIND]
+ *        [--pocket KIND,ID]
  *
  * Keys: left right up down sleft sright sup sdown ok back bomb item card map home; "a-b:key" holds the key
  * from frame a to b, "a:key" for one frame. --run starts a new run past the title (--stage: on that floor).
  * --bot plays by itself: it goes for the monsters, crying at them, then on through the doors to the rooms it
  * hasn't seen, then down the trapdoor; --god keeps Isaac alive; --goto starts in the floor's first room of that kind
- * (ROOM_* in src/data.h), --boss makes the floor's boss that one (MON_*). Screenshots are DIR/shot_<frame>.ppm. */
+ * (ROOM_* in src/data.h), --boss makes the floor's boss that one (MON_*), --pocket gives a pill (1) or card (2).
+ * Screenshots are DIR/shot_<frame>.ppm. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -145,8 +147,8 @@ static uint32_t bot_keys(void) {
 int main(int argc, char **argv) {
   int frames = 600, seed = 1, stage = 1, every = 0;
   char keys[65536] = "", shots[65536] = "", out[512] = "build/shots", saves[512] = "build/host-saves", give[1024] = "";
-  bool all = false, run = false, bot = false, god = false;
-  int boss = -1, gokind = -1;
+  bool all = false, run = false, bot = false, god = false, immortal = false;
+  int boss = -1, gokind = -1, pocket_kind = 0, pocket = 0;
   for (int i = 1; i < argc; i++) {
     const char *a = argv[i];
     const char *v = i + 1 < argc ? argv[i + 1] : "";
@@ -164,9 +166,11 @@ int main(int argc, char **argv) {
     else if (!strcmp(a, "--give")) snprintf(give, sizeof give, "%s", v), i++;
     else if (!strcmp(a, "--boss")) boss = atoi(v), i++;
     else if (!strcmp(a, "--goto")) gokind = atoi(v), i++;
+    else if (!strcmp(a, "--pocket")) sscanf(v, "%d,%d", &pocket_kind, &pocket), i++;
     else if (!strcmp(a, "--run")) run = true;
     else if (!strcmp(a, "--bot")) bot = true;
     else if (!strcmp(a, "--god")) god = true;
+    else if (!strcmp(a, "--immortal")) immortal = true;
   }
   mkdir(out, 0755);
   mkdir(saves, 0755);
@@ -184,6 +188,7 @@ int main(int argc, char **argv) {
     }
     if (boss >= 0) fl.boss = (uint8_t)boss, fl.rooms[fl.boss_room].boss = (uint8_t)boss;
     for (char *tok = strtok(give, ","); tok; tok = strtok(NULL, ",")) item_give(atoi(tok));
+    if (pocket_kind) pl.pocket_kind = (uint8_t)pocket_kind, pl.pocket = (uint8_t)pocket;
     g_mode = MODE_PLAY;
     if (gokind == ROOM_DEVIL || gokind == ROOM_ANGEL) {   /* (straight into the Devil's or an angel's room) */
       fl.devil_angel = gokind == ROOM_ANGEL;
@@ -204,6 +209,7 @@ int main(int argc, char **argv) {
     if (bot && !k) k = bot_keys();
     if (getenv("TRACE") && f % 50 == 0) printf("f %d pl %.1f,%.1f v %.2f,%.2f keys %x mode %d room %d\n", f, pl.x, pl.y, pl.vx, pl.vy, k, g_mode, fl.cur);
     if (god) pl.invuln = pl.invuln > 2 ? pl.invuln : 2, pl.dead = false;
+    if (immortal && pl.red < 2 && pl.containers) pl.red = (uint8_t)(pl.containers * 2), pl.dead = false;
     host_keys = k;
     host_time += 33;
     game_frame(k);
@@ -221,6 +227,7 @@ int main(int argc, char **argv) {
     if (ents[i].kind == EK_MON)
       printf("MON %d type %d hp %.1f/%.1f state %d at %.0f,%.0f flags %x\n", i, ents[i].type, ents[i].hp, ents[i].maxhp,
              ents[i].state, ents[i].x, ents[i].y, ents[i].flags);
+  printf("POCKET %d %d ACTIVE %d LIVES %d\n", pl.pocket_kind, pl.pocket, pl.active, pl.lives);
   printf("END mode %d stage %d room %d kind %d hp %d/%d soul %d coins %d bombs %d keys %d items %d frames %u floors %d dropped %d\n",
          g_mode, fl.stage, fl.cur, room_cur()->kind, pl.red, pl.containers * 2, pl.soul, pl.coins, pl.bombs, pl.keys, pl.norder,
          g_frame, floors_seen, gfx_dropped);

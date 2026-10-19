@@ -136,7 +136,7 @@ static const ItemInfo items[] = {
   {132, "A LUMP OF COAL", "MY XMAS PRESENT", T, 0, 2},
   {133, "GUPPY'S PAW", "SOUL CONVERTER", D, 1, 2},
   {134, "GUPPY'S TAIL", "CURSED?", D, 0, 1},
-  {135, "IV BAG", "PORTABLE BLOOD BANK", S, 0, 1},
+  {135, "IV BAG", "PORTABLE BLOOD BANK", S, 254, 1},
   {136, "BEST FRIEND", "REUSABLE DECOY", T | S, 3, 0},
   {137, "REMOTE DETONATOR", "REMOTE BOMB DETONATION", T | S, 1, 1},
   {138, "STIGMATA", "DMG + HP UP", T, 0, 2},
@@ -146,7 +146,7 @@ static const ItemInfo items[] = {
   {144, "BUM FRIEND", "HE'S GREEDY", T | S, 0, 1},
   {145, "GUPPY'S HEAD", "REUSABLE FLY HIVE", D, 1, 2},
   {146, "PRAYER CARD", "REUSABLE ETERNITY", A, 6, 2},
-  {147, "NOTCHED AXE", "ROCKS DON'T STAND A CHANCE", S, 0, 1},
+  {147, "NOTCHED AXE", "ROCKS DON'T STAND A CHANCE", S | T, 0, 1},
   {149, "IPECAC", "EXPLOSIVE SHOTS", T, 0, 3},
   {150, "TOUGH LOVE", "TOOTH SHOT", T, 0, 2},
   {152, "TECHNOLOGY 2", "LASER", T, 0, 2},
@@ -171,7 +171,7 @@ static const ItemInfo items[] = {
   {174, "RAINBOW BABY", "RANDOM BUDDY", T, 0, 1},
   {175, "DAD'S KEY", "OPEN SESAME", S, 2, 1},
   {176, "STEM CELLS", "HP UP + SHOT SPEED UP", BO, 0, 1},
-  {177, "PORTABLE SLOT", "GAMBLE 24/7", S, 0, 1},
+  {177, "PORTABLE SLOT", "GAMBLE 24/7", S, 254, 1},
   {178, "HOLY WATER", "SPLASH!", A, 0, 1},
   {179, "FATE", "FLIGHT ETERNAL", A, 0, 3},
   {182, "SACRED HEART", "HOMING SHOTS + DMG UP", A, 0, 4},
@@ -250,7 +250,7 @@ void item_give(int id) {
   hud_banner(ii->name, ii->text);
   if (ii->charge) {
     pl.active = (int16_t)id;
-    pl.active_charge = ii->charge == 255 ? 1 : ii->charge;
+    pl.active_charge = ii->charge >= 254 ? (ii->charge == 255) : ii->charge;
   }
   switch (id) {
     case 11: pl.lives++; break;
@@ -474,7 +474,7 @@ static bool use_effect(int id) {
 void item_use_active(void) {
   const ItemInfo *ii = item_info(pl.active);
   if (!ii) return;
-  int need = ii->charge == 255 ? 1 : ii->charge;
+  int need = ii->charge == 255 ? 1 : ii->charge == 254 ? 0 : ii->charge;
   if (pl.active_charge < need && ii->charge != 0) return;
   if (!use_effect(pl.active)) return;
   if (ii->charge == 255) {   /* used once: gone */
@@ -489,7 +489,7 @@ void item_use_active(void) {
 /* a room cleared: a charge, and the familiars that bring things */
 void item_room_cleared(void) {
   const ItemInfo *ii = item_info(pl.active);
-  if (ii && ii->charge && ii->charge != 255) {
+  if (ii && ii->charge && ii->charge < 254) {
     int max = ii->charge * (pl.has[63] ? 2 : 1);
     pl.active_charge = (int16_t)(pl.active_charge + 1 + (pl.has[116] ? 1 : 0));
     if (pl.active_charge > max) pl.active_charge = (int16_t)max;
@@ -569,7 +569,7 @@ void pill_use(int color) {
     case PL_LUCK_DOWN: pl.pill_luck -= 1; break;
     case PL_LUCK_UP: pl.pill_luck += 1; break;
     case PL_TELEPILLS: random_room_teleport(-1); break;
-    case PL_48H: { const ItemInfo *ii = item_info(pl.active); if (ii && ii->charge && ii->charge != 255) pl.active_charge = ii->charge; break; }
+    case PL_48H: { const ItemInfo *ii = item_info(pl.active); if (ii && ii->charge && ii->charge < 254) pl.active_charge = ii->charge; break; }
     case PL_HEMATEMESIS: { int n = pl.red / 2; pl.red = pl.containers ? 1 : 0; for (int i = 0; i < n && i < 5; i++) pickup_spawn(PK_HEART, 0, pl.x, pl.y, true); break; }
     case PL_PARALYSIS: pl.invuln = 0; pl.vx = pl.vy = 0; break;
     case PL_SEE: floor_reveal(4); break;
@@ -728,7 +728,25 @@ void familiar_update(Ent *e) {
     }
     return;
   }
-  if (dir == DIR_NONE || id == 144 || id == 99 * 0) return;
+  if (id == 144) {   /* Bum Friend: after the coins, and something back now and then */
+    Ent *c = NULL;
+    float bd = 1e9f;
+    for (int i = 0; i < MAX_ENTS; i++)
+      if (ents[i].kind == EK_PICKUP && !(ents[i].flags & EF_SHOP) && ents[i].type >= PK_PENNY && ents[i].type <= PK_DIME) {
+        float d = dist2(ents[i].x, ents[i].y, e->x, e->y);
+        if (d < bd) bd = d, c = &ents[i];
+      }
+    if (c) {
+      e->x += (c->x - e->x) * 0.1f, e->y += (c->y - e->y) * 0.1f;
+      if (bd < 8 * 8) {
+        e->c += c->type == PK_PENNY ? 1 : c->type == PK_NICKEL ? 5 : 10;
+        c->kind = EK_NONE;
+        if (e->c >= 3 + rnd(4)) e->c = 0, pickup_drop_random(e->x, e->y);
+      }
+    }
+    return;
+  }
+  if (dir == DIR_NONE) return;
   float sx = DIR_X[dir] * 5, sy = DIR_Y[dir] * 5;
   if (id == 188) sx = -sx, sy = -sy;
   switch (id) {

@@ -57,6 +57,14 @@ void room_clear_reward(void) {
   if (r->kind == ROOM_BOSS || r->kind == ROOM_MINIBOSS) return;
   float luck = pl.luck;
   int roll = rnd(100) + (int)(luck * 4);
+  if (pl.has[134]) {   /* Guppy's Tail: a third nothing, a third a chest */
+    int g = rnd(3);
+    if (g == 0) return;
+    if (g == 1) {
+      pickup_spawn(rnd(3) ? PK_CHEST : PK_LOCKED_CHEST, 0, 160, 120, true);
+      return;
+    }
+  }
   if (roll < 45) return;
   /* where: the room's middle, or the nearest free cell */
   float x = 160, y = 120;
@@ -128,13 +136,13 @@ static bool try_collect(Ent *e) {
     case PK_DIME: collect_coins(10); break;
     case PK_KEY: if (pl.keys < 99) pl.keys++; break;
     case PK_KEY_RING: pl.keys = (uint8_t)(pl.keys + 2 > 99 ? 99 : pl.keys + 2); break;
-    case PK_GOLDEN_KEY: pl.keys = (uint8_t)(pl.keys + 1 > 99 ? 99 : pl.keys + 1), pl.has[175] |= 0; break;
+    case PK_GOLDEN_KEY: fl.golden_key = true; break;
     case PK_BOMB: if (pl.bombs < 99) pl.bombs++; break;
     case PK_DOUBLE_BOMB: pl.bombs = (uint8_t)(pl.bombs + 2 > 99 ? 99 : pl.bombs + 2); break;
-    case PK_GOLDEN_BOMB: pl.bombs = (uint8_t)(pl.bombs + 1 > 99 ? 99 : pl.bombs + 1); break;
+    case PK_GOLDEN_BOMB: fl.golden_bomb = true; break;
     case PK_BATTERY: {
       const ItemInfo *ii = item_info(pl.active);
-      if (!ii || !ii->charge || ii->charge == 255 || pl.active_charge >= ii->charge) return false;
+      if (!ii || !ii->charge || ii->charge >= 254 || pl.active_charge >= ii->charge) return false;
       pl.active_charge = ii->charge;
       break;
     }
@@ -154,8 +162,8 @@ static bool try_collect(Ent *e) {
       open_chest(e);
       return true;
     case PK_LOCKED_CHEST:
-      if (!pl.keys && !pl.has[175]) return false;
-      if (!pl.has[175]) pl.keys--;
+      if (!pl.keys && !pl.has[175] && !fl.golden_key) return false;
+      if (!pl.has[175] && !fl.golden_key) pl.keys--;
       open_chest(e);
       return true;
     default: break;
@@ -245,6 +253,7 @@ void pedestal_update(Ent *e) {
     else if (pl.soul >= 6 && pl.containers == 0) pl.soul = (uint8_t)(pl.soul - 6);
     else if (pl.containers > 0) player_add_containers(-pl.containers);
     else return;
+    pl.devil_deals++;
     if (!pl.containers && !pl.soul) player_kill(-7);
   }
   int item = e->t3;

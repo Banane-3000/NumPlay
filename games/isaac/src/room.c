@@ -6,6 +6,7 @@
 
 #define GRID_RUBBLE 100   /* (a rock blown up: rubble on the floor) */
 
+bool g_ladder;   /* (Isaac moving, with The Ladder) */
 static uint8_t g(int c, int r) {
   if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return CELL_BLOCK;
   return room_cur()->grid[r][c];
@@ -19,7 +20,8 @@ bool grid_solid(int c, int r, bool flying) {
   switch (k) {
     case CELL_ROCK: case CELL_BLOCK: case CELL_TINTED: case CELL_BOMB_ROCK: case CELL_TNT: case CELL_KEY_BLOCK:
       return !flying || k == CELL_BLOCK || k == CELL_KEY_BLOCK;
-    case CELL_PIT: return !flying;
+    case CELL_PIT: return !flying && !(g_ladder && !(g(c - 1, r) == CELL_PIT && g(c + 1, r) == CELL_PIT)
+                                              && !(g(c, r - 1) == CELL_PIT && g(c, r + 1) == CELL_PIT));
     case CELL_FIRE: case CELL_RED_FIRE: return ghp(c, r) > 0 && !flying;
     default: return is_poop(k) && ghp(c, r) > 0 && !flying;
   }
@@ -246,9 +248,30 @@ void grid_explode(float x, float y, float radius) {
       if (k == CELL_ROCK || k == CELL_TINTED || k == CELL_BOMB_ROCK || k == CELL_TNT || is_poop(k) || k == CELL_FIRE
           || k == CELL_RED_FIRE || k == CELL_COBWEB)
         destroy_cell(c, r);
-      if (k == CELL_ROCK && pl.has[147]) destroy_cell(c, r);
     }
   door_bombed(x, y);
+}
+
+/* Notched Axe: a rock he walks into breaks */
+void grid_break_at(float x, float y) {
+  int c = col_of(x), r = row_of(y);
+  if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return;
+  int k = g(c, r);
+  if (k == CELL_ROCK || k == CELL_TINTED || k == CELL_BOMB_ROCK || k == CELL_POOP) destroy_cell(c, r);
+}
+
+void grid_update(void) {
+  Room *rm = room_cur();
+  for (int r = 0; r < ROWS; r++)
+    for (int c = 0; c < COLS; c++) {
+      int k = rm->grid[r][c];
+      if ((k != CELL_FIRE && k != CELL_RED_FIRE) || !rm->gridhp[r][c]) continue;
+      float x, y;
+      cell_center(c, r, &x, &y);
+      float d2 = dist2(x, y, pl.x, pl.y);
+      if (d2 < 14 * 14) player_hurt(1, -4);
+      if (k == CELL_RED_FIRE && d2 < 110 * 110 && g_room_frames > 20 && rnd(90) == 0) enemy_shot_at(x, y - 10, 3);
+    }
 }
 
 /* ---------------------------------------------------------------- drawing */
@@ -349,7 +372,7 @@ void doors_draw(void) {
     if (!room_door_exists(d, &kind)) continue;
     int fk = door_frame_kind(kind, false, here);
     bool open = room_door_open(d);
-    bool locked = !open && !ents_alive_monsters();
+    bool locked = !open && !ents_alive_monsters() && kind != ROOM_CHALLENGE;
     int f = fk * 2 + (open ? 0 : 1);
     if (fk == 3) f = 6;   /* (a hole stays a hole) */
     if (d == DIR_UP) gfx_sprite(SPR_DOOR, f, door_x[2], door_y[2], 0, 32);

@@ -68,7 +68,7 @@ static void room_cell(int x, int y, int w, int h, Room *r, int i, bool big) {
     case ROOM_CHALLENGE: icon = 9; break;
     default: break;
   }
-  if (icon >= 0 && ((r->state & (RS_VISITED | RS_FOUND)) || pl.has[21] || (r->state & RS_SEEN))) {
+  if (icon >= 0 && ((r->state & (RS_VISITED | RS_FOUND)) || pl.has[21])) {
     static const uint32_t col[10] = {0xC02020, 0xE0C030, 0x40A040, 0x606060, 0x902020, 0xD050A0, 0xA03030, 0x806040, 0xC06020, 0xA02020};
     gfx_sprite_tint(SPR_MAP_ICON, icon, x + w / 2, y + h / 2, 0, rgb565(col[icon]), 32, 32);
     (void)big;
@@ -124,7 +124,7 @@ void hud_draw(void) {
   if (pl.active) {
     const ItemInfo *ii = item_info(pl.active);
     gfx_sprite(item_sprite(pl.active), 0, 16, 26, 0, 32);
-    if (ii && ii->charge && ii->charge != 255) {
+    if (ii && ii->charge && ii->charge < 254) {
       int h = 22, n = ii->charge;
       gfx_rect(29, 4, 6, h + 2, C_BLACK, 32);
       int full = pl.active_charge > n ? n : pl.active_charge;
@@ -140,7 +140,8 @@ void hud_draw(void) {
   gfx_sprite(SPR_HUD_ICON, 0, 3, cy, 0, 32), number(14, cy, pl.coins);
   gfx_sprite(SPR_HUD_ICON, 1, 3, cy + 11, 0, 32), number(14, cy + 11, pl.bombs);
   gfx_sprite(SPR_HUD_ICON, 2, 3, cy + 22, 0, 32), number(14, cy + 22, pl.keys);
-  if (pl.has[175] || pl.keys >= 99) {}
+  if (fl.golden_key) gfx_rect(26, cy + 25, 3, 3, rgb565(0xF0C030), 32);
+  if (fl.golden_bomb) gfx_rect(26, cy + 14, 3, 3, rgb565(0xF0C030), 32);
   minimap();
   /* the pill or card */
   if (pl.pocket_kind) {
