@@ -1064,12 +1064,11 @@ static void run_env(int ei) {
       }
       continue;
     }
-    for (int j = k; j < p->nentries; j++)
-      if (rd16(p->entries + 2 * j) == i) {
-        run_chain(e, (uint16_t)i);
-        if (j == k) k++;
-        break;
-      }
+    /* the entries are in node order (tools/scriptc.py): the next one is this node's or a later one's */
+    if (k < p->nentries && rd16(p->entries + 2 * k) == i) {
+      run_chain(e, (uint16_t)i);
+      k++;
+    }
   }
 }
 

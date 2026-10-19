@@ -14,6 +14,7 @@ vec3 phys_gravity = {0, -9.8f, 0};
 #define MAX_CONTACTS 1024
 #define MAX_EVENTS 64
 #define ITER 10
+#define MAX_JOINT_FRAMES 256 /* joint frames kept on the stack during a step (48 bytes each) */
 
 /* tunables (calibrated against the original game) */
 float k_mass_scale = 1.0f;
@@ -62,9 +63,13 @@ typedef struct {
   float nx, ny;           /* normal from a to b (pointing out of b into a) */
   float nz, jz;           /* z3 only: the normal's depth part, friction impulse along z */
   float depth;
-  float mu, rest;
+  float mu;
+  union {
+    float rest; /* bounciness, until prep_contacts has made it part of the bias */
+    float mt2;  /* then for z3 contacts: the effective mass across the plane (solve_contact3) */
+  };
   float jn, jt, jp;
-  float mn, mt, bias, pbias;
+  float mn, mt, bias, pbias; /* (z3: mt along the plane, set by solve_contact3) */
   float rax, ray, rbx, rby;
 } Contact;
 
@@ -117,6 +122,17 @@ static struct { int16_t a, b; float imp; float nx, ny; } events[MAX_EVENTS];
 static int nevents;
 
 /* ---------------------------------------------------------------- raycast */
+/* How far the object's bounds reach from its position, plus a margin for rounding: an upper bound of the
+ * distance from o->pos to any point of its bounds along any world axis, found without turning anything (the
+ * sum of absolute values bounds a vector's length, and turning keeps lengths). 0 for an object whose
+ * rotation is not a unit quaternion (then nothing may be skipped). It only skips what the exact tests that
+ * follow would turn away. */
+static float obj_reach(const Obj *o) {
+  float qq = o->rot.x * o->rot.x + o->rot.y * o->rot.y + o->rot.z * o->rot.z + o->rot.w * o->rot.w;
+  if (qq < 0.999f || qq > 1.001f) return 0;
+  return o->shape->reach * 1.01f + 0.01f;
+}
+
 static bool ray_box(vec3 o, vec3 d, vec3 mn, vec3 mx, float *tin) {
   float t0 = -1e30f, t1 = 1e30f;
   float oo[3] = {o.x, o.y, o.z}, dd[3] = {d.x, d.y, d.z}, a[3] = {mn.x, mn.y, mn.z}, b[3] = {mx.x, mx.y, mx.z};
@@ -279,9 +295,16 @@ bool phys_raycast_ex(vec3 from, vec3 to, vec3 *hit, int *obj, int ignore) {
   int bo = -1;
   vec3 seg = vsub(to, from);
   float sl = vdot(seg, seg), isl = sl > 1e-12f ? 1.0f / sl : 0;
+  vec3 smin = v3(fminf(from.x, to.x), fminf(from.y, to.y), fminf(from.z, to.z));
+  vec3 smax = v3(fmaxf(from.x, to.x), fmaxf(from.y, to.y), fmaxf(from.z, to.z));
   for (int i = 0; i < nobj; i++) {
     Obj *ob = &objs[i];
     if (!(ob->flags & OF_COLLIDE) || (ob->flags & OF_DEAD) || i == ignore) continue;
+    /* far from the segment's box: the sphere below misses too */
+    float reach = obj_reach(ob) + 0.04f;
+    if (reach > 0.04f && sl < 1e30f && (ob->pos.x < smin.x - reach || ob->pos.x > smax.x + reach || ob->pos.y < smin.y - reach ||
+                          ob->pos.y > smax.y + reach || ob->pos.z < smin.z - reach || ob->pos.z > smax.z + reach))
+      continue;
     /* quick reject: the segment misses the sphere around the object's bounds */
     const Shape *sh = ob->shape;
     vec3 lo = vsub(sh->bmin, sh->origin), hi = vsub(sh->bmax, sh->origin);
@@ -1289,6 +1312,8 @@ static bool static_solid_at(vec3 w, int skip) {
   for (int s = 0; s < nobj; s++) {
     const Obj *os = &objs[s];
     if (s == skip || (os->flags & (OF_DYNAMIC | OF_DEAD | OF_TEMPLATE | OF_COLLIDE | OF_VISIBLE)) != (OF_COLLIDE | OF_VISIBLE)) continue;
+    float reach = obj_reach(os);
+    if (reach > 0 && (fabsf(w.x - os->pos.x) > reach || fabsf(w.y - os->pos.y) > reach || fabsf(w.z - os->pos.z) > reach)) continue;
     const Shape *sh = os->shape;
     vec3 l = obj_local(os, w);
     if (l.x < sh->bmin.x || l.y < sh->bmin.y || l.z < sh->bmin.z || l.x > sh->bmax.x || l.y > sh->bmax.y || l.z > sh->bmax.z) continue;
@@ -1402,7 +1427,8 @@ static bool elems_meet3d(const Body *A, const Elem *ea, const Body *B, const Ele
   return true;
 }
 
-static void gen_contacts(void) {
+/* (not inlined: its element arrays leave the stack before the joint frames go on it) */
+__attribute__((noinline)) static void gen_contacts(void) {
   ncon = 0;
   weld_groups();
   for (int i = 0; i < nbodies; i++) {
@@ -1417,7 +1443,9 @@ static void gen_contacts(void) {
     for (int s = 0; s < nobj; s++) {
       Obj *os = &objs[s];
       if ((os->flags & (OF_DYNAMIC | OF_DEAD | OF_TEMPLATE | OF_COLLIDE | OF_VISIBLE)) != (OF_COLLIDE | OF_VISIBLE)) continue;
-      if (joined_static(i, s)) continue;
+      /* far away, found before turning anything */
+      float reach = obj_reach(os);
+      if (reach > 0 && (fabsf(os->pos.x - A->x) > reach + A->bound || fabsf(os->pos.y - A->y) > reach + A->bound)) continue;
       /* AABB check in world */
       const Shape *sh = os->shape;
       vec3 c = obj_world(os, vscale(vadd(sh->bmin, sh->bmax), 0.5f));
@@ -1426,6 +1454,7 @@ static void gen_contacts(void) {
       if (fabsf(c.x - A->x) > r + A->bound || fabsf(c.y - A->y) > r + A->bound) continue;
       float zc = c.z, hz = fabsf(qrot(os->rot, v3(0, 0, 1)).z) * h.z + 1;
       if (A->zmax < zc - hz || A->zmin > zc + hz) continue;
+      if (joined_static(i, s)) continue;
       cur_a = i;
       cur_b = -1;
       cur_sobj = s;
@@ -1550,7 +1579,8 @@ static void tangents3(const Contact *c, float t1[3], float t2[3]) {
   t2[0] = -c->nz * t1[1], t2[1] = c->nz * t1[0], t2[2] = c->nx * t1[1] - c->ny * t1[0];
 }
 
-static void solve_contact3(Contact *c) {
+/* first: the first iteration, which works out the friction rows' effective masses (the same in all of them) */
+static void solve_contact3(Contact *c, bool first) {
   Body *A = &bodies[c->a];
   Body *B = c->b >= 0 ? &bodies[c->b] : 0;
   float vax, vay, vbx = 0, vby = 0;
@@ -1570,7 +1600,13 @@ static void solve_contact3(Contact *c) {
     vel_at(A, c->rax, c->ray, &vax, &vay);
     if (B) vel_at(B, c->rbx, c->rby, &vbx, &vby);
     float vt = (vax - vbx) * u[0] + (vay - vby) * u[1] + (A->vz - (B ? B->vz : 0)) * u[2];
-    float m = eff_mass3(A, c->rax, c->ray, B, c->rbx, c->rby, u[0], u[1], u[2]);
+    float m;
+    if (first) {
+      m = eff_mass3(A, c->rax, c->ray, B, c->rbx, c->rby, u[0], u[1], u[2]);
+      *(k ? &c->mt2 : &c->mt) = m;
+    } else {
+      m = k ? c->mt2 : c->mt;
+    }
     float *acc = k ? &c->jz : &c->jt, a0 = *acc;
     *acc = clampf(a0 + m * -vt, -lim, lim);
     float dt = *acc - a0;
@@ -1672,11 +1708,11 @@ static void prep_contacts(void) {
   }
 }
 
-static void solve_contacts(void) {
+static void solve_contacts(bool first) {
   for (int i = 0; i < ncon; i++) {
     Contact *c = &con[i];
     if (c->z3) {
-      solve_contact3(c);
+      solve_contact3(c, first);
       continue;
     }
     Body *A = &bodies[c->a];
@@ -1787,6 +1823,37 @@ static void joint_frame(Joint *j, Body **pa, Body **pb, float *rax, float *ray, 
   *ang = B->a - (A ? A->a : atan2f(cy, cx)) - j->ref;
 }
 
+/* A joint's frame and the effective masses of its rows stay the same through a step's iterations (the
+ * bodies only move once the step is solved): worked out once per step instead of twenty times. */
+typedef struct {
+  float rax, ray, rbx, rby, cx, cy;
+  float err[3]; /* x, y, angle */
+  float m[3];   /* effective mass of each row */
+} JointFrame;
+static JointFrame *jfr; /* one per joint, on phys_step's stack while it solves (NULL: worked out each time) */
+
+static bool joint_live(const Joint *j) {
+  return !(j->b < 0 || bodies[j->b].obj < 0 || (j->a >= 0 && bodies[j->a].obj < 0));
+}
+
+static void joint_frame_fill(Joint *j, JointFrame *f) {
+  Body *A, *B;
+  joint_frame(j, &A, &B, &f->rax, &f->ray, &f->rbx, &f->rby, &f->cx, &f->cy, &f->err[0], &f->err[1], &f->err[2]);
+  for (int k = 0; k < 2; k++) {
+    float nx = k == 0 ? f->cx : -f->cy, ny = k == 0 ? f->cy : f->cx;
+    f->m[k] = eff_mass(A, f->rax, f->ray, B, f->rbx, f->rby, nx, ny);
+  }
+  float ik = (A ? A->invi * A->lockr : 0) + B->invi * B->lockr;
+  f->m[2] = ik > 1e-9f ? 1.0f / ik : 0;
+}
+
+static const JointFrame *joint_frame_get(int ji) {
+  static JointFrame one;
+  if (jfr) return &jfr[ji];
+  joint_frame_fill(&joints[ji], &one);
+  return &one;
+}
+
 static void solve_joints(bool first) {
   JointExtTmp *et = etmp;
   for (int ji = 0; ji < njoints; ji++) {
@@ -1794,21 +1861,17 @@ static void solve_joints(bool first) {
     JointExt *x = j->ext;
     JointExtTmp *t = x ? et++ : 0;
     JointTmp *jt = &jtmp[ji];
-    if (j->b < 0 || bodies[j->b].obj < 0 || (j->a >= 0 && bodies[j->a].obj < 0)) continue;
-    Body *A, *B;
-    float rax, ray, rbx, rby, cx, cy, ex, ey, ang;
-    joint_frame(j, &A, &B, &rax, &ray, &rbx, &rby, &cx, &cy, &ex, &ey, &ang);
-    float err[3] = {ex, ey, ang};
+    if (!joint_live(j)) continue;
+    Body *A = j->a >= 0 ? &bodies[j->a] : 0, *B = &bodies[j->b];
+    const JointFrame *fr = joint_frame_get(ji);
+    float rax = fr->rax, ray = fr->ray, rbx = fr->rbx, rby = fr->rby, cx = fr->cx, cy = fr->cy;
+    const float *err = fr->err;
     for (int k = 0; k < 3; k++) {
       float nx = 0, ny = 0;
-      float m;
+      float m = fr->m[k];
       if (k < 2) {
         nx = k == 0 ? cx : -cy;
         ny = k == 0 ? cy : cx;
-        m = eff_mass(A, rax, ray, B, rbx, rby, nx, ny);
-      } else {
-        float ik = (A ? A->invi * A->lockr : 0) + B->invi * B->lockr;
-        m = ik > 1e-9f ? 1.0f / ik : 0;
       }
       if (m <= 0) continue;
       /* relative velocity along dof (B relative to A) */
@@ -1899,15 +1962,15 @@ static void solve_joints(bool first) {
 static void solve_split_joints(void) {
   for (int ji = 0; ji < njoints; ji++) {
     Joint *j = &joints[ji];
-    if (j->b < 0 || bodies[j->b].obj < 0 || (j->a >= 0 && bodies[j->a].obj < 0)) continue;
-    Body *A, *B;
-    float rax, ray, rbx, rby, cx, cy, ex, ey, ang;
-    joint_frame(j, &A, &B, &rax, &ray, &rbx, &rby, &cx, &cy, &ex, &ey, &ang);
+    if (!joint_live(j)) continue;
+    Body *A = j->a >= 0 ? &bodies[j->a] : 0, *B = &bodies[j->b];
+    const JointFrame *fr = joint_frame_get(ji);
+    float rax = fr->rax, ray = fr->ray, rbx = fr->rbx, rby = fr->rby, cx = fr->cx, cy = fr->cy;
     for (int k = 0; k < 3; k++) {
       if (j->lo[k] != j->hi[k]) continue;
       if (k < 2) {
         float nx = k == 0 ? cx : -cy, ny = k == 0 ? cy : cx;
-        float m = eff_mass(A, rax, ray, B, rbx, rby, nx, ny);
+        float m = fr->m[k];
         if (m <= 0) continue;
         float vx = B->pvx - B->pw * rby, vy = B->pvy + B->pw * rbx;
         if (A) vx -= A->pvx - A->pw * ray, vy -= A->pvy + A->pw * rax;
@@ -1980,9 +2043,15 @@ void phys_step(void) {
   gen_contacts();
   warm_start();
   prep_contacts();
+  /* the joints' frames, on the stack once gen_contacts has returned (the most joints a level makes is 203) */
+  int nfr = jok && njoints <= MAX_JOINT_FRAMES ? njoints : 0;
+  JointFrame frames[nfr ? nfr : 1];
+  jfr = nfr ? frames : 0;
+  for (int ji = 0; ji < nfr; ji++)
+    if (joint_live(&joints[ji])) joint_frame_fill(&joints[ji], &frames[ji]);
   for (int it = 0; it < ITER; it++) {
     if (jok) solve_joints(it == 0);
-    solve_contacts();
+    solve_contacts(it == 0);
   }
   warm_store();
   for (int i = 0; i < nbodies; i++) bodies[i].pvx = bodies[i].pvy = bodies[i].pw = bodies[i].pvz = 0;
@@ -1990,6 +2059,7 @@ void phys_step(void) {
     solve_split();
     if (jok) solve_split_joints();
   }
+  jfr = 0;
   /* events */
   nevents = 0;
   for (int i = 0; i < ncon; i++) {

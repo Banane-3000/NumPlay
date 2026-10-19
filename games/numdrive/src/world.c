@@ -410,6 +410,10 @@ static void shape_finish(Shape *s) {
   s->bmin = v3(bx0 / 8, by0 / 8, bz0 / 8);
   s->bmax = v3(bx1 / 8, by1 / 8, bz1 / 8);
   s->coll = coll;
+  {
+    vec3 lo = vsub(s->bmin, s->origin), hi = vsub(s->bmax, s->origin);
+    s->reach = fmaxf(-lo.x, hi.x) + fmaxf(-lo.y, hi.y) + fmaxf(-lo.z, hi.z);
+  }
   if (s->np == 1 && (blocks[s->blk[0]]->flags & 3) == 2) {
     Block *b = blocks[s->blk[0]];
     const uint8_t *bb = b->bb + PK_C(s->key[0]) * 6;
