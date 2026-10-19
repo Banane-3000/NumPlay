@@ -96,6 +96,9 @@ static void make_palette(int num) {
     }
 }
 
+/* (a new palette for this frame: everything is sent again) */
+int nw_palette_changing(void) { return next_pal >= 0 || last_gamma != usegamma; }
+
 void nw_frame_begin(void) {
     nw_band_index = 0;
     /* (the refresh measured again now and then: the panel's clock is not the processor's) */
@@ -251,7 +254,7 @@ static void nw_melt_band(int x0, int x1) {
 void nw_band_end(int x0, int x1) {
     int w = x1 - x0;
 #ifdef HOST
-    for (int y = 0; y < SCREENHEIGHT; y++)
+    for (int y = 0; y < nw_band_rows; y++)
         memcpy(host_doom_screen + y * SCREENWIDTH + x0, nw_band + y * NW_BAND_W, w);
 #endif
     int j = nw_band_index++;
@@ -265,16 +268,17 @@ void nw_band_end(int x0, int x1) {
         return;
     }
     uint16_t lines[NW_BAND_W * 24];
-    for (int y = 0; y < SCREENHEIGHT; y += 20) {
+    for (int y = 0; y < nw_band_rows; y += 20) {
         const uint8_t *src = nw_band + y * NW_BAND_W;
         uint16_t *d = lines;
-        for (int k = 0; k < 4; k++) {
+        int n = nw_band_rows - y < 20 ? nw_band_rows - y : 20; /* (Doom's rows, and the screen's for them) */
+        for (int k = 0; k < (n + 4) / 5; k++) {
             for (int r = 0; r < 5; r++, src += NW_BAND_W, d += w)
                 for (int i = 0; i < w; i++) d[i] = palette[src[i]];
             memcpy(d, d - w, w * sizeof *d);
             d += w;
         }
-        plat_push(x0, y / 5 * 6, w, 24, lines);
+        plat_push(x0, y / 5 * 6, w, n / 5 * 6 + n % 5, lines);
     }
     int32_t pushed = (int32_t)(plat_millis() - t) * 256;
     nw_push_ms += (pushed - nw_push_ms) / 4;

@@ -412,7 +412,7 @@ static void nw_vpatch_cols(const patch_t *patch, int x, int y, int c0, int c1) {
     if (c1 > nw_band_x1) c1 = nw_band_x1;
     if (c0 < 0) c0 = 0;
     if (c1 > SCREENWIDTH) c1 = SCREENWIDTH;
-    if (x >= c1 || x + w <= c0 || y >= SCREENHEIGHT) return;
+    if (x >= c1 || x + w <= c0 || y >= nw_band_rows) return;
     nw_shared_palettes();
     const uint8_t *pal = vpatch_has_shared_palette(patch) ? shared_palette8[vpatch_shared_palette(patch)]
                                                           : vpatch_palette(patch);
@@ -421,7 +421,7 @@ static void nw_vpatch_cols(const patch_t *patch, int x, int y, int c0, int c1) {
 #define PUT(px, c) do { int px_ = (px); if ((unsigned)(px_ - c0) < cw) row[px_] = (c); } while (0)
     for (int r = 0; r < h; r++) {
         int sy = y + r;
-        if (sy >= SCREENHEIGHT) break;
+        if (sy >= nw_band_rows) break;
         uint8_t *row = sy >= 0 ? nw_band - nw_band_x0 + sy * NW_BAND_W : NULL;
         switch (vpatch_type(patch)) {
             case vp4_runs: {

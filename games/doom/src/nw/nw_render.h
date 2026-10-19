@@ -21,8 +21,10 @@ extern "C" {
 /* the columns this pass records (the whole view, or one band when a frame is drawn band by band: the BSP
  * still goes over the whole view, so that everything is as vanilla has it, but only the band is kept) */
 extern int nw_strip_x0, nw_strip_x1;
-/* the band being drawn */
+/* the band being drawn, and the rows of it drawn and sent (the status bar's are not when they have not changed:
+ * the panel keeps them) */
 extern int nw_band_x0, nw_band_x1;
+extern int nw_band_rows;
 
 /* the frame's table of wall texture heights (dc_texturemid), shared by the columns of a wall's tier */
 int nw_add_tmid(fixed_t texturemid);

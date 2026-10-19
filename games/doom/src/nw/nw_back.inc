@@ -10,6 +10,9 @@ uint32_t nw_last_walls, nw_last_planes; // (and the records of the last frame)
 #endif
 int nw_strip_x0 = 0, nw_strip_x1 = SCREENWIDTH;
 int nw_band_x0 = 0, nw_band_x1 = SCREENWIDTH;
+int nw_band_rows = SCREENHEIGHT;
+int nw_palette_changing(void);
+extern int nw_melting;
 int nw_tmid_cur;
 fixed_t nw_masked_texturemid;
 int nw_fuzz_at;
@@ -559,7 +562,7 @@ static void nw_draw_band(uint8_t *band, int x0, int x1, bool view, int help, boo
             }
         }
         int below = scaledviewwidth == SCREENWIDTH ? viewheight : SCREENHEIGHT - ST_HEIGHT;
-        for (int y = below; y < SCREENHEIGHT; y++) memset(render_frame_buffer + y * NW_STRIDE + x0, 0, x1 - x0);
+        for (int y = below; y < nw_band_rows; y++) memset(render_frame_buffer + y * NW_STRIDE + x0, 0, x1 - x0);
     } else {
         nw_draw_background(x0, x1, help);
         if (gamestate == GS_FINALE && finalestage == F_STAGE_TEXT && !help) {
@@ -582,11 +585,16 @@ static void nw_draw_band(uint8_t *band, int x0, int x1, bool view, int help, boo
 // the frame's bands, in the order the panel refreshes them
 static bool nw_frame_view, nw_frame_strips;
 static int nw_frame_help;
+// the status bar's rows are drawn and sent again only when what is drawn there changes (the panel keeps them):
+// what was drawn there last (0: not known), and whether this frame leaves them
+static uint32_t nw_bar_last;
+static bool nw_bar_kept;
 
 static void nw_draw_frame() {
     bool view = nw_frame_view, strips = nw_frame_strips;
     int help = nw_frame_help;
     nw_frame_begin();
+    nw_band_rows = nw_bar_kept && !nw_melting ? SCREENHEIGHT - ST_HEIGHT : SCREENHEIGHT;
     uint8_t __aligned(8) band[NW_BAND_W * SCREENHEIGHT];
     const int bands = SCREENWIDTH / NW_BAND_W;
     if (nw_scan_right_to_left) {
@@ -609,6 +617,7 @@ static void nw_draw_frame() {
     }
     nw_band_x0 = 0;
     nw_band_x1 = SCREENWIDTH;
+    nw_band_rows = SCREENHEIGHT;
     nw_frame_end();
 }
 
@@ -659,6 +668,7 @@ extern "C" int nw_melt(int tics) {
     }
     for (int i = 0; i < SCREENWIDTH / 2; i++) nw_melt_to[i] = nw_melt_y[i] > 0 ? nw_melt_y[i] : 0;
     nw_melting = 1;
+    nw_bar_last = 0;
     nw_draw_frame();
     nw_melting = 0;
     if (done) nw_melt_going = false;
@@ -726,6 +736,25 @@ void pd_end_frame(int wipe_start) {
         V_DrawPatchDirect(viewwindowx + (scaledviewwidth - 68) / 2, y, VPATCH_HANDLE(VPATCH_NAME(M_PAUSE)));
     }
     M_Drawer();
+
+    // (in a level, the view above the status bar: what is drawn over its rows, the patches reaching them, and the
+    // palette, are as last frame's, or not)
+    uint32_t bar = 0;
+    if (view && viewwindowy + viewheight <= SCREENHEIGHT - ST_HEIGHT && !wipe_start && !nw_palette_changing()) {
+        bar = 2166136261u;
+        for (int l = 1; l < nw_patches[0].header.size; l++) {
+            const vpatchlist_t &e = nw_patches[l];
+            if (e.entry.y + vpatch_height(resolve_vpatch_handle(e.entry.patch_handle)) <= SCREENHEIGHT - ST_HEIGHT)
+                continue;
+            bar = (bar ^ e.entry.patch_handle) * 16777619u;
+            bar = (bar ^ (uint16_t) e.entry.x) * 16777619u;
+            bar = (bar ^ (uint16_t) e.entry.y) * 16777619u;
+            bar = (bar ^ e.entry.repeat) * 16777619u;
+        }
+        bar |= 1;
+    }
+    nw_bar_kept = bar && bar == nw_bar_last;
+    nw_bar_last = bar;
 
     nw_frame_view = view;
     nw_frame_strips = strips;
