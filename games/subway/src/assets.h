@@ -1,4 +1,4 @@
-/* Subway Surfers: the fonts and the logo (assets.c, made by tools/assets.py). */
+/* Subway Surfers: the fonts (assets.c, made by tools/assets.py). */
 #ifndef SS_ASSETS_H
 #define SS_ASSETS_H
 #include <stdint.h>
@@ -20,9 +20,4 @@ typedef struct {
 
 extern const Font font_big, font_mid, font_small;
 
-/* the logo: each row is runs of (count, byte), the byte's high 4 bits its alpha, the low ones its colour */
-extern const uint16_t logo_w, logo_h;
-extern const uint16_t logo_pal[16];
-extern const uint16_t logo_rows[];
-extern const uint8_t logo_runs[];
 #endif

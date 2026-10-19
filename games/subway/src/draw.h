@@ -1,5 +1,5 @@
 /* Subway Surfers: flat drawing over the band being drawn (r3d.h): boxes, round boxes, discs,
- * polygons, text with an outline, the logo. Everything clips itself to the band's rows. */
+ * polygons, text with an outline, pictures. Everything clips itself to the band's rows. */
 #ifndef SS_DRAW_H
 #define SS_DRAW_H
 #include <stdint.h>
@@ -27,7 +27,6 @@ int d_text_width(const Font *f, const char *s);
 /* white-ish text with a dark outline t pixels thick, the game's lettering; align -1 left, 0 centre,
  * 1 right of x */
 void d_label(const Font *f, int x, int baseline, const char *s, uint16_t fill, uint16_t outline, int t, int align);
-void d_logo(int x, int y);
 /* one of the game's pictures (data.c), its top-left at (x, y) */
 void d_image(int x, int y, const Image *im);
 #endif

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Makes src/assets.c: Subway Surfers' fonts and logo, from Lilita One.
+"""Makes src/assets.c: Subway Surfers' fonts, from Lilita One.
 
 Lilita One (Juan Montoreano, SIL Open Font License 1.1) is the round, heavy
 lettering the game's own buttons and numbers look like. Its glyphs are
@@ -8,10 +8,7 @@ rendered 4x supersampled with the baseline on a pixel boundary and kept as
 letter also comes grown by 1 and by 2 pixels all round and 1 more below: the
 game's lettering is white with a dark outline and a shadow, drawn in two.
 
-The logo, "SUBWAY SURFERS" on two lines, is drawn from the same font: filled
-with the game's yellow, a thick navy outline and a shadow under it, tilted a
-little. It is kept as one byte a pixel, its alpha (4 bits) and its colour
-(4 bits, from a palette of 16), in runs: a count, then the byte, row by row.
+(The logo is the game's own: tools/pack.py.)
 
 The output is committed; run it again only to change sizes or colours.
 Usage: assets.py src/assets.c
@@ -22,7 +19,7 @@ import urllib.request
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent
 CACHE = ROOT / ".fonts"
@@ -144,111 +141,11 @@ def fonts(lines):
     return total
 
 
-# ---------------------------------------------------------------- the logo
-NAVY = (22, 34, 92)
-SHADOW = (10, 16, 48)
-
-
-def word(text, cap, top, bottom, outline):
-    """A word drawn big (4x), filled with a gradient from top to bottom, its outline around it."""
-    up = 4
-    f = load(cap, up)
-    bb = f.getbbox(text, anchor="ls")
-    pad = (outline + 4) * up
-    w, h = bb[2] - bb[0] + 2 * pad, bb[3] - bb[1] + 2 * pad
-    mask = Image.new("L", (w, h), 0)
-    ImageDraw.Draw(mask).text((pad - bb[0], pad - bb[1]), text, font=f, fill=255, anchor="ls")
-    fill = np.asarray(mask).astype(np.float32) / 255
-    ring = np.asarray(mask.filter(ImageFilter.MaxFilter(2 * outline * up + 1))).astype(np.float32) / 255
-    ys = np.linspace(0, 1, h)[:, None]
-    top, bottom = np.array(top, np.float32), np.array(bottom, np.float32)
-    grad = top[None, None, :] * (1 - ys[..., None]) + bottom[None, None, :] * ys[..., None]
-    # a light band near the top of the letters, as on the game's lettering
-    shine = np.clip(1 - np.abs(ys - 0.33) * 9, 0, 1)[..., None] * 0.35
-    grad = grad * (1 - shine) + 255 * shine
-    rgb = np.zeros((h, w, 3), np.float32) + np.array(NAVY, np.float32)
-    rgb = rgb * (1 - fill[..., None]) + grad * fill[..., None]
-    img = np.dstack([rgb, ring * 255]).astype(np.uint8)
-    return Image.fromarray(img, "RGBA")
-
-
-def logo(lines):
-    up = 4
-    a = word("SUBWAY", 30, (255, 255, 255), (150, 220, 255), 3)
-    b = word("SURFERS", 34, (255, 238, 60), (255, 150, 20), 3)
-    w = max(a.width, b.width)
-    gap = -6 * up
-    canvas = Image.new("RGBA", (w + 24 * up, a.height + b.height + gap + 24 * up), (0, 0, 0, 0))
-    canvas.alpha_composite(a, ((canvas.width - a.width) // 2, 8 * up))
-    canvas.alpha_composite(b, ((canvas.width - b.width) // 2, 8 * up + a.height + gap))
-    # the shadow, down and to the right
-    alpha = canvas.getchannel("A")
-    shadow = Image.new("RGBA", canvas.size, SHADOW + (0,))
-    shadow.putalpha(alpha.point(lambda v: v * 0.7))
-    out = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-    out.alpha_composite(shadow, (3 * up, 4 * up))
-    out.alpha_composite(canvas)
-    out = out.rotate(5, resample=Image.BICUBIC, expand=True)
-    out = out.resize((out.width // up, out.height // up), Image.LANCZOS)
-    box = out.getbbox()
-    out = out.crop(box)
-    px = np.asarray(out).astype(np.int32)
-    # 15 colours for the opaque parts (pngquant would do as well; this keeps it to Pillow)
-    opaque = px[..., 3] > 0
-    rgb = Image.fromarray(px[..., :3].astype(np.uint8), "RGB")
-    pal_img = rgb.quantize(colors=15, method=Image.MEDIANCUT, dither=Image.NONE)
-    pal = pal_img.getpalette()[:45]
-    idx = np.asarray(pal_img).astype(np.int32)
-    alpha4 = np.clip(np.round(px[..., 3] / 255 * 15), 0, 15).astype(np.int32)
-    alpha4[~opaque] = 0
-    vals = (alpha4 << 4) | np.where(alpha4 > 0, idx, 0)
-    h, w = vals.shape
-    data = bytearray()
-    rows = []
-    for y in range(h):
-        rows.append(len(data))
-        row = vals[y].tolist()
-        x = 0
-        while x < w:
-            v = row[x]
-            n = 1
-            while x + n < w and row[x + n] == v and n < 255:
-                n += 1
-            data += bytes([n, v])
-            x += n
-    rows.append(len(data))
-    colours = []
-    for i in range(15):
-        r, g, bl = pal[3 * i:3 * i + 3]
-        colours.append(((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (bl >> 3))
-    lines.append(f"#define LOGO_W {w}")
-    lines.append(f"#define LOGO_H {h}")
-    lines.append(f"const uint16_t logo_w = {w}, logo_h = {h};")
-    lines.append("const uint16_t logo_pal[16] = {" + ", ".join(f"0x{c:04X}" for c in colours + [0]) + "};")
-    lines.append(f"const uint16_t logo_rows[{len(rows)}] = {{")
-    for i in range(0, len(rows), 16):
-        lines.append("  " + ",".join(str(r) for r in rows[i:i + 16]) + ",")
-    lines.append("};")
-    lines.append(f"const uint8_t logo_runs[{len(data)}] = {{")
-    for i in range(0, len(data), 32):
-        lines.append("  " + ",".join(str(v) for v in data[i:i + 32]) + ",")
-    lines.append("};")
-    print(f"logo: {w}x{h}, {len(data)} bytes of runs")
-    preview = Image.fromarray(np.dstack([px[..., :3], px[..., 3]]).astype(np.uint8), "RGBA")
-    return preview, len(data) + 2 * len(rows)
-
-
 def main(out):
     lines = ["/* Made by tools/assets.py from Lilita One by Juan Montoreano (SIL Open Font License 1.1). */",
              '#include "assets.h"', ""]
     total = fonts(lines)
-    preview, n = logo(lines)
-    total += n
     Path(out).write_text("\n".join(lines) + "\n")
-    if len(sys.argv) > 2:
-        bg = Image.new("RGBA", preview.size, (90, 180, 240, 255))
-        bg.alpha_composite(preview)
-        bg.save(sys.argv[2])
     print(f"total {total} bytes")
 
 

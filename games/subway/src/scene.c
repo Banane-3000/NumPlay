@@ -386,7 +386,7 @@ static void bridge(float z0, float dist) {
 }
 
 /* the overhead line: a gantry across the tracks and a wire over each one */
-static void catenary(float z0, float dist) {
+static void catenary(float z0, float dist, uint32_t h) {
   float gz = z0 + 12;
   uint32_t pole = 0x4E5A66;
   cube(-5.2f, 0, gz, -4.85f, 7.8f, gz + 0.35f, pole, 2);
@@ -398,6 +398,14 @@ static void catenary(float z0, float dist) {
     cube(x - 0.06f, 6.9f, gz + 0.1f, x + 0.06f, 7.4f, gz + 0.25f, 0x26262A, 2);
     V3 w[4] = {{x - 0.03f, 6.9f, z0 + BLOCK}, {x + 0.03f, 6.9f, z0 + BLOCK}, {x + 0.03f, 6.9f, z0}, {x - 0.03f, 6.9f, z0}};
     r_poly(w, 4, L(0x2A2A2E), P_TWOSIDED, 0);
+    if (h % 3 == 0) {
+      /* a signal over the track, its lamps facing the runner */
+      float sx = x + 0.75f;
+      cube(sx - 0.22f, 6.3f, gz - 0.25f, sx + 0.22f, 7.4f, gz, 0x1E2024, 2);
+      uint32_t lamp = (h >> (3 + l)) & 1 ? 0xFF3B30 : 0x3CFF6A;
+      front(gz - 0.26f, sx - 0.12f, sx + 0.12f, 7.0f, 7.24f, (h >> (3 + l)) & 1 ? lamp : 0x3A3A3A, P_DECAL | P_NOHAZE);
+      front(gz - 0.26f, sx - 0.12f, sx + 0.12f, 6.55f, 6.79f, (h >> (3 + l)) & 1 ? 0x3A3A3A : lamp, P_DECAL | P_NOHAZE);
+    }
   }
 }
 
@@ -412,7 +420,7 @@ static bool bridge_at(int b) {
 static void open_block(int b, float z0, float dist) {
   uint32_t h = world_hash((uint32_t)b * 7919u + 3 + world_seed);
   bool before_tunnel = world_tunnel(z0 + BLOCK + 1);
-  catenary(z0, dist);
+  catenary(z0, dist, h);
   if (bridge_at(b)) {
     bridge(z0, dist);
     return;
