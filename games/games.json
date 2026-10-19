@@ -345,24 +345,6 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/breakout"
   },
   {
-    "id": "leveldevil",
-    "title": "Level Devil",
-    "tagline": "Reach the door, trust nothing",
-    "credit": "Based on Level Devil by Unept",
-    "top": "0xF49F7E",
-    "bottom": "0x634D40",
-    "accent": "0xD9512C",
-    "colors": 16,
-    "records": [
-      "leveldevil.sav"
-    ],
-    "shots": [
-      "docs/shot.png"
-    ],
-    "app": "LevelDevil.nwa",
-    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/leveldevil"
-  },
-  {
     "id": "twoplayer",
     "title": "2 Players",
     "tagline": "Pong and more, side by side",

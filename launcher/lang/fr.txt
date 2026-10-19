@@ -101,7 +101,6 @@ Fill the grid, 1 to 9	Remplis la grille, de 1 à 9
 Ultimate Tic-Tac-Toe	Morpion ultime
 Tic-tac-toe in tic-tac-toe	Un morpion dans le morpion
 Backgrounds, clocks, timers	Fonds, horloges, minuteurs
-Reach the door, trust nothing	Atteins la porte, ne te fie à rien
 Stop the invasion, one cannon	Arrête l'invasion avec un seul canon
 # (names that stay as they are)
 NumDash	NumDash
@@ -109,7 +108,6 @@ NumBlocks	NumBlocks
 NumDrive	NumDrive
 2048	2048
 NumVisuals	NumVisuals
-Level Devil	Level Devil
 Space Invaders	Space Invaders
 Sudoku	Sudoku
 # the games' credits
@@ -118,7 +116,6 @@ By Tatone26, from All the Apps	Par Tatone26, tiré d'All the Apps
 Inspired by Tatone26's All the Apps	Inspiré d'All the Apps de Tatone26
 Based on 2048 by Gabriele Cirulli	D'après 2048 de Gabriele Cirulli
 Based on Block Blast! by Hungry Studio	D'après Block Blast! de Hungry Studio
-Based on Level Devil by Unept	D'après Level Devil d'Unept
 Based on Space Invaders by Taito	D'après Space Invaders de Taito
 # a game the RAM of the calculator's software is too small for
 Needs 	Il manque 
