@@ -104,7 +104,7 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
     <td align="center"><a href="games/leveldevil/README.md"><img src="docs/media/thumb_leveldevil.png" width="200" alt="Level Devil"><br><b>Level Devil</b></a><br><sub>Unept's troll platformer: the game's 80 rooms, with their own traps</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/LevelDevil.nwa">Download</a></td>
   </tr>
   <tr>
-    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Super Mario 64, the Nether and the End in NumBlocks and more: see the roadmap</sub></td>
+    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Super Mario 64, Minecraft 1.18.2 and more: see the roadmap</sub></td>
   </tr>
 </table>
 
@@ -211,8 +211,8 @@ Filmed on my own calculator, no emulator.
 - [x] Sokoban
 - [x] Sudoku
 - [x] Ultimate Tic-Tac-Toe
+- [x] The Nether and the End in NumBlocks: portals, fortresses, strongholds and the Ender Dragon, in NumBlocks.nwa
 - [ ] Super Mario 64
-- [ ] The Nether and the End in NumBlocks
 - [ ] Full Minecraft 1.18.2 as a standalone app
 - [ ] A customizer website: pick the games you want in your launcher, with Enlarged Extra Apps support to fit several big games, or big and small ones together
 - [ ] [Retro-Go](https://github.com/ducalex/retro-go) for Game Boy, NES and more: upload your own ROMs on the website and get a .nwa app that plays them
