@@ -21,6 +21,12 @@
 </p>
 
 <p align="center">
+  <a href="https://mason363.github.io/NumPlay/customize/"><img src="docs/media/studio.png" width="640" alt="NumPlay Studio: pick your games, add Game Boy, NES and Sega games, and install in one click"></a>
+  <br>
+  <a href="https://mason363.github.io/NumPlay/customize/"><b>Make your own NumPlay in NumPlay Studio</b></a>
+</p>
+
+<p align="center">
   <a href="#how-to-install"><b>How to install</b></a> &nbsp;·&nbsp; <a href="docs/play.md"><b>How to play</b></a> &nbsp;·&nbsp; <a href="https://github.com/Mason363/NumPlay/releases/latest"><b>All downloads</b></a> &nbsp;·&nbsp; <a href="#roadmap"><b>Roadmap</b></a> &nbsp;·&nbsp; <a href="docs/make-a-game.md"><b>Make a game</b></a>
 </p>
 
@@ -288,6 +294,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 - **[Gabriel](https://github.com/tomcalif9-stack)**, who made the home screen's moving backgrounds, translated NumPlay into French first, and tests it on Upsilon and an N0115.
 - **[LanoCodes17](https://github.com/LanoCodes17)**, whose idea the Konami code is: one of the secret ways into NumPlay from Matrices.
 - **[Retro-Go](https://github.com/ducalex/retro-go)** by ducalex inspired NumPlay's Retro-Go, whose launcher, menus and frame skipping are written again for NumPlay with no code copied from it. Its emulators are **[gnuboy](https://github.com/rofl0r/gnuboy)** by Laguna and Gilgamesh (GNU GPL v2 or later) for the Game Boy and **nofrendo** by Matthew Conte (GNU LGPL v2, used under the GPL) for the NES; the Master System and Game Gear are NumPlay's own, around **[superzazu's z80](https://github.com/superzazu/z80)** by Nicolas Allemand (MIT License). Its tests use Blargg's test ROMs, Matt Currie's dmg-acid2 and cgb-acid2, kevtris's nestest and Frank Cringle's zexdoc and zexall. Not affiliated with them.
+- **NumPlay Studio** builds your NumPlay right in the browser with **GNU ld and objcopy** from [binutils](https://www.gnu.org/software/binutils/) (GNU GPL v3), compiled to WebAssembly with [emscripten](https://emscripten.org).
 - Everyone who reported a bug: **NEE** ([reversallava63](https://github.com/reversallava63)), **Gabriel**, **[briac134](https://github.com/briac134)**, **[Raphanobie](https://github.com/Raphanobie)**, **[zbigzo](https://github.com/zbigzo)**, **Yacine**, **PelicanMan75**, **[Spykube](https://github.com/Spykube)** and **[axio-m](https://github.com/axio-m)**. Thank you!
 
 ## License
