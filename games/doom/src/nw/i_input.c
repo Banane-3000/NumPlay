@@ -12,7 +12,7 @@
  *   x,n,t  var    strafe left, strafe right
  *   toolbox       the automap; in it, + and - zoom, x follows, / shows the grid, 0 shows the whole map,
  *                 8 puts a mark, 9 takes them away
- *   1 to 7        the weapons
+ *   1 to 7        the weapons; ( and ) the previous and next one you have
  *   + -           the screen bigger, smaller
  *   sqrt          brightness
  *   ln, log       quick save, quick load
@@ -37,6 +37,7 @@ int M_BackKey(void);
 boolean M_WantsEnter(void);
 
 boolean nw_home;
+boolean nw_always_run;
 /* the Doom key each held key pressed (released with the same one), or NW_SENT_NONE for one that pressed none */
 #define NW_SENT_NONE 0x100
 static uint16_t sent[NK_COUNT];
@@ -77,6 +78,8 @@ const nw_action_t nw_actions[NA_COUNT] = {
     [NA_MESSAGES] = {"MESSAGES ON, OFF", KEY_F8},
     [NA_DETAIL] = {"DETAIL HIGH, LOW", KEY_F5},
     [NA_CHEAT] = {"TYPE A CHEAT", 0},
+    [NA_NEXTWEAPON] = {"NEXT WEAPON", ']'},
+    [NA_PREVWEAPON] = {"PREVIOUS WEAPON", '['},
 };
 
 /* the calculator's keys, as the options and Read This! show them ("" for those that are not keys) */
@@ -107,6 +110,7 @@ void nw_bindings_default(void) {
         {NK_PLUS, NA_BIGGER}, {NK_MINUS, NA_SMALLER}, {NK_MUL, NA_FOLLOW}, {NK_DIV, NA_GRID},
         {NK_ZERO, NA_WHOLEMAP}, {NK_EIGHT, NA_MARK}, {NK_NINE, NA_CLEARMARKS}, {NK_SQRT, NA_GAMMA},
         {NK_LN, NA_QUICKSAVE}, {NK_LOG, NA_QUICKLOAD}, {NK_PI, NA_PAUSE}, {NK_ANS, NA_CHEAT},
+        {NK_LPAREN, NA_PREVWEAPON}, {NK_RPAREN, NA_NEXTWEAPON},
     };
     memset(nw_binding, NA_NONE, sizeof nw_binding);
     for (unsigned i = 0; i < sizeof def / sizeof def[0]; i++) nw_binding[def[i][0]] = def[i][1];

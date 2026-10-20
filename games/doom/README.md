@@ -80,6 +80,7 @@ Press a key on the title screen for the menu, then choose New Game, Knee-Deep in
 | x,n,t / var | Strafe left / right |
 | alpha (held) | Run |
 | 1 to 7 | Choose a weapon |
+| ( / ) | The previous / next weapon you have |
 | Toolbox | Automap: the map, the map over the game, the game |
 | + / − | Screen size; on the automap, zoom |
 | × / ÷ / 0 | Automap: follow you, grid, the whole map |
@@ -94,7 +95,7 @@ In menus, the arrows choose, OK or EXE confirms and Back goes back. When the gam
 
 **Options, Keys** gives any key any action: choose an action, press the key (it shows each action's keys, on pages that Left and Right turn; THE KEYS AS THEY CAME puts them back). The keys and the options are kept in `doom.cfg`.
 
-**Options, More Options**: Brightness (off and four levels, as vanilla's gamma), Map over the view (the automap's second mode), Secrets on the map (the walls of secret areas in their own colour), and Screen refresh (which way the calculator's panel is refreshed, see below).
+**Options, More Options**: Brightness (off and four levels, as vanilla's gamma), Always run (as vanilla's autorun trick: you run without holding alpha), Map over the view (the automap's second mode), Secrets on the map (the walls of secret areas in their own colour), and Screen refresh (which way the calculator's panel is refreshed, see below).
 
 **Options, Cheats**: God mode (IDDQD), all weapons and keys (IDKFA), weapons and ammo (IDFA), no clipping (IDCLIP), warp (IDCLEV, Left and Right choose the level), a power (IDBEHOLD: invulnerability, strength, invisibility, radiation suit, the map, light amplification), the whole map (IDDT) and the chainsaw (IDCHOPPERS). The last line, or the ans key in the game, lets you type any code, IDMYPOS and IDSPISPOPD too: the letter keys type what is written above them in alpha, numbers are typed as they are.
 

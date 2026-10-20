@@ -27,6 +27,7 @@ void nw_show_error(const char *msg);
 
 /* i_input.c: Home or On/Off is pressed (the moment is kept, then the app quits) */
 extern boolean nw_home;
+extern boolean nw_always_run;   /* Options, More: run without holding the run key */
 void nw_input_init(void);
 /* the calculator's keys (eadk_key_*) */
 enum {
@@ -43,7 +44,8 @@ enum {
     NA_NONE, NA_FORWARD, NA_BACKWARD, NA_TURNLEFT, NA_TURNRIGHT, NA_FIRE, NA_USE, NA_STRAFE, NA_RUN,
     NA_STRAFELEFT, NA_STRAFERIGHT, NA_WEAPON1, NA_WEAPON2, NA_WEAPON3, NA_WEAPON4, NA_WEAPON5, NA_WEAPON6,
     NA_WEAPON7, NA_AUTOMAP, NA_MENU, NA_PAUSE, NA_BIGGER, NA_SMALLER, NA_FOLLOW, NA_GRID, NA_WHOLEMAP, NA_MARK,
-    NA_CLEARMARKS, NA_GAMMA, NA_QUICKSAVE, NA_QUICKLOAD, NA_MESSAGES, NA_DETAIL, NA_CHEAT, NA_COUNT
+    NA_CLEARMARKS, NA_GAMMA, NA_QUICKSAVE, NA_QUICKLOAD, NA_MESSAGES, NA_DETAIL, NA_CHEAT, NA_NEXTWEAPON,
+    NA_PREVWEAPON, NA_COUNT
 };
 typedef struct {
     const char *name;

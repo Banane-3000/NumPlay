@@ -215,7 +215,7 @@ static void M_NwCheats(int choice)
 }
 
 // ---------------------------------------------------------------- more
-enum { more_bright, more_overlay, more_secrets, more_sync, more_end };
+enum { more_bright, more_run, more_overlay, more_secrets, more_sync, more_end };
 
 // (the settings loaded: the screen size and detail they have)
 void M_NwViewLoaded(void)
@@ -229,6 +229,7 @@ static void M_NwMoreItem(int choice)
     switch (itemOn)
     {
         case more_bright: M_NwBrightness(choice); break;
+        case more_run: nw_always_run = !nw_always_run; break;
         case more_overlay: nw_map_overlay = !nw_map_overlay; break;
         case more_secrets: nw_map_secrets = !nw_map_secrets; break;
         case more_sync:
@@ -245,13 +246,14 @@ static void M_NwMoreItem(int choice)
 
 static const menuitem_t MoreMenu[] = {
     {2, VPATCH_NAME_INVALID, 'b', M_NwMoreItem},
+    {2, VPATCH_NAME_INVALID, 'a', M_NwMoreItem},
     {2, VPATCH_NAME_INVALID, 'm', M_NwMoreItem},
     {2, VPATCH_NAME_INVALID, 's', M_NwMoreItem},
     {2, VPATCH_NAME_INVALID, 'r', M_NwMoreItem},
 };
 
 static void M_DrawNwMore(void);
-menu_t MoreDef = {more_end, &OptionsDef, MoreMenu, M_DrawNwMore, 40, 40, 0};
+menu_t MoreDef = {more_end, &OptionsDef, MoreMenu, M_DrawNwMore, 40, 30, 0};
 
 static void M_DrawNwMore(void)
 {
@@ -260,15 +262,17 @@ static void M_DrawNwMore(void)
     nw_value_x = 150;
     M_NwTitle("MORE OPTIONS");
     M_NwLine(&MoreDef, more_bright, "BRIGHTNESS", levels[usegamma]);
+    M_NwLine(&MoreDef, more_run, "ALWAYS RUN", nw_always_run ? "ON" : "OFF");
     M_NwLine(&MoreDef, more_overlay, "MAP OVER THE VIEW", nw_map_overlay ? "ON" : "OFF");
     M_NwLine(&MoreDef, more_secrets, "SECRETS ON THE MAP", nw_map_secrets ? "PURPLE" : "OFF");
     M_NwLine(&MoreDef, more_sync, "SCREEN REFRESH", sync[nw_sync_off ? 2 : nw_scan_right_to_left]);
     static const char *const notes[] = {
-        "THE MAP KEY GOES FROM THE VIEW TO THE MAP,", "TO THE MAP OVER THE VIEW, THEN BACK.", "",
+        "THE MAP KEY GOES FROM THE VIEW TO THE MAP,", "TO THE MAP OVER THE VIEW, THEN BACK.",
         "THE PICTURE IS SENT AS THE CALCULATOR'S", "SCREEN REFRESHES: IF IT TEARS, TRY THE", "OTHER WAY ROUND.",
     };
+    // (above the status bar)
     for (unsigned i = 0; i < sizeof notes / sizeof notes[0]; i++)
-        M_WriteText(16, MoreDef.y + LINEHEIGHT * more_end + 8 + 10 * i, notes[i]);
+        M_WriteText(16, MoreDef.y + LINEHEIGHT * more_end + 6 + 10 * i + (i >= 2 ? 4 : 0), notes[i]);
 }
 
 static void M_NwMore(int choice)

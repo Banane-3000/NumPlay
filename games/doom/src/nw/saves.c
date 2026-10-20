@@ -157,10 +157,10 @@ void nw_resume_done(void) {
 /* ------------------------------------------------------------------ settings */
 boolean nw_first_start;
 
-/* 'D', the version (2), messages, brightness, the map over the view, secrets on the map, the screen's refresh
- * (left to right, right to left, none), the detail, the screen size, then each calculator key's action (NK_COUNT
- * of them) */
-#define CFG_LEN (9 + NK_COUNT)
+/* 'D', the version (3), messages, brightness, the map over the view, secrets on the map, the screen's refresh
+ * (left to right, right to left, none), the detail, the screen size, always run, then each calculator key's
+ * action (NK_COUNT of them). Version 2 had no always run. */
+#define CFG_LEN (10 + NK_COUNT)
 extern int nw_map_overlay, nw_map_secrets, nw_scan_right_to_left, nw_sync_off;
 extern isb_int8_t detailLevel, screenblocks;
 
@@ -168,25 +168,31 @@ void nw_settings_load(void) {
     uint32_t len;
     const uint8_t *d = plat_load(CFG_NAME, &len);
     nw_first_start = !d;
-    if (!d || len < 4 || d[0] != 'D' || (d[1] != 1 && d[1] != 2)) return;
+    if (!d || len < 4 || d[0] != 'D' || d[1] < 1 || d[1] > 3) return;
     showMessages = d[2] ? 1 : 0;
     usegamma = d[3] <= 4 ? d[3] : 0;
-    if (d[1] != 2 || len != CFG_LEN) return;
+    if (d[1] == 1 || len != CFG_LEN - (d[1] == 2)) return;
     nw_map_overlay = d[4] != 0;
     nw_map_secrets = d[5] != 0;
     nw_scan_right_to_left = d[6] == 1;
     nw_sync_off = d[6] == 2;
     detailLevel = d[7] == 1;
     screenblocks = d[8] >= 3 && d[8] <= 11 ? d[8] : 10;
-    for (int k = 0; k < NK_COUNT; k++) nw_binding[k] = d[9 + k] < NA_COUNT ? d[9 + k] : NA_NONE;
+    int at = 9;
+    if (d[1] == 3) nw_always_run = d[at++] != 0;
+    for (int k = 0; k < NK_COUNT; k++) nw_binding[k] = d[at + k] < NA_COUNT ? d[at + k] : NA_NONE;
+    if (d[1] == 2) {   /* (the weapon keys came after: on ( and ) if those do nothing) */
+        if (nw_binding[NK_LPAREN] == NA_NONE) nw_binding[NK_LPAREN] = NA_PREVWEAPON;
+        if (nw_binding[NK_RPAREN] == NA_NONE) nw_binding[NK_RPAREN] = NA_NEXTWEAPON;
+    }
     M_NwViewLoaded();
 }
 
 void nw_settings_save(void) {
-    uint8_t d[CFG_LEN] = {'D', 2, (uint8_t)showMessages, (uint8_t)usegamma, (uint8_t)nw_map_overlay,
+    uint8_t d[CFG_LEN] = {'D', 3, (uint8_t)showMessages, (uint8_t)usegamma, (uint8_t)nw_map_overlay,
                           (uint8_t)nw_map_secrets, (uint8_t)(nw_sync_off ? 2 : nw_scan_right_to_left),
-                          (uint8_t)detailLevel, (uint8_t)screenblocks};
-    memcpy(d + 9, nw_binding, NK_COUNT);
+                          (uint8_t)detailLevel, (uint8_t)screenblocks, (uint8_t)nw_always_run};
+    memcpy(d + 10, nw_binding, NK_COUNT);
     uint32_t len;
     const uint8_t *old = plat_load(CFG_NAME, &len);
     if (old && len == sizeof d && !memcmp(old, d, sizeof d)) return;

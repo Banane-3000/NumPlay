@@ -400,8 +400,14 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
     // fraggle: support the old "joyb_speed = 31" hack which
     // allowed an autorun effect
 
+#if NUMWORKS
+    extern boolean nw_always_run;
+#endif
     speed = key_speed >= NUMKEYS
          || is_gamekeydown(key_speed)
+#if NUMWORKS
+         || nw_always_run   // (Options, More: always run)
+#endif
 #if !NO_USE_JOYSTICK
          || joybspeed >= MAX_JOY_BUTTONS
          || joybuttons[joybspeed]

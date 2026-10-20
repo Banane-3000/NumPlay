@@ -1032,6 +1032,7 @@ static const struct { const char *what; uint8_t actions[4]; } keys_page[] = {
     {"STRAFE (HELD)", {NA_STRAFE}},
     {"STRAFE LEFT, RIGHT", {NA_STRAFELEFT, NA_STRAFERIGHT}},
     {"RUN (HELD)", {NA_RUN}},
+    {"PREVIOUS, NEXT WEAPON", {NA_PREVWEAPON, NA_NEXTWEAPON}},
     {"AUTOMAP", {NA_AUTOMAP}},
     {"SCREEN SIZE, MAP ZOOM", {NA_BIGGER, NA_SMALLER}},
     {"MAP: FOLLOW, GRID, ALL", {NA_FOLLOW, NA_GRID, NA_WHOLEMAP}},

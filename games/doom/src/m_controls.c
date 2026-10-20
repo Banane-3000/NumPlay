@@ -129,8 +129,8 @@ key_type_t key_weapon5 = '5';
 key_type_t key_weapon6 = '6';
 key_type_t key_weapon7 = '7';
 key_type_t key_weapon8 = '8';
-key_type_t key_prevweapon = 0;
-key_type_t key_nextweapon = 0;
+key_type_t key_prevweapon = '[';   // (the calculator's PREVIOUS WEAPON and NEXT WEAPON send these)
+key_type_t key_nextweapon = ']';
 
 // Map control keys:
 
