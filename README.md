@@ -17,6 +17,7 @@
 
 <p align="center">
   <a href="https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay.nwa"><img src="https://img.shields.io/badge/Download-NumPlay.nwa-1E7F74?style=for-the-badge" alt="Download NumPlay.nwa"></a>
+  <a href="https://mason363.github.io/NumPlay/customize/"><img src="https://img.shields.io/badge/Pick_your_games-NumPlay_Studio-3A3A3C?style=for-the-badge" alt="Pick your games in NumPlay Studio"></a>
 </p>
 
 <p align="center">
@@ -125,7 +126,7 @@ Retro-Go plays the Game Boy, Game Boy Color, NES, Master System and Game Gear ga
 
 You need your calculator, its USB cable, and a computer with **Google Chrome** or **Microsoft Edge**. It takes about 2 minutes.
 
-1. **Download** [NumPlay.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay.nwa), or one of the big games above.
+1. **Download** [NumPlay.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay.nwa), or one of the big games above. Want other games in it? Pick them in [NumPlay Studio](https://mason363.github.io/NumPlay/customize/) and it makes a NumPlay.nwa with just those.
 2. **Plug** your calculator into the computer and turn it on.
 3. **Go to** [my.numworks.com/apps](https://my.numworks.com/apps) and log in. No account? Sign up there, it's free.
 4. Click **Connect**, then pick your calculator in the small window that opens.
