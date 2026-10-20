@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Draws src/icon.png (55 x 56): the keeper pushing a crate onto a goal, between brick walls, in the
-game's colours. Drawn 8 times bigger, then scaled down.
+"""Draws src/icon.png (55 x 56): the warehouse keeper next to a wooden crate, between olive brick walls on
+the sand floor, in the game's colours (the way Sokoban is usually drawn). Drawn 8 times bigger, then scaled
+down; run tools/round_icons.py on it after (NumPlay's rounded corners).
 
 Usage: icon.py [src/icon.png]
 """
@@ -11,45 +12,53 @@ from PIL import Image, ImageDraw
 
 K = 8
 W, H = 55 * K, 56 * K
-im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+im = Image.new("RGB", (W, H), (0xDE, 0xD6, 0xAE))
 d = ImageDraw.Draw(im)
-cell = 13 * K
-x0, y0 = (W - 4 * cell) // 2, (H - 4 * cell) // 2
 
 
 def rgb(v):
-    return (v >> 16, v >> 8 & 255, v & 255, 255)
+    return (v >> 16, v >> 8 & 255, v & 255)
 
 
-# the floor, a checkerboard, inside a rounded tile of walls
-d.rounded_rectangle((0, 0, W - 1, H - 1), radius=12 * K, fill=rgb(0x8C5A3A))
-for r in range(4):
-    for c in range(4):
-        x, y = x0 + c * cell, y0 + r * cell
-        if r in (0, 3) or c in (0, 3):  # bricks around
-            d.rectangle((x, y, x + cell - 1, y + cell - 1), fill=rgb(0x5B3A26))
-            d.rectangle((x, y, x + cell - K - 1, y + cell - K - 1), fill=rgb(0xB57D55))
-            d.rectangle((x + K, y + K, x + cell - K - 1, y + cell - K - 1), fill=rgb(0x8C5A3A))
-        else:
-            d.rectangle((x, y, x + cell - 1, y + cell - 1), fill=rgb(0xE4D7BC if (r ^ c) & 1 else 0xDCCDAF))
-# a crate pushed onto its goal, the keeper behind it looking at it; below, a crate and a goal to go
-def crate(x, y, dark, face):
-    d.rounded_rectangle((x + K, y + K, x + cell - K, y + cell - K), radius=3 * K, fill=rgb(dark))
-    d.rounded_rectangle((x + 3 * K, y + 3 * K, x + cell - 3 * K, y + cell - 3 * K), radius=2 * K, fill=rgb(face))
-    d.rectangle((x + 3 * K, y + cell // 2 - K, x + cell - 3 * K, y + cell // 2 + K), fill=rgb(dark))
+def box(x0, y0, x1, y1, c):
+    d.rectangle((x0 * K, y0 * K, x1 * K - 1, y1 * K - 1), fill=rgb(c))
 
 
-crate(x0 + 2 * cell, y0 + cell, 0x3F7A2C, 0x5DAE45)
-crate(x0 + cell, y0 + 2 * cell, 0x8A5422, 0xD6943E)
-gx, gy = x0 + 2 * cell + cell // 2, y0 + 2 * cell + cell // 2
-d.ellipse((gx - 3 * K, gy - 3 * K, gx + 3 * K, gy + 3 * K), fill=rgb(0xD2452F))
-x, y = x0 + cell, y0 + cell
-cx, cy, rr = x + cell // 2, y + cell // 2, cell * 3 // 8
-d.ellipse((cx - rr, cy - rr + K, cx + rr, cy + rr + K), fill=rgb(0x1D3F8A))
-d.ellipse((cx - rr, cy - rr, cx + rr, cy + rr), fill=rgb(0x3C7BE8))
-for e in (-1, 1):
-    ex, ey = cx + e * cell // 7 + 2 * K, cy - cell // 12
-    d.ellipse((ex - 2 * K, ey - 2 * K, ex + 2 * K, ey + 2 * K), fill=(255, 255, 255, 255))
-    d.ellipse((ex, ey - K, ex + 2 * K, ey + K), fill=rgb(0x1C1A20))
+def bricks(y0, y1):
+    """Olive bricks, rows of 5 pixels with dark joints, staggered."""
+    box(0, y0, 55, y1, 0xA19555)
+    for r, y in enumerate(range(y0, y1, 5)):
+        box(0, y + 4, 55, y + 5, 0x444024)
+        for x in range(-6 + 6 * (r & 1), 55, 12):
+            box(x, y, x + 1, y + 4, 0x444024)
+
+
+bricks(0, 10)
+bricks(46, 56)
+# the sand's marks
+for x, y in ((6, 14), (40, 15), (9, 42), (50, 41), (27, 43)):
+    box(x, y, x + 3, y + 1, 0xC6BE95)
+# the crate: a black edge, a frame and an X of planks
+x0, y0, s = 22, 13, 30
+box(x0, y0, x0 + s, y0 + s, 0x000000)
+box(x0 + 1, y0 + 1, x0 + s - 1, y0 + s - 1, 0xDA7D00)
+box(x0 + 4, y0 + 4, x0 + s - 4, y0 + s - 4, 0xFFB650)
+m = s - 8
+for k in range(m - 2):
+    box(x0 + 4 + k, y0 + 4 + k, x0 + 7 + k, y0 + 7 + k, 0xDA7D00)
+    box(x0 + s - 7 - k, y0 + 4 + k, x0 + s - 4 - k, y0 + 7 + k, 0xDA7D00)
+# the keeper, facing us, his hands on the crate
+c = 12
+box(c - 6, 26, c + 11, 31, 0xFFDAAA)   # the arms, out to the crate
+box(c - 5, 24, c + 5, 34, 0xDADADA)   # the shirt
+box(c + 2, 24, c + 5, 34, 0xC6C6C6)
+box(c - 5, 34, c + 5, 41, 0x2895FF)   # the trousers
+box(c, 36, c + 1, 41, 0x0061BA)
+box(c - 6, 41, c - 1, 43, 0x996D40)   # the shoes
+box(c + 1, 41, c + 6, 43, 0x996D40)
+box(c - 4, 13, c + 4, 24, 0xFFDAAA)   # the face
+box(c - 5, 11, c + 5, 16, 0x000000)   # the hair
+box(c - 3, 18, c - 1, 20, 0x000000)   # the eyes
+box(c + 1, 18, c + 3, 20, 0x000000)
 out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "..", "src", "icon.png")
 im.resize((55, 56), Image.LANCZOS).save(out)

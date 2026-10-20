@@ -2,17 +2,17 @@
 
 Push every box onto a goal. Hiroyuki Imabayashi's warehouse puzzle on the NumWorks calculator, with David W. Skinner's Microban: 155 levels, from the very first push to The Dungeon.
 
-<img src="docs/shot.png" width="320" alt="Sokoban's first level: the keeper in his red cap between a crate on its goal and a crate still to push">
+<img src="docs/shot.png" width="320" alt="Sokoban's first level: the warehouse keeper between brick walls, a crate on its goal and a crate still to push">
 
 - **Microban's 155 levels**, small ones that each show an idea, the easy ones first. **Sokoban.nwa** has all 155; **inside NumPlay** there's room for the first 35. Both keep the same progress, so a level solved in one is solved in the other.
 - **The rules of the original:** the keeper pushes the boxes one at a time and can never pull them, so a box pushed into a corner stays there.
 - **Undo** takes back your steps one at a time, hundreds of them; **Restart** puts the level back as it began.
 - **Moves and pushes** are counted, and the fewest moves you solved each level in are kept.
-- **The levels**, ten to a row: the ones you solved are green. A level opens while fewer than three before it are still unsolved, so one that blocks you never stops you for good.
+- **The levels**, ten to a row, each a crate: the ones you solved turn dark like a crate on its goal, the ones still shut are bricks. A level opens while fewer than three before it are still unsolved, so one that blocks you never stops you for good.
 - **The levels as Microban has them**, wall for wall, down to the decorations of The Dungeon; big ones shrink to fit the screen.
-- **The classic look**: brick walls, wooden crates that turn green on their goals, and the warehouse keeper in his red cap, who looks the way he walks. The keeper steps a cell at a time, as in the original.
+- **The classic look**: olive brick walls, a sandy floor with pink goal dots, wooden crates with an X that turn dark on their goals, and the warehouse keeper with his black hair, white shirt and blue trousers, the way Sokoban is usually drawn. The pause menu is a sign of planks. The keeper steps a cell at a time, as in the original.
 
-<img src="docs/levels.png" width="320" alt="The level list: the first seventeen levels solved in green, the next three open">
+<img src="docs/levels.png" width="320" alt="The level list: the first seventeen levels solved, the next three open, the rest still bricks">
 
 ## Controls
 

@@ -16,3 +16,4 @@ Level 	关卡
 Moves 	步数 
 Pushes 	推动 
 Your best: 	最佳：
+OK play   Back quit	OK 开始   Back 退出

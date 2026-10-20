@@ -438,9 +438,9 @@
     "title": "Sokoban",
     "tagline": "Push every box home",
     "credit": "Levels: Microban by David W. Skinner",
-    "top": "0xC9843F",
-    "bottom": "0x2B2730",
-    "accent": "0xF2B53C",
+    "top": "0xA19555",
+    "bottom": "0x444024",
+    "accent": "0xFFB650",
     "colors": 11,
     "records": [
       "sokoban.sav"

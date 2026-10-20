@@ -24,8 +24,10 @@
 #include "../../common/epsilon_files.h"
 #define np_file_read ef_read
 #define np_file_write ef_write
+#ifndef HOST /* (a computer build of the tests has no app header) */
 const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name"))) = "Sokoban";
 const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level"))) = 0;
+#endif
 void np_push(int x, int y, int w, int h, const color_t *px) {
   eadk_display_push_rect((eadk_rect_t){(uint16_t)x, (uint16_t)y, (uint16_t)w, (uint16_t)h}, px);
 }
@@ -47,12 +49,20 @@ static uint32_t keys(void) {
 #define F_WALL 8
 #define F_NONE 16 /* (while a level opens) no wall here, though there is floor next to it */
 
+/* the warehouse's colours, as Sokoban is usually drawn: sand, olive bricks, wooden crates */
 #define WHITE 0xFFFF
-#define BG HEX(0x2B2730) /* around the warehouse */
-#define BAR HEX(0x1C1A20)
-#define CREAM HEX(0xF2E6CF)
-#define GOLD HEX(0xF2B53C)
-#define GREEN HEX(0x5DAE45)
+#define BG HEX(0xDED6AE)    /* the sand floor, and around the warehouse */
+#define SPECK HEX(0xC6BE95) /* the sand's marks */
+#define BRICK HEX(0xA19555)
+#define MORTAR HEX(0x444024)
+#define DOT HEX(0xD69585)   /* a goal */
+#define WOOD HEX(0xFFB650)
+#define WOOD2 HEX(0xDA7D00)
+#define WOOD3 HEX(0xBA650C)
+#define WOOD4 HEX(0x8D2C00)
+#define INK 0
+#define BAR MORTAR
+#define CREAM HEX(0xFFDAAA)
 
 /* sokoban.sav: the level played last, and the fewest moves each level was solved in (0: not yet), for
    all of Microban whatever this build holds, so NumPlay and Sokoban.nwa share it */
@@ -66,7 +76,7 @@ static struct {
    the first and last cells) */
 static uint8_t g[MAXW * (MAXH + 2) + 2];
 #define G (g + MAXW + 1)
-static const int8_t off[4] = {-MAXW, 1, MAXW, -1}, ddx[4] = {0, 1, 0, -1}; /* up, right, down, left */
+static const int8_t off[4] = {-MAXW, 1, MAXW, -1}; /* up, right, down, left */
 static uint8_t hist[HIST]; /* the steps taken: the way, and 4 for a push */
 static color_t strip[SCREEN_W * STRIP_H];
 static int level, rows, size, ox, oy, keeper, face, left, moves, pushes, nh;
@@ -158,13 +168,18 @@ static void undo(void) {
 }
 
 /* ------------------------------------------------------------ drawing */
-static void box(int i) {
-  int s = size, x = ox + i % MAXW * s, y = oy + i / MAXW * s;
-  color_t dark = G[i] & F_GOAL ? HEX(0x3F7A2C) : HEX(0x8A5422);
-  gfx_rrect(x + 1, y + 1, s - 2, s - 2, s / 5, dark, 256);
-  gfx_rrect(x + 3, y + 3, s - 6, s - 6, s / 5 - 1, G[i] & F_GOAL ? GREEN : HEX(0xD6943E), 256);
-  gfx_fill(x + 3, y + s / 2 - 1, s - 6, 2, dark);
+/* a wooden crate: a black edge, a frame and an X of planks; darker on a goal */
+static void crate(int x, int y, int s, bool goal) {
+  int t = s / 12 + 1, m = s - 2 - 2 * t, ix = x + 1 + t, iy = y + 1 + t;
+  gfx_fill(x, y, s, s, INK);
+  gfx_fill(x + 1, y + 1, s - 2, s - 2, goal ? WOOD3 : WOOD2);
+  gfx_fill(ix, iy, m, m, goal ? WOOD4 : WOOD);
+  for (int k = 0; k + t <= m; k++) {
+    gfx_fill(ix + k, iy + k, t, t, goal ? WOOD3 : WOOD2);
+    gfx_fill(ix + m - t - k, iy + k, t, t, goal ? WOOD3 : WOOD2);
+  }
 }
+static void box(int i) { crate(ox + i % MAXW * size, oy + i / MAXW * size, size, G[i] & F_GOAL); }
 /* the panels in the middle (OV_PAUSE to OV_DONE): a title, a few lines, then the choices, the one
    picked in gold */
 static const char *const panels[4][6] = {
@@ -174,15 +189,18 @@ static const char *const panels[4][6] = {
   {T("Solved!"), T("Next level")},
 };
 static const uint8_t choices[4] = {5, 2, 1, 1}, lines[4] = {0, 0, 4, 1};
-static void overlay(void) {
+static void overlay(void) { /* a sign of planks, like the crates */
   int n = choices[ov - 1], h = 54 + 16 * lines[ov - 1] + 28 * n, y = (SCREEN_H - h) / 2;
-  gfx_fill_alpha(0, 0, SCREEN_W, SCREEN_H, 0, 110);
-  gfx_rrect(40, y, 240, h, 12, BAR, 256);
-  gfx_text_center(&np_font_title, 160, y + 32, panels[ov - 1][0], GOLD, 256);
-  y = gfx_paragraph(&np_font_body, 160, y + 54, 224, 16, ov == OV_HELP ? T("Push every box onto a goal: they can't be pulled.\nArrows: walk   Backspace: undo\nBack: pause") : ov == OV_DONE ? msg : "", CREAM, 256) - 12;
+  gfx_fill_alpha(0, 0, SCREEN_W, SCREEN_H, MORTAR, 110);
+  gfx_fill(38, y - 2, 244, h + 4, INK);
+  gfx_fill(40, y, 240, h, WOOD3);
+  gfx_fill(44, y + 4, 232, h - 8, WOOD);
+  for (int k = y + 22; k < y + h - 8; k += 22) gfx_fill(44, k, 232, 1, WOOD2);
+  gfx_text_center(&np_font_title, 160, y + 32, panels[ov - 1][0], WOOD4, 256);
+  y = gfx_paragraph(&np_font_body, 160, y + 54, 224, 16, ov == OV_HELP ? T("Push every box onto a goal: they can't be pulled.\nArrows: walk   Backspace: undo\nBack: pause") : ov == OV_DONE ? msg : "", MORTAR, 256) - 12;
   for (int i = 0; i < n; i++, y += 28) {
-    if (sel == i) gfx_rrect(96, y, 128, 24, 12, GOLD, 256);
-    gfx_text_center(&np_font_body, 160, y + 17, panels[ov - 1][i + 1], sel == i ? BAR : CREAM, 256);
+    if (sel == i) gfx_rrect(92, y, 136, 24, 4, WOOD4, 256);
+    gfx_text_center(&np_font_body, 160, y + 17, panels[ov - 1][i + 1], sel == i ? CREAM : MORTAR, 256);
   }
 }
 
@@ -192,48 +210,60 @@ static void play_scene(void *ctx) {
   for (int i = 0; i < rows * MAXW; i++) {
     int x = ox + i % MAXW * s, y = oy + i / MAXW * s, f = G[i];
     if (y >= gfx_y1 || y + s <= gfx_y0) continue;
-    if (f & F_WALL) { /* bricks, two rows a cell, the joints staggered */
-      gfx_fill(x, y, s, s, HEX(0xA4613C));
-      gfx_fill(x, y + s / 2 - 1, s, 1, HEX(0x5B3A26));
-      gfx_fill(x, y + s - 1, s, 1, HEX(0x5B3A26));
-      gfx_fill(x + s / 2, y, 1, s / 2, HEX(0x5B3A26));
-      gfx_fill(x, y + s / 2, 1, s - s / 2, HEX(0x5B3A26));
+    if (f & F_WALL) { /* olive bricks, four rows a cell (two when small), the joints staggered */
+      int n = s >= 16 ? 4 : 2;
+      gfx_fill(x, y, s, s, BRICK);
+      for (int r = 0; r < n; r++) {
+        int ry = y + r * s / n, rh = (r + 1) * s / n - r * s / n;
+        gfx_fill(x, ry + rh - 1, s, 1, MORTAR);
+        gfx_fill(x + (r & 1 ? s / 4 : 0), ry, 1, rh, MORTAR);
+        gfx_fill(x + (r & 1 ? s * 3 / 4 : s / 2), ry, 1, rh, MORTAR);
+      }
     } else if (f) {
-      gfx_fill(x, y, s, s, (i ^ i / MAXW) & 1 ? HEX(0xE4D7BC) : HEX(0xDCCDAF));
-      if (f & F_GOAL) gfx_circle(x + s / 2, y + s / 2, s / 5 + 1, HEX(0xD2452F), 256);
+      gfx_fill(x + (i * 5 % 7) * s / 9 + 1, y + s / 4, s / 5, 1, SPECK); /* the sand's marks */
+      gfx_fill(x + (i * 3 % 5) * s / 8 + 2, y + s * 3 / 4, s / 6, 1, SPECK);
+      if (f & F_GOAL) gfx_circle(x + s / 2, y + s / 2, s / 6 + 1, DOT, 256);
       if (f & F_BOX) box(i);
     }
   }
-  /* the keeper: a warehouse man in blue overalls and a red cap, looking the way he goes */
-  int cx = ox + keeper % MAXW * s + s / 2, cy = oy + keeper / MAXW * s + s / 2;
-  gfx_rrect(cx - s * 5 / 16, cy - s / 16, s * 5 / 8, s * 7 / 16, s / 6, HEX(0x2F5FC4), 256);
-  gfx_circle(cx, cy - s / 6, s / 4, HEX(0xF2C29B), 256);
-  gfx_rrect(cx - s / 4, cy - s * 7 / 16, s / 2, s / 6 + 1, s / 12, HEX(0xC83A2C), 256);
-  for (int e = -1; e <= 1 && face; e += 2) /* (from behind, no eyes) */
-    gfx_fill(cx + e * s / 10 + ddx[face] * s / 10 - s / 32, cy - s / 7, s / 16 + 1, s / 10 + 1, BAR);
-  gfx_fill(0, 0, SCREEN_W, HDR, BAR);
+  /* the warehouse keeper, facing us: black hair, a white shirt, blue trousers */
+  int x = ox + keeper % MAXW * s, y = oy + keeper / MAXW * s, c = x + s / 2, u = s / 16 + (s < 16);
+  gfx_fill(c - s * 5 / 16, y + s * 8 / 16, s * 5 / 8, s * 4 / 16, CREAM);              /* the arms */
+  gfx_rrect(c - s / 4, y + s * 7 / 16, s / 2, s * 5 / 16, u, HEX(0xDADADA), 256);      /* the shirt */
+  gfx_fill(c + s / 8, y + s * 7 / 16, s / 8, s * 5 / 16, HEX(0xC6C6C6));
+  gfx_fill(c - s / 4, y + s * 11 / 16, s / 2, s * 3 / 16, HEX(0x2895FF));               /* the trousers */
+  gfx_fill(c, y + s * 12 / 16, u, s * 2 / 16, HEX(0x0061BA));
+  gfx_fill(c - s / 4, y + s * 14 / 16, s / 2, u + 1, HEX(0x996D40));                    /* the shoes */
+  gfx_rrect(c - s * 3 / 16, y + s * 2 / 16, s * 3 / 8, s * 6 / 16, u, CREAM, 256);     /* the face */
+  gfx_rrect(c - s * 7 / 32, y + s / 16, s * 7 / 16, s * 3 / 16, u, INK, 256);          /* the hair */
+  gfx_fill(c - s / 8, y + s * 5 / 16, u, u + 1, INK);                                    /* the eyes */
+  gfx_fill(c + s / 8 - u + 1, y + s * 5 / 16, u, u + 1, INK);
+  gfx_fill(0, 0, SCREEN_W, HDR, MORTAR);
   put(line, T("Level "), (uint32_t)level + 1);
-  gfx_text(&np_font_body, 8, 16, line, GOLD, 256);
+  gfx_text(&np_font_body, 8, 16, line, WOOD, 256);
   put(cat(put(line, T("Moves "), (uint32_t)moves), "   "), T("Pushes "), (uint32_t)pushes);
   gfx_text_right(&np_font_body, 312, 16, line, CREAM, 256);
   if (ov) overlay();
 }
 
 /* the levels, ten a row, six rows on the screen at a time */
-static void hub_scene(void *ctx) {
+static void hub_scene(void *ctx) { /* a crate a level: dark once solved; bricks while it's shut */
   char s[8];
   gfx_fill(0, 0, SCREEN_W, SCREEN_H, BG);
-  gfx_fill(0, 0, SCREEN_W, 36, BAR);
-  gfx_text(&np_font_title, 12, 27, "SOKOBAN", GOLD, 256);
+  gfx_fill(0, 0, SCREEN_W, 36, MORTAR);
+  gfx_text(&np_font_title, 12, 27, "SOKOBAN", WOOD, 256);
+  gfx_text_right(&np_font_small, 308, 24, T("OK play   Back quit"), CREAM, 256);
   for (int i = 0; i < LEVELS; i++) {
-    int x = 12 + 30 * (i % 10), y = 46 + 27 * (i / 10 - top);
+    int x = 13 + 30 * (i % 10), y = 44 + 27 * (i / 10 - top);
     if (y < 40 || y > 190) continue;
-    gfx_rrect(x, y, 26, 22, 6, sv.best[i] ? GREEN : unlocked(i) ? CREAM : HEX(0x57505E), 256);
-    if (i == pick) gfx_rrect_outline(x - 3, y - 3, 32, 28, 8, 2, GOLD, 256);
+    if (i == pick) gfx_fill(x - 3, y - 3, 30, 30, INK);
+    if (unlocked(i)) crate(x, y, 24, sv.best[i]);
+    else gfx_fill(x, y, 24, 24, BRICK), gfx_fill(x, y + 11, 24, 1, MORTAR), gfx_fill(x + 12, y, 1, 11, MORTAR);
     put(s, "", (uint32_t)i + 1);
-    gfx_text_center(&np_font_small, x + 13, y + 15, s, sv.best[i] ? WHITE : BG, 256);
+    gfx_rrect(x + 4, y + 6, 16, 12, 3, unlocked(i) ? CREAM : BRICK, 256);
+    gfx_text_center(&np_font_small, x + 12, y + 16, s, unlocked(i) ? WOOD4 : MORTAR, 256);
   }
-  gfx_fill(0, 214, SCREEN_W, 26, BAR);
+  gfx_fill(0, 214, SCREEN_W, 26, MORTAR);
   put(line, T("Your best: "), sv.best[pick]);
   if (sv.best[pick]) gfx_text_center(&np_font_body, 160, 232, line, CREAM, 256);
   if (ov) overlay();

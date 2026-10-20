@@ -16,3 +16,4 @@ Level 	Niveau
 Moves 	Pas 
 Pushes 	Poussées 
 Your best: 	Ton record : 
+OK play   Back quit	OK : jouer   Retour : quitter

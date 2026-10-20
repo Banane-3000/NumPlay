@@ -731,7 +731,7 @@ Nine small boards make a big one. The cell you take sends the other player to th
 
 ## Sokoban
 
-<img src="media/sokoban.gif" width="320" align="right" alt="Sokoban: Microban's second and fourth levels solved, the crates turning green on their goals">
+<img src="media/sokoban.gif" width="320" align="right" alt="Sokoban: Microban's second and fourth levels solved, the crates turning dark on their goals">
 
 | Key | What it does |
 | --- | --- |
@@ -740,7 +740,7 @@ Nine small boards make a big one. The cell you take sends the other player to th
 | **OK** or **EXE** | Choose |
 | **Back** | Pause: Resume, Restart, Levels, How to play, Quit game |
 
-Push every crate onto a goal: the keeper pushes one at a time and can't pull, so a crate in a corner stays there. Microban's 155 levels by David W. Skinner, the first 35 inside NumPlay and all of them in Sokoban.nwa; solved levels turn green on the level list, and the fewest moves for each are kept.
+Push every crate onto a goal: the keeper pushes one at a time and can't pull, so a crate in a corner stays there. Microban's 155 levels by David W. Skinner, the first 35 inside NumPlay and all of them in Sokoban.nwa; solved levels turn dark on the level list, and the fewest moves for each are kept.
 
 <br clear="right">
 
