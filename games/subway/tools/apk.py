@@ -573,8 +573,8 @@ def pack_city(o, th):
             th.add(m, f"{st}_{side}", keep=near)
             if f"{st}_{side}_LOD1" in th.meshes:
                 th.add(m, f"{st}_{side}_LOD1", keep=near)
-            quads, atlas = th.bake(m, visible=corridor, texel=2.5, min_area=20, major_area=150, budget=24,
-                                   weight=env_weight, atlas_max=(128, 128), name=f"{st}_{side}", cams=ENV_CAMS)
+            quads, atlas = th.bake(m, visible=corridor, texel=1.6, min_area=20, major_area=150, budget=24,
+                                   weight=env_weight, atlas_max=(128, 256), name=f"{st}_{side}", cams=ENV_CAMS)
             n = write_bmodel(o, f"{st}_{side[0]}", quads, atlas)
             print(f"{st}_{side}: {len(m.P)} triangles, {n} faces")
     for sec in SECTIONS:
@@ -582,8 +582,8 @@ def pack_city(o, th):
         th.add(m, sec, keep=near)
         if sec == "station_mid":
             th.add(m, "station_platforms", keep=near)
-        quads, atlas = th.bake(m, visible=corridor, texel=2.5, min_area=20, major_area=150, budget=40, weight=env_weight,
-                               atlas_max=(256, 128), name=sec, cams=ENV_CAMS)
+        quads, atlas = th.bake(m, visible=corridor, texel=1.8, min_area=20, major_area=150, budget=40, weight=env_weight,
+                               atlas_max=(256, 256), name=sec, cams=ENV_CAMS)
         n = write_bmodel(o, sec, quads, atlas, colors=192)
         print(f"{sec}: {len(m.P)} triangles, {n} faces")
 

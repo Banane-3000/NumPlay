@@ -30,8 +30,8 @@ static Anim a_run, a_guard, a_dog, a_shop;
 /* the game's run camera: 33 units up and 33 behind the runner, following 0.75 of its moves across */
 #define CAM_Y (33 * U)
 #define CAM_BACK (33 * U)
-#define CAM_PITCH 0.34f
-#define CAM_F 250.0f
+#define CAM_PITCH 0.36f
+#define CAM_F 255.0f
 #define CAM_CY 104.0f
 
 
