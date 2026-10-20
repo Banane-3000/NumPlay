@@ -253,6 +253,7 @@ static void panel(int x, int y, int w, int h) {
 }
 
 static void draw_c_menu(void) {
+  if (msg_open) return; /* (an item's text: the menu closes for its box, as in the game) */
   bool low = pl.y + 15 - cam_y < 130;
   int oy = low ? 135 : 0;
   char s[64];

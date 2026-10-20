@@ -58,7 +58,7 @@ void ruins3_setup(int room, int from) {
       }
       obj_sign(9260, 2498, 62, 34, "* (Toys you aren't interested\n  in.)|* (An empty photo frame.)");
       obj_sign(9335, 2498, 32, 48, "* (A box of shoes in many\n  different sizes.)");
-      if (flag(F_BED_SLEPT) == 1) {
+      if (flag(F_BED_SLEPT) == 1 && !flag(F_PIE)) { /* (once taken, gone) */
         Obj *p = obj_deco(SPR_O_PIESLICE, 9322, 2572, false);
         if (p) p->flags |= OF_TALK | OF_BACK, p->event = EV_ITEM, p->arg = flag(F_HARDMODE) ? ITEM_SNAIL_PIE : ITEM_BUTTERSCOTCH_PIE,
                    p->arg2 = F_PIE;
