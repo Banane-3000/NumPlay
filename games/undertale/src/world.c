@@ -186,13 +186,14 @@ static void leavers_update(void) {
 
 void world_camera(void) {
   if (cam_locked) return;
+  /* (inside the game's room: a room smaller than the screen in the middle) */
   int cx = pl.x + 10 - SCREEN_W / 2, cy = pl.y + 15 - SCREEN_H / 2;
-  if (room.w <= SCREEN_W) cx = room.x + (room.w - SCREEN_W) / 2;
-  else if (cx < room.x) cx = room.x;
-  else if (cx > room.x + room.w - SCREEN_W) cx = room.x + room.w - SCREEN_W;
-  if (room.h <= SCREEN_H) cy = room.y + (room.h - SCREEN_H) / 2;
-  else if (cy < room.y) cy = room.y;
-  else if (cy > room.y + room.h - SCREEN_H) cy = room.y + room.h - SCREEN_H;
+  if (room.vw <= SCREEN_W) cx = room.vx + (room.vw - SCREEN_W) / 2;
+  else if (cx < room.vx) cx = room.vx;
+  else if (cx > room.vx + room.vw - SCREEN_W) cx = room.vx + room.vw - SCREEN_W;
+  if (room.vh <= SCREEN_H) cy = room.vy + (room.vh - SCREEN_H) / 2;
+  else if (cy < room.vy) cy = room.vy;
+  else if (cy > room.vy + room.vh - SCREEN_H) cy = room.vy + room.vh - SCREEN_H;
   cam_x = cx, cam_y = cy;
 }
 

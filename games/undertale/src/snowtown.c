@@ -266,7 +266,7 @@ static int ev_grillbys(Ev *c) {
     return 1;
   }
   SAY(FACE_SANS, "* well, i know a shortcut.");
-  FADE_TO(ROOM_GRILLBYS, 1230, 880, DIR_UP);
+  FADE_TO(ROOM_GRILLBYS, 1262, 798, DIR_UP);
   SAY(FACE_SANS, "* here's a good seat.|* so, what'll it be?\n`2* fries or burger?@Fries@Burger");
   SAY(FACE_SANS, "* nice.|* say... papyrus says a\n  #Yflower#X talks to him\n  sometimes.|* gives him advice.\n* weird, right?|* if you see a talking flower, tell me, ok?|`1* oh, and thanks for paying.");
   set_flag(F_GRILLBYS, 1);
