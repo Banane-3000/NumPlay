@@ -240,7 +240,106 @@ static int arenas_test(void) {
   return fails || !total ? 1 : 0;
 }
 
+/* the ground's seams, as the calculator rounds: from many places in every room the Knight lands on the ground, then is
+ * put a few float steps lower (as near as rounding leaves him), and must walk both ways where no wall stops him; and
+ * jumping at a wall, put a few steps nearer it, he must fall back down, not hang on it */
+static bool wall_ahead(int dir) {
+  const Body *b = &g_hero.body;
+  float x = b->x + b->ox + dir * b->hx, y0 = b->y + b->oy - b->hy, y1 = y0 + 2 * b->hy;
+  for (float y = y0 + 0.08f; y < y1; y += 0.1f)
+    if (phys_ray(x - dir * 0.3f, y, dir, 0, 0.4f, CF_SOLID, NULL)) return true;
+  /* (or the room's end; or a gate he is sent back from: to a room the game leaves out) */
+  if (x < 0.3f || x > g_room.h->w - 0.3f) return true;
+  int n;
+  const Ent *es = room_ents(&n);
+  for (int i = 0; i < n; i++)
+    if (es[i].type == ENT_GATE && !(es[i].flags & G_DOOR))
+      for (int j = i + 1; j < n && es[j].type == ENT_BOX; j++)
+        if (es[j].flags == 0 && x + 0.2f > es[j].x0 && x - 0.2f < es[j].x1 && y1 > es[j].y0 && y0 < es[j].y1) return true;
+  return false;
+}
+static float ulps(float v, int n) {   /* (n float steps down, or up) */
+  for (int i = 0; i < abs(n); i++) v = nextafterf(v, n < 0 ? -1e9f : 1e9f);
+  return v;
+}
+static int seams_test(void) {
+  int fails = 0, floors = 0, walls = 0;
+  const Hero *h = &g_hero;
+  shielded = true;
+  for (int r = 0; r < NUM_ROOMS; r++) {
+    if (!room_load(r)) continue;
+    char name[64];
+    snprintf(name, sizeof name, "%s", room_name(r));
+    float w = g_room.h->w, hh = g_room.h->h;
+    for (float x = 2.13f; x < w - 2; x += 1.37f) {
+      float lastgy = -1;
+      for (float y = hh - 2; y > 2; y -= 1.3f) {
+        if (!room_load(r)) continue;
+        PhysHit hit;
+        if (!phys_ray(x, y, 0, -1, 30, CF_TERRAIN, &hit) || hit.ny < 0.99f || hit.y == lastgy) continue;
+        float gy = lastgy = hit.y;
+        bool inside = false;
+        for (float yy = gy + 0.3f; yy < gy + 3; yy += 0.5f)
+          for (float xx = x - 0.6f; xx <= x + 0.61f; xx += 0.3f) inside |= phys_tile_solid((int)floorf(xx), (int)floorf(yy));
+        if (inside || phys_ray(x, gy + 0.05f, 0, 1, 3, CF_SOLID, NULL) || phys_ray(x - 0.4f, gy + 0.5f, 1, 0, 0.8f, CF_SOLID, NULL))
+          continue;
+        game_new();
+        game_enter(r, x, gy + 2.4f, true);
+        int t;
+        for (t = 0; t < 100 && !(h->cs.on_ground && h->state != HS_HARD_LANDING); t++) run_ticks(1, 0);
+        if (!h->cs.on_ground || h->state == HS_NO_INPUT || h->control_relinquished || !h->accepting_input || g_room.id != r)
+          continue;
+        floors++;
+        g_hero.body.y = ulps(g_hero.body.y, -3);
+        for (int dir = 1; dir >= -1; dir -= 2) {
+          float lx = h->body.x;
+          int still = 0;
+          for (t = 0; t < 30; t++) {
+            run_ticks(1, dir > 0 ? K_RIGHT : K_LEFT);
+            if (!h->cs.on_ground || h->state == HS_NO_INPUT || g_room.id != r || game_changing_room() || g_game.freeze_phase) break;
+            still = fabsf(h->body.x - lx) < 0.01f && h->state == HS_RUNNING ? still + 1 : 0;
+            if (still == 3) {
+              if (!wall_ahead(dir) && !h->cs.transitioning)
+                printf("FAIL seams %s: landed at %.2f,%.3f, stuck going %s at %.4f,%.5f\n", name, x, gy, dir > 0 ? "right" : "left",
+                       h->body.x, h->body.y), fails++;
+              break;
+            }
+            lx = h->body.x;
+          }
+          run_ticks(5, 0);
+        }
+        /* (a wall a little way off: the Knight jumps at it) */
+        for (int dir = -1; dir <= 1; dir += 2) {
+          PhysHit wh;
+          if (!phys_ray(x, gy + 1.0f, dir, 0, 3, CF_TERRAIN, &wh) || fabsf(wh.nx) < 0.99f || !room_load(r)) continue;
+          game_new();
+          game_enter(r, x, gy + 1.42f, true);
+          run_ticks(30, 0);
+          if (!h->cs.on_ground || h->state == HS_NO_INPUT || h->control_relinquished || g_room.id != r) continue;
+          walls++;
+          int held = 0, worst = 0;
+          bool nudged = false;
+          for (t = 0; t < 120; t++) {
+            run_ticks(1, (dir > 0 ? K_RIGHT : K_LEFT) | (t < 15 || (t > 40 && t < 55) ? K_JUMP : 0));
+            if (g_room.id != r || game_changing_room() || h->cs.transitioning || h->state == HS_NO_INPUT || g_game.freeze_phase) break;
+            if (!nudged && h->cs.touching_wall) g_hero.body.x = ulps(g_hero.body.x, 3 * dir), nudged = true;
+            held = !h->cs.on_ground && fabsf(h->body.vy) < 1e-4f && !h->cs.jumping && h->state != HS_HARD_LANDING ? held + 1 : 0;
+            if (held > worst) worst = held;
+          }
+          if (worst >= 40 && h->body.y + h->body.oy - h->body.hy > 0.5f)   /* (not the room's bottom: a pit out of it) */
+            printf("FAIL seams %s: from %.2f,%.3f jumping %s, held up in the air %d ticks at %.4f,%.5f\n", name, x, gy,
+                   dir > 0 ? "right" : "left", worst, h->body.x, h->body.y), fails++;
+        }
+      }
+    }
+  }
+  shielded = false;
+  printf("seams: %d landings, %d jumps at walls, %d failing\n", floors, walls, fails);
+  return fails ? 1 : 0;
+}
+
 static int gates_test(const char *which) {
+  if (!strcmp(which, "seams")) return seams_test();
   if (!strcmp(which, "markers")) return markers_test();
   if (!strcmp(which, "arenas")) return arenas_test();
   if (!strncmp(which, "wander:", 7)) {   /* (wander:ROOM|all:seed:ticks) */
