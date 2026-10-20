@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href="#how-to-install"><b>How to install</b></a> &nbsp;·&nbsp; <a href="docs/play.md"><b>How to play</b></a> &nbsp;·&nbsp; <a href="https://github.com/Mason363/NumPlay/releases/latest"><b>All downloads</b></a> &nbsp;·&nbsp; <a href="#roadmap"><b>Roadmap</b></a>
+  <a href="#how-to-install"><b>How to install</b></a> &nbsp;·&nbsp; <a href="docs/play.md"><b>How to play</b></a> &nbsp;·&nbsp; <a href="https://github.com/Mason363/NumPlay/releases/latest"><b>All downloads</b></a> &nbsp;·&nbsp; <a href="#roadmap"><b>Roadmap</b></a> &nbsp;·&nbsp; <a href="docs/make-a-game.md"><b>Make a game</b></a>
 </p>
 
 <p align="center">
@@ -190,6 +190,20 @@ Install any of them instead of NumPlay.nwa: your progress is the same in each. A
 </table>
 
 Filmed on my own calculator, no emulator.
+
+## Make your own NumWorks games
+
+NumPlay is also a kit for making games and apps for the NumWorks calculator. Start from its template in one command, then use the same pieces its games are built with: 2D and 3D drawing that fits the calculator's memory, fonts in three languages, saves that survive a reinstall, physics, and an emulator that tests your game without a calculator. It works on macOS, Windows and Linux.
+
+```bash
+python3 tools/setup.py
+```
+
+```bash
+python3 tools/new_game.py "My Game"
+```
+
+Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, and **[Contributing](CONTRIBUTING.md)** if you'd like to help with NumPlay itself.
 
 ## Roadmap
 

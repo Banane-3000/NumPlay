@@ -1,4 +1,9 @@
 title: NumPlay
-description: "24 games for the NumWorks calculator in one app: NumDash, Crossy Road, NumBlocks, NumDrive, Balatro, Buckshot Roulette, Block Blast, Portal Returns, Tetris, Chrome Dino, Chess, Space Invaders, Sudoku and more. And Super Mario 64, Doom, Sonic, Plants vs. Zombies, Cookie Clicker and more on their own."
+description: "24 games for the NumWorks calculator in one app: NumDash, Crossy Road, NumBlocks, NumDrive, Balatro, Buckshot Roulette, Block Blast, Portal Returns, Tetris, Chrome Dino, Chess, Space Invaders, Sudoku and more. And Super Mario 64, Doom, Sonic, Plants vs. Zombies, Cookie Clicker and more on their own. Free and open source, with a kit to make your own NumWorks games in C."
+url: https://mason363.github.io
+baseurl: /NumPlay
 theme: jekyll-theme-cayman
-exclude: [games, launcher, tools, tests, build, LICENSES, Makefile, .github]
+plugins:
+  - jekyll-sitemap
+  - jekyll-seo-tag
+exclude: [games, launcher, tools, tests, build, sdk, LICENSES, Makefile, .github]
