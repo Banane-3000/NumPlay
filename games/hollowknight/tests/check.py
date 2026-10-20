@@ -8,7 +8,7 @@
 - every arena won: its fight over and the room's battle gates open, also as the Knight comes back and after a save and
   a load
 - a long walk of made up keys from every room: the Knight never out of the room, without control, wedged, undrawn or
-  out of the view
+  out of the view, and the view never jumping
 - a bench: sat on, the inventory opened, a charm equipped, then up again (atBench off)
 - every room played with its enemies hit, in a new game and after the bosses, drawn whole and fast (as a slow
   calculator draws it): the sanitizers stop on any fault

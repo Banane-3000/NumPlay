@@ -138,6 +138,16 @@ static int wander_test(const char *which, int seed, int ticks) {
         game_draw();
         if (g_hero_undrawn != before) printf("FAIL wander %s (seed %d) tick %d: not drawn in %s at %.2f,%.2f\n", start, seed, t, room_name(g_room.id), x, y), fails++, reports++;
       }
+      /* (and the view moves smoothly: no jump across the screen in a step) */
+      static float lcx, lcy;
+      static int calm;
+      float jump = fabsf(g_cam_x - lcx) + fabsf(g_cam_y - lcy);
+      if (t == 0) calm = 0;
+      if (calm > 25 && jump > 3)
+        printf("FAIL wander %s (seed %d) tick %d: the view jumped %.2f in a step in %s at %.2f,%.2f\n", start, seed, t, jump,
+               room_name(g_room.id), x, y), fails++, reports++;
+      calm = busy || h->cs.hazard_respawning || h->respawning || t == 0 ? 0 : calm + 1;
+      lcx = g_cam_x, lcy = g_cam_y;
       if (!busy && (fabsf(x - g_cam_x) > (VIEW_W / 2) / FOCAL * -CAM_Z || fabsf(y - g_cam_y) > (VIEW_H / 2) / FOCAL * -CAM_Z)) {
         if (++unseen == 100) printf("FAIL wander %s (seed %d) tick %d: out of view 2 s in %s at %.2f,%.2f, view at %.2f,%.2f\n", start, seed, t, room_name(g_room.id), x, y, g_cam_x, g_cam_y), fails++, reports++;
       } else
