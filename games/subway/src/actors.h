@@ -1,38 +1,29 @@
-/* Subway Surfers: the people and the dog (meshes on skeletons, keyframed), the power-ups, the boards. */
+/* Subway Surfers: the people and the dog (the game's skinned models playing the game's animation clips), the
+ * power-ups and coins, the boards. */
 #ifndef SS_ACTORS_H
 #define SS_ACTORS_H
 #include "game.h"
+#include "models.h"
 
-#define NBONES 11
-enum { BN_HIPS, BN_CHEST, BN_HEAD, BN_ARM_L, BN_FORE_L, BN_ARM_R, BN_FORE_R, BN_LEG_L, BN_SHIN_L, BN_LEG_R, BN_SHIN_R };
-
-/* how a body is held: each bone turned from the T pose the models are made in (radians: about x, then
- * y, then z; arms are lowered about z, everything swings forward about -x), and the whole body */
+/* what a model is playing: a clip and its time, and the clip it is fading from */
 typedef struct {
-  float a[NBONES][3];
-  float y;            /* raised (m) */
-  float lean, tilt;   /* forward, sideways (about the hips, or the middle of a roll) */
-  float yaw;          /* turned about the upright axis */
-  float spin;         /* head over heels, about the middle of the body curled up (a roll) */
-} Pose;
+  const Clip *a, *b;
+  float ta, tb;
+  float fade, rate;   /* how much of a (0..1), how fast it comes in (per second) */
+} Anim;
+/* plays c from time t (s), faded in over fade seconds (0: at once); the same clip again just goes on */
+void anim_play(Anim *an, const Clip *c, float t, float fade);
+void anim_step(Anim *an, float dt);
+float anim_length(const Clip *c);
+bool anim_done(const Anim *an);   /* a clip that does not loop is at its end */
 
-enum { WHO_JAKE, WHO_TRICKY, WHO_FRESH, WHO_SPIKE, WHO_INSPECTOR };
-void pose_run(Pose *p, float phase);
-void pose_stand(Pose *p, float t);
-void pose_jump(Pose *p, float t);    /* t from 0 (leaving the ground) to 1 (landing) */
-void pose_roll(Pose *p, float t);    /* t from 0 to 1 */
-void pose_hover(Pose *p, float t);
-void pose_fly(Pose *p, float t);
-void pose_spray(Pose *p, float t);
-void pose_fall(Pose *p, float t);    /* t from 0 (the crash) to 1 (lying down) */
-void pose_catch(Pose *p, float t);   /* the Inspector, his hands on the runner */
-void pose_stumble(Pose *p, float k); /* a trip, k from 1 (just now) to 0, over the pose */
-/* a person at (x, y, z), its feet on y; light: 1 outside, less in a tunnel */
-void actor_draw(int who, V3 at, const Pose *p, float light);
-void dog_draw(V3 at, float phase, float light);
-void dog_draw_turned(V3 at, float phase, float light, float yaw);
+enum { WHO_JAKE, WHO_TRICKY, WHO_FRESH, WHO_SPIKE, WHO_INSPECTOR, WHO_DOG };
+/* a model standing at `at` (its feet), turned by yaw about the upright (0: facing ahead, +z), leaning forward by
+ * lean (radians, about its hips); light: 1 outside, less in a tunnel */
+void actor_draw(int who, const Anim *an, V3 at, float yaw, float lean, float light);
 void board_draw(V3 at, int board, float yaw, float t, float light);
-void jetpack_draw(V3 at, const Pose *p, float t, float light);   /* on the back of the person just drawn */
+void jetpack_draw(float t, float light);   /* on the back of the person just drawn */
 void shadow_draw(float x, float z, float ground, float height);
 void actors_pickup(const Item *it, float t);   /* a power-up, a key or a mystery box, turning */
+void actors_coin(const Item *it, float t, float light);
 #endif

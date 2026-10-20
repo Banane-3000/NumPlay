@@ -2,3 +2,4 @@ output/
 build/
 tools/.fonts/
 tools/ref/
+tools/__pycache__/

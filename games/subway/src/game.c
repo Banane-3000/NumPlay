@@ -5,15 +5,21 @@
 #include "plat.h"
 #include "save.h"
 
-#define GRAVITY 40.0f
-#define JUMP_V 11.7f       /* 1.7 m up */
-#define SUPER_V 19.0f      /* 4.5 m up: onto the trains */
+/* the game's own numbers (its character motor), in metres */
+#define GRAVITY (200 * U)
+#define JUMP_V 11.63f      /* 20 units up (2.6 m): sqrt(2 g h) */
+#define SUPER_V 16.45f     /* Super Sneakers: twice as high, onto the trains */
+#define DIVE_V (-90 * U)   /* down in the air: a dive into a roll */
 #define ROLL_T 0.6f
-#define STAND_H 1.75f
-#define ROLL_H 0.85f
+#define LANE_T 0.27f       /* from one track to the next */
+#define STAND_H (9.2f * U) /* the runner's collider */
+#define ROLL_H (4.5f * U)
 #define FLY_Y 8.0f
-#define FLY_LOW 5.0f       /* (in a tunnel) */
-#define PW 0.32f           /* the runner's half width */
+#define FLY_LOW 5.0f       /* (in a tunnel, under a roof) */
+#define PW 0.3f            /* the runner's half width */
+#define SPEED0 (110 * U)   /* from 110 units a second to 220, over 179 s */
+#define SPEED1 (220 * U)
+#define SPEED_T 179.0f
 
 Runner pl;
 Run run;
@@ -28,14 +34,15 @@ const char *const board_power[NBOARDS] = {"The classic", "Super jump", "Speed up
 const uint32_t board_price[NBOARDS] = {0, 7500, 15000};
 
 float power_time(int pw) {
-  static const uint8_t t[2][6] = {{9, 12, 15, 18, 21, 25}, {10, 14, 18, 22, 26, 30}};
-  int l = pg.upg[pw] > 5 ? 5 : pg.upg[pw];
-  return (float)t[pw != PW_JETPACK][l];
+  /* the game's power-up configs: each level's time */
+  static const float t[2][MAXUPG + 1] = {{8, 9, 10.5f, 12.5f, 15, 19, 25}, {10, 11.5f, 13.4f, 15.8f, 19, 24, 30}};
+  int l = pg.upg[pw] > MAXUPG ? MAXUPG : pg.upg[pw];
+  return t[pw != PW_JETPACK][l];
 }
 
 int upgrade_cost(int level) {
-  static const uint16_t c[5] = {500, 1000, 3000, 10000, 60000};
-  return level < 5 ? (int)c[level] : 0;
+  static const uint16_t c[MAXUPG] = {500, 1000, 2500, 5000, 15000, 50000};
+  return level < MAXUPG ? (int)c[level] : 0;
 }
 
 int multiplier(void) {
@@ -207,7 +214,7 @@ void run_start(void) {
   memset(&pl, 0, sizeof pl);
   for (int i = 0; i < NSPARKS; i++) sparks[i].t = 1;
   pl.lane = pl.from_lane = 1;
-  pl.speed = 13;
+  pl.speed = SPEED0;
   pl.chase = 3.2f;   /* the Inspector and his dog, right behind from the start */
   in_run = true;
   run.multiplier = multiplier();
@@ -253,6 +260,7 @@ void run_bank(void) {
 }
 
 static void crash(void) {
+  pl.ev |= EV_CRASH;
   if (pl.hover > 0) {
     /* the board breaks instead */
     pl.hover = 0;
@@ -269,6 +277,7 @@ static void crash(void) {
 static void stumble(void) {
   run.stumbles++;
   pl.stumble = 0.45f;
+  pl.ev |= EV_STUMBLE;
   if (pl.chase > 0 && pl.hover <= 0) {
     /* stumbling twice: the Inspector catches up */
     pl.dead = true;
@@ -276,7 +285,7 @@ static void stumble(void) {
     pl.crash_t = 0;
     return;
   }
-  pl.chase = 4.0f;
+  pl.chase = 5.0f;   /* (the game's stumble: the Inspector stays right behind for 5 s) */
 }
 
 static void collect(Item *it) {
@@ -334,9 +343,11 @@ static void collide(float prev_x) {
       case O_TRAIN:
       case O_MOVING: topy = TRAIN_H; break;
       case O_RAMP: topy = TRAIN_H * (pl.z - o->z0) / RAMP_LEN; break;
-      case O_HURDLE: topy = 1.15f; break;
-      case O_HIGHBAR: bottom = 1.35f, topy = 2.35f; break;
-      default: topy = 2.6f; break;
+      /* (the barriers' shapes: the low one solid up to 12.5 units; the tall one open below 9 units, its board
+       * and sign up to 29; the one on trestles open below 9.5, its board up to 15) */
+      case O_HURDLE: topy = 12.5f * U; break;
+      case O_HIGHBAR: bottom = 8.5f * U, topy = 29 * U; break;
+      default: bottom = 8.5f * U, topy = 15 * U; break;
     }
     if (pl.y >= topy - 0.08f || pl.y + h <= bottom) continue;
     if ((o->type == O_TRAIN || o->type == O_MOVING) && pl.y >= topy - 0.6f) {
@@ -374,17 +385,18 @@ void run_step(uint32_t keys, uint32_t pressed) {
 #ifdef SS_GOD
   pl.safe = 0.1f;   /* (a build for measuring speed: nothing hurts) */
 #endif
-  /* faster and faster: from 13 m/s towards 26 */
-  pl.speed = 13 + 13 * pl.t / (pl.t + 100);
+  /* faster and faster: the game's speed, from 110 units a second to 220 over 179 s */
+  pl.speed = SPEED0 + (SPEED1 - SPEED0) * (pl.t < SPEED_T ? pl.t / SPEED_T : 1);
   float speed = pl.speed;
   if (pl.hover > 0 && pg.board == 2) speed *= 1.12f;
   if (pl.headstart > 0) speed = speed * 3 > 50 ? speed * 3 : 50;
+  pl.ev = 0;
 
   /* the first seconds: a headstart (1) or a score booster (3) */
   if (run.start_t < 5) {
     if (pressed & K_ONE && pg.headstarts && pl.headstart <= 0) {
       pg.headstarts--;
-      pl.headstart = 4.5f;
+      pl.headstart = 6;   /* (the game's headstart: 6 s)*/
       pl.fly = FLY_Y;
       world_clear(pl.z, pl.z + 260);
       world_sky_coins(pl.z + 10, pl.z + 240);
@@ -398,24 +410,29 @@ void run_step(uint32_t keys, uint32_t pressed) {
     }
   }
   /* the hoverboard */
-  if (pressed & K_OK && pl.hover <= 0 && pg.boards && pl.fly <= 0) {
+  if (pl.board_wait > 0) pl.board_wait -= DT;
+  if (pressed & K_OK && pl.hover <= 0 && pg.boards && pl.fly <= 0 && pl.board_wait <= 0) {
     pg.boards--;
-    pl.hover = 30;
+    pl.hover = 30;   /* (the game's hoverboard: 30 s, then 5 s before the next) */
+    pl.board_wait = 35;
     run.boards_used++;
   }
 
   /* across */
   float prev_x = pl.x;
-  if (pressed & K_LEFT && pl.lane > 0) pl.from_lane = pl.lane, pl.lane--, run.lanes++;
-  if (pressed & K_RIGHT && pl.lane < 2) pl.from_lane = pl.lane, pl.lane++, run.lanes++;
-  float tx = LANE_X(pl.lane), dx = tx - pl.x, step = 17 * DT;
+  if (pressed & K_LEFT && pl.lane > 0) pl.from_lane = pl.lane, pl.lane--, run.lanes++, pl.ev |= EV_LEFT;
+  if (pressed & K_RIGHT && pl.lane < 2) pl.from_lane = pl.lane, pl.lane++, run.lanes++, pl.ev |= EV_RIGHT;
+  /* (the game's lane change: 0.27 s, straight across) */
+  float tx = LANE_X(pl.lane), dx = tx - pl.x, step = LANE / LANE_T * DT;
   pl.x += dx > step ? step : dx < -step ? -step : dx;
   pl.lean += ((tx - pl.x) * 0.22f - pl.lean) * 0.3f;
 
   /* up and down */
   bool super = pl.power[PW_SNEAKERS] > 0 || (pl.hover > 0 && pg.board == 1);
   if (pl.fly > 0) {
-    float target = world_tunnel(pl.z + 12) || world_tunnel(pl.z) ? FLY_LOW : pl.fly;
+    float roof = world_roof(pl.z) < world_roof(pl.z + 12) ? world_roof(pl.z) : world_roof(pl.z + 12);
+    float target = roof < pl.fly + 1.5f ? roof - 1.6f : pl.fly;
+    if (target < 1.2f) target = 1.2f;
     pl.y += (target - pl.y) * 0.08f;
     pl.vy = 0;
     pl.state = ST_AIR;
@@ -425,25 +442,32 @@ void run_step(uint32_t keys, uint32_t pressed) {
     if (on) {
       pl.y = pl.ground, pl.vy = 0;
       if (pl.state == ST_AIR) pl.state = ST_RUN;
+      if (pl.state == ST_AIR) pl.ev |= EV_LAND;
       if (pressed & K_UP) {
         pl.vy = super ? SUPER_V : JUMP_V;
+        /* (not through a low roof) */
+        float room = world_roof(pl.z + 3) - pl.y - STAND_H;
+        if (room < 2.6f) pl.vy = room > 0.4f ? __builtin_sqrtf(2 * GRAVITY * room) : 0;
         pl.state = ST_AIR;
         pl.roll = 0;
         run.jumps++;
+        pl.ev |= super ? EV_JUMP | EV_SUPER : EV_JUMP;
       } else if (pressed & K_DOWN) {
         pl.roll = ROLL_T;
         run.rolls++;
+        pl.ev |= EV_ROLL;
       }
     } else {
       pl.vy -= GRAVITY * DT;
       pl.y += pl.vy * DT;
       pl.state = ST_AIR;
       if (pressed & K_DOWN) {
-        pl.vy = -26;
+        pl.vy = DIVE_V < pl.vy ? DIVE_V : pl.vy;
         pl.roll = ROLL_T;
         run.rolls++;
+        pl.ev |= EV_ROLL;
       }
-      if (pl.y <= pl.ground) pl.y = pl.ground, pl.vy = 0, pl.state = ST_RUN;
+      if (pl.y <= pl.ground) pl.y = pl.ground, pl.vy = 0, pl.state = ST_RUN, pl.ev |= EV_LAND;
     }
   }
   if (pl.roll > 0) pl.roll -= DT;

@@ -8,24 +8,31 @@
 #include <stdint.h>
 #include "r3d.h"
 
-#define LANE 2.6f
+/* the game's own units are 0.13 m: its tracks are 20 apart */
+#define U 0.13f
+#define LANE (20 * U)
 #define LANE_X(l) (((l) - 1) * LANE)
-#define TRAIN_W 1.18f      /* half its width */
-#define TRAIN_H 3.5f       /* its roof */
-#define CAR_LEN 11.0f
-#define CAR_GAP 0.6f
-#define RAMP_LEN 7.0f
+#define TRAIN_W (10.2f * U)  /* half a car's width */
+#define TRAIN_H (28.6f * U)  /* its roof */
+#define CAR_LEN (60 * U)     /* from one car to the next (the car, and the gap behind it) */
+#define CAR_GAP (4.3f * U)
+#define RAMP_LEN (36 * U)    /* the ramp before the first car of a ramp train */
+#define SEG (180 * U)        /* a stretch of the city */
 #define DT (1.0f / 60)
+#define SPEED_MIN (110 * U)   /* the game's run speed: 110 units a second at the start, 220 after 179 s */
+#define SPEED_MAX (220 * U)
 
 /* ---------------------------------------------------------------- the world ahead */
 enum {
   O_TRAIN,       /* standing on the tracks: a crash from the front, a stumble from the side, a roof to run on */
   O_MOVING,      /* a train coming the other way */
-  O_RAMP,        /* up to a train's roof */
-  O_HURDLE,      /* low: jump it */
-  O_HIGHBAR,     /* a board up high: roll under it */
-  O_BLOCK,       /* a big barrier: go round it, or over with Super Sneakers or the jetpack */
+  O_RAMP,        /* a ramp train: up its ramp onto the roofs (z0 is the ramp's foot) */
+  O_HURDLE,      /* the low barrier: jump it */
+  O_HIGHBAR,     /* the tall one with its sign: roll under it */
+  O_STANDARD,    /* the barrier on its trestles: jump it or roll under it */
 };
+/* trains' looks: the silver subway train, the teal standard one, the red cargo wagons */
+enum { TR_SUB, TR_STANDARD, TR_CARGO, TR_KINDS };
 typedef struct {
   uint8_t type, lane, cars, look;
   float z0, z1;          /* from its near end to its far end */
@@ -54,8 +61,17 @@ void world_clear(float z0, float z1);       /* no obstacles from z0 to z1 (a saf
 void world_sky_coins(float z0, float z1);   /* coins high up, for the jetpack */
 uint32_t world_hash(uint32_t a);
 extern uint32_t world_seed;   /* the scenery of this run */
-/* the scenery at z: a tunnel? */
+/* the city along the tracks, a stretch (SEG) at a time: streets, the elevated line on its pillars, stations, tunnels */
+enum { SC_STREET, SC_PILLARS, SC_STATION, SC_TUBE };
+typedef struct {
+  uint8_t kind, part;    /* part: 0 the start, 1 the middle, 2 the end (streets: their left look) */
+  uint8_t right;         /* streets: their right look */
+} Stretch;
+Stretch world_stretch(int seg);
+/* the scenery at z: a tunnel? under a roof (the elevated line, a station)? */
 bool world_tunnel(float z);
+bool world_covered(float z);   /* a low roof: no trains under it */
+float world_roof(float z);    /* how high the roof is (m), very high in the open */
 
 /* ---------------------------------------------------------------- the runner */
 enum { ST_RUN, ST_AIR, ST_STUMBLE, ST_CRASH };
@@ -77,8 +93,11 @@ typedef struct {
   float headstart;       /* time left of a headstart */
   float crash_t;         /* since the crash */
   float lean;            /* sideways, while changing lanes */
+  float board_wait;      /* before another hoverboard */
+  uint8_t ev;            /* what happened this step (EV_*: the animations follow) */
   bool on_roof, dead;
 } Runner;
+enum { EV_JUMP = 1, EV_LAND = 2, EV_ROLL = 4, EV_LEFT = 8, EV_RIGHT = 16, EV_STUMBLE = 32, EV_CRASH = 64, EV_SUPER = 128 };
 extern Runner pl;
 
 /* ---------------------------------------------------------------- the run */
@@ -117,7 +136,7 @@ void run_bank(void);           /* the coins and the progress go to the save (the
 typedef struct {
   uint32_t coins, keys, best, runs;
   uint16_t boards, headstarts, boosters, mystery;   /* how many of each item */
-  uint8_t upg[NUPG];             /* jetpack, sneakers, magnet, 2x: levels 0 to 5 */
+  uint8_t upg[NUPG];             /* jetpack, sneakers, magnet, 2x: levels 0 to 6 */
   uint8_t chars, ownboards;      /* bits: unlocked */
   uint8_t character, board;
   uint8_t mset, mdone;           /* the mission set (the multiplier is 1 + mset) and its missions done */
@@ -132,6 +151,7 @@ enum {
   CNT_COINS, CNT_JUMPS, CNT_ROLLS, CNT_POWERUPS, CNT_BOARDS, CNT_STUMBLES, CNT_JETPACKS, CNT_MAGNETS,
   CNT_MYSTERY, CNT_RUNS, CNT_DIST, CNT_COUNT
 };
+#define MAXUPG 6
 float power_time(int pw);      /* how long a power-up lasts, with its upgrades */
 int upgrade_cost(int level);   /* to go up from this level, or 0 at the top */
 extern const char *const char_names[NCHARS];

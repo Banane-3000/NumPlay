@@ -3,9 +3,9 @@
 #   make check      link it like the calculator does (output/subway.bin)
 #   make host       build/play: the game on a computer, for tests and screenshots
 #   make test       the game played on a computer (tests/check.py, with the sanitizers)
-#   make assets     src/assets.c and src/icon.png again (tools/assets.py, tools/icon.py: Python + Pillow + NumPy)
-#   make data       src/data.c and src/data.h again: the people, the world's pictures, the icons and the logo, from the
-#                   Subway Surfers Wiki's pictures (tools/fetch.py gets them, tools/pack.py makes them)
+#   make assets     src/assets.c again: the fonts (tools/assets.py: Python + Pillow + NumPy)
+#   make data APK=DIR   src/data.c and src/data.h again, from the game's own Android package unzipped in DIR
+#                   (tools/apk.py: Python + UnityPy + Pillow + NumPy; the package is only read)
 Q ?= @
 # the ARM toolchain on the PATH, or in TOOLCHAIN=<its bin folder>
 TOOLCHAIN ?=
@@ -64,11 +64,9 @@ test: build/play
 
 assets:
 	python3 tools/assets.py src/assets.c
-	python3 tools/icon.py src/icon.png
 
 data:
-	python3 tools/fetch.py tools/ref
-	python3 tools/pack.py tools/ref
+	python3 -I tools/apk.py $(APK)
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) build

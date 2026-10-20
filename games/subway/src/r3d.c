@@ -4,10 +4,10 @@
 #define NEAR 0.35f
 #define FAR 190.0f
 #define ZK 22000.0f      /* depths are ZK / z: 62857 at the near plane, larger is nearer */
-#define MAXP 1800        /* polygons a frame */
-#define MAXV 6000        /* their corners */
-#define MAXA 3300        /* corners with a light level and a place in a picture */
-#define MAXT 280         /* textured faces in perspective */
+#define MAXP 1600        /* polygons a frame */
+#define MAXV 5400        /* their corners */
+#define MAXA 3600        /* corners with a light level and a place in a picture */
+#define MAXT 480         /* textured faces in perspective */
 #define MAXN 14          /* corners of a polygon once cut */
 #define SUB 8.0f         /* corners are kept in 1/8 pixels */
 #define GUARD 1900.0f    /* (so they may lie at most this far from the screen's middle) */
@@ -38,19 +38,31 @@ typedef struct {
 
 uint16_t *r_col;
 int r_y0, r_y1;
-static uint16_t zbuf[SCREEN_W * BAND_H] __attribute__((aligned(8)));
 Camera cam;
-float r_haze0 = 60, r_haze1 = 150;
+float r_haze0 = 60, r_haze1 = 150, r_far = 40;
 uint32_t r_haze_rgb = 0xD8F0FF;
 
-static Poly polys[MAXP];
-static uint16_t order[MAXP];   /* the see-through ones go last */
-static Pos pos[MAXV];
-static Attr attr[MAXA];
-static UV uvs[MAXT];
+/* the frame's lists: in the RAM after the game's own (r_init) */
+typedef struct {
+  Poly polys[MAXP];
+  uint16_t order[MAXP];   /* the see-through ones go last */
+  Pos pos[MAXV];
+  Attr attr[MAXA];
+  UV uvs[MAXT];
+  uint16_t zbuf[SCREEN_W * BAND_H] __attribute__((aligned(8)));
+} Work;
+static Work *work;
+#define polys (work->polys)
+#define order (work->order)
+#define pos (work->pos)
+#define attr (work->attr)
+#define uvs (work->uvs)
+#define zbuf (work->zbuf)
 static int npolys, nverts, nattr, nuv, nalpha;
 
 void r_set_band_memory(uint16_t *band) { r_col = band; }
+uint32_t r_work_size(void) { return sizeof(Work); }
+void r_init(void *mem) { work = (Work *)mem; }
 
 void r_sincos(float a, float *s, float *c) {
   a -= (float)(int)(a / 6.2831853f) * 6.2831853f;
@@ -74,7 +86,15 @@ bool r_project(V3 p, float *sx, float *sy) {
   return true;
 }
 
-void r_begin(void) { npolys = nverts = nattr = nuv = nalpha = 0; }
+#ifdef HOST
+uint16_t r_heat[SCREEN_W * SCREEN_H];   /* (pixels tried at each place, this frame) */
+#endif
+void r_begin(void) {
+  npolys = nverts = nattr = nuv = nalpha = 0;
+#ifdef HOST
+  for (int i = 0; i < SCREEN_W * SCREEN_H; i++) r_heat[i] = 0;
+#endif
+}
 int r_count(void) { return npolys; }
 
 uint32_t r_mix888(uint32_t a, uint32_t b, int t) {
@@ -123,7 +143,7 @@ static bool fit(const float *x, const float *y, const float *w, float *a, float 
 }
 
 /* projects, checks and keeps a polygon in camera space */
-static void emit(CV *p, int n, int kind, uint16_t color, int flags, int alpha) {
+static void emit(CV *p, int n, int kind, uint16_t color, int flags, int alpha, uint16_t avg) {
   if (npolys >= MAXP || nverts + MAXN > MAXV || ((kind == K_SHADE || kind == K_TEX) && nattr + MAXN > MAXA)) return;
   CV b1[MAXN], b2[MAXN];
   int behind = 0;
@@ -192,13 +212,12 @@ static void emit(CV *p, int n, int kind, uint16_t color, int flags, int alpha) {
   if (kind == K_PERSP) {
     /* far off, a picture is only its average colour (color already holds it when kind comes back flat) */
     const Texture *t = r_tex[color];
-    if (t->clear && nuv >= MAXT) return;   /* (a see-through one is only drawn as itself) */
-    if (!t->clear && (zm > r_haze1 * 0.6f || nuv >= MAXT)) {
-      uint32_t avg = 0;
-      /* (the palette's first useful colour stands for it: the tool puts the average there) */
-      uint16_t c = t->pal[t->clear ? 1 : 0];
-      avg = (uint32_t)(c >> 11) * 255 / 31 << 16 | (uint32_t)((c >> 5) & 63) * 255 / 63 << 8 | (uint32_t)(c & 31) * 255 / 31;
-      color = r_565(r_mix888(avg, 0, 256 - alpha * 8 > 256 ? 0 : 256 - alpha * 8));
+    if (t->clear && !avg && (nuv >= MAXT || zm > r_far * 1.6f)) return;   /* (a see-through one is only drawn as itself: near) */
+    if ((!t->clear && (zm > r_haze1 * 0.6f || nuv >= MAXT)) || (avg && (zm > r_far || nuv >= MAXT))) {
+      /* (the palette's first useful colour stands for it: the tool puts the average there; or the face's own) */
+      uint16_t c = avg ? avg : t->pal[t->clear ? 1 : 0];
+      uint32_t a8 = (uint32_t)(c >> 11) * 255 / 31 << 16 | (uint32_t)((c >> 5) & 63) * 255 / 63 << 8 | (uint32_t)(c & 31) * 255 / 31;
+      color = r_565(r_mix888(a8, 0, 256 - alpha * 8 > 256 ? 0 : 256 - alpha * 8));
       kind = K_FLAT;
       q->kind = K_FLAT;
       alpha = 255;
@@ -262,10 +281,12 @@ void r_poly(const V3 *w, int n, uint32_t rgb, int flags, int alpha) {
     far += v.z > FAR;
   }
   if (far == n) return;
-  emit(c, n, K_FLAT, r_565(rgb), flags, alpha);
+  emit(c, n, K_FLAT, r_565(rgb), flags, alpha, 0);
 }
 
-void r_poly_tex(const V3 *w, const float *uv, int n, int tex, int light, int flags) {
+void r_poly_tex(const V3 *w, const float *uv, int n, int tex, int light, int flags) { r_poly_tex_avg(w, uv, n, tex, light, flags, 0); }
+
+void r_poly_tex_avg(const V3 *w, const float *uv, int n, int tex, int light, int flags, uint16_t avg) {
   if (n < 3 || n > MAXN - 4) return;
   CV c[MAXN];
   int far = 0;
@@ -276,7 +297,7 @@ void r_poly_tex(const V3 *w, const float *uv, int n, int tex, int light, int fla
   }
   if (far == n) return;
   int l = light >> 3;
-  emit(c, n, K_PERSP, (uint16_t)tex, flags, l > 32 ? 32 : l < 0 ? 0 : l);
+  emit(c, n, K_PERSP, (uint16_t)tex, flags, l > 32 ? 32 : l < 0 ? 0 : l, avg);
 }
 
 void r_mesh(const RV *v, int nv, const Tri *t, int nt, const uint16_t *pal, int tex) {
@@ -288,8 +309,8 @@ void r_mesh(const RV *v, int nv, const Tri *t, int nt, const uint16_t *pal, int 
       float ax = a->x / a->z, ay = a->y / a->z, bx = b->x / b->z, by = b->y / b->z, cx = c->x / c->z, cy = c->y / c->z;
       if ((bx - ax) * (cy - ay) - (cx - ax) * (by - ay) >= 0) continue;
     }
-    if (t[i].col == TEX_COL) emit(p, 3, K_TEX, (uint16_t)tex, 0, 255);
-    else emit(p, 3, K_SHADE, pal[t[i].col], 0, 255);
+    if (t[i].col == TEX_COL) emit(p, 3, K_TEX, (uint16_t)tex, 0, 255, 0);
+    else emit(p, 3, K_SHADE, pal[t[i].col], 0, 255, 0);
   }
   (void)nv;
 }
@@ -350,7 +371,9 @@ static inline int32_t fix16(float t) {
 }
 
 #ifdef HOST
-uint32_t r_stat[4], r_stat_tex[64];   /* (pixels tried, by kind and texture: for measuring) */
+uint32_t r_stat_texhole[64];
+int r_show_holes;
+uint32_t r_stat[4], r_stat_tex[64], r_stat_rows, r_stat_polys, r_stat_skips, r_stat_chunks, r_stat_written, r_stat_holes;   /* (pixels tried, by kind and texture: for measuring) */
 #endif
 
 static void raster(const Poly *q) {
@@ -385,11 +408,15 @@ static void raster(const Poly *q) {
     }
   }
   if (ne < 2) return;
+#ifdef HOST
+  r_stat_polys++;
+#endif
   uint16_t col = q->color;
   int kind = q->kind;
   const Texture *tx = kind == K_TEX || kind == K_PERSP ? r_tex[q->color] : NULL;
   int alpha = q->alpha >> 3;
-  int32_t da = (int32_t)(q->a * 65536.0f);
+  float qa = q->a > 30000 ? 30000 : q->a < -30000 ? -30000 : q->a;   /* (seen nearly edge-on) */
+  int32_t da = (int32_t)(qa * 65536.0f);
   for (int y = ya; y < yb; y++) {
     float yc = (float)y + 0.5f, xl = 1e9f, xr = -1e9f;
     const Edge *L = NULL, *R = NULL;
@@ -409,8 +436,10 @@ static void raster(const Poly *q) {
     uint32_t z = (uint32_t)(zf * 65536.0f);
     uint16_t *zb = zbuf + (y - r_y0) * SCREEN_W, *cb = r_col + (y - r_y0) * SCREEN_W;
 #ifdef HOST
+    r_stat_rows++;
     r_stat[kind] += (uint32_t)(x1 - x0);
     if (kind == K_PERSP) r_stat_tex[q->color] += (uint32_t)(x1 - x0);
+    for (int x = x0; x < x1; x++) r_heat[y * SCREEN_W + x]++;
 #endif
     if (kind == K_FLAT) {
       if (alpha >= 31) {
@@ -432,18 +461,43 @@ static void raster(const Poly *q) {
       uint32_t wm = (1u << tx->wl) - 1, hmask = ((1u << tx->hl) - 1) << tx->wl;
       int vs = 16 - tx->wl, light = q->alpha;
       bool clear = tx->clear;
-      /* u and v exactly every 8 pixels, straight lines between */
+      /* u and v exactly every 16 pixels, straight lines between; a run of 16 all behind what is drawn is passed
+       * over without its texture places */
       float fx = (float)x0 + 0.5f;
       float qz = q->a * fx + q->b * yc + q->c, qu = w->ua * fx + w->ub * yc + w->uc, qv = w->va * fx + w->vb * yc + w->vc;
-      float iz = qz > 1 ? 1 / qz : 1;
-      int32_t u = fix16(qu * iz), v = fix16(qv * iz);
+      int32_t u = 0, v = 0;
+      bool known = false;   /* u and v are those at x */
       for (int x = x0; x < x1;) {
-        int n8 = x1 - x < 8 ? x1 - x : 8;
-        float qz2 = qz + q->a * (float)n8, qu2 = qu + w->ua * (float)n8, qv2 = qv + w->va * (float)n8;
+        int n = x1 - x < 16 ? x1 - x : 16;
+        uint16_t *zp = zb + x, *cp = cb + x, *ze = zp + n;
+        float fn = (float)n;
+        float qz2 = qz + q->a * fn, qu2 = qu + w->ua * fn, qv2 = qv + w->va * fn;
+        /* (any pixel in front?) */
+        uint32_t zt = z;
+        uint16_t *zq = zp;
+        while (zq < ze && (uint16_t)(zt >> 16) <= *zq) zq++, zt += (uint32_t)da;
+#ifdef HOST
+        r_stat_chunks++;
+#endif
+        if (zq == ze) {
+#ifdef HOST
+          r_stat_skips++;
+#endif
+          z = zt, x += n;
+          qz = qz2, qu = qu2, qv = qv2;
+          known = false;
+          continue;
+        }
+        if (!known) {
+          float iz = qz > 1 ? 1 / qz : 1;
+          u = fix16(qu * iz), v = fix16(qv * iz);
+        }
         float iz2 = qz2 > 1 ? 1 / qz2 : 1;
         int32_t u2 = fix16(qu2 * iz2), v2 = fix16(qv2 * iz2);
-        uint32_t du = (uint32_t)((u2 - u) / n8), dv = (uint32_t)((v2 - v) / n8), uu = (uint32_t)u, vv = (uint32_t)v;
-        uint16_t *zp = zb + x, *cp = cb + x, *ze = zp + n8;
+        uint32_t du, dv;
+        if (n == 16) du = (uint32_t)((u2 - u) >> 4), dv = (uint32_t)((v2 - v) >> 4);
+        else du = (uint32_t)((u2 - u) / n), dv = (uint32_t)((v2 - v) / n);
+        uint32_t uu = (uint32_t)u, vv = (uint32_t)v;
         /* (three loops: the plain one kept as short as can be) */
         if (light >= 32 && !clear) {
           for (; zp < ze; zp++, cp++, z += (uint32_t)da, uu += du, vv += dv) {
@@ -456,6 +510,14 @@ static void raster(const Poly *q) {
             if (d <= *zp) continue;
             uint8_t t = px[(vv >> vs & hmask) | (uu >> 16 & wm)];
             if (t) *zp = d, *cp = pal[t];
+#ifdef HOST
+            if (t) r_stat_written++;
+            else {
+              r_stat_holes++, r_stat_texhole[q->color]++;
+              extern int r_show_holes;
+              if (r_show_holes) *cp = 0xF81F;
+            }
+#endif
           }
         } else {
           for (; zp < ze; zp++, cp++, z += (uint32_t)da, uu += du, vv += dv) {
@@ -466,8 +528,9 @@ static void raster(const Poly *q) {
             *zp = d, *cp = r_mix565(0, pal[t], light);
           }
         }
-        x += n8;
+        x += n;
         qz = qz2, qu = qu2, qv = qv2, u = u2, v = v2;
+        known = true;
       }
       continue;
     }

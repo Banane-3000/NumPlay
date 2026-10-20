@@ -20,6 +20,11 @@ uint32_t perf_slow __attribute__((used));
 int main(void) {
   uint16_t band[SCREEN_W * BAND_H];   /* (here: on the stack, out of the RAM apps get) */
   r_set_band_memory(band);
+  /* the renderer's lists: the RAM after the game's own data */
+  extern char _heap_start[], _heap_end[];
+  uintptr_t heap = ((uintptr_t)_heap_start + 7) & ~(uintptr_t)7;
+  if ((uintptr_t)_heap_end < heap + r_work_size()) return 1;
+  r_init((void *)heap);
   plat_begin();
   app_init();
   uint32_t prev = 0;

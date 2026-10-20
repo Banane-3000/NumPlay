@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include "../src/actors.h"
 #include "../src/app.h"
+#include "../src/data.h"
 #include "../src/game.h"
 #include "../src/r3d.h"
 #include "../src/save.h"
@@ -146,23 +147,25 @@ static void view(const char *spec, const char *out) {
   sscanf(spec, "%d,%15[a-z],%f,%f,%f,%f", &who, anim, &t, &yaw, &dist, &height);
   static uint16_t band[SCREEN_W * BAND_H];
   r_set_band_memory(band);
+  static uint64_t work[200000 / 8];
+  if (r_work_size() > sizeof work) abort();
+  r_init(work);
   r_begin();
   r_camera(0, height, -dist, 0.05f, 300, 160, 120);
-  Pose p;
-  if (!strcmp(anim, "run")) pose_run(&p, t * 6.2831853f);
-  else if (!strcmp(anim, "jump")) pose_jump(&p, t);
-  else if (!strcmp(anim, "roll")) pose_roll(&p, t);
-  else if (!strcmp(anim, "hover")) pose_hover(&p, t);
-  else if (!strcmp(anim, "fly")) pose_fly(&p, t);
-  else if (!strcmp(anim, "fall")) pose_fall(&p, t);
-  else if (!strcmp(anim, "spray")) pose_spray(&p, t);
-  else if (!strcmp(anim, "catch")) pose_catch(&p, t);
-  else if (!strcmp(anim, "trip")) pose_run(&p, 0), pose_stumble(&p, t);
-  else if (!strcmp(anim, "tpose")) memset(&p, 0, sizeof p);
-  else pose_stand(&p, t);
-  p.yaw += yaw;
-  if (who == 5) dog_draw_turned((V3){0, 0, 0}, t * 6.2831853f, 1, p.yaw);
-  else actor_draw(who, (V3){0, 0, 0}, &p, 1);
+  /* a clip by its name: the runner's, the Inspector's (who 4) or the dog's (who 5) */
+  static const struct { const char *n; const Clip *c[3]; } clips[] = {
+    {"run", {&clip_runner_run, &clip_inspector_run, &clip_dog_run}}, {"jump", {&clip_runner_jump, &clip_inspector_jump, &clip_dog_jump}},
+    {"hang", {&clip_runner_hang, &clip_inspector_jump, &clip_dog_jump}}, {"roll", {&clip_runner_roll, &clip_inspector_roll, &clip_dog_run}},
+    {"board", {&clip_runner_board, &clip_inspector_run, &clip_dog_run}}, {"fly", {&clip_runner_fly, &clip_inspector_run, &clip_dog_run}},
+    {"death", {&clip_runner_death, &clip_inspector_catch, &clip_dog_catch}}, {"catch", {&clip_runner_death, &clip_inspector_catch, &clip_dog_catch}},
+    {"stand", {&clip_runner_idle, &clip_inspector_whistle, &clip_dog_run}},
+  };
+  const Clip *c = clips[0].c[0];
+  for (unsigned i = 0; i < sizeof clips / sizeof clips[0]; i++)
+    if (!strcmp(anim, clips[i].n)) c = clips[i].c[who < 4 ? 0 : who - 3];
+  Anim an = {0};
+  anim_play(&an, c, t, 0);
+  actor_draw(who, &an, (V3){0, 0, 0}, yaw, 0, 1);
   r_render(view_bg, NULL);
   char path[512];
   snprintf(path, sizeof path, "%s/view.ppm", out);
@@ -192,6 +195,10 @@ int main(int argc, char **argv) {
     else if (!strcmp(a, "--keys-owned")) keys_owned = atol(v), i++;
     else if (!strcmp(a, "--draw-every")) draw_every = atoi(v), i++;
     else if (!strcmp(a, "--stats")) stats = true;
+    else if (!strcmp(a, "--holes")) {
+      extern int r_show_holes;
+      r_show_holes = 1;
+    }
     else if (!strcmp(a, "--god")) god = true;
     else if (!strcmp(a, "--when")) when = v, i++;
     else if (!strcmp(a, "--view")) view_spec = v, i++;
@@ -221,6 +228,9 @@ int main(int argc, char **argv) {
   host_save_dir(saves);
   static uint16_t band[SCREEN_W * BAND_H];
   r_set_band_memory(band);
+  static uint64_t work[200000 / 8];
+  if (r_work_size() > sizeof work) abort();
+  r_init(work);
   app_init();
   if (coins >= 0) pg.coins = (uint32_t)coins;
   if (keys_owned >= 0) pg.keys = (uint32_t)keys_owned;
@@ -278,12 +288,27 @@ int main(int argc, char **argv) {
       char p[512];
       snprintf(p, sizeof p, "%s/shot_%05d.ppm", out, f);
       host_shot(p);
+      /* and how many pixels were tried at each place (a grey level each) */
+      extern uint16_t r_heat[SCREEN_W * SCREEN_H];
+      snprintf(p, sizeof p, "%s/heat_%05d.pgm", out, f);
+      FILE *h = fopen(p, "wb");
+      if (h) {
+        fprintf(h, "P5 %d %d 255\n", SCREEN_W, SCREEN_H);
+        for (int i = 0; i < SCREEN_W * SCREEN_H; i++) fputc(r_heat[i] * 32 > 255 ? 255 : r_heat[i] * 32, h);
+        fclose(h);
+      }
     }
   }
   extern uint32_t r_stat[4], r_stat_tex[64];
   if (stats)
     for (int i = 0; i < 64; i++)
-      if (r_stat_tex[i]) printf("texture %d: %u\n", i, r_stat_tex[i] / (unsigned)(f / draw_every + 1));
+      if (r_stat_tex[i]) {
+        extern uint32_t r_stat_texhole[64];
+        printf("texture %d: %u holes %u\n", i, r_stat_tex[i] / (unsigned)(f / draw_every + 1), r_stat_texhole[i] / (unsigned)(f / draw_every + 1));
+      }
+  extern uint32_t r_stat_rows, r_stat_polys, r_stat_skips, r_stat_chunks, r_stat_written, r_stat_holes;
+  if (stats) printf("holes %u chunks %u skipped %u written (clear) %u\n", r_stat_holes / (unsigned)(f / draw_every + 1), r_stat_chunks / (unsigned)(f / draw_every + 1), r_stat_skips / (unsigned)(f / draw_every + 1), r_stat_written / (unsigned)(f / draw_every + 1));
+  if (stats) printf("rows a frame %u, polygon bands %u\n", r_stat_rows / (unsigned)(f / draw_every + 1), r_stat_polys / (unsigned)(f / draw_every + 1));
   if (stats) printf("pixels a frame: flat %u shaded %u textured %u perspective %u\n", r_stat[0] / (unsigned)(f / draw_every + 1),
                     r_stat[1] / (unsigned)(f / draw_every + 1), r_stat[2] / (unsigned)(f / draw_every + 1),
                     r_stat[3] / (unsigned)(f / draw_every + 1));

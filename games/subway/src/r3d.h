@@ -24,6 +24,9 @@ typedef struct {
 extern uint16_t *r_col;
 extern int r_y0, r_y1;
 void r_set_band_memory(uint16_t *band);
+/* the frame's lists (polygons, corners, depths): r_work_size bytes, given before anything is drawn */
+uint32_t r_work_size(void);
+void r_init(void *mem);
 
 /* the camera: where it is, how far it looks down (radians), its focal length and the
  * screen point straight ahead */
@@ -43,6 +46,8 @@ bool r_project(V3 p, float *sx, float *sy);
 
 /* distance haze: from HAZE0 to HAZE1 metres ahead colours go to the horizon's */
 extern float r_haze0, r_haze1;
+/* beyond r_far (m) a baked face with an average colour is drawn in it, plain */
+extern float r_far;
 extern uint32_t r_haze_rgb;
 
 /* pictures laid on polygons: width and height are powers of two; index 0 can be see-through */
@@ -70,6 +75,8 @@ void r_poly(const V3 *v, int n, uint32_t rgb, int flags, int alpha);
 /* a textured polygon, in perspective: uv gives each corner's place in the picture (in texels, two
  * floats a corner; the picture repeats), light 0..256 */
 void r_poly_tex(const V3 *v, const float *uv, int n, int tex, int light, int flags);
+/* the same, drawn plain in avg (RGB565, 0: never) beyond r_far */
+void r_poly_tex_avg(const V3 *v, const float *uv, int n, int tex, int light, int flags, uint16_t avg);
 
 /* meshes (people, the dog): corners in camera space with a light level (0..255) and a place in a
  * picture (1/4 texels, below 4096), triangles of three corners and a colour (an index into pal; TEX_COL:

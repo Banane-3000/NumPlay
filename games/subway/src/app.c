@@ -24,8 +24,14 @@ static char note[40];           /* the shop's word on the last try */
 static float note_t;
 static float cam_x, cam_y;      /* the run's camera, smoothed */
 static bool drawn;              /* a screen that does not move is drawn once, then again when something changes */
-#define CAM_Y 4.4f              /* above the ground */
-#define CAM_BACK 5.2f           /* behind the runner */
+static bool hit_train;          /* the crash was into a train's front */
+static void runner_anim(float dt);
+static Anim a_run, a_guard, a_dog, a_shop;
+/* the game's run camera: 33 units up and 33 behind the runner, following 0.75 of its moves across */
+#define CAM_Y (33 * U)
+#define CAM_BACK (33 * U)
+#define CAM_PITCH 0.34f
+#define CAM_F 250.0f
 
 /* colours of the game's screens */
 #define NAVY 0x0B2A55
@@ -166,10 +172,12 @@ static void shop_buy(void) {
 static void camera_follow(void) {
   float tx = pl.x * 0.75f, ty = CAM_Y + pl.ground * 0.85f + (pl.y - pl.ground) * 0.35f;
   if (pl.fly > 0) ty = CAM_Y + pl.y * 0.8f;
-  /* under a tunnel's ceiling */
-  if ((world_tunnel(pl.z - CAM_BACK) || world_tunnel(pl.z + 4)) && ty > 7.9f) ty = 7.9f;
-  cam_x += (tx - cam_x) * 0.18f;
-  cam_y += (ty - cam_y) * 0.12f;
+  /* under a roof */
+  float roof = world_roof(pl.z - CAM_BACK) < world_roof(pl.z + 4) ? world_roof(pl.z - CAM_BACK) : world_roof(pl.z + 4);
+  if (ty > roof - 0.4f) ty = roof - 0.4f;
+  /* (the game's follow speeds: 15 across, 7.5 up and down) */
+  cam_x += (tx - cam_x) * (1 - 1 / (1 + 15 * DT));
+  cam_y += (ty - cam_y) * (1 - 1 / (1 + 7.5f * DT));
 }
 
 void app_step(uint32_t keys, uint32_t pressed) {
@@ -218,6 +226,13 @@ void app_step(uint32_t keys, uint32_t pressed) {
         break;
       }
       run_step(keys, pressed);
+      if (pl.ev & EV_CRASH && pl.dead) {
+        /* into a train's front? */
+        hit_train = false;
+        for (int i = 0; i < nobs; i++)
+          if ((obs[i].type == O_TRAIN || obs[i].type == O_MOVING) && obs[i].lane == pl.lane && obs[i].z0 > pl.z - 0.5f && obs[i].z0 < pl.z + 1.5f)
+            hit_train = true;
+      }
       camera_follow();
       if (run_over()) {
         if (pg.keys + run.keys >= (uint32_t)run_save_cost()) {
@@ -252,6 +267,7 @@ void app_step(uint32_t keys, uint32_t pressed) {
       }
       break;
     case S_SHOP:
+      anim_step(&a_shop, DT);
       if (pressed & K_LEFT) shop_tab = (shop_tab + TABS - 1) % TABS, shop_sel = shop_top = 0;
       if (pressed & K_RIGHT) shop_tab = (shop_tab + 1) % TABS, shop_sel = shop_top = 0;
       if (pressed & K_UP && shop_sel > 0) shop_sel--;
@@ -284,59 +300,104 @@ void app_step(uint32_t keys, uint32_t pressed) {
       break;
   }
   if (title_scene()) pl.t += DT;
+  if (state == S_RUN || title_scene()) runner_anim(DT);
 }
 
 /* ---------------------------------------------------------------- drawing: the 3D part */
 static float lerp(float a, float b, float t) { return a + (b - a) * t; }
 
+static bool clip_in(const Anim *an, const Clip *const *list, int n) {
+  for (int i = 0; i < n; i++)
+    if (an->a == list[i]) return true;
+  return false;
+}
+
+/* the runner's clip, from what happened this step: the game's own moves */
+static void runner_anim(float dt) {
+  Anim *an = &a_run;
+  uint8_t ev = pl.ev;
+  float rate = 1;
+  if (title_scene()) {
+    anim_play(an, &clip_runner_idle, 0, 0.25f);
+  } else if (pl.dead) {
+    anim_play(an, hit_train ? &clip_runner_death_train : &clip_runner_death, 0, 0.06f);
+  } else if (pl.fly > 0) {
+    if (ev & EV_LEFT) anim_play(an, &clip_runner_fly_l, 0, 0.05f), an->ta = 0;
+    else if (ev & EV_RIGHT) anim_play(an, &clip_runner_fly_r, 0, 0.05f), an->ta = 0;
+    else if (an->a != &clip_runner_fly && (anim_done(an) || (an->a != &clip_runner_fly_l && an->a != &clip_runner_fly_r)))
+      anim_play(an, &clip_runner_fly, 0, 0.2f);
+  } else if (pl.hover > 0) {
+    static const Clip *const once[] = {&clip_runner_board_jump, &clip_runner_board_land, &clip_runner_board_roll, &clip_runner_board_l,
+                                       &clip_runner_board_r};
+    if (ev & EV_JUMP) anim_play(an, &clip_runner_board_jump, 0, 0.05f);
+    else if (ev & EV_ROLL) anim_play(an, &clip_runner_board_roll, 0, 0.05f);
+    else if (ev & EV_LAND) anim_play(an, &clip_runner_board_land, 0, 0.05f);
+    else if (ev & EV_LEFT && pl.state != ST_AIR) anim_play(an, &clip_runner_board_l, 0, 0.06f);
+    else if (ev & EV_RIGHT && pl.state != ST_AIR) anim_play(an, &clip_runner_board_r, 0, 0.06f);
+    if (!clip_in(an, once, 5) || anim_done(an)) {
+      if (pl.roll > 0) anim_play(an, &clip_runner_board_roll, 0, 0.1f);
+      else if (pl.state == ST_AIR) anim_play(an, &clip_runner_board_hang, 0, 0.12f);
+      else anim_play(an, &clip_runner_board, 0, 0.12f);
+    }
+  } else {
+    static const Clip *const once[] = {&clip_runner_jump, &clip_runner_land, &clip_runner_roll, &clip_runner_dodge_l, &clip_runner_dodge_r,
+                                       &clip_runner_stumble_l, &clip_runner_stumble_r, &clip_runner_salto, &clip_runner_intro};
+    bool super = pl.power[PW_SNEAKERS] > 0;
+    if (ev & EV_STUMBLE) anim_play(an, pl.x < LANE_X(pl.lane) ? &clip_runner_stumble_r : &clip_runner_stumble_l, 0, 0.05f);
+    else if (ev & EV_JUMP) anim_play(an, ev & EV_SUPER ? &clip_runner_salto : &clip_runner_jump, 0, 0.05f);
+    else if (ev & EV_ROLL) {
+      anim_play(an, &clip_runner_roll, 0, 0.05f);
+      an->ta = 0;
+    } else if (ev & EV_LAND && pl.roll <= 0) anim_play(an, &clip_runner_land, 0, 0.05f);
+    else if (ev & EV_LEFT && pl.state != ST_AIR && pl.roll <= 0) anim_play(an, &clip_runner_dodge_l, 0, 0.06f);
+    else if (ev & EV_RIGHT && pl.state != ST_AIR && pl.roll <= 0) anim_play(an, &clip_runner_dodge_r, 0, 0.06f);
+    if (!clip_in(an, once, 9) || anim_done(an)) {
+      if (pl.roll > 0) anim_play(an, &clip_runner_roll, 0.3f, 0.1f);
+      else if (pl.state == ST_AIR) anim_play(an, &clip_runner_hang, 0, an->a == &clip_runner_jump ? 0.1f : 0.2f);
+      else anim_play(an, super ? &clip_runner_super_run : &clip_runner_run, 0, 0.12f);
+    }
+    if (an->a == &clip_runner_run || an->a == &clip_runner_super_run)
+      rate = 0.9f + 0.35f * (pl.speed - SPEED_MIN) / (SPEED_MAX - SPEED_MIN);
+  }
+  anim_step(an, dt * rate);
+  /* the Inspector and his dog */
+  if (pl.dead && pl.crash_t > 0.25f) {
+    anim_play(&a_guard, &clip_inspector_catch, 0, 0.15f);
+    anim_play(&a_dog, &clip_dog_catch, 0, 0.15f);
+  } else {
+    anim_play(&a_guard, &clip_inspector_run, 0, 0.15f);
+    anim_play(&a_dog, &clip_dog_run, 0, 0.15f);
+  }
+  float grate = title_scene() ? 0 : 1;
+  anim_step(&a_guard, dt * grate);
+  anim_step(&a_dog, dt * grate);
+}
+
 static void draw_runner(void) {
-  Pose p;
   int who = pg.character;
   float lt = scene_light(pl.z);
   bool title = title_scene();
-  if (title) {
-    /* facing the camera, waiting */
-    pose_stand(&p, clock);
-    p.yaw = 3.14159f;
-  }
-  else if (pl.dead) pose_fall(&p, pl.crash_t * 2.5f);
-  else if (pl.fly > 0) pose_fly(&p, clock);
-  else if (pl.roll > 0) pose_roll(&p, 1 - pl.roll / 0.6f);
-  else if (pl.hover > 0 && pl.state != ST_AIR) pose_hover(&p, clock);
-  else if (pl.state == ST_AIR) {
-    /* from leaving the ground to landing, by the speed up (a jump off a ramp or a fall starts halfway) */
-    float v0 = pl.power[PW_SNEAKERS] > 0 ? 19.0f : 11.7f, t = 0.5f - pl.vy / (2 * v0);
-    pose_jump(&p, t);
-  }
-  else pose_run(&p, pl.phase);
-  if (!title) {
-    /* turning round to run, at the start */
-    if (run.start_t < 0.35f && !pl.dead) p.yaw += 3.14159f * (1 - run.start_t / 0.35f);
-    p.tilt -= pl.lean;
-    if (pl.stumble > 0) pose_stumble(&p, pl.stumble / 0.45f), p.tilt += 0.3f * pl.stumble;
-  }
+  float yaw = title ? 3.14159f : 0;
+  if (!title && run.start_t < 0.35f && !pl.dead) yaw += 3.14159f * (1 - run.start_t / 0.35f);   /* turning round to run */
   V3 at = {pl.x, pl.y, pl.z};
   bool blink = pl.safe > 0.15f && ((int)(clock * 12) & 1);
   if (!title && pl.hover > 0 && !pl.dead && pl.fly <= 0) {
-    board_draw(at, pg.board, p.yaw, clock, lt);
-    at.y += 0.2f;
+    board_draw(at, pg.board, yaw, clock, lt);
+    at.y += 0.18f;
   }
   if (!blink) {
-    actor_draw(who, at, &p, lt);
-    if (pl.power[PW_JETPACK] > 0 || pl.headstart > 0) jetpack_draw(at, &p, clock, lt);
+    actor_draw(who, &a_run, at, yaw, 0, lt);
+    if (pl.power[PW_JETPACK] > 0 || pl.headstart > 0) jetpack_draw(clock, lt);
   }
   float g = pl.fly > 0 ? world_ground(pl.x, pl.z, 0) : pl.ground;
   shadow_draw(pl.x, pl.z, g, pl.y - g);
   /* the Inspector and his dog, while they are after the runner */
   if (!title && (pl.chase > 0 || pl.dead)) {
-    float back = pl.dead ? 1.6f - (pl.crash_t > 1 ? 1 : pl.crash_t) * 0.4f : 2.6f + (pl.chase < 1 ? (1 - pl.chase) * 9 : 0);
-    if (run.start_t < 1) back = 2.6f + (1 - run.start_t) * 3;
-    Pose ip;
-    pose_run(&ip, pl.phase * 0.85f);
-    if (pl.dead && pl.crash_t > 0.8f) pose_catch(&ip, clock);
-    float ix = pl.x + 0.85f, dx = pl.x - 0.95f;
-    actor_draw(WHO_INSPECTOR, (V3){ix, 0, pl.z - back}, &ip, lt);
-    dog_draw((V3){dx, 0, pl.z - back + 0.8f}, pl.phase * 1.3f, lt);
+    float back = pl.dead ? 1.3f - (pl.crash_t > 1 ? 1 : pl.crash_t) * 0.5f : 2.4f + (pl.chase < 1 ? (1 - pl.chase) * 9 : 0);
+    if (run.start_t < 1) back = 2.4f + (1 - run.start_t) * 3;
+    float ix = pl.x + 0.55f, dx = pl.x - 0.75f;
+    actor_draw(WHO_INSPECTOR, &a_guard, (V3){ix, pl.dead ? pl.ground : 0, pl.z - back}, 0, 0, lt);
+    actor_draw(WHO_DOG, &a_dog, (V3){dx, pl.dead ? pl.ground : 0, pl.z - back + 0.7f}, 0, 0, lt);
   }
 }
 
@@ -357,19 +418,21 @@ static void draw_sparks(void) {
 static void draw_world(void) {
   r_begin();
   bool title = title_scene();
-  float tx = 0, ty = 1.5f, tz = -4.9f, tp = 0.0f;
-  if (title) scene_camera(tx, ty, tz, tp);
+  /* the title: in front of the runner, a little to the side, looking back at the yard */
+  float tx = 0.9f, ty = 1.3f, tz = -3.6f, tp = 0.02f, tf = 230;
+  if (title) scene_camera(tx, ty, tz, tp, tf);
   else {
     /* the camera swings round from the title's view */
-    float k = intro >= 1 ? 1 : intro * intro * (3 - 2 * intro), pitch = 0.3f + (pl.fly > 0 ? 0.06f : 0);
+    float k = intro >= 1 ? 1 : intro * intro * (3 - 2 * intro), pitch = CAM_PITCH + (pl.fly > 0 ? 0.08f : 0);
     /* a shake when the runner crashes */
     float shake = 0;
     if (pl.dead && pl.crash_t < 0.35f) {
       float s, c;
       r_sincos(pl.crash_t * 70, &s, &c);
-      shake = s * 0.18f * (1 - pl.crash_t / 0.35f);
+      shake = s * 0.15f * (1 - pl.crash_t / 0.35f);
     }
-    scene_camera(lerp(tx, cam_x, k) + shake, lerp(ty, cam_y, k) + shake * 0.5f, lerp(tz, pl.z - CAM_BACK, k), lerp(tp, pitch, k));
+    scene_camera(lerp(tx, cam_x, k) + shake, lerp(ty, cam_y, k) + shake * 0.5f, lerp(tz, pl.z - CAM_BACK, k), lerp(tp, pitch, k),
+                 lerp(tf, CAM_F, k));
   }
   draw_runner();
   scene_draw(clock);
@@ -749,26 +812,23 @@ static void draw_shop(void) {
   r_begin();
   if (shop_tab == TAB_CHARS || shop_tab == TAB_BOARDS) {
     /* a turning preview, on the right */
-    r_camera(0, 1.05f, -3.1f, 0.04f, 230, 258, 136);
+    r_camera(0, 0.75f, -2.6f, 0.06f, 240, 258, 136);
     float yaw = 3.14159f + clock * 0.9f;
     /* the stand */
     V3 st[8];
     for (int k = 0; k < 8; k++) {
       float s, c;
       r_sincos((float)k * 0.785f, &s, &c);
-      st[k] = (V3){s * 0.9f, 0, c * 0.9f};
+      st[k] = (V3){s * 0.7f, 0, c * 0.7f};
     }
     r_poly(st, 8, 0x1A4F9A, P_NOHAZE, 0);
-    Pose p;
     if (shop_tab == TAB_CHARS) {
-      pose_stand(&p, clock);
-      p.yaw = yaw;
-      actor_draw(shop_sel, (V3){0, 0, 0}, &p, 1);
+      anim_play(&a_shop, &clip_runner_idle, 0, 0);
+      actor_draw(shop_sel, &a_shop, (V3){0, 0, 0}, yaw, 0, 1);
     } else {
-      pose_hover(&p, clock);
-      p.yaw = yaw + 0.3f;
-      board_draw((V3){0, 0.1f, 0}, shop_sel, yaw, clock, 1);
-      actor_draw(pg.character, (V3){0, 0.3f, 0}, &p, 1);
+      anim_play(&a_shop, &clip_runner_board, 0, 0);
+      board_draw((V3){0, 0.05f, 0}, shop_sel, yaw, clock, 1);
+      actor_draw(pg.character, &a_shop, (V3){0, 0.23f, 0}, yaw, 0, 1);
     }
   }
   r_render(shop_background, overlay);
