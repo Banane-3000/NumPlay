@@ -361,6 +361,17 @@ for place, room, y_max in (("conveniencestore", "convenienceStore1", 990), ("gaz
     check(f"the door at {place} stops Lucky and lets him in", stopped and f" scene interior:{room}" in err,
           f"at {p} after walking up, scenes {[l.split(' scene ')[1] for l in err.splitlines() if ' scene ' in l]}")
 
+# after the ending (the petals redraw the whole view every third frame), the
+# streets west of the blue team's headquarters decode little: two of a house
+# drawn side by side could not stream as the bands go down, and the frame was
+# decoded band by band, its biggest pictures four times each (250 KB a frame:
+# Mason363/NumPlay#90 saw 2 frames a second there on an N0120)
+_, err, _ = run("overworld@blueteamhq", 120, env={"CI_ENDING": "1", "CI_POS": "-1420,880", "CI_ZFRAME": "1"})
+kb = {int(m[1]): float(m[2]) for m in re.finditer(r"^f(\d+) decoded ([\d.]+) KB", err, re.M)}
+still = [kb.get(f, 0) for f in range(60, 120)]
+check("the streets by the blue team's headquarters decode little after the ending", sum(still) / 60 < 40 and max(still) < 120,
+      f"{sum(still) / 60:.0f} KB a frame, at most {max(still):.0f} KB")
+
 if failures:
     print("\n".join(failures))
     sys.exit(1)
