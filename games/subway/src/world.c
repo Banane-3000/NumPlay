@@ -47,9 +47,9 @@ void world_reset(uint32_t seed) {
 
 /* the title screen's yard: a train standing on each side of the runner */
 void world_title(void) {
-  Obstacle *o = add(O_TRAIN, 0, 1.5f, 1.5f + train_len(2));
+  Obstacle *o = add(O_TRAIN, 0, 3.0f, 3.0f + train_len(2));
   if (o) o->cars = 2, o->look = TR_SUB;
-  o = add(O_TRAIN, 2, 3.0f, 3.0f + train_len(2));
+  o = add(O_TRAIN, 2, 4.5f, 4.5f + train_len(2));
   if (o) o->cars = 2, o->look = TR_CARGO;
 }
 

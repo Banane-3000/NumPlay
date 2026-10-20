@@ -66,6 +66,13 @@ typedef struct {
   int16_t box[6];
 } BModel;
 
+/* a button or panel for stretching round its corners: colours, alphas, its corners' size */
+typedef struct {
+  uint8_t w, h, bx, by;
+  const uint16_t *px;
+  const uint8_t *a;
+} Slice;
+
 /* a picture for the screens: rows of runs of (count, alpha 0..7 << 5 | colour) */
 typedef struct {
   uint8_t w, h;

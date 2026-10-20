@@ -29,4 +29,6 @@ int d_text_width(const Font *f, const char *s);
 void d_label(const Font *f, int x, int baseline, const char *s, uint16_t fill, uint16_t outline, int t, int align);
 /* one of the game's pictures (data.c), its top-left at (x, y) */
 void d_image(int x, int y, const Image *im);
+/* a button or panel of the game's (data.c) stretched to w x h round its corners; a256: its opacity */
+void d_slice(const Slice *s, int x, int y, int w, int h, int a256);
 #endif

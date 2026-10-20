@@ -63,7 +63,7 @@ static void ground_tables(void) {
 
 void scene_init(void) {
   ground_tables();
-  r_haze0 = 70, r_haze1 = 160;
+  r_haze0 = 60, r_haze1 = 145;
   r_haze_rgb = 0xCFEFFF;
   if (plat_slow()) {
     detail = 0.7f;
@@ -86,8 +86,8 @@ static float on_sleepers(float a, float b) {
   return n / (b - a);
 }
 
-void scene_camera(float x, float y, float z, float pitch, float f) {
-  r_camera(x, y, z, pitch, f, 160, 104);
+void scene_camera(float x, float y, float z, float pitch, float f, float cy) {
+  r_camera(x, y, z, pitch, f, 160, cy);
   /* the horizon: the row looking level */
   float kh = cam.sp / cam.cp;
   horizon = (int)(cam.cy - kh * cam.f) + 1;
@@ -156,7 +156,10 @@ static void clouds(uint16_t *row, int y) {
 }
 
 void scene_background(void) {
+  /* (rows with the same table and haze share the hazed copy) */
   static uint16_t hazed[GROUND_W];
+  static const uint16_t *hazed_lut;
+  static int hazed_t = -1;
   uint16_t haze = r_565(r_haze_rgb);
   for (int y = r_y0; y < r_y1; y++) {
     uint16_t *p = r_col + (y - r_y0) * SCREEN_W;
@@ -171,7 +174,10 @@ void scene_background(void) {
     uint32_t n = g->n;
     if (g->haze) {
       int t = (g->haze + 4) >> 3;
-      for (uint32_t i = 0; i < n; i++) hazed[i] = r_mix565(lut[i], haze, t);
+      if (lut != hazed_lut || t != hazed_t) {
+        for (uint32_t i = 0; i < n; i++) hazed[i] = r_mix565(lut[i], haze, t);
+        hazed_lut = lut, hazed_t = t;
+      }
       lut = hazed;
     }
     uint16_t left = lut[0], right = lut[n - 1];
@@ -220,7 +226,7 @@ static void bmodel(const BModel *m, float ox, float oy, float oz, int maxq) {
 /* how many faces at this distance */
 static int faces_at(float d) {
   d /= detail;
-  return d < 30 ? 999 : d < 60 ? 22 : d < 100 ? 12 : 6;
+  return d < 26 ? 999 : d < 50 ? 16 : d < 90 ? 9 : 5;
 }
 
 /* ---------------------------------------------------------------- the city */
@@ -281,7 +287,7 @@ static void barrier(const Obstacle *o) {
 
 void scene_draw(float t) {
   /* (near things first: what they hide is then left out pixel by pixel, without being drawn) */
-  float zfar = cam.z + 175 * detail;
+  float zfar = cam.z + 150 * detail;
   for (int i = 0; i < nobs; i++) {
     const Obstacle *o = &obs[i];
     if (o->z0 > zfar || o->z1 < cam.z) continue;

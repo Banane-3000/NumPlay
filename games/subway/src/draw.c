@@ -226,3 +226,23 @@ void d_image(int x, int y, const Image *im) {
     }
   }
 }
+
+void d_slice(const Slice *s, int x, int y, int w, int h, int a256) {
+  int y0 = imax(y, r_y0), y1 = imin(y + h, r_y1);
+  if (y0 >= y1) return;
+  int mw = w - 2 * s->bx, mh = h - 2 * s->by, sw = s->w - 2 * s->bx, sh = s->h - 2 * s->by;
+  if (mw < 1) mw = 1;
+  if (mh < 1) mh = 1;
+  for (int j = y0; j < y1; j++) {
+    int dy = j - y, sy = dy < s->by ? dy : dy >= h - s->by ? s->h - (h - dy) : s->by + (dy - s->by) * sh / mh;
+    const uint16_t *src = s->px + sy * s->w;
+    const uint8_t *sa = s->a + sy * s->w;
+    uint16_t *p = row(j);
+    for (int i = imax(x, 0); i < imin(x + w, SCREEN_W); i++) {
+      int dx = i - x, sx = dx < s->bx ? dx : dx >= w - s->bx ? s->w - (w - dx) : s->bx + (dx - s->bx) * sw / mw;
+      int al = sa[sx] * a256 >> 8;
+      if (al < 8) continue;
+      p[i] = al > 247 ? src[sx] : r_mix565(p[i], src[sx], (al + 4) >> 3);
+    }
+  }
+}

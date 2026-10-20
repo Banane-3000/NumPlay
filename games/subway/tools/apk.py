@@ -539,7 +539,7 @@ def write_bmodel(o, name, quads, atlas, colors=128, shift=(0, 0, 0), what="city"
         x1, y1 = int(np.ceil(uv[:, 0].max())), int(np.ceil(uv[:, 1].max()))
         pic = A[y0:y1, x0:x1]
         avg = 0
-        if pic.size and (pic[..., 3] > 127).mean() > 0.6:
+        if pic.size and (pic[..., 3] > 127).mean() > 0.92:
             rgb = pic[..., :3][pic[..., 3] > 127].mean(axis=0)
             avg = c565(*rgb) or 1
         faces.append((len(corners), len(pts), avg))
@@ -602,17 +602,18 @@ def pack_trains(o, th):
     for name, mesh in CARS:
         m = bake.Mesh()
         th.add(m, mesh)
-        quads, atlas = th.bake(m, visible=car_visible, texel=0.7, min_area=6, major_area=60, budget=18,
+        head = name in ("sub", "standard", "freight", "ramp")
+        quads, atlas = th.bake(m, visible=car_visible, texel=0.5, min_area=6, major_area=60, budget=18,
                                weight=lambda n, d: 1.0 if n[2] < -0.9 else 0.9 if abs(n[0]) > 0.9 else 0.7,
-                               atlas_max=(128, 128), name=name)
+                               atlas_max=(256, 128) if head else (128, 128), name=name)
         n = write_bmodel(o, f"car_{name}", quads, atlas, shift=(0, 0, 30), what="trains")
         print(f"car {name}: {len(m.P)} triangles, {n} faces")
     for name, mesh in BARRIERS:
         m = bake.Mesh()
         th.add(m, mesh)
         cx = 0   # (the barriers stand in the middle of their track; their shadow is beside them)
-        quads, atlas = th.bake(m, visible=lambda c, n: n[2] < 0.3 and n[1] > -0.5, texel=0.6, min_area=3, major_area=20,
-                               budget=10, atlas_max=(64, 64), name=name)
+        quads, atlas = th.bake(m, visible=lambda c, n: n[2] < 0.3 and n[1] > -0.5, texel=0.35, min_area=3, major_area=20,
+                               budget=10, atlas_max=(128, 64), name=name)
         n = write_bmodel(o, f"barrier_{name}", quads, atlas, shift=(-cx, 0, 0), what="trains")
         print(f"barrier {name}: {len(m.P)} triangles, {n} faces, centre x {cx:.1f}")
 
@@ -793,27 +794,94 @@ def render_model(pk, bundle, mesh, tex, size, yaw=0.5, pitch=0.25):
     return fit(im, size)
 
 
+def slice9(o, name, img, border, size_border):
+    """a button or panel picture for stretching (its corners kept): scaled so its border is size_border pixels,
+    kept as colours and alphas"""
+    k = size_border / border
+    w, h = max(2 * size_border + 2, round(img.width * k)), max(2 * size_border + 2, round(img.height * k))
+    im = np.asarray(img.resize((w, h), Image.LANCZOS)).astype(int)
+    px = [c565(*c[:3]) for c in im.reshape(-1, 4)]
+    a = [int(c[3]) for c in im.reshape(-1, 4)]
+    o.array("uint16_t", f"{name}_px", px, 16, "screens")
+    o.array("uint8_t", f"{name}_a", a, 32, "screens")
+    o.c.append(f"const Slice {name} = {{{w}, {h}, {size_border}, {size_border}, {name}_px, {name}_a}};")
+    o.c.append("")
+    o.h.append(f"extern const Slice {name};")
+
+
 def pack_screens(o, pk):
-    ui = sprites(pk, ATLAS_UI)
+    """the game's own screen pictures: buttons, icons, the pause button, the score's star, the logo"""
+    ob = {}
+    for x in pk.env(ATLAS_UI).objects:
+        if x.type.name == "Sprite":
+            d = x.read()
+            ob[d.m_Name] = d
+    ui = {n: d.image.convert("RGBA") for n, d in ob.items()}
     props = np.asarray(pk.texture("common-builtin_assets_textures_common", "common_props_tex"))
     pu = "common-builtin_assets_models_powerups"
     extra = {}
     for b in ("sprites-builtin_assets_ui_spriteatlas_fc_headstart", "sprites-builtin_assets_ui_spriteatlas_fc_booster",
               "sprites-builtin_assets_icon_feature_magnet"):
         extra.update(sprites(pk, b))
+    # buttons and panels, stretched on the calculator round their corners
+    for name, spr in (("sl_green", "Btn_Green_01"), ("sl_red", "Btn_Red_01"), ("sl_blue", "Btn_Blue_01"), ("sl_gold", "Btn_Gold_01"),
+                      ("sl_grey", "Btn_Grey_01"), ("sl_purple", "Btn_Purple_01"), ("sl_light", "Btn_Blue_02")):
+        d = ob[spr]
+        bd = d.m_Border
+        border = max(4.0, min(bd.x, bd.y, bd.z, bd.w) if min(bd.x, bd.y, bd.z, bd.w) > 0 else ui[spr].height / 3)
+        slice9(o, name, ui[spr], border, 7)
     icons = {
         "coin": ui["Icon_Coin"], "key": ui["Icon_Key"], "board": ui["Icon_Board"], "jetpack": ui["icon_jetpack_small"],
         "mystery": ui["icon_box_mysteryBox_Outlined"], "headstart": extra["Headstart_0"], "booster": extra["ScoreBooster_0"],
+        "star": ui["Icon_ScoreMultiplier_Small"], "check": ui["Icon_Check_02"], "lock": ui["Icon_Lock"],
+        "trophy": ui["Icon_Trophy"], "gift": ui["Icon_Gift"], "timer": ui["Icon_Timer_01"],
     }
     for key, img in icons.items():
-        for size, suffix in ((24, ""), (16, "_s")):
+        for size, suffix in ((24, ""), (15, "_s")):
             o.image(f"im_{key}{suffix}", fit(img, size))
     for key, mesh in (("sneakers", "powerups_superSneakers"), ("magnet", "powerups_coinMagnet"), ("double", "powerups_2xMultiplier")):
-        for size, suffix in ((24, ""), (16, "_s")):
+        for size, suffix in ((24, ""), (15, "_s")):
             o.image(f"im_{key}{suffix}", render_model(pk, pu, mesh, props, size))
+    # the pause button: the light blue button with its two bars
+    S = 8
+    pb = Image.new("RGBA", (26 * S, 26 * S), (0, 0, 0, 0))
+    btn = ui["Btn_Blue_02"]
+    bd = ob["Btn_Blue_02"].m_Border
+    pb.alpha_composite(_nine(btn, (bd.x, bd.y, bd.z, bd.w), 26 * S, 26 * S, 8 * S))
+    from PIL import ImageDraw
+    dr = ImageDraw.Draw(pb)
+    for cx in (9, 17):
+        dr.rounded_rectangle(((cx - 3) * S, 6.5 * S, (cx + 3) * S, 18.5 * S), radius=2 * S, fill=(56, 64, 97, 255))
+        dr.rounded_rectangle(((cx - 1.8) * S, 7.7 * S, (cx + 1.8) * S, 17.3 * S), radius=1.3 * S, fill=(255, 255, 255, 255))
+    o.image("im_pause", pb.resize((26, 26), Image.LANCZOS))
+    # the bricks the pause screen is decorated with (the game tints them its dark blue)
+    br = ui["Spr_Dec_Bricks_01"]
+    br = br.crop(br.getbbox())
+    br = br.resize((56, round(br.height * 56 / br.width)), Image.LANCZOS)
+    tint = np.asarray(br).copy()
+    tint[..., 0], tint[..., 1], tint[..., 2] = 18, 31, 51
+    o.image("im_bricks", Image.fromarray(tint, "RGBA"), colors=4)
     logo = sprites(pk, "challengeimages-builtin_assets_logo_subway_surfers")["logo_subway_surfers"]
     logo = logo.crop(logo.getbbox())
-    o.image("im_logo", logo.resize((156, round(logo.height * 156 / logo.width)), Image.LANCZOS))
+    o.image("im_logo", logo.resize((132, round(logo.height * 132 / logo.width)), Image.LANCZOS))
+
+
+def _nine(img, border, w, h, b):
+    """img stretched to w x h round its corners (border: its left, bottom, right, top in its pixels) drawn b wide"""
+    l, bt, r, t = (int(round(v)) for v in border)
+    if min(l, bt, r, t) <= 0:
+        return img.resize((w, h), Image.LANCZOS)
+    W, H = img.size
+    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    xs = [(0, l, 0, b), (l, W - r, b, w - b), (W - r, W, w - b, w)]
+    ys = [(0, t, 0, b), (t, H - bt, b, h - b), (H - bt, H, h - b, h)]
+    for sx0, sx1, dx0, dx1 in xs:
+        for sy0, sy1, dy0, dy1 in ys:
+            if sx1 > sx0 and sy1 > sy0 and dx1 > dx0 and dy1 > dy0:
+                out.alpha_composite(img.crop((sx0, sy0, sx1, sy1)).resize((dx1 - dx0, dy1 - dy0), Image.LANCZOS), (dx0, dy0))
+    return out
+
+
 
 def main(package):
     folder = Path(package)

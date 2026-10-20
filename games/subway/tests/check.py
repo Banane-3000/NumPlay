@@ -95,11 +95,11 @@ def long_runs(d):
 
 
 def shop(d):
-    # Down: the buttons, OK: the shop. Upgrades: OK five times on each line
+    # Down: the buttons, OK: the shop. Upgrades: OK six times on each line
     keys = ["30:ok", "60:down", "70:ok"]
     t = 100
     for row in range(4):
-        for _ in range(5):
+        for _ in range(6):
             keys.append(f"{t}:ok")
             t += 10
         keys.append(f"{t}:down")
@@ -113,11 +113,11 @@ def shop(d):
              f"{t + 60}:down", f"{t + 70}:ok", f"{t + 90}:back", f"{t + 110}:home"]
     play(d, "--coins", "400000", "--frames", str(t + 200), "--keys", ",".join(keys), "--shots", f"{t - 50},{t + 80}")
     s = save(d)
-    assert [s["u0"], s["u1"], s["u2"], s["u3"]] == [5, 5, 5, 5], s
+    assert [s["u0"], s["u1"], s["u2"], s["u3"]] == [6, 6, 6, 6], s
     assert s["boards"] >= 5 and s["headstarts"] >= 1 and s["boosters"] >= 1, s
     assert s["chars"] == 0b111 and s["character"] == 2, s
     assert s["ownboards"] == 0b11 and s["board"] == 1, s
-    spent = 4 * (500 + 1000 + 3000 + 10000 + 60000) + 600 + 2000 + 3000 + 500 + 6000 + 12000 + 7500
+    spent = 4 * (500 + 1000 + 2500 + 5000 + 15000 + 50000) + 600 + 2000 + 3000 + 500 + 6000 + 12000 + 7500
     assert s["coins"] <= 400000 - spent + 20000, s   # (a mystery box may give coins back)
 
 
