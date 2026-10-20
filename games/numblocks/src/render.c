@@ -1951,12 +1951,12 @@ static void ents_strip(int py0, int rows, uint16_t (*cb)[RW], float (*zb)[RW]) {
 }
 
 /* ---------------------------------------------------------------- the frame */
+static float eye_bri = 1, eye_sky = 1;   /* (fogColor1; the same without the night) */
 #if NB_DIMS
 /* The Nether and the End: WorldProviderHell's light table (never under 0.1), the End's light (0.22 and
  * more, EntityRenderer.updateLightmap); the fog's colour (WorldProvider*.getFogColor, mixed with the black
  * of their sky as updateFogColor does) dimmed where the eyes are dark (fogColor1, eased); no sun, moon,
  * stars or clouds; the Nether's fog close (doesXZShowFog: from 5% to half of 32 blocks) */
-static float eye_bri = 1;
 static void dims_light(void) {
   static const float face_shade[4] = {1.0f, 0.8f, 0.6f, 0.5f};
   float table[16];
@@ -2201,7 +2201,27 @@ void render_frame(const Camera *c, uint32_t tod) {
   cam_fr[2][0] = cam_z - oz, cam_fr[2][1] = cam_z + 1 - oz;
 #if NB_DIMS
   if (dim != DIM_OVERWORLD) dims_light();
+  else
 #endif
+  {
+    /* EntityRenderer.updateFogColor: the fog is as light as the spot the eyes are in (fogColor1, eased),
+     * so in a dark cave what is past the view fades to black, not to the sky; and under y 32 it darkens
+     * on to black (getVoidFogYFactor). The sky too where the sky's light does not reach: at this view
+     * distance Minecraft's sky is mostly that fog */
+    int lb = cam_i >= 0 ? vl[cam_i] : 15, bl = lb >> 4, sl = lb & 15;
+    float want[2];
+    for (int n = 0; n < 2; n++) {
+      int l = sl - (n ? 0 : sky_sub());
+      if (bl > l) l = bl;
+      float f = 1 - l / 15.0f;
+      want[n] = (1 - f) / (f * 3 + 1) * (1 - 2 / 32.0f) + 2 / 32.0f;
+    }
+    eye_bri += (want[0] - eye_bri) * 0.1f;
+    eye_sky += (want[1] - eye_sky) * 0.1f;
+    float v = (c->y - 1.62f) / 32, deep = v >= 1 ? 1 : v < 0 ? 0 : v * v, k = eye_bri * deep, ks = eye_sky * deep;
+    fog_r = (int)(fog_r * k), fog_g = (int)(fog_g * k), fog_b = (int)(fog_b * k);
+    sky_r = (int)(sky_r * ks), sky_g = (int)(sky_g * ks), sky_b = (int)(sky_b * ks);
+  }
   under_water = is_water(cam_b);
   if (under_water) {
     fog_r = 10, fog_g = 30, fog_b = 110;
