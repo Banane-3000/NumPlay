@@ -33,6 +33,7 @@ LCD scanout simulation. Saves and crash logs remain outside build/ and dist/.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import queue
 import re
@@ -52,7 +53,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 import numpy as np
-from PIL import Image, ImageTk, ImageDraw, ImageFont
+from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageEnhance
 
 try:
     from tkinterdnd2 import DND_FILES, TkinterDnD
@@ -93,17 +94,56 @@ LCD_MS_PER_PIXEL = (85.0 / (24 * 320 * 152) + 45.0 / (120 * 320 * 16)) / 2
 # replacement for a firmware-specific glyph rasterizer cycle model.
 FONT_CALL_MS = 0.030
 FONT_CHAR_MS = (44.0 / 120.0 - FONT_CALL_MS) / 18
-# NumWorks' own colours (Epsilon's palette): white and greys, and its yellow for what is going on
-BG = "#f5f5f5"        # around the calculator
-PANEL = "#ffffff"     # the side panel
-PANEL_2 = "#ececec"   # buttons
-HOVER = "#d9d9d9"
-LINE = "#d9d9d9"
-FG = "#414147"        # text
-MUTED = "#8c8c8c"     # secondary text
-ACCENT = "#ffb734"    # NumWorks yellow
-SELECT = "#d4d7e0"    # what is chosen
-ERROR_BG = "#fde3e3"
+# NUMPLAY_DARK_MODE_V1
+# Keep both palettes here so the theme can be changed while a game runs.
+# The calculator LCD image and calculator artwork are deliberately untouched.
+THEME_SETTINGS_FILE = Path.home() / ".numplay-emulator" / "settings.json"
+THEME_PALETTES = {
+    "light": {
+        "BG": "#f5f5f5", "PANEL": "#ffffff", "PANEL_2": "#ececec",
+        "HOVER": "#d9d9d9", "LINE": "#d9d9d9", "FG": "#414147",
+        "MUTED": "#8c8c8c", "ACCENT": "#ffb734", "SELECT": "#d4d7e0",
+        "ERROR_BG": "#fde3e3",
+    },
+    "dark": {
+        "BG": "#131821", "PANEL": "#1c232f", "PANEL_2": "#2b3544",
+        "HOVER": "#394759", "LINE": "#394759", "FG": "#edf1f9",
+        "MUTED": "#aab8cd", "ACCENT": "#ffb734", "SELECT": "#3c4b60",
+        "ERROR_BG": "#4c303a",
+    },
+}
+
+
+def _load_theme_preference():
+    try:
+        data = json.loads(THEME_SETTINGS_FILE.read_text(encoding="utf-8"))
+        return data.get("theme") if isinstance(data, dict) and data.get("theme") in THEME_PALETTES else "light"
+    except (OSError, ValueError, TypeError):
+        return "light"
+
+
+def _save_theme_preference(name):
+    """Preserve other settings and atomically save the chosen theme."""
+    try:
+        data = json.loads(THEME_SETTINGS_FILE.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            data = {}
+    except (OSError, ValueError, TypeError):
+        data = {}
+    data["theme"] = name
+    THEME_SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = THEME_SETTINGS_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    os.replace(tmp, THEME_SETTINGS_FILE)
+
+
+def _activate_theme_palette(name):
+    global CURRENT_THEME
+    CURRENT_THEME = name if name in THEME_PALETTES else "light"
+    globals().update(THEME_PALETTES[CURRENT_THEME])
+
+
+_activate_theme_palette(_load_theme_preference())
 UI_FAMILY = ("Helvetica Neue" if sys.platform == "darwin" else "Segoe UI" if os.name == "nt" else "DejaVu Sans")
 MONO_FAMILY = ("Menlo" if sys.platform == "darwin" else "Consolas" if os.name == "nt" else "DejaVu Sans Mono")
 FONT_GROW = 3 if sys.platform == "darwin" else 0   # (Tk's points are smaller on a Mac)
@@ -1500,7 +1540,7 @@ class FlatButton(tk.Label):
 
     def __init__(self, parent, text, command, primary=False):
         self._bg = ACCENT if primary else PANEL_2
-        super().__init__(parent, text=text, bg=self._bg, fg=FG, font=font(10, "bold" if primary else "normal"),
+        super().__init__(parent, text=text, bg=self._bg, fg=("#34343a" if primary else FG), font=font(10, "bold" if primary else "normal"),
                          pady=8, cursor="hand2", disabledforeground="#b5b5b5")
         self._command = command
         self.bind("<Enter>", lambda e: self._enabled() and super(FlatButton, self).configure(
@@ -1566,6 +1606,7 @@ class CalculatorSkinApp(LiveApp):
                  profile_speed: bool = False, start_live: bool = False):
         self.art_path = art_path
         self.art = Image.open(art_path).convert("RGB")
+        self._theme_art_original = self.art.copy()
         self.art_px = self.art.size
         self._canvas_image = None
         self._canvas_screen = None
@@ -1612,6 +1653,7 @@ class CalculatorSkinApp(LiveApp):
         self.follow_var.set(False)
         self._builder_poll_id = self.root.after(120, self._poll_builder)
         self._upload_poll_id = self.root.after(160, self._poll_upload)
+        self._apply_interface_theme(initial=True)
         if start_live:
             self.root.after(260, self._start_builder)
 
@@ -1647,6 +1689,10 @@ class CalculatorSkinApp(LiveApp):
                                        activeforeground=FG)
         options_button.pack(side="right")
         self._options_menu = tk.Menu(options_button, tearoff=0)
+        self.dark_mode_var = tk.BooleanVar(master=self.root, value=(CURRENT_THEME == "dark"))
+        self._options_menu.add_checkbutton(label="Dark mode", variable=self.dark_mode_var,
+                                           command=self._toggle_dark_mode)
+        self._options_menu.add_separator()
         options_button.configure(menu=self._options_menu)
         self._options_menu.add_command(label="Screenshot", command=self._focus_after(self.screenshot))
         self._options_menu.add_command(label="Keyboard shortcuts", command=self._focus_after(self.show_keymap))
@@ -1753,6 +1799,104 @@ class CalculatorSkinApp(LiveApp):
         self._update_upload_controls()
         self.root.focus_force()
         self.root.after(150, self.refocus_input)
+
+    # NUMPLAY_DARK_MODE_V1: immediate, persistent user-selected interface theme.
+    def _toggle_dark_mode(self):
+        requested = "dark" if self.dark_mode_var.get() else "light"
+        self._apply_interface_theme(requested)
+        try:
+            _save_theme_preference(requested)
+        except OSError as exc:
+            messagebox.showwarning("NumPlay theme",
+                                   f"Theme changed, but could not save it for next time:\n{exc}",
+                                   parent=self.root)
+        self.set_status("Dark mode" if requested == "dark" else "Light mode")
+        self.root.after(75, self.refocus_input)
+
+    def _apply_interface_theme(self, requested=None, *, initial=False):
+        """Repaint Tk widgets, including log windows, without restarting Unicorn.
+
+        Colours are replaced by their palette values rather than rebuilding
+        the window: doing so would interrupt the active calculator/game and
+        live builder. FlatButton stores its own background for mouse hovering.
+        """
+        previous = THEME_PALETTES[CURRENT_THEME]
+        if requested is not None:
+            _activate_theme_palette(requested)
+        updated = THEME_PALETTES[CURRENT_THEME]
+        mapping = {old.lower(): updated[key]
+                   for key, old in previous.items()}
+        tk_options = (
+            "background", "foreground", "activebackground", "activeforeground",
+            "selectcolor", "disabledforeground", "highlightbackground",
+            "highlightcolor", "insertbackground", "troughcolor",
+        )
+        visited = set()
+
+        def paint(widget):
+            # Tk menus and Toplevels can appear elsewhere in the widget tree.
+            if str(widget) in visited:
+                return
+            visited.add(str(widget))
+            try:
+                options = set(widget.keys())
+                changes = {}
+                for option in tk_options:
+                    if option not in options:
+                        continue
+                    value = str(widget.cget(option)).lower()
+                    if value in mapping and mapping[value] != value:
+                        changes[option] = mapping[value]
+                if changes:
+                    widget.configure(**changes)
+                if isinstance(widget, FlatButton):
+                    # FlatButton remembers the hover/leave base colour.
+                    primary = widget._bg.lower() == previous["ACCENT"].lower()
+                    widget._bg = ACCENT if primary else PANEL_2
+                    widget.configure(bg=widget._bg,
+                                     fg="#34343a" if primary else FG)
+                for child in widget.winfo_children():
+                    paint(child)
+            except tk.TclError:
+                pass
+
+        paint(self.root)
+        self.root.configure(bg=BG)
+        for menu in (self._options_menu, self._clock_submenu, self._manual_clock_menu):
+            try:
+                menu.configure(bg=PANEL, fg=FG,
+                               activebackground=SELECT, activeforeground=FG,
+                               selectcolor=ACCENT)
+            except (tk.TclError, AttributeError):
+                pass  # Native system menus may ignore these colours on macOS.
+
+        # ttk progress bars use the system theme unless styled explicitly.
+        try:
+            style = ttk.Style(self.root)
+            style.configure("NumPlay.Horizontal.TProgressbar",
+                            background=ACCENT, troughcolor=PANEL_2, borderwidth=0)
+            for bar in (self.progress, self.upload_progress):
+                bar.configure(style="NumPlay.Horizontal.TProgressbar")
+        except (tk.TclError, AttributeError):
+            pass
+
+        # Mason's segmented labels have their own selection-colour closure.
+        # Re-running the existing variable trace repaints them without calling
+        # the mode-switch commands or restarting the compiler/emulator.
+        for var in (self.view_var, self.mode_var):
+            var.set(var.get())
+        # Make the large calculator illustration comfortable at night too.
+        # Only the static shell image is dimmed; the actual 320x240 LCD pixels
+        # are always presented at their exact original brightness and colours.
+        self.art = (ImageEnhance.Brightness(self._theme_art_original).enhance(0.54)
+                    if CURRENT_THEME == "dark" else self._theme_art_original)
+        self._art_geometry = (0, 0, 0, 0)
+        try:
+            self._resize()
+            self.canvas.itemconfigure("native-border", outline=LINE)
+            self._draw_highlight()
+        except (tk.TclError, AttributeError):
+            pass
 
     def _section(self, parent, title):
         label = tk.Label(parent, text=title, bg=PANEL, fg=MUTED, font=font(9), anchor="w")
