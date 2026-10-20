@@ -68,11 +68,12 @@ All of these come in one app, **NumPlay.nwa**.
     <td align="center"><a href="games/sudoku/README.md"><img src="docs/media/thumb_sudoku.png" width="120" alt="Sudoku"><br><b>Sudoku</b></a></td>
     <td align="center"><a href="games/uttt/README.md"><img src="docs/media/thumb_uttt.png" width="120" alt="Ultimate Tic-Tac-Toe"><br><b>Ultimate Tic-Tac-Toe</b></a></td>
     <td align="center"><a href="games/sokoban/README.md"><img src="docs/media/thumb_sokoban.png" width="120" alt="Sokoban"><br><b>Sokoban</b></a></td>
-    <td align="center"><a href="games/numvisuals/README.md"><img src="docs/media/thumb_numvisuals.png" width="120" alt="NumVisuals"><br><b>NumVisuals</b></a></td>
   </tr>
 </table>
 
 Want just one game? Each one also comes as its own file on the [downloads page](https://github.com/Mason363/NumPlay/releases/latest).
+
+**NumVisuals**, moving backgrounds with a clock, a stopwatch, a timer or a counter on top, comes on its own: [download NumVisuals.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumVisuals.nwa). Its backgrounds are also in NumPlay: press ⌫ on the home screen.
 
 ## Big games, installed on their own
 
@@ -131,7 +132,7 @@ You need your calculator, its USB cable, and a computer with **Google Chrome** o
 | --- | --- | --- |
 | N0120 | Epsilon 23.2 or newer (the calculator's own software) | Everything |
 | N0110, N0115 | Epsilon 23.2 or newer | Everything. These models are about 2.5 times slower, so the big games show fewer frames per second, but they keep their speed. |
-| N0110, N0115 | Upsilon | NumPlay-Upsilon.nwa: 20 games (see Other versions) |
+| N0110, N0115 | Upsilon | NumPlay-Upsilon.nwa: 19 games (see Other versions) |
 | Any | Custom software built from Epsilon 25.2's source | Everything. These builds can give apps less memory (133 KB): on one that gives even less, a game that needs more says how much on its card. |
 
 To see your calculator's model and software, open **Settings**, then **About**. To update the software, go to [my.numworks.com](https://my.numworks.com) with the calculator plugged in.
@@ -147,7 +148,7 @@ To see your calculator's model and software, open **Settings**, then **About**. 
 | [NumPlay-Matrices.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay-Matrices.nwa) | The same app, in disguise: it looks like a math app called **Matrices**. |
 | [NumPlay-French.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay-French.nwa) | NumPlay en français : tous les jeux, en français. |
 | [NumPlay-Chinese.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay-Chinese.nwa) | NumPlay 中文版：所有游戏，简体中文。 |
-| [NumPlay-Upsilon.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay-Upsilon.nwa) | For calculators running **Upsilon**: the 20 games that fit in the memory it gives apps. |
+| [NumPlay-Upsilon.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay-Upsilon.nwa) | For calculators running **Upsilon**: the 19 games that fit in the memory it gives apps. |
 
 <img src="docs/media/home_invisible.png" width="240" alt="The home screen with NumPlay-Invisible: the spot after Settings looks empty"> <img src="docs/media/home_matrices.png" width="240" alt="The home screen with NumPlay-Matrices among the calculator's own apps">
 

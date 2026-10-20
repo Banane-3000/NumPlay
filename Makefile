@@ -31,7 +31,7 @@ APP_SPACE = 2031616
 # the games that fit it (NumPlay draws their text there: see launcher/src/compat.c)
 UPSILON_RAM = 107674
 UPSILON_GAMES = crossyroad blockblast portal tetris dinorun chess flappybird pacman snake connectfour solitaire g2048 minesweeper \
-  breakout twoplayer invaders sudoku uttt sokoban numvisuals
+  breakout twoplayer invaders sudoku uttt sokoban
 
 # NumPlay and its discreet versions: the same app, with another name and icon
 # on the calculator's home screen. Each one is a release file.
@@ -80,7 +80,6 @@ MOD_balatro = games/balatro/output/module.o
 MOD_buckshot = games/buckshot/output/module.o
 MOD_portal = games/portal/output/module.o
 MOD_chess = games/chess/output/module.o
-MOD_numvisuals = games/numvisuals/output/module.o
 MOD_tetris = $(B)/tetris/raw.o
 ENTRY = main
 ENTRY_tetris = np_tetris_main
@@ -286,7 +285,6 @@ SIM_balatro = games/balatro/output/sim-module.o
 SIM_buckshot = games/buckshot/output/sim-module.o
 SIM_portal = games/portal/output/sim-module.o
 SIM_chess = games/chess/output/sim-module.o
-SIM_numvisuals = games/numvisuals/output/sim-module.o
 SIM_tetris = $(B)/sim/tetris.o
 SIM_CFLAGS = -std=gnu11 -O2 -fPIC -DNP_SIMULATOR=1 -DNP_VERSION='"$(VERSION)"' $(EADK_SIM_CFLAGS) -Ilauncher/src -Wall -Wno-unused-parameter
 

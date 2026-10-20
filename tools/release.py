@@ -20,7 +20,7 @@ import re
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 REPO = "https://github.com/Mason363/NumPlay"
 # in games.json, but not games
-EXTRAS = {"numvisuals"}
+EXTRAS = set()
 # games too big to fit next to NumPlay on the calculator: only on their own, in a section of their own
 ALONE = {
     "celeste": ("Celeste", "the whole climb up Celeste Mountain. Too big to share the calculator with NumPlay: install it "
@@ -58,6 +58,8 @@ ALONE = {
     "sonic": ("Sonic the Hedgehog", "the whole 1991 game: Green Hill to Scrap Brain, the Final Zone, the Special "
               "Stages and the six Chaos Emeralds, and the ending. Too big to share the calculator with NumPlay: install "
               "it on its own"),
+    "numvisuals": ("NumVisuals", "moving backgrounds with a clock, a stopwatch, a timer, a counter or your own words. "
+                   "Its backgrounds are also in NumPlay's home screen (Backspace): install it on its own"),
     "cookieclicker": ("Cookie Clicker", "the whole game, with its own pictures: every building and upgrade, golden and "
                       "wrath cookies, the grandmapocalypse, ascension and the heavenly upgrades, sugar lumps, the "
                       "dragon, Santa and the Grimoire. Too big to share the calculator with NumPlay: install it on its "
@@ -72,7 +74,7 @@ LANGUAGES = [
     ("NumPlay-French.nwa", "NumPlay en français : tous les jeux, en français"),
     ("NumPlay-Chinese.nwa", "NumPlay 中文版：所有游戏，简体中文"),
 ]
-UPSILON = ("NumPlay-Upsilon.nwa", "For calculators running Upsilon (N0110, N0115): the 20 games that fit in the memory "
+UPSILON = ("NumPlay-Upsilon.nwa", "For calculators running Upsilon (N0110, N0115): the 19 games that fit in the memory "
            "Upsilon gives apps. Install it with nwlink, see the README")
 
 
