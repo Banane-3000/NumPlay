@@ -83,11 +83,10 @@ static const uint32_t colors[LEVELS][2] = {
   {0xEA7851, 0x4A3B35}, {0xCD7647, 0x40312A}, {0xAB7050, 0x401D0D}, {0xCD7647, 0x2F1509},
 };
 #define BLACK 0
-#define WHITE 0xFFFF
 
 /* leveldevil.sav */
 static struct {
-  uint8_t magic, version, flags, open; /* flags: 1 the keys were shown; open: the levels open, 1 to 16 */
+  uint8_t magic, version, flags, open; /* flags: none now; open: the levels open, 1 to 16 */
   uint8_t level, room;                 /* the level last played, and the room reached in it */
   uint16_t done;                       /* the levels cleared, a bit each */
   uint32_t deaths;                     /* in all */
@@ -120,7 +119,7 @@ static int no, ns, nr;
 static uint16_t gcol[33];
 
 static color_t strip[SCREEN_W * STRIP_H];
-static int level, rnum, ri, scr, ov, sel, tries, modes, frame, shake, shake_n;
+static int level, rnum, ri, scr, ov, sel, modes, frame, shake, shake_n;
 static uint8_t cnt[EVENTS];
 static uint16_t at_[EVENTS];
 /* the runner: its box's corner and its speed (256ths of a pixel, a step), its size (pixels) */
@@ -320,7 +319,6 @@ static void reset(void) { /* the room as it starts */
 static void enter(void) { /* room rnum of the level */
   ri = level * ROOMS + rnum;
   bg = gfx_rgb(colors[level][0]), fg = gfx_rgb(colors[level][1]);
-  tries = 0;
   reset();
 }
 
@@ -940,7 +938,7 @@ static void map_move(int dx, int dy) {
   else
     for (int k = 0; k < sv.open; k++) {
       int ex = portal_at[k][0] - x, ey = (portal_at[k][1] - y) * dy, d = ex * ex * 2 + ey * ey;
-      if (ey > 8 && d < bd) bd = d, best = k;
+      if (ey > 8 && iabs(ex) <= 3 * ey && d < bd) bd = d, best = k; /* (up or down, not far to the side) */
     }
   if (best >= 0) sv.sel = (uint16_t)best;
 }
@@ -970,7 +968,8 @@ int main(void) {
       sel = (sel + dy + 4) % 4;
       if (hitk & back_k || (hitk & ok && sel == 0)) ov = OV_NONE, jaws_open(), jaw_still = 1; /* Resume */
       else if (hitk & ok && sel == 1) ov = OV_NONE, reset(), jaws_open();                     /* Restart */
-      else if (hitk & ok && sel == 2) ov = OV_NONE, sv.room = (uint8_t)rnum, save(), jaw_hold = 20, jaw_then = THEN_MAP;
+      else if (hitk & ok && sel == 2) /* Levels: the map, the room left as it was */
+        ov = OV_NONE, sv.room = (uint8_t)rnum, save(), jaw_hold = 20, jaw_then = THEN_MAP, jaw_still = 1;
       else if (hitk & ok) ov = OV_QUIT, sel = 0;
     } else if (ov == OV_QUIT) {
       if (dx || dy) sel ^= 1;
@@ -993,7 +992,7 @@ int main(void) {
       ov = OV_PAUSE, sel = 0, jaws_shut();
       save();
     } else if (waiting && hitk) { /* the game's retry: any key */
-      tries++, reset();
+      reset();
       hitk = 0;
     }
     if (quit) break;
