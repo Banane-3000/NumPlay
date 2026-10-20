@@ -334,4 +334,5 @@ void game_init(void);
 void game_frame(void);   /* one update at 60 Hz (and drawing when due) */
 void game_draw(void);
 void game_save(void);
+void game_autosave(void);
 #endif

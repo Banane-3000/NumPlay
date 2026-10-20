@@ -126,10 +126,16 @@ void save_load(void) {
 }
 
 bool save_write(void) {
-  g_save.checksum = checksum(offsetof(SaveData, checksum));
-  bool ok = plat_save(SAVE_NAME, &g_save, sizeof g_save);
+  bool ok = save_write_quick();
   save_copy();
   return ok;
+}
+
+/* the save alone, without its copy: while a chapter is played (its room in the cache would push out what the room
+ * uses); the copy is written again at the chapter's end and on leaving */
+bool save_write_quick(void) {
+  g_save.checksum = checksum(offsetof(SaveData, checksum));
+  return plat_save(SAVE_NAME, &g_save, sizeof g_save);
 }
 
 ModeStats *save_mode(void) { return &g_save.modes[g_session.area][g_session.mode]; }
