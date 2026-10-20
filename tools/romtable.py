@@ -20,6 +20,7 @@ All numbers are little-endian. To be the same byte for byte as the website's for
 
 usage:
   romtable.py -o roms.o [ROM...]       an ARM object for the calculator (the default)
+  romtable.py -o roms.o --list FILE    the ROMs named in FILE, one a line (names with spaces)
   romtable.py --c roms.c [ROM...]      the same table as C, for the simulator and tests
   romtable.py --bin roms.bin [ROM...]  just the table's bytes"""
 import argparse
@@ -102,10 +103,13 @@ def main():
     ap.add_argument("-o", dest="obj", help="ARM object to write")
     ap.add_argument("--c", dest="csrc", help="C source to write")
     ap.add_argument("--bin", dest="bin", help="raw table to write")
+    ap.add_argument("--list", help="a file naming more ROMs, one a line (for names with spaces)")
     ap.add_argument("roms", nargs="*")
     a = ap.parse_args()
     if not (a.obj or a.csrc or a.bin):
         ap.error("say where: -o, --c or --bin")
+    if a.list:
+        a.roms += [line.strip() for line in open(a.list, encoding="utf-8") if line.strip()]
     blob = table(a.roms)
     for path, data in ((a.obj, lambda: elf_object(blob)), (a.csrc, lambda: c_source(blob).encode()),
                        (a.bin, lambda: blob)):

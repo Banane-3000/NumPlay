@@ -1,6 +1,7 @@
 # Retro-Go: Game Boy, Game Boy Color and NES games on the calculator.
 #   make          build output/retrogo.nwa (RetroGo.nwa), its ROM table from ROMS (none: empty)
-#   make ROMS="a.gb b.nes"   the same with those games in it, to try them
+#   make ROMS="a.gb b.nes"   the same with those games in it, to try them (or ROMS_LIST=file:
+#                            one a line, for names with spaces)
 #   make check    link the app like the calculator does (output/retrogo.bin)
 #   make test     the emulators and the ROM table on this computer
 #
@@ -68,7 +69,7 @@ $(BUILD_DIR)/xfont.o: ../../launcher/src/xfont.c ../../launcher/src/np_xfont.h $
 # the file as it is when it wouldn't change, so nothing is linked again for nothing.
 $(BUILD_DIR)/roms.o: FORCE
 	@mkdir -p $(BUILD_DIR)
-	$(Q) $(PY) ../../tools/romtable.py -o $@ $(ROMS)
+	$(Q) $(PY) ../../tools/romtable.py -o $@ $(ROMS) $(if $(ROMS_LIST),--list $(ROMS_LIST))
 
 $(BUILD_DIR)/retrogo-full.nwa: $(CORE_O) $(APP_O) $(BUILD_DIR)/gfx.o $(BUILD_DIR)/font_data.o $(BUILD_DIR)/xfont.o \
   $(BUILD_DIR)/icon.o $(BUILD_DIR)/roms.o src/roms.ld
