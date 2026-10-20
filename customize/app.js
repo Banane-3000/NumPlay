@@ -1013,7 +1013,7 @@
     }
     tips();
     logoKeys();
-    const first = !store('numplay-intro') && !location.hash;
+    const first = (!store('numplay-intro') && !location.hash) || /[?&]intro\b/.test(location.search);  // (or ?intro, to see it)
     restore();
     if (st.lang !== 'en') loadKit(st.lang).then(render).catch(() => { st.lang = 'en'; render(); });
     render();
