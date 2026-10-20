@@ -5,7 +5,9 @@
 (() => {
   const KIT = 'kit/';
   const MiB = 1048576;
-  const XL_SPACE = Math.round(6.6 * MiB);  // Enlarged Extra Apps (Nwagra), as issue #57 promised
+  // Enlarged Extra Apps (nwagyu's Nwagra): it moves the end of the app area from the end of
+  // Epsilon's slot to the end of the 8 MB flash, so apps go from 0x90200000 to 0x90800000
+  const XL_SPACE = 6 * MiB;
   const SYS = {
     1: { tag: 'GB', name: 'Game Boy', color: '#6d8a0c', shell: '#c9c9cf' },
     2: { tag: 'GBC', name: 'Game Boy Color', color: '#6a3fb5', shell: '#b9a6d8' },
@@ -171,11 +173,11 @@
       const k = Math.min(1, (now - t0) / 220), e = 1 - Math.pow(1 - k, 3);
       shownUsed = from + (used - from) * e;
       $('#used').textContent = (shownUsed / MiB).toFixed(2);
-      $('#status-line').textContent = (shownUsed / MiB).toFixed(2) + ' OF ' + (cap / MiB).toFixed(cap === XL_SPACE ? 1 : 2) + ' MB';
+      $('#status-line').textContent = (shownUsed / MiB).toFixed(2) + ' OF ' + +(cap / MiB).toFixed(2) + ' MB';
       $('#battery').style.width = 'calc(' + Math.min(100, 100 * shownUsed / cap) + '% - 2px)';
       if (k < 1) requestAnimationFrame(step);
     };
-    requestAnimationFrame(step);
+    step(t0);
 
     // the icons
     for (const [id, b] of buttons) {
