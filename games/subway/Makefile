@@ -4,8 +4,8 @@
 #   make host       build/play: the game on a computer, for tests and screenshots
 #   make test       the game played on a computer (tests/check.py, with the sanitizers)
 #   make assets     src/assets.c again: the fonts (tools/assets.py: Python + Pillow + NumPy)
-#   make data APK=DIR   src/data.c and src/data.h again, from the game's own Android package unzipped in DIR
-#                   (tools/apk.py: Python + UnityPy + Pillow + NumPy; the package is only read)
+#   make data APK=DIR   src/data.c, src/data.h and src/icon.png again, from the game's own Android package unzipped
+#                   in DIR (tools/apk.py, tools/icon.py: Python + UnityPy + Pillow + NumPy; the package is only read)
 Q ?= @
 # the ARM toolchain on the PATH, or in TOOLCHAIN=<its bin folder>
 TOOLCHAIN ?=
@@ -67,6 +67,8 @@ assets:
 
 data:
 	python3 -I tools/apk.py $(APK)
+	python3 -I tools/icon.py $(APK) src/icon.png
+	python3 ../../tools/round_icons.py src/icon.png
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) build

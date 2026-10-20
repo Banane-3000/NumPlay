@@ -274,8 +274,20 @@ int main(int argc, char **argv) {
     }
     bool keep = raw && f >= raw_from && f <= raw_to && f % 4 == 0;   /* (15 frames a second) */
     if (shot || keep || f % draw_every == 0) {
+      extern uint32_t r_stat[4], r_stat_rows;
+      uint32_t before = r_stat[1] + r_stat[2] + r_stat[3] + r_stat[0] / 3 + r_stat_rows * 6;
       app_draw();
       if ((int)perf_polys > max_polys) max_polys = (int)perf_polys;
+      uint32_t cost = r_stat[1] + r_stat[2] + r_stat[3] + r_stat[0] / 3 + r_stat_rows * 6 - before;
+      static uint32_t worst[5], worst_f[5];
+      for (int k = 0; k < 5; k++)
+        if (cost > worst[k]) {
+          for (int m = 4; m > k; m--) worst[m] = worst[m - 1], worst_f[m] = worst_f[m - 1];
+          worst[k] = cost, worst_f[k] = (uint32_t)f;
+          break;
+        }
+      if (stats && f == frames - 1)
+        for (int k = 0; k < 5; k++) printf("worst frame %u: %u\n", worst_f[k], worst[k]);
     }
     if (keep) {
       char p[512];

@@ -213,7 +213,10 @@ static float pattern(float z, float speed) {
   /* (easier ones while the run is young) */
   if (patterns < 3) k = k % 40;
   float end = z;
-  if (world_covered(z) || world_covered(z + 60)) {
+  /* (no train may run on under a low roof: anything near one is barriers only) */
+  bool low = false;
+  for (float dz = -10; dz <= 130; dz += 10) low |= world_covered(z + dz);
+  if (low) {
     end = covered_pattern(z, d, l);
     patterns++;
     return end;

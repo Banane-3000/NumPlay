@@ -382,19 +382,29 @@ static void raster(const Poly *q) {
   const Pos *pp = pos + q->v0;
   const Attr *at = q->kind == K_SHADE || q->kind == K_TEX ? attr + q->at : NULL;
   int n = q->n;
-  Edge e[MAXN];
-  int ne = 0;
+  /* the edges of each side (a convex polygon has a left side and a right side from its top to its bottom; which
+   * way it turns tells which edges go down which side), each side's from the top */
+  float area = 0;
+  for (int i = 0, j = n - 1; i < n; j = i++) area += (float)pp[j].x * (float)pp[i].y - (float)pp[i].x * (float)pp[j].y;
+  Edge e[2][MAXN];
+  int ne[2] = {0, 0};
   for (int i = 0, j = n - 1; i < n; j = i++) {
     float ay = pp[j].y * (1 / SUB), by = pp[i].y * (1 / SUB);
     if (ay == by) continue;
     int ka = j, kb = i;
-    if (ay > by) {
+    bool down = by > ay;
+    if (!down) {
       float t = ay;
       ay = by, by = t;
       ka = i, kb = j;
     }
     if (by <= (float)ya || ay >= (float)yb) continue;
-    Edge *E = &e[ne++];
+    int side = (down == (area > 0)) ? 1 : 0;   /* 1: right */
+    Edge *E = &e[side][ne[side]];
+    /* (kept in order from the top) */
+    int k = ne[side]++;
+    while (k > 0 && e[side][k - 1].y0 > ay) e[side][k] = e[side][k - 1], k--;
+    E = &e[side][k];
     float h = 1 / (by - ay), xa = pp[ka].x * (1 / SUB), xb = pp[kb].x * (1 / SUB);
     E->y0 = ay, E->y1 = by;
     E->dx = (xb - xa) * h, E->x = xa - ay * E->dx;
@@ -407,7 +417,7 @@ static void raster(const Poly *q) {
       E->dv = (vb - va) * h, E->v = va - ay * E->dv;
     }
   }
-  if (ne < 2) return;
+  if (!ne[0] || !ne[1]) return;
 #ifdef HOST
   r_stat_polys++;
 #endif
@@ -417,16 +427,20 @@ static void raster(const Poly *q) {
   int alpha = q->alpha >> 3;
   float qa = q->a > 30000 ? 30000 : q->a < -30000 ? -30000 : q->a;   /* (seen nearly edge-on) */
   int32_t da = (int32_t)(qa * 65536.0f);
+  int li = 0, ri = 0;
   for (int y = ya; y < yb; y++) {
-    float yc = (float)y + 0.5f, xl = 1e9f, xr = -1e9f;
-    const Edge *L = NULL, *R = NULL;
-    for (int k = 0; k < ne; k++) {
-      if (yc < e[k].y0 || yc >= e[k].y1) continue;
-      float x = e[k].x + yc * e[k].dx;
-      if (x < xl) xl = x, L = &e[k];
-      if (x > xr) xr = x, R = &e[k];
+    float yc = (float)y + 0.5f;
+    while (li < ne[0] - 1 && yc >= e[0][li].y1) li++;
+    while (ri < ne[1] - 1 && yc >= e[1][ri].y1) ri++;
+    const Edge *L = &e[0][li], *R = &e[1][ri];
+    if (yc < L->y0 || yc >= L->y1 || yc < R->y0 || yc >= R->y1) continue;
+    float xl = L->x + yc * L->dx, xr = R->x + yc * R->dx;
+    if (xl > xr) {
+      float t = xl;
+      xl = xr, xr = t;
+      const Edge *T = L;
+      L = R, R = T;
     }
-    if (!L || xl > xr) continue;
     int x0 = xl <= -1 ? 0 : (int)(xl + 0.5f), x1 = xr >= SCREEN_W ? SCREEN_W : (int)(xr + 0.5f);
     if (x0 < 0) x0 = 0;
     if (x0 >= x1) continue;

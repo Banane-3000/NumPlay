@@ -166,12 +166,17 @@ static void shop_buy(void) {
 static void camera_follow(void) {
   float tx = pl.x * 0.75f, ty = CAM_Y + pl.ground * 0.85f + (pl.y - pl.ground) * 0.35f;
   if (pl.fly > 0) ty = CAM_Y + pl.y * 0.8f;
-  /* under a roof */
-  float roof = world_roof(pl.z - CAM_BACK) < world_roof(pl.z + 4) ? world_roof(pl.z - CAM_BACK) : world_roof(pl.z + 4);
-  if (ty > roof - 0.4f) ty = roof - 0.4f;
-  /* (the game's follow speeds: 15 across, 7.5 up and down) */
+  /* under a roof: from a little before it (the game lowers its camera there) */
+  float roof = 1000;
+  for (float dz = -CAM_BACK; dz <= 16; dz += 2) {
+    float r = world_roof(pl.z + dz);
+    if (r < roof) roof = r;
+  }
+  if (ty > roof - 0.5f) ty = roof - 0.5f;
+  /* (the game's follow speeds: 15 across, 7.5 up and down; at once down under a roof) */
   cam_x += (tx - cam_x) * (1 - 1 / (1 + 15 * DT));
   cam_y += (ty - cam_y) * (1 - 1 / (1 + 7.5f * DT));
+  if (cam_y > roof - 0.5f) cam_y = roof - 0.5f;
 }
 
 void app_step(uint32_t keys, uint32_t pressed) {
