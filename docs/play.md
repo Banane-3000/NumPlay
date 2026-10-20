@@ -20,6 +20,24 @@ Your progress is also copied into a Python script, `numplay_saves.py`, so updati
 
 In every game, **Back** pauses, and the pause menu has a small **Quit game** button. It always asks first, since Back sits right next to OK.
 
+## Suika Game
+
+![Suika Game](../games/suika/docs/shot.png)
+
+| Key | What it does |
+| --- | --- |
+| **Left / Right** | Move the cloud |
+| **OK / EXE** | Drop one fruit |
+| **Back** | Pause / resume |
+| **Home / On-Off** | Save and leave |
+
+Merge matching fruit to reach the watermelon. Only the next fruit is shown;
+each new fruit is an independent draw from the five smallest kinds. There is
+no reserve, placement hint or combo bonus. The red rim warns when the pile
+needs to settle. Pause freezes physics; **New game** asks before replacing a
+run. **Title screen**, then **Back**, returns to NumPlay with the run saved.
+English-only. [More details](../games/suika/README.md).
+
 ## NumDash
 
 <img src="media/numdash.gif" width="320" align="right" alt="NumDash gameplay: Stereo Madness">
