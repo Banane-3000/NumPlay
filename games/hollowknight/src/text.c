@@ -1,9 +1,13 @@
 /* Text: the game's sheets' entries (TEXT, in the pack's own code page) in its fonts (FONT: glyphs of 4-bit alpha);
  * the dialogue box (DialogueManager: Box Open, its Text's DialogueBox and Dialogue Page Control) and the prompt
- * markers over what the Knight can act on (PromptMarker). Text is a third bigger than the game's (tools/text.py),
- * the boxes with it. */
+ * markers over what the Knight can act on (PromptMarker). The boxes are a third bigger than the game's, the text read
+ * in them bigger still, to read on the calculator's screen (tools/text.py: the titles as the game has them). */
 #include <math.h>
 #include "game.h"
+#ifdef HOST
+#include <stdio.h>
+#include <stdlib.h>
+#endif
 
 #define DT 0.02f
 #define HUD_PX (FOCAL / (-1.342f - CAM_Z))   /* (the HUD's pixels a unit) */
@@ -71,6 +75,22 @@ float text_box(int text, int style, float x, float y, float w, int align, float 
     i = next;
   }
   return lines * font_line(st) / px;
+}
+
+/* a description's style: the message's, else the smaller ones, the first in which it fits in room (HUD units) down
+ * from its top, w wide (the last, where none does) */
+#ifdef HOST
+uint32_t g_text_overrun;   /* (tests: a text too long for its box even in the smallest) */
+#endif
+int text_fit(int text, float w, float room) {
+  static const int8_t styles[] = {STYLE_MSG, STYLE_MSG_S, STYLE_MSG_XS};
+  for (unsigned i = 0; i < sizeof styles; i++)
+    if (text_box(text, styles[i], 0, 0, w, 0, 0) <= room + 0.01f) return styles[i];
+#ifdef HOST
+  g_text_overrun++;
+  if (getenv("HKOVERRUN")) printf("   text %d: %.2f high in MSG_XS, room %.2f\n", text, text_box(text, STYLE_MSG_XS, 0, 0, w, 0, 0), room);
+#endif
+  return STYLE_MSG_XS;
 }
 
 /* ---------------------------------------------------------------- the dialogue box */

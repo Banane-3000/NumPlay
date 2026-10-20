@@ -5,6 +5,8 @@
   the ground, and can slash and move; and spikes there send him back to a good place
 - the ground's seams, as the calculator rounds: landed a few float steps low, the Knight walks off both ways; jumping
   at a wall, he falls back down
+- the text of the shops, the inventory (its items, charms and map), the menus, the messages and the stag's menu: in the
+  screen, in its box, no line over another
 - every arena won: its fight over and the room's battle gates open, also as the Knight comes back and after a save and
   a load
 - a long walk of made up keys from every room: the Knight never out of the room, without control, wedged, undrawn or
@@ -54,6 +56,9 @@ def main():
     results.append(report("gates", rc, out, ("FAIL",)))
     rc, out = play("--gates", "seams")
     results.append(report("seams", rc, out, ("FAIL",)))
+    with tempfile.TemporaryDirectory() as saves:
+        rc, out = play("--gates", "texts", env={"HKSAVES": saves})
+    results.append(report("texts", rc, out, ("FAIL",)))
     with tempfile.TemporaryDirectory() as saves:
         rc, out = play("--gates", "arenas", env={"HKSAVES": saves})
     results.append(report("arenas", rc, out, ("FAIL",)))

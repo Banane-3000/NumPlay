@@ -348,7 +348,161 @@ static int seams_test(void) {
   return fails ? 1 : 0;
 }
 
+/* the text on the screens that show much of it (the shops, the inventory and its charms and map, the menus, the
+ * messages, a conversation), each frame drawn: in the screen, no line over another, none left out (gfx.c's audit) */
+extern bool g_text_audit;
+extern char g_text_audit_log[2048];
+static int text_fails;
+static char text_seen[64][160];
+static int text_nseen;
+static void text_frame(const char *where, bool menu) {
+  if (menu) {
+    g_gfx_no_room = !menu_in_game();
+    if (menu_in_game()) game_draw_layers();
+    menu_draw();
+    gfx_frame();
+  } else
+    game_draw();
+  if (getenv("HKTEXTSHOTS")) {   /* (each frame checked, as an image: HKTEXTSHOTS=its folder) */
+    static int nshot;
+    char path[256];
+    snprintf(path, sizeof path, "%s/%03d_%s.ppm", getenv("HKTEXTSHOTS"), nshot++, where);
+    for (char *c = path + strlen(getenv("HKTEXTSHOTS")) + 1; *c; c++)
+      if (*c == ' ') *c = '_';
+    host_shot(path);
+  }
+  extern uint32_t g_text_overrun;
+  if (g_text_overrun) {
+    size_t k = strlen(g_text_audit_log);
+    snprintf(g_text_audit_log + k, sizeof g_text_audit_log - k, "a description too long for its box; ");
+    g_text_overrun = 0;
+  }
+  if (!g_text_audit_log[0]) return;
+  char line[160];
+  snprintf(line, sizeof line, "%s: %s", where, g_text_audit_log);
+  for (int i = 0; i < text_nseen; i++)
+    if (!strcmp(text_seen[i], line)) return;
+  if (text_nseen < 64) strcpy(text_seen[text_nseen++], line);
+  printf("FAIL texts %s\n", line);
+  text_fails++;
+}
+/* (keys as --play has them; each step drawn) */
+static void text_keys(const char *where, const char *keys, bool menu) {
+  for (const char *p = keys; *p;) {
+    uint32_t k = 0;
+    for (; *p && *p != '*'; p++)
+      k |= *p == 'L' ? K_LEFT : *p == 'R' ? K_RIGHT : *p == 'U' ? K_UP : *p == 'D' ? K_DOWN : *p == 'O' ? K_OK | K_JUMP
+         : *p == 'B' ? K_BACK | K_ATTACK : *p == 'P' ? K_PAUSE : *p == 'I' ? K_INV : *p == 'M' ? K_MAP
+         : *p == 'S' ? K_DASH : 0;
+    int n = *p == '*' ? atoi(++p) : 1;
+    while (*p && *p != ',') p++;
+    if (*p == ',') p++;
+    for (int i = 0; i < n; i++) {
+      if (!menu || !menu_tick(k)) game_tick(stag_tick(shop_tick(inv_tick(k))));
+      if (i == n - 1) text_frame(where, menu);   /* (as it settles: panes slide, windows open) */
+    }
+  }
+}
+static void text_room(const char *room, float x, float y, const char *flags) {
+  game_new();
+  g_pd.geo = 9999;
+  for (const char *f = flags; *f;) {
+    pd_set_flag(atoi(f), true);
+    while (*f && *f != ',') f++;
+    if (*f) f++;
+  }
+  for (int r = 0; r < NUM_ROOMS; r++)
+    if (!strcmp(room_name(r), room)) game_enter(r, x, y, true);
+}
+static int texts_test(void) {
+  g_text_audit = true;
+  char down[512] = "_*80,U*2,_*100";
+  for (int i = 0; i < 14; i++) strcat(down, ",D*2,_*25");
+  /* the shops: every row, then the confirmation (a new game's stock; then with the maps and pins had, the rest) */
+  static const struct { const char *room; float x; const char *flags; } shops[] = {
+      {"Room_mapper", 17.35f, "123,149"}, {"Room_mapper", 17.35f, "123,149,1,2,130,131,132,133,134,135,136"},
+      {"Room_shop", 15.6f, "23,122"}, {"Room_Charm_Shop", 17.14f, "124"}};
+  for (unsigned k = 0; k < sizeof shops / sizeof shops[0]; k++) {
+    text_room(shops[k].room, shops[k].x, 6.5f, shops[k].flags);
+    text_keys(shops[k].room, down, false);
+    text_keys(shops[k].room, "O*2,_*60,D*2,_*20,B*2,_*40", false);
+  }
+  /* the inventory: its panes, every place on them (with all it can hold); the charms, every one (at a bench too); the
+   * map */
+  for (int bench = 0; bench < 2; bench++) {
+    text_room("Town", 60, 12, bench ? "0,1,2,3,14,119,123,37,38,39,40,42,43,44,45,50,53,54,55,56,57"
+                                    : "1,2,3,14,119,123,37,38,39,40,42,43,44,45,50,53,54,55,56,57");
+    g_pd.charm_slots = 3, g_pd.has_spell = true, g_pd.fireball_level = 1, g_pd.simple_keys = 1, g_pd.rancid_eggs = 1;
+    g_pd.heart_pieces = 2, g_pd.vessel_fragments = 1;
+    pd_set_flag(PDF_HEART_PIECE_COLLECTED, true), pd_set_flag(PDF_VESSEL_FRAGMENT_COLLECTED, true);
+    for (int i = 0; i < 4; i++) g_pd.trinkets[i] = 1;
+    char keys[1024] = "_*40,I*2,_*60";
+    for (int i = 0; i < 6; i++) {   /* (each row, left to right, then down) */
+      for (int j = 0; j < 7; j++) strcat(keys, ",R*2,_*15");
+      strcat(keys, ",D*2,_*15");
+      for (int j = 0; j < 7; j++) strcat(keys, ",L*2,_*15");
+      strcat(keys, ",D*2,_*15");
+    }
+    text_keys(bench ? "inventory at a bench" : "inventory", keys, false);
+  }
+  /* the quick map of each area */
+  static const char *const quick[] = {"Town", "Crossroads_04", "Fungus1_01"};
+  for (unsigned i = 0; i < sizeof quick / sizeof quick[0]; i++) {
+    text_room(quick[i], 20, 12, "1,2,6,12,16,130,131");
+    memset(g_pd.rooms_mapped, 0xFF, sizeof g_pd.rooms_mapped), memset(g_pd.rooms_visited, 0xFF, sizeof g_pd.rooms_visited);
+    text_keys("quick map", "_*60,M*90", false);
+  }
+  /* the inventory's map, its key and pins shown (Shift); the stag's menu, every station open */
+  text_room("Town", 60, 12, "1,2,130,131,132,133,134,135,136,137,138,139,140,141,142");
+  memset(g_pd.rooms_mapped, 0xFF, sizeof g_pd.rooms_mapped), memset(g_pd.rooms_visited, 0xFF, sizeof g_pd.rooms_visited);
+  text_keys("map", "_*40,I*2,_*60,L*2,_*20,L*2,_*20,L*2,_*20,L*2,_*40,S*2,_*30,S*2,_*30,S*2,_*30,O*2,_*80,S*2,_*30,B*2,_*60",
+            false);
+  {
+    static const int16_t opened[] = STAG_OPENED;
+    text_room("Room_Town_Stag_Station", 40, 8, "");
+    for (unsigned i = 0; i < sizeof opened / sizeof opened[0]; i++)
+      if (opened[i] >= 0) pd_set_flag(opened[i], true);
+    g_pd.stag_position1 = 1;
+    stag_menu_open(0, 0);
+    text_keys("stag", "_*60,D*2,_*20,D*2,_*20", false);
+  }
+  /* the menus: the title, the profiles, how to play's two pages, the pause menu */
+  game_new();
+  menu_start();
+  text_keys("menus", "_*40,O*2,_*40,B*2,_*30,D*2,_*10,O*2,_*40,O*2,_*40,O*2,_*30", true);
+  /* the messages as the fireball and the dash are taken; a relic's notice; the charm tutorial */
+  text_room("Crossroads_01", 40, 12, "");
+  msg_show(MSG_FIREBALL);
+  text_keys("message", "_*200", false);
+  text_room("Crossroads_01", 40, 12, "");
+  msg_show(MSG_DASH);
+  text_keys("message", "_*200", false);
+  /* a relic's notice; a charm's, and the charm tutorial */
+  {
+    typedef struct { int16_t name, desc; } ND;
+    static const ND tr[4] = TXT_INV_TRINKETS;
+    text_room("Crossroads_01", 40, 12, "");
+    notice_icon(0);
+    notice_show(tr[0].name);
+    text_keys("notice", "_*30,_*60,_*100", false);
+    text_room("Crossroads_01", 40, 12, "");
+    charm_notice(1);
+    text_keys("charm notice", "_*30,_*60,_*100", false);
+    text_room("Crossroads_01", 40, 12, "");
+    charm_tute();
+    text_keys("charm tutorial", "_*30,_*60,_*100", false);
+    charm_tute_close();
+  }
+  /* a conversation (Elderbug's first) */
+  text_room("Town", 76, 12, "");
+  text_keys("Elderbug", "_*40,U*2,_*120,O*2,_*60,O*2,_*60,O*2,_*60,O*2,_*60,O*2,_*60", false);
+  g_text_audit = false;
+  printf("texts: %d failing\n", text_fails);
+  return text_fails ? 1 : 0;
+}
+
 static int gates_test(const char *which) {
+  if (!strcmp(which, "texts")) return texts_test();
   if (!strcmp(which, "seams")) return seams_test();
   if (!strcmp(which, "markers")) return markers_test();
   if (!strcmp(which, "arenas")) return arenas_test();
