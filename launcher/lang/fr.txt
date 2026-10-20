@@ -98,12 +98,14 @@ Clear the field, flag the mines	Déblaie le terrain, pose les drapeaux
 Block Breaker	Casse-briques
 Break every brick	Casse toutes les briques
 Backgrounds, clocks, timers	Fonds, horloges, minuteurs
+Game Boy and NES games	Jeux Game Boy et NES
 # (names that stay as they are)
 NumDash	NumDash
 NumBlocks	NumBlocks
 NumDrive	NumDrive
 2048	2048
 NumVisuals	NumVisuals
+Retro-Go	Retro-Go
 # the games' credits
 Inspired by Minecraft, not affiliated with Mojang	Inspiré de Minecraft, sans lien avec Mojang
 By Tatone26, from All the Apps	Par Tatone26, tiré d'All the Apps
@@ -111,6 +113,7 @@ Inspired by Tatone26's All the Apps	Inspiré d'All the Apps de Tatone26
 Based on 2048 by Gabriele Cirulli	D'après 2048 de Gabriele Cirulli
 Based on Block Blast! by Hungry Studio	D'après Block Blast! de Hungry Studio
 Based on Chrome's dinosaur game by Google	D'après le jeu du dinosaure de Chrome, de Google
+Based on Retro-Go by ducalex	D'après Retro-Go de ducalex
 # a game the RAM of the calculator's software is too small for
 Needs 	Il manque 
  KB more memory	 Ko de mémoire

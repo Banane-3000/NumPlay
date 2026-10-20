@@ -377,5 +377,33 @@
     ],
     "colors": 48,
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/numvisuals"
+  },
+  {
+    "id": "retrogo",
+    "title": "Retro-Go",
+    "tagline": "Game Boy and NES games",
+    "credit": "Based on Retro-Go by ducalex",
+    "top": "0xE84B39",
+    "bottom": "0x1E1430",
+    "accent": "0x3199DC",
+    "records": [
+      "retrogo.cfg",
+      "rg_*"
+    ],
+    "reset": [
+      "rg_*"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "app": "RetroGo.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/retrogo",
+    "default": false,
+    "roms": true,
+    "systems": [
+      1,
+      2,
+      3
+    ]
   }
 ]

@@ -1,0 +1,95 @@
+# Retro-Go in Chinese: the English text as in the source, a tab, the translation (see tools/lang.py).
+OK	OK
+Yes	是
+No	否
+arrows	方向键
+D-pad	十字键
+Back	返回
+shift	shift
+Select	Select
+EXE	EXE
+Start	Start
+Backspace	退格
+menu	菜单
+Home	主页
+quit	退出
+Off	关
+Fit	适应
+Full	全屏
+Pocket	Pocket
+Light	Light
+Day	日
+Hour	时
+Min	分
+Sec	秒
+Auto	自动
+Never	从不
+Always	总是
+On	开
+Palette	调色板
+RTC config	时钟设置
+SRAM autosave	自动存档
+Overscan	边缘裁切
+Crop sides	裁切两侧
+Sprite limit	精灵上限
+Scaling	缩放
+Speed	速度
+Emulator options	模拟器选项
+Options	选项
+Menu	菜单
+Quit	退出
+Home (saves)	主页（会保存）
+Controls	按键
+Retro-Go	Retro-Go
+Port	移植
+Not affiliated with Retro-Go	与 Retro-Go 无关
+About Retro-Go	关于 Retro-Go
+Slot 0	存档位 0
+Slot 1	存档位 1
+Slot 2	存档位 2
+Slot 3	存档位 3
+empty	空
+last used	最近使用
+saved	已保存
+Saving...	正在保存...
+Save & Continue	保存并继续
+Save & Quit	保存并退出
+Load game	读取存档
+Reset	重置
+About	关于
+Save	保存
+Not enough room	空间不足
+Delete other saves to make room.	请删除其他存档腾出空间。
+Load	读取
+This save can't be read.	无法读取这个存档。
+Soft reset	软重置
+Hard reset	硬重置
+Reset Emulation?	重置游戏？
+Quit game?	退出游戏？
+The battery save is kept.	卡带存档会保留。
+This cartridge type isn't supported.	不支持这种卡带。
+This game needs more memory than the calculator has.	这个游戏需要的内存超过了计算器的容量。
+This file isn't a game Retro-Go can read.	Retro-Go 无法读取这个文件。
+Can't start the game	无法启动游戏
+Welcome to Retro-Go!	欢迎使用 Retro-Go！
+Add games on NumPlay's	请在 NumPlay 的
+customizer website:	定制网站上添加
+Game Boy, Game Boy Color	Game Boy、Game Boy Color
+and NES games.	和 NES 游戏。
+Home: quit	主页：退出
+Left/Right: system    OK: games    Home: quit	左/右：主机    OK：游戏    主页：退出
+OK: play    Back: systems    Left/Right: system	OK：开始    返回：主机    左/右：切换主机
+Reading...	正在读取...
+Name	名称
+System	主机
+Size	大小
+Close	关闭
+File properties	文件属性
+Retro-Go on the calculator plays Game Boy, Game Boy Color and NES games.	计算器上的 Retro-Go 可以玩 Game Boy、Game Boy Color 和 NES 游戏。
+Resume game	继续游戏
+New game	新游戏
+Delete save	删除存档
+Properties	属性
+Resume	继续
+Delete save?	删除存档？
+Delete sram file?	删除卡带存档？

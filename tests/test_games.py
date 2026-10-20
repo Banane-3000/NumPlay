@@ -139,6 +139,10 @@ GAMES = {
     # Press OK to Play: the first scenario, its first goal closed, the city runs; then Continue
     "finalearth2": ("FinalEarth2.nwa", "finalearth2.sav", presses((2000, "ok"), (3000, "ok")), 9000,
                     presses((2000, "ok")), 6000),
+    # no games in its table: the welcome; Backspace, Options, Scaling from Fit to Full, back; next time to 1x
+    "retrogo": ("RetroGo.nwa", "retrogo.cfg",
+                presses((1500, "backspace"), (2200, "ok"), (2900, "right"), (3500, "back")), 4500,
+                presses((1500, "backspace"), (2200, "ok"), (2900, "right"), (3500, "back")), 4500),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -222,6 +226,8 @@ CHECKS = {
                    lambda v: v[2] & 1 and struct.unpack_from("<I", v, 12)[0] >= 2),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
+    # the scaling (third byte): Full, then 1x
+    "retrogo": (lambda v: len(v) == 19 and v[:2] == b"R\1" and v[2] == 2, lambda v: v[2] == 0),
 }
 
 
@@ -280,7 +286,7 @@ def main():
     ap.add_argument("--numplay", help="play the games inside this NumPlay.nwa instead")
     a = ap.parse_args()
     order = [g["id"] for g in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "games",
-                                                          "games.json")))]
+                                                          "games.json"))) if g.get("default", True)]  # (in NumPlay.nwa)
     os.makedirs(a.out, exist_ok=True)
     failed = False
     for name, (nwa, save, keys1, home1, keys2, home2) in GAMES.items():
