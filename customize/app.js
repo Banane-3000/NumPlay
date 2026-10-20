@@ -260,10 +260,13 @@
     }
     render();
   }
-  function romName(file) {
-    let n = file.replace(/\.[^.]*$/, '');
+  function romName(file) {  // (its name without the extension, at most 40 bytes of UTF-8, no letter cut)
     const enc = new TextEncoder();
-    while (enc.encode(n).length > 39) n = n.slice(0, -1);
+    let n = '';
+    for (const ch of file.replace(/\.[^.]*$/, '')) {
+      if (enc.encode(n + ch).length > 40) break;
+      n += ch;
+    }
     return n;
   }
   function removeRom(r) {
@@ -347,13 +350,14 @@
     roms.forEach((r, i) => {
       const e = ROM_HEAD + ROM_ENTRY * i;
       v.setUint32(e, offs[i], true); v.setUint32(e + 4, r.bytes.length, true); d[e + 8] = r.sys;
-      d.set(enc.encode(r.name).slice(0, 39), e + 12);
+      d.set(enc.encode(r.name).slice(0, 40), e + 12);
       d.set(r.bytes, offs[i]);
     });
     return d;
   }
-  // ...as a relocatable ARM object: one section, .rodata.np_roms, and the symbol np_roms
-  function romObject(table, eflags) {
+  // ...as a relocatable ARM object: one section, .rodata.np_roms, and the symbol np_roms (as
+  // tools/romtable.py makes it, e_flags 0 like nwlink's icon objects)
+  function romObject(table) {
     const shstr = '\0.rodata.np_roms\0.symtab\0.strtab\0.shstrtab\0', str = '\0np_roms\0';
     const enc = new TextEncoder(), shs = enc.encode(shstr), sts = enc.encode(str);
     const dataOff = 52, symOff = align4(dataOff + table.length), strOff = symOff + 48;
@@ -361,7 +365,7 @@
     const b = new Uint8Array(total), v = new DataView(b.buffer);
     b.set([0x7f, 0x45, 0x4c, 0x46, 1, 1, 1], 0);
     v.setUint16(16, 1, true); v.setUint16(18, 40, true); v.setUint32(20, 1, true);
-    v.setUint32(32, shOff, true); v.setUint32(36, eflags, true);
+    v.setUint32(32, shOff, true);
     v.setUint16(40, 52, true); v.setUint16(46, 40, true); v.setUint16(48, 5, true); v.setUint16(50, 4, true);
     b.set(table, dataOff);
     // symbols: none, the section, np_roms (global object)
@@ -410,7 +414,7 @@
     sel.forEach((id, i) => { files[id + '.o'] = objs[4 + i]; });
     const args = kit.link.concat(['-T', 'numplay.ld', 'base.o', 'arena.o', 'name.o', 'icon.o'], sel.map((id) => id + '.o'));
     if (roms) {
-      files['roms.o'] = romObject(romTable(st.roms), new DataView(objs[0].buffer).getUint32(36, true));
+      files['roms.o'] = romObject(romTable(st.roms));
       args.push('roms.o');
     }
     files['numplay.ld'] = kit.script.head + sel.map((id) => kit.script.blocks[id]).join('') + kit.script.tail;
