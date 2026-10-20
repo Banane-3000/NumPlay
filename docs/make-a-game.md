@@ -68,12 +68,12 @@ Plug the calculator in, open [my.numworks.com/apps](https://my.numworks.com/apps
 | **Saves that survive a reinstall**: a copy kept in a Python script, which the NumWorks website keeps | `games/celeste/src/save.c` (`save_copy`) | Celeste, Hollow Knight, Undertale, the big games |
 | **Safety**: Home handled cleanly, the slower models and Upsilon recognised, keys let go before quitting | `games/common/epsilon_app.h` | every game |
 | **Compression**: LZ for pictures, DEFLATE for levels | `games/common/np_lz.h`, `launcher/src/inflate.c` | Chrome Dino, Sokoban, NumDash |
-| **3D**: perspective-correct textured triangles drawn a few rows at a time, with fog and light | `games/sm64/src/render.c` | Super Mario 64 |
+| **3D**: perspective-correct textured triangles drawn a few rows at a time, with fog and light | [`src/render.c`](https://github.com/Mason363/NumWorks-Super-Mario-64/blob/main/src/render.c) in NumWorks-Super-Mario-64 | Super Mario 64 |
 | **3D**: shaded, textured models and scenery | `games/subway/src/r3d.c` | Subway Surfers |
 | **Voxels**: a Minecraft-style world renderer | `games/numblocks/src/render.c` | NumBlocks |
 | **Physics**: rigid bodies, joints, contacts and raycasts | `games/numdrive/src` | NumDrive |
 | **Vehicle physics** on hills | `games/hillclimb/src` | Hill Climb Racing |
-| **A port of a C game engine** running on the calculator: Doom, Super Mario 64's decompilation, Sonic | `games/doom`, `games/sm64`, `games/sonic` | |
+| **A port of a C game engine** running on the calculator: Doom, Sonic, and Super Mario 64's decompilation ([its own repository](https://github.com/Mason363/NumWorks-Super-Mario-64)) | `games/doom`, `games/sonic` | |
 
 And the tools, all in `tools/`:
 

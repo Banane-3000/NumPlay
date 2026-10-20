@@ -201,10 +201,6 @@ GAMES = {
     "cookieclicker": ("CookieClicker.nwa", "cookieclicker.sav",
                       presses((2500, "ok"), (3500, "ok"), (4000, "ok"), (4500, "ok")), 6500,
                       presses((3000, "ok"), (3600, "ok")), 5500),
-    # past the title and the keys (a new game): Peach's letter, Lakitu's flight to the castle, the warp pipe; Home.
-    # Next time the title, the keys again from Shift, then the game (quitting with On/Off)
-    "sm64": ("SuperMario64.nwa", "sm64.sav", presses((2500, "ok"), (4000, "ok"), (14000, "ok"), (17000, "ok")), 22000,
-             presses((2500, "shift"), (4000, "ok"), (5000, "ok")), 9000),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -236,8 +232,7 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "numpowder": "numpowder_saves.py", "undertale": "undertale_saves.py", "subway": "subway_saves.py",
           "fnaf": "fnaf_saves.py", "doom": "doom_saves.py", "isaac": "isaac_saves.py",
           "hillclimb": "hillclimb_saves.py", "pvz": "pvz_saves.py", "sonic": "sonic_saves.py",
-          "cookieclicker": "cookieclicker_saves.py", "leveldevil": "leveldevil_saves.py",
-          "sm64": "sm64_saves.py"}
+          "cookieclicker": "cookieclicker_saves.py", "leveldevil": "leveldevil_saves.py"}
 CHECKS = {
     # the island remembers where Lucky was; after the reinstall, from the copy
     "championisland": (lambda v: v[:3] == b"CI1" and b"PLAYER_LOC" in v,) * 2,
@@ -270,9 +265,6 @@ CHECKS = {
     # copy, it goes on
     "sonic": (lambda v: v[:4] == b"S1SV" and v[6] == 1 and v[7] == 0 and struct.unpack_from("<I", v, 28)[0] > 0,
               lambda v: v[:4] == b"S1SV" and v[6] == 1 and struct.unpack_from("<I", v, 28)[0] > 600),
-    # the save chip (the N64's 512-byte EEPROM): its menu data's two copies signed ("HI", little-endian); after the
-    # reinstall, from the copy, kept
-    "sm64": (lambda v: len(v) == 512 and v[476:478] == b"IH" and v[508:510] == b"IH",) * 2,
     # a simulation saved ("NPWD"); after the reinstall, from the copy, it goes on and is saved again
     "numpowder": (lambda v: v[:4] == b"NPWD",) * 2,
     # a run banked ("HCR1", runs at 212) with a best on the Countryside (at 48); after the reinstall, from the copy,

@@ -422,29 +422,6 @@ Drive as far as you can before the fuel runs out or Bill lands on his head. Pick
 
 <br clear="right">
 
-## Super Mario 64
-
-<img src="media/sm64.gif" width="320" align="right" alt="Super Mario 64: Mario runs up to Peach's castle, then gets a star in Bob-omb Battlefield">
-
-Super Mario 64 comes as its own app, `SuperMario64.nwa`: it is too big to share the calculator with NumPlay.
-
-| Key | What it does |
-| --- | --- |
-| **Arrows** | Move (the control stick) |
-| **alpha** (held) | Walk and tiptoe |
-| **OK** or **EXE** | A: jump, swim, read and talk |
-| **Back** | B: punch, kick, dive, pick up and throw |
-| **shift** | Z: crouch, slide, ground pound |
-| **4** / **6** | Turn the camera |
-| **8** / **2** | Camera closer / further |
-| **0** | R: Mario's camera or Lakitu's |
-| **⌫** | Start: pause |
-| **Home** | Quit |
-
-Press Start or OK on the title: a new game shows these keys, then Peach's letter (Shift shows them again from the title). Jump into a painting to enter its course and choose a star to go for: Bob-omb Battlefield, Whomp's Fortress, Jolly Roger Bay, Cool, Cool Mountain and, from the courtyard, Big Boo's Haunt. In the pause menu, Shift quits the game (it asks first). Collecting a star saves it; your stars are also copied into `sm64_saves.py`, so installing the app again doesn't erase them.
-
-<br clear="right">
-
 ## Cookie Clicker
 
 <img src="media/cookieclicker.gif" width="320" align="right" alt="Cookie Clicker: a golden cookie caught for a Frenzy, upgrades bought, the Grimoire, then an ascension">
