@@ -81,7 +81,7 @@ static const uint16_t art[][8] = {
 };
 enum { A_BOOM = 6, A_CANNON, A_WRECK, A_SAUCER = 10, A_SBOOM, A_SBOOM2, A_PBOOM, A_ABOOM, A_SHOT, A_BUNKER, A_CELL = 20, A_LETTER };
 /* the arcade's letters, 5 columns of 7 pixels (the lowest bit on top) */
-static const char glyphs[] = "0123456789ABCDEGHILMNOPRSTVY<>-*=?";
+static const char glyphs[] = "0123456789ABCDEGHILMNOPRSTVY<>-*=?UQJF";
 static const uint8_t font[][5] = {
   {0x3E, 0x51, 0x49, 0x45, 0x3E}, {0x00, 0x42, 0x7F, 0x40, 0x00}, {0x62, 0x51, 0x49, 0x49, 0x46},
   {0x22, 0x41, 0x49, 0x49, 0x36}, {0x18, 0x14, 0x12, 0x7F, 0x10}, {0x27, 0x45, 0x45, 0x45, 0x39},
@@ -94,7 +94,8 @@ static const uint8_t font[][5] = {
   {0x26, 0x49, 0x49, 0x49, 0x32}, {0x01, 0x01, 0x7F, 0x01, 0x01}, {0x1F, 0x20, 0x40, 0x20, 0x1F},
   {0x07, 0x08, 0x70, 0x08, 0x07}, {0x08, 0x14, 0x22, 0x41, 0x00}, {0x00, 0x41, 0x22, 0x14, 0x08},
   {0x08, 0x08, 0x08, 0x08, 0x08}, {0x22, 0x14, 0x7F, 0x14, 0x22}, {0x14, 0x14, 0x14, 0x14, 0x14},
-  {0x02, 0x01, 0x51, 0x09, 0x06},
+  {0x02, 0x01, 0x51, 0x09, 0x06}, {0x3F, 0x40, 0x40, 0x40, 0x3F}, {0x3E, 0x41, 0x51, 0x21, 0x5E},
+  {0x20, 0x40, 0x41, 0x3F, 0x01}, {0x7F, 0x09, 0x09, 0x09, 0x01}, /* (U Q J F: the pause menu's) */
 };
 /* the attract screen, typed out a letter at a time, and where its lines go */
 static const char attract[] = "PLAY\0SPACE INVADERS\0*SCORE ADVANCE TABLE*\0=? MYSTERY\0=30 POINTS\0=20 POINTS\0=10 POINTS";
@@ -213,14 +214,39 @@ static const uint16_t *look(int i) { return art[i / 22 * 2 + (st[i] >> 1)]; }
 
 /* ------------------------------------------------------------ the screen */
 static const char *const items[2][2] = {{T("Resume"), T("Quit game")}, {T("No"), T("Yes")}};
+/* the pause menu in the arcade's own letters, white on black, the squid pointing at the choice in the
+   film's green (in the arcade's letters when they have every letter of a text, else NumPlay's) */
+static int glyph(int ch) {
+  ch = ch >= 'a' && ch <= 'z' ? ch - 32 : ch;
+  for (int g = 0; glyphs[g]; g++)
+    if (glyphs[g] == ch) return g;
+  return ch == ' ' ? -1 : -2;
+}
+static int atext(int cx, int y, const char *s, int k, color_t c) { /* returns where it begins */
+  int n = 0;
+  for (const char *t = s; *t; t++) n += glyph((uint8_t)*t) > -2 ? 1 : 1000;
+  if (n >= 1000) { /* a letter the arcade didn't have */
+    gfx_text_center(&np_font_body, cx, y + 7 * k, s, c, 256);
+    return cx - gfx_text_width(&np_font_body, s) / 2;
+  }
+  int x0 = cx - (n * 8 - 3) * k / 2;
+  for (int x = x0; *s; s++, x += 8 * k) {
+    int g = glyph((uint8_t)*s);
+    for (int col = 0; g >= 0 && col < 5; col++)
+      for (int r = 0; r < 7; r++)
+        if (font[g][col] >> r & 1) gfx_fill(x + col * k, y + r * k, k, k, c);
+  }
+  return x0;
+}
 static void overlay(void) {
-  gfx_rrect(70, 60, 180, 120, 8, 0, 256);
-  gfx_rrect_outline(70, 60, 180, 120, 8, 2, WHITE, 256);
-  gfx_text_center(&np_font_title, 160, 92, ov == OV_PAUSE ? T("Paused") : T("Quit game?"), WHITE, 256);
+  gfx_fill(64, 72, 192, 96, 0);
+  atext(160, 84, ov == OV_PAUSE ? T("Paused") : T("Quit game?"), 2, WHITE);
   for (int i = 0; i < 2; i++) {
-    int y = 106 + 32 * i;
-    if (sel == i) gfx_rrect(100, y, 120, 24, 4, GREEN, 256);
-    gfx_text_center(&np_font_body, 160, y + 17, items[ov - 1][i], sel == i ? 0 : WHITE, 256);
+    int y = 120 + 20 * i;
+    int x = atext(160, y, items[ov - 1][i], 1, sel == i ? GREEN : WHITE) - 22;
+    for (int r = 0; sel == i && r < 8; r++)
+      for (int b = 0; b < 16; b++)
+        if (art[4][r] << b & 0x8000) gfx_fill(x + b, y + r - 1, 1, 1, GREEN);
   }
 }
 

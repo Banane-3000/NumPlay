@@ -134,9 +134,10 @@ static void mark(int who, int x, int y, int s, color_t c) {
   if (who) gfx_rrect_outline(x - s / 2, y - s / 2, s, s, s / 2, 2 * t, c, 256);
   else stroke(x - h, y - h, x + h, y + h, 2 * h, t, c), stroke(x - h, y + h, x + h, y - h, 2 * h, t, c);
 }
+/* a choice in the menus, as a move on a board: the one picked is marked with X, in X's colour */
 static void button(int y, const char *s, bool on) {
-  box(75, y, 170, 26, on ? WHITE : HEX(0x3A4374));
-  gfx_text_center(&np_font_body, 160, y + 18, s, on ? PLATE : WHITE, 256);
+  gfx_text_center(&np_font_body, 160, y + 18, s, on ? WHITE : PALE, 256);
+  if (on) mark(0, 160 - gfx_text_width(&np_font_body, s) / 2 - 16, y + 13, 12, HEX(0xFF4D6D));
 }
 
 static const char *const OPP[4] = {T("vs a friend"), T("vs easy"), T("vs normal"), T("vs hard")};
@@ -152,7 +153,8 @@ static void overlay(void) {
     button(188, T("Play"), true);
     return;
   }
-  box(60, 44, 200, 152, PLATE);
+  box(60, 44, 200, 152, PLATE); /* a small board: its # in the middle, under the choices */
+  for (int i = 1; i < 3; i++) gfx_fill(60 + 200 * i / 3 - 1, 50, 3, 140, SQUARE), gfx_fill(66, 44 + 152 * i / 3 - 1, 188, 3, SQUARE);
   gfx_text_center(&np_font_title, 160, 72, T("Paused"), WHITE, 256);
   const char *items[3] = {T("Resume"), T("New game"), sure ? T("Quit game?") : T("Quit game")};
   for (int i = 0; i < 3; i++) button(84 + 30 * i, items[i], sel == i);

@@ -650,13 +650,33 @@ static void button(int x, int y, int w, const char *s, bool on) {
   box(x, y, w, 26, 13, on ? GOLD : HEX(0x3A4372));
   gfx_text_center(&np_font_body, x + w / 2, y + 18, s, on ? INK : WHITE, 256);
 }
-/* a card over the game: its title, then its buttons from by down */
+/* a card over the game: its title, then its buttons from by down. Over a game it is drawn in that game's
+   look: Pong's black court and white walls with its square ball, the air hockey rink with a mallet, the tanks' grey maze, the light cycles' blue grid; over the menu, in the menu's */
 static void card(int y, int h, const char *title, const char *const *items, int n, int by) {
   gfx_fill_alpha(0, 0, SCREEN_W, SCREEN_H, 0, 130);
-  box(60, y, 200, h, 14, HEX(0x262D52));
-  gfx_rrect_outline(60, y, 200, h, 14, 2, HEX(0x56619A), 256);
-  say(&np_font_title, 160, y + 30, title, WHITE);
-  for (int i = 0; i < n; i++) button(84, by + 32 * i, 152, items[i], sel == i);
+  if (screen <= S_RULES || (screen == S_ASK && back_to == S_MENU)) {
+    box(60, y, 200, h, 14, HEX(0x262D52));
+    gfx_rrect_outline(60, y, 200, h, 14, 2, HEX(0x56619A), 256);
+    say(&np_font_title, 160, y + 30, title, WHITE);
+    for (int i = 0; i < n; i++) button(84, by + 32 * i, 152, items[i], sel == i);
+    return;
+  }
+  static const uint32_t LOOK[NG][3] = {{0x000000, 0xFFFFFF, 0xFFFFFF}, {0xF4F6FA, 0x9AA3B8, 0x161A33},
+                                       {0xE6E6EA, 0x3A3D4F, 0x3A3D4F}, {0x0B1230, 0x3E8BFF, 0xFFFFFF}};
+  color_t bg = gfx_rgb(LOOK[game][0]), edge = gfx_rgb(LOOK[game][1]), ink = gfx_rgb(LOOK[game][2]);
+  gfx_fill(57, y - 3, 206, h + 6, edge);
+  gfx_fill(60, y, 200, h, bg);
+  if (game == CYCLES)
+    for (int k = 16; k < 200; k += 16) gfx_fill(60 + k, y, 1, h, HEX(0x1C2A55)), k < h ? gfx_fill(60, y + k, 200, 1, HEX(0x1C2A55)) : (void)0;
+  say(&np_font_title, 160, y + 30, title, ink);
+  for (int i = 0; i < n; i++) {
+    int ty = by + 32 * i + 18, x = 160 - gfx_text_width(&np_font_body, items[i]) / 2 - 16;
+    gfx_text_center(&np_font_body, 160, ty, items[i], sel == i && game ? team[0] : ink, 256);
+    if (sel != i) continue;
+    if (game == PONG) gfx_fill(x, ty - 9, 6, 6, WHITE); /* the ball */
+    else if (game == HOCKEY) gfx_circle(x + 3, ty - 6, 6, team[0], 256), gfx_circle(x + 3, ty - 6, 3, light[0], 256);
+    else gfx_fill(x - 6, ty - 7, 12, 3, team[0]); /* a shot, a trail */
+  }
 }
 
 /* the little picture of each game in the menu: x, y, w, h, roundness, colour (red, blue, white) */

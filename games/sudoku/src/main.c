@@ -299,8 +299,12 @@ static const uint8_t buttons[5] = {0, 4, 4, 1, 2}, leads[5][4] = {
 static void overlay(void) {
   char s[16];
   int n = buttons[ov], extra = ov == OV_HELP || ov == OV_WON ? 56 : 0, y = (SCREEN_H - 54 - extra - 32 * n) / 2;
+  /* drawn like a box of the grid: a thick navy edge, the choices in cells split by thin lines, the one
+     picked shaded as the cell picked is */
   gfx_fill_alpha(0, 0, SCREEN_W, SCREEN_H, NAVY, 110);
-  gfx_rrect(60, y, 200, 54 + extra + 32 * n, 14, WHITE, 256);
+  gfx_fill(58, y - 2, 204, 58 + extra + 32 * n, NAVY);
+  gfx_fill(60, y, 200, 54 + extra + 32 * n, WHITE);
+  gfx_fill(76, y + 48 + extra - 1, 168, 32 * n + 1, LINE);
   say(&np_font_title, 160, y + 34, cards[ov][0], NAVY);
   y += 48;
   if (ov == OV_HELP)
@@ -312,7 +316,8 @@ static void overlay(void) {
   y += extra;
   for (int i = 0; i < n; i++, y += 32) {
     color_t c = menu == i ? WHITE : NAVY;
-    gfx_rrect(80, y, 160, 26, 13, menu == i ? BLUE : TILE, 256);
+    gfx_fill(77, y, 166, 31, menu == i ? PICK : WHITE);
+    c = NAVY;
     say(&np_font_body, 160, y + 18, ov == OV_MENU && i == 3 && quit_ok ? T("OK again to quit") : cards[ov][i + 1], c);
     if (ov == OV_LEVEL && sv.best[i]) gfx_text_right(&np_font_small, 232, y + 17, clock_text(s, sv.best[i]), c, 256);
   }
