@@ -21,7 +21,7 @@
 #define SLEEPER_W (4.4f * U)
 
 enum { G_NONE, G_SLEEPER, G_MIX, G_KINDS };
-static uint16_t ground[2][G_KINDS][GROUND_W * 2];   /* outside and in tunnels; levels one after the other */
+static uint16_t ground[G_KINDS][GROUND_W * 2];   /* levels one after the other */
 static const int level_at[LEVELS] = {0, 384, 576, 672, 720, 744, 756};
 static uint16_t sky[SCREEN_H];
 /* how far the details go: on the slower calculators (N0110, N0115) they stop sooner, and the haze comes nearer */
@@ -40,25 +40,22 @@ static GroundRow rows[SCREEN_H];
 /* ---------------------------------------------------------------- the ground's colours */
 static void ground_tables(void) {
   uint32_t acc[GROUND_W];
-  for (int env = 0; env < 2; env++)
-    for (int kind = 0; kind < G_KINDS; kind++) {
-      for (int i = 0; i < GROUND_W; i++) {
-        uint32_t a = ground_rgb[i], b = ground_rgb[GROUND_W + i];
-        uint32_t c = kind == G_NONE ? a : kind == G_SLEEPER ? b : r_mix888(a, b, 75);
-        if (env) c = r_mix888(r_mix888(c, 0, 150), 0x182434, 40);
-        acc[i] = c;
-      }
-      for (int l = 0; l < LEVELS; l++) {
-        int n = GROUND_W >> l;
-        for (int i = 0; i < n; i++) ground[env][kind][level_at[l] + i] = r_565(acc[i]);
-        /* the next level: each two averaged */
-        for (int i = 0; i < n / 2; i++) {
-          uint32_t a = acc[2 * i], b = acc[2 * i + 1];
-          acc[i] = ((((a >> 16) & 255) + ((b >> 16) & 255)) / 2) << 16 | ((((a >> 8) & 255) + ((b >> 8) & 255)) / 2) << 8 |
-                   (((a & 255) + (b & 255)) / 2);
-        }
+  for (int kind = 0; kind < G_KINDS; kind++) {
+    for (int i = 0; i < GROUND_W; i++) {
+      uint32_t a = ground_rgb[i], b = ground_rgb[GROUND_W + i];
+      acc[i] = kind == G_NONE ? a : kind == G_SLEEPER ? b : r_mix888(a, b, 75);
+    }
+    for (int l = 0; l < LEVELS; l++) {
+      int n = GROUND_W >> l;
+      for (int i = 0; i < n; i++) ground[kind][level_at[l] + i] = r_565(acc[i]);
+      /* the next level: each two averaged */
+      for (int i = 0; i < n / 2; i++) {
+        uint32_t a = acc[2 * i], b = acc[2 * i + 1];
+        acc[i] = ((((a >> 16) & 255) + ((b >> 16) & 255)) / 2) << 16 | ((((a >> 8) & 255) + ((b >> 8) & 255)) / 2) << 8 |
+                 (((a & 255) + (b & 255)) / 2);
       }
     }
+  }
 }
 
 void scene_init(void) {
@@ -72,8 +69,9 @@ void scene_init(void) {
   r_far = 34 * detail;
 }
 
-float scene_light(float z) { return world_tunnel(z) ? 0.55f : 1.0f; }
-uint32_t scene_lit(uint32_t rgb, float z) { return world_tunnel(z) ? r_mix888(r_mix888(rgb, 0, 115), 0x10203A, 30) : rgb; }
+/* (Subway City's tunnel is a hall with a glass roof: as light inside as out) */
+float scene_light(float z) { (void)z; return 1.0f; }
+uint32_t scene_lit(uint32_t rgb, float z) { (void)z; return rgb; }
 
 /* ---------------------------------------------------------------- the camera, the sky, the ground's rows */
 /* the part of [a, b] on sleepers */
@@ -128,7 +126,7 @@ void scene_camera(float x, float y, float z, float pitch, float f, float cy) {
     int l = 0;
     while (step > 1.4f && l < LEVELS - 1) step *= 0.5f, l++;
     float scale = (float)(32 >> l);
-    g->lut = ground[world_tunnel(wz)][kind] + level_at[l];
+    g->lut = ground[kind] + level_at[l];
     g->n = (uint16_t)(GROUND_W >> l);
     g->u = (int32_t)(((cam.x + (0.5f - cam.cx) * zc / cam.f) - GROUND_X0) * scale * 65536);
     g->du = (int32_t)(zc / cam.f * scale * 65536);
@@ -198,7 +196,7 @@ void scene_background(void) {
 }
 
 /* ---------------------------------------------------------------- the game's baked models */
-static int lit = 256;      /* full light (outside), less in tunnels */
+static int lit = 256;      /* the light on the baked faces (full) */
 
 /* a baked model placed at (ox, oy, oz), its first maxq faces (the most worth seeing come first) */
 static void bmodel(const BModel *m, float ox, float oy, float oz, int maxq) {
@@ -243,7 +241,6 @@ static const BModel *const sections[3][3] = {
 static void stretch(int seg) {
   float z0 = (float)seg * SEG, d = z0 - cam.z;
   Stretch s = world_stretch(seg);
-  lit = s.kind == SC_TUBE && s.part > 0 ? 140 : 256;
   int nq = faces_at(d < 0 ? 0 : d);
   if (s.kind == SC_STREET) {
     bmodel(street_l[s.part], 0, 0, z0, nq);
@@ -291,7 +288,6 @@ void scene_draw(float t) {
   for (int i = 0; i < nobs; i++) {
     const Obstacle *o = &obs[i];
     if (o->z0 > zfar || o->z1 < cam.z) continue;
-    lit = world_tunnel(o->z0) ? 140 : 256;
     if (o->type == O_TRAIN || o->type == O_MOVING) train(o, zfar);
     else if (o->type == O_RAMP) bmodel(&bm_car_ramp, LANE_X(o->lane), 0, o->z0 + 6.3f * U, faces_at(o->z0 - cam.z));
     else barrier(o);
@@ -299,7 +295,6 @@ void scene_draw(float t) {
   for (int i = 0; i < nitems; i++) {
     const Item *it = &items[i];
     if (it->z > cam.z + 110 * detail || it->z < cam.z + 1) continue;
-    lit = world_tunnel(it->z) ? 140 : 256;
     if (it->kind == I_COIN) actors_coin(it, t, scene_light(it->z));
     else actors_pickup(it, t);
   }

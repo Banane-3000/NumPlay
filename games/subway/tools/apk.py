@@ -582,8 +582,10 @@ def pack_city(o, th):
         th.add(m, sec, keep=near)
         if sec == "station_mid":
             th.add(m, "station_platforms", keep=near)
+        # (the tunnel's hall is all arches: its planes taken more loosely)
+        loose = dict(plane_cos=0.85, plane_gap=3.0) if sec.startswith("tube") else {}
         quads, atlas = th.bake(m, visible=corridor, texel=1.8, min_area=20, major_area=150, budget=40, weight=env_weight,
-                               atlas_max=(256, 256), name=sec, cams=ENV_CAMS)
+                               atlas_max=(256, 256), name=sec, cams=ENV_CAMS, **loose)
         n = write_bmodel(o, sec, quads, atlas, colors=192)
         print(f"{sec}: {len(m.P)} triangles, {n} faces")
 

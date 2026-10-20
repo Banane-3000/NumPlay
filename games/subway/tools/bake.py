@@ -129,7 +129,7 @@ def lighting(n):
 
 
 def bake(mesh, textures, kinds, visible, texel=2.0, max_side=128, min_area=12.0, slab=(-8.0, 8.0), major_area=40.0,
-         budget=10000, weight=None, atlas_max=(256, 256), name="?", cams=None):
+         budget=10000, weight=None, atlas_max=(256, 256), name="?", cams=None, plane_cos=0.97, plane_gap=1.2):
     """mesh: Mesh; textures: [RGBA arrays]; kinds: ['opaque'|'cutout'|'glass'|'shadow'|'skip'] per material;
     visible(c, n) -> bool for each triangle (centre, normal). Returns (quads, atlas RGBA image): quads are
     (corners (4,3), uv (4,2) texels in the atlas), clockwise seen from the front"""
@@ -157,7 +157,7 @@ def bake(mesh, textures, kinds, visible, texel=2.0, max_side=128, min_area=12.0,
         n = N[i]
         best = None
         for g in groups:
-            if g[0] @ n > 0.97 and abs(g[0] @ C[i] - g[1]) < 1.2:
+            if g[0] @ n > plane_cos and abs(g[0] @ C[i] - g[1]) < plane_gap:
                 best = g
                 break
         if best is None:

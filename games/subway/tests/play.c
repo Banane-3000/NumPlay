@@ -1,7 +1,7 @@
 /* Plays Subway Surfers on a computer, with scripted keys, and saves frames.
  *
  *   play [--frames N] [--keys "10-40:right,50:ok,..."] [--shots 30,60|all] [--out DIR] [--saves DIR]
- *        [--seed N] [--bot FROM] [--coins N] [--keys-owned N] [--draw-every N] [--power FRAME:KIND] [--god] [--when roof|tunnel] [--stats]
+ *        [--seed N] [--bot FROM] [--coins N] [--keys-owned N] [--draw-every N] [--power FRAME:KIND] [--god] [--when roof|tunnel|covered] [--stats]
  *   play --view WHO,ANIM,T,YAW,DIST[,HEIGHT] --out DIR   (one person, or the dog (5), alone: DIR/view.ppm)
  *
  * Keys: left right up down ok back one three home. "a-b:key" holds the key from frame a to b, "a:key" for one
@@ -268,7 +268,8 @@ int main(int argc, char **argv) {
     snprintf(list, sizeof list, ",%s,", shots);
     bool shot = all || strstr(list, name);
     if (when && !pl.dead) {
-      bool now = (!strcmp(when, "roof") && pl.on_roof) || (!strcmp(when, "tunnel") && world_tunnel(pl.z - 2) && world_tunnel(pl.z + 30));
+      bool now = (!strcmp(when, "roof") && pl.on_roof) || (!strcmp(when, "tunnel") && world_tunnel(pl.z - 2) && world_tunnel(pl.z + 30)) ||
+                 (!strcmp(when, "covered") && world_covered(pl.z + 10) && world_covered(pl.z + 40));
       when_n = now ? when_n + 1 : 0;
       if (when_n == 25) shot = true;
     }
