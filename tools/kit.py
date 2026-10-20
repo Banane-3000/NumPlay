@@ -145,7 +145,7 @@ def main():
             "id": i, "index": n, "title": g["title"], "tagline": g["tagline"], "credit": g.get("credit"),
             "top": g["top"], "bottom": g["bottom"], "accent": g["accent"],
             "flash": flash, "ram": ram, "default": i in default, "upsilon": i in upsilon,
-            "roms": bool(g.get("roms")), "xl": bool(g.get("xl")),
+            "roms": bool(g.get("roms")), "systems": g.get("systems"), "xl": bool(g.get("xl")),
             "bytes": os.path.getsize(os.path.join(O, "games", i + ".o.gz")),
             "icon": bool(icon), "thumb": os.path.exists(thumb)})
 

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NumPlay Studio</title>
+<meta name="description" content="Pick the NumWorks games you want, add your own Game Boy and NES games for Retro-Go, and get one NumPlay app with all of them.">
+<link rel="icon" href="kit/variants/NumPlay.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<a class="brand" href="../">
+  <img id="brand-icon" src="kit/variants/NumPlay.png" alt="">
+  <span>NumPlay</span>
+</a>
+
+<main id="studio" aria-busy="true">
+  <section id="small" class="grid small" aria-label="Games in NumPlay"></section>
+
+  <section class="device" aria-label="Your calculator">
+    <div class="meter">
+      <span id="used" class="used">0.00</span>
+      <div id="bar" class="bar" role="img" aria-label="Space used"></div>
+      <div class="cap" role="radiogroup" aria-label="App space">
+        <button type="button" role="radio" data-cap="std" aria-checked="true" data-tip="Every NumWorks">1.94 MB</button>
+        <button type="button" role="radio" data-cap="xl" aria-checked="false" data-tip="Enlarged Extra Apps, with Nwagra">6.6 MB</button>
+      </div>
+    </div>
+    <div class="side-by">
+      <div id="calc" class="calc">
+        <img class="calc-img" src="calculator.webp" alt="A NumWorks calculator" draggable="false">
+        <div id="screen" class="screen" role="img" aria-label="Space on the calculator">
+          <div class="status"><span id="status-line"></span><span class="battery"><i id="battery"></i></span></div>
+          <div id="map" class="map"></div>
+          <div class="drop-hint" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <div id="variants" class="variants" role="radiogroup" aria-label="App icon"></div>
+        <button id="install" type="button" class="install"><span>Install</span></button>
+        <button id="download" type="button" class="round" aria-label="Download NumPlay.nwa" data-tip="Download NumPlay.nwa">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12"/><path d="M6 11l6 6 6-6"/><path d="M5 20h14"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="side" aria-label="Big games and Retro-Go">
+    <div id="big" class="grid big"></div>
+    <div id="carts" class="carts" aria-label="Retro-Go games">
+      <label id="add-rom" class="cart add" for="rom-file" data-tip="Add Game Boy or NES games">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+      </label>
+      <input id="rom-file" type="file" multiple accept=".gb,.gbc,.nes">
+    </div>
+  </section>
+</main>
+
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <button type="button" class="sheet-close" aria-label="Close">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <h2 id="sheet-title">NumPlay.nwa is on its way</h2>
+    <ol class="steps">
+      <li><span class="step-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><rect x="8.5" y="4.5" width="7" height="5" rx="0.5"/><path d="M9 13h.01M12 13h.01M15 13h.01M9 16h.01M12 16h.01M15 16h.01M9 19h.01M12 19h.01M15 19h.01"/></svg>
+      </span><span>Plug your calculator in</span></li>
+      <li class="xl-only"><span class="step-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>
+      </span><span>Click the <a href="https://nwagyu.org/guide/help/enlarge-your-memory.html" target="_blank" rel="noopener">Nwagra</a> bookmark on the installer page</span></li>
+      <li><span class="step-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+      </span><span>Drop NumPlay.nwa there</span></li>
+    </ol>
+    <a class="install wide" href="https://my.numworks.com/apps" target="_blank" rel="noopener">Open the installer</a>
+  </div>
+</div>
+
+<footer class="foot"><a href="https://github.com/Mason363/NumPlay">Made by Mason Chen as part of NumPlay</a></footer>
+
+<div id="tip" class="tip" role="tooltip"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="app.js"></script>
+</body>
+</html>
