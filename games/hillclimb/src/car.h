@@ -1,53 +1,58 @@
-/* Hill Climb Racing: a vehicle's physics.
+/* Hill Climb Racing: a vehicle and its world, as the game builds them (car.cpp).
  *
- * The chassis (with Bill) and each wheel are rigid bodies in the plane. A wheel hangs from the chassis on a
- * spring and damper along the chassis' own up and down, held there by a joint; the engine turns the driven wheels
- * against the chassis, so it rears up when you floor it and turns in the air. The ground pushes on the wheels,
- * on the chassis' outline and, at the end, on Bill's head. Impulses are solved in turn (sequential impulses) at
- * 240 steps a second. Meters, seconds, kilograms; y up. */
+ * The game runs on Box2D 2.2.1, and so does this: the same bodies, fixtures and joints with the game's numbers
+ * (its PlayerCar classes, read from its Android package), stepped 60 times a second with 8 velocity and 3 position
+ * iterations. The chassis and the wheels hang on wheel joints whose motors drive them; Bill is a torso and a head
+ * on revolute joints and springs; the ground is a chain of 0.5 m edges, rope bridges are planks on revolute joints.
+ * Meters, seconds, radians; y up. car_step is one 1/60 s. */
 #ifndef HC_CAR_H
 #define HC_CAR_H
 #include <stdbool.h>
 #include <stdint.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define CAR_MAXW 6
 #define CAR_HZ 60          /* car_step's rate */
 
-typedef struct { float x, y, a, vx, vy, w, im, ii; } Body;   /* centre of mass, angle; inverse mass and inertia */
+typedef struct { float x, y, a; } CarBody;   /* a body's origin and angle */
+
+enum { FLIP_NONE, FLIP_FRONT, FLIP_BACK, FLIP_NECK };
 
 typedef struct {
   int veh, nw;
-  Body ch, wh[CAR_MAXW];
-  float wr[CAR_MAXW], spin[CAR_MAXW];
-  float anc[CAR_MAXW][2];   /* the tops of the springs, from the centre of mass (chassis frame) */
-  float s0, smax;           /* the springs' length at rest unloaded, the most they let a wheel hang */
-  float k, c;               /* stiffness, damping */
-  float torque, wmax, brake, drive[CAR_MAXW];
-  float grip, air, down;
-  float com[2];             /* the centre of mass from the picture's origin */
-  float hull[16][2];
-  int nhull;
-  float head[2];            /* Bill's head's centre, from the centre of mass */
-  bool ground[CAR_MAXW], touch, head_hit;
-  float wheel_load[CAR_MAXW];
-  float rpm;                /* 0 to 1, for the meter */
-  float wob[2], wobv[2];    /* Bill's head nodding on its neck (chassis frame) */
-  float last_vx, last_vy;
-  int tree_broken;          /* a tree knocked down this step, or -1 */
-  int tree_hurt_id;         /* the tree being pushed on, and how hard so far (N s) */
-  float tree_hurt;
+  CarBody ch, wh[CAR_MAXW], torso, head, cannon;
+  float wr[CAR_MAXW];       /* the wheels' radii */
+  float vx, vy, w;          /* the chassis' velocity and spin (rad/s, counterclockwise) */
+  int air;                  /* steps since a wheel or the chassis last touched anything */
+  bool dead;                /* Bill's head touched the ground: driver down */
+  int flip;                 /* a flip completed this step (FLIP_*) */
+  float rev, turbo;         /* the engine's revs and the turbo's pressure, for the meters */
+  int tree_broken;          /* a tree knocked over this step, or -1 */
+  bool ground[CAR_MAXW];    /* the wheel touched something this step */
 } Car;
 
-/* levels: the vehicle's four upgrades (1 and up) */
-void car_init(Car *c, int veh, const uint8_t levels[4], float x);
-/* one 1/60 s: gas and brake from 0 to 1; no fuel left: the engine is off */
-void car_step(Car *c, float gas, float brake, bool fuel);
-/* the picture's origin and angle: where to draw it */
-void car_origin(const Car *c, float *x, float *y);
-/* a point of the picture's frame (meters, y up) in the world */
+/* a new world for the stage being driven (stage.h), and the vehicle in it at the start */
+void car_init(Car *c, int veh, const uint8_t levels[4]);
+/* one 1/60 s: gas (1), brake (-1) or neither (0); engine: there is fuel and Bill is alive */
+void car_step(Car *c, int pedal, bool engine);
+/* the world's memory back (a run ends) */
+void car_free(void);
+/* a picture frame point (meters, the chassis' frame) in the world */
 void car_point(const Car *c, float lx, float ly, float *wx, float *wy);
-void car_head(const Car *c, float *x, float *y);   /* Bill's head's centre in the world (nodding) */
-float car_speed(const Car *c);                      /* along the ground, m/s */
+float car_speed(const Car *c);
 bool car_airborne(const Car *c);
-float car_fuel_seconds(int veh, const uint8_t levels[4]);
+/* does a square (centre, half its side) touch the vehicle or Bill: coins and fuel cans */
+bool car_touches_box(const Car *c, float x, float y, float half);
+/* the fuel's use (1, or by the Fuel upgrade) */
+float car_fuel_rate(int veh, const uint8_t levels[4]);
+/* a bridge's planks, for drawing: how many, and each one's centre and angle */
+int car_planks(CarBody *out, int most);
+/* the trees near the car (Forest): their feet and angles, and which trees they are */
+int car_trees(CarBody *out, int *which, int most);
+
+#ifdef __cplusplus
+}
+#endif
 #endif

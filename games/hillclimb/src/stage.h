@@ -1,13 +1,17 @@
-/* Hill Climb Racing: the stages, their ground and what lies along it.
+/* Hill Climb Racing: the stages, their ground and what lies along it, as the game makes them.
  *
- * A stage's ground is the same on every run: a sum of smooth noises (each a Catmull-Rom curve through hashed
- * heights) whose size grows with the distance, so the hills get steeper and bumpier the further you go. Caves
- * have a ceiling; the Desert has rope bridges over canyons, the Forest trees to break through. Coins come every
- * 30 m, fuel cans at the stage's own spacing, and each stretch of the road is a level with its reward. */
+ * A stage's ground is the game's own formula (its Stage*::getHeightAtX: sums of sines that grow with the distance),
+ * sampled every 0.5 m like the game's terrain. Rope bridges cross canyons every 70 to 210 m on most stages (the road
+ * resumes after one at the height it had before it); caves have a ceiling over the ground; the Forest has pine trees.
+ * Coins come in a chunk every 30 m, worth more the further you go, fuel cans every few chunks, all as the game's
+ * GameContentLayer places them. Each stage has levels, kept from run to run, each with its bonus. */
 #ifndef HC_STAGE_H
 #define HC_STAGE_H
 #include <stdbool.h>
 #include <stdint.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 enum { ST_COUNTRYSIDE, ST_DESERT, ST_ARCTIC, ST_HIGHWAY, ST_CAVE, ST_MOON, ST_MARS, ST_ALIEN, ST_ARCTIC_CAVE,
        ST_FOREST, NSTAGES };
@@ -16,55 +20,60 @@ enum { FEAT_NONE, FEAT_BRIDGES, FEAT_TREES, FEAT_ICICLES };
 typedef struct {
   const char *name;
   uint32_t price;
-  float gravity, friction;
+  float gravity, friction;      /* the game's: g (m/s2), the ground's friction */
+  float coin_mult, coin_off;    /* a coin chunk at x is worth x * coin_mult; coins' rows from coin_off */
   uint8_t sky, surf, ground, csurf, icon, particle;
-  uint8_t ceiling;              /* 0 none, 1 all along (a cave), 2 tunnels now and then */
+  uint8_t ceiling;              /* a cave: a ceiling all along */
   uint8_t feature, clouds, stars;
-  uint32_t seed;
-  float len[4], amp0[4], grow[4], amax[4];   /* the noises: wavelength, size at the start, + per km, at most */
-  float clear, clear_var;       /* a cave's height over its floor */
-  float fuel_first, fuel_gap, fuel_grow, fuel_max;   /* the first can, the gap, its growth per can, at most */
-  float coin25, coin100, coin500, all500;            /* where coins of each value start */
-  float lvl_len, lvl_inc;       /* a level's length and how much longer each next one is */
-  uint32_t lvl_reward, lvl_reward_inc;
+  uint8_t bridges;              /* rope bridges */
+  float bridge_k, bridge_d;     /* the next bridge comes bridge_d (2 + sin(n / bridge_k)) m later */
+  uint16_t lvl_base, lvl_step;  /* the game's levels (StageInfo): level n (from 0) ends at base + step n */
+  uint16_t lvl_mult;            /* and pays mult x that + 2500 */
   uint32_t surf_color;          /* the surface's colour (particles, the map) */
 } Stage;
 
 extern const Stage stages[NSTAGES];
 extern const Stage *stage;      /* the stage being driven */
-void stage_set(int s);
+extern int stage_id;
+void stage_set(int s);          /* (also forgets what was worked out for the last one) */
 
-/* the ground under x (meters), what wheels drive on: bridges count */
+/* the ground under x (the game's GameContentLayer::getTerrainHeightAt): under a bridge, the canyon */
 float stage_floor(float x);
-/* the ground drawn under x: below a bridge, the canyon's floor */
+/* the ground as it is built: a point every 0.5 m (k: x = -40 + k / 2), lines between them */
+float stage_vertex(int k);
 float stage_ground(float x);
-/* the ceiling over x, if there is one there */
+/* the ground or a bridge's deck under x (getHeightWithBridgeOrPit) */
+float stage_deck(float x);
+/* a cave's ceiling over x (GameContentLayer::getCeilingHeightAt), and as it is built (points every 0.5 m) */
 bool stage_ceiling(float x, float *y);
-/* the start: a wall behind it */
-#define STAGE_WALL -6.0f
+float stage_roof_vertex(int k);
+bool stage_roof(float x, float *y);
 
-/* bridges: the one over x (its ends), or false */
-bool stage_bridge(float x, float *x0, float *x1);
-/* how the bridge under the vehicle gives way: its weight at x (set each frame) */
-void stage_bridge_load(float x, float depth);
+/* bridges: the k-th one (from 0) starts at x0, is len meters long, at height y; false if none */
+bool stage_bridge_k(int k, float *x0, float *len, float *y);
+int stage_bridge_first(float x);   /* the first bridge that ends after x */
 
-/* trees: the k-th tree's place (false past the stage's end); broken ones are kept in a bit set */
-bool stage_tree(int k, float *x);
-int stage_tree_first(float x);   /* the first tree at or after x */
-#define TREES_MAX 4800
-void stage_trees_reset(void);    /* all standing again (a new run) */
+/* trees (the Forest): the k-th one's foot; fallen ones are kept in a bit set */
+bool stage_tree(int k, float *x, float *y);
+int stage_tree_first(float x);     /* the first tree at or after x */
+#define TREES_MAX 3200
+void stage_trees_reset(void);      /* all standing again (a new run) */
 bool stage_tree_standing(int k);
 void stage_tree_fall(int k);
-#define TREE_H 2.4f
-#define TREE_R 0.16f
+#define TREE_H 3.4f
 
-/* coins: group k's coins (at most 14); value of a coin; positions */
+/* coins: chunk k (from 1, at 30 k m): at most 14 coins, their places and values; how many */
 #define COIN_GROUPS 2048
 #define COIN_SPACING 30.0f
-int stage_coin_group(int k, float *x, float *y, int *value);   /* how many, their places and values */
-/* fuel cans: the k-th one's x, k from 0; false past the last */
-bool stage_fuel(int k, float *x);
-/* levels: where level n (1, 2...) ends and its reward */
-float stage_level_end(int n);
-uint32_t stage_level_reward(int n);
+#define COIN_SIZE 1.5f             /* a coin's side (and a fuel can's): the car picks it up by touching it */
+int stage_coin_group(int k, float *x, float *y, int *value);
+/* fuel cans: the k-th one's place, k from 0; false past the last */
+bool stage_fuel(int k, float *x, float *y);
+/* levels (StageInfo::getLevelGoal, getLevelBonus): where level n (0, 1...) ends, and its bonus */
+uint32_t stage_level_goal(int n);
+uint32_t stage_level_bonus(int n);
+
+#ifdef __cplusplus
+}
+#endif
 #endif

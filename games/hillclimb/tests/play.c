@@ -46,26 +46,38 @@ static void parse_keys(const char *spec) {
 
 /* a driver: gas, and in the air the pedals to land level with the ground ahead */
 static bool flipper;   /* --flips: backflips in the air when there is time */
+static float air_rot, last_a, best_x;
+static int stuck, backing, tries;
 static uint32_t autopilot(void) {
   const Car *c = &run.car;
   if (run.over) return 0;
-  float x = c->ch.x, slope = atan2f(stage_floor(x + 1.5f) - stage_floor(x - 1.5f), 3.0f);
+  /* stuck at the foot of a hill: back up the last one and take a run at it, as a player would */
+  if (backing && c->ch.x > best_x - 4 - 3 * tries) return backing--, K_LEFT;
+  backing = 0;
+  if (c->ch.x > best_x + 1) best_x = c->ch.x, stuck = 0, tries = 0;
+  else if (++stuck > 90 && run.fuel > 0) {   /* (further back each time) */
+    stuck = 0, backing = 45 + 40 * (tries < 4 ? tries++ : tries);
+    return K_LEFT;
+  }
+  air_rot = car_airborne(c) ? air_rot + (c->ch.a - last_a) : 0;
+  last_a = c->ch.a;
+  float x = c->ch.x, slope = atan2f(stage_deck(x + 1.5f) - stage_deck(x - 1.5f), 3.0f);
   float a = c->ch.a;
   while (a > 3.14159f) a -= 6.28318f;
   while (a < -3.14159f) a += 6.28318f;
   float d = a - slope;
   if (car_airborne(c)) {
-    if (flipper && run.air_rot < 2.4f) {   /* time left in the air against the turn still to make */
-      float h = c->ch.y - stage_floor(c->ch.x), g = stage->gravity, vy = c->ch.vy;
-      float left = (vy + sqrtf(vy * vy + 2 * g * (h > 0 ? h : 0))) / g, w = c->ch.w > 2 ? c->ch.w : 2;
-      if (left > (6.28f - run.air_rot) / w + 0.25f) return K_RIGHT;
+    if (flipper && air_rot < 2.4f) {   /* time left in the air against the turn still to make */
+      float h = c->ch.y - stage_deck(c->ch.x), g = stage->gravity, vy = c->vy;
+      float left = (vy + sqrtf(vy * vy + 2 * g * (h > 0 ? h : 0))) / g, w = c->w > 2 ? c->w : 2;
+      if (left > (6.28f - air_rot) / w + 0.25f) return K_RIGHT;
     }
-    if (d > 0.25f || (c->ch.w > 1.2f && d > -0.9f)) return K_LEFT;
-    if (d < -0.35f) return K_RIGHT;
+    if (d > 0.25f || (c->w > 1.2f && d > -0.9f)) return K_LEFT;
+    if (d < -0.35f || (c->w < -1.2f && d < 0.9f)) return K_RIGHT;
     return 0;
   }
   if (d > 0.6f) return K_LEFT;        /* rearing up: a touch of brake brings the nose down */
-  if (d > 0.3f && c->ch.w > 0.6f) return 0;   /* coming up fast: ease off */
+  if (d > 0.3f && c->w > 0.6f) return 0;   /* coming up fast: ease off */
   if (car_speed(c) < 0.3f && run.fuel <= 0) return 0;
   return K_RIGHT;
 }
@@ -100,14 +112,10 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--trace")) trace = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--things")) {   /* where the first bridges, tunnels and fuel cans of a stage are */
       stage_set(atoi(argv[++i]));
-      float b0, b1, c, f;
-      for (float x = 0; x < 2000; x += 1) {
-        if (stage_bridge(x, &b0, &b1)) printf("bridge %.0f to %.0f\n", b0, b1), x = b1;
-      }
-      bool in = false;
-      for (float x = 0; x < 2000; x += 1)
-        if (stage_ceiling(x, &c) != in) in = !in, printf("ceiling %s at %.0f\n", in ? "starts" : "ends", x);
-      for (int k = 0; k < 8 && stage_fuel(k, &f); k++) printf("fuel %.0f\n", f);
+      float b0, len, by, f, fy;
+      for (int k = 0; stage_bridge_k(k, &b0, &len, &by) && b0 < 2000; k++)
+        printf("bridge %.0f to %.0f at %.1f\n", b0, b0 + len, by);
+      for (int k = 0; k < 8 && stage_fuel(k, &f, &fy); k++) printf("fuel %.1f %.1f\n", f, fy);
       return 0;
     } else if (!strcmp(argv[i], "--slopes")) {   /* the steepest slope of each 100 m of a stage, in degrees */
       stage_set(atoi(argv[++i]));
@@ -154,8 +162,8 @@ int main(int argc, char **argv) {
       host_shot(p);
     }
     if (trace && f % trace == 0 && (g_mode == MODE_RUN || g_mode == MODE_END))
-      printf("f %d x %.1f y %.1f a %.2f v %.1f fuel %.1f air %d head %d dist %.0f coins %u\n", f, run.car.ch.x,
-             run.car.ch.y, run.car.ch.a, car_speed(&run.car), run.fuel, car_airborne(&run.car), run.car.head_hit,
+      printf("f %d x %.2f y %.2f a %.3f v %.2f fuel %.1f air %d dead %d dist %.0f coins %u\n", f, run.car.ch.x,
+             run.car.ch.y, run.car.ch.a, car_speed(&run.car), run.fuel, run.car.air, run.car.dead,
              run.dist, (unsigned)run_total());
   }
   printf("END mode %d dist %d coins %u total %u over %d end %d level %d flips %u saved %u running %d\n", g_mode,

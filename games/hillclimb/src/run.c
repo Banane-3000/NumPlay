@@ -1,4 +1,5 @@
-/* The run being driven: pedals, fuel, coins, tricks, levels, the end; the camera and the picture of it all. */
+/* The run being driven, by the game's rules (its GameLayer and GameContentLayer): pedals, fuel, coins, flips, air
+ * time, levels, the end; the camera and the picture of it all. */
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -11,12 +12,10 @@ Run run;
 #define SX 124      /* where the camera's point is on the screen */
 #define SY 138
 #define PI 3.14159265f
-#define FLIP_TURN (1.5f * PI)   /* a flip counts once upside down and the other wheel on top: 270 degrees */
-
-static const uint32_t air_values[] = {25, 50, 75, 100, 200, 300, 400, 500};
+#define DT (1.0f / CAR_HZ)
 
 /* ------------------------------------------------------------------ popups and particles */
-static void popup(const char *text, uint32_t value, int big) {
+static void popup_later(const char *text, uint32_t value, int big, int wait) {
   int slot = 0;
   for (int i = 0; i < NPOPUPS; i++)
     if (run.pop[i].t > run.pop[slot].t) slot = i;
@@ -27,7 +26,21 @@ static void popup(const char *text, uint32_t value, int big) {
     }
   Popup *p = &run.pop[slot];
   snprintf(p->text, sizeof p->text, "%s", text);
-  p->value = value, p->t = 0, p->big = (uint8_t)big;
+  p->value = value, p->t = 0, p->big = (uint8_t)big, p->seq = ++run.pop_seq, p->wait = (uint8_t)wait;
+}
+static void popup(const char *text, uint32_t value, int big) { popup_later(text, value, big, 0); }
+
+/* the same popup again (air time going up): its value and its time renewed */
+static void popup_update(const char *text, uint32_t value, int big) {
+  for (int i = 0; i < NPOPUPS; i++)
+    if (run.pop[i].text[0] && (!strcmp(run.pop[i].text, "AIR TIME") || !strcmp(run.pop[i].text, "BIG AIR TIME") ||
+                               !strcmp(run.pop[i].text, "INSANE AIR TIME"))) {
+      snprintf(run.pop[i].text, sizeof run.pop[i].text, "%s", text);
+      run.pop[i].value = value, run.pop[i].big = (uint8_t)big;
+      if (run.pop[i].t > 8) run.pop[i].t = 8;
+      return;
+    }
+  popup(text, value, big);
 }
 
 static void particle(float x, float y, float vx, float vy, float life, float size, int kind) {
@@ -49,12 +62,18 @@ void run_start(int vehicle, int stg) {
   stage_set(stg);
   stage_trees_reset();
   run.vehicle = vehicle, run.stage = stg;
-  car_init(&run.car, vehicle, sv.level[vehicle], 0);
-  run.fuel = run.fuel_max = car_fuel_seconds(vehicle, sv.level[vehicle]);
-  run.start_x = run.car.ch.x;
+  car_init(&run.car, vehicle, sv.level[vehicle]);
+  run.fuel = 100;
+  run.burn = 2.5f * car_fuel_rate(vehicle, sv.level[vehicle]);
+  run.start_x = 0;
   run.best = sv.best[stg][vehicle];
-  run.cam_x = run.car.ch.x, run.cam_y = run.car.ch.y + 0.4f, run.cam_s = 22;
+  run.cam_x = run.car.ch.x, run.cam_y = run.car.ch.y, run.zoom = 40, run.cam_s = 22;
   rnd_state = 12345u + (uint32_t)stg;
+  /* the stage's level goes on from the last run (StageInfo's level), and the run opens with its goal */
+  run.level = sv.stage_level[stg];
+  char t[32];
+  snprintf(t, sizeof t, "LEVEL %d: REACH %um", run.level + 1, (unsigned)stage_level_goal(run.level));
+  popup(t, 0, 0);
 }
 
 uint32_t run_total(void) { return run.coins + run.bonus; }
@@ -65,6 +84,7 @@ static void end_run(int why) {
 }
 
 void run_finish(void) {
+  car_free();
   if (run.dist > (float)sv.best[run.stage][run.vehicle]) {
     sv.best[run.stage][run.vehicle] = (uint16_t)(run.dist < 65535 ? run.dist : 65535);
     run.new_best = true;
@@ -79,87 +99,65 @@ void run_finish(void) {
   save_write();
 }
 
-/* the air time's worth after t seconds in the air: from a second on, a step every quarter second */
-static uint32_t air_worth(float t) {
-  if (t < 1.0f) return 0;
-  int n = (int)((t - 1.0f) / 0.25f);
-  if (n < 8) return air_values[n];
-  uint32_t v = 1000 + 500 * (uint32_t)(n - 8);
-  return v > 25000 ? 25000 : v;
-}
-
+/* flips (PlayerCar::handleFlips, GameLayer::onFlip...) and air time (GameLayer's frame): paid as they happen */
 static void tricks(void) {
   Car *c = &run.car;
-  bool air = car_airborne(c) && !c->head_hit;
-  static float last_a;
-  float da = c->ch.a - last_a;
-  last_a = c->ch.a;
-  if (air) {
-    run.air_t += 1.0f / CAR_HZ;
-    run.air_rot += da;
-    run.air_value = air_worth(run.air_t);
-    /* a flip each time it has turned 270 degrees more (and 360 for each next one) */
-    float turn = fabsf(run.air_rot) - FLIP_TURN - 2 * PI * (float)run.air_flips;
-    if (turn >= 0) {
-      run.air_flips++;
-      run.flips++;
-      run.bonus += 1000;
-      popup(run.air_rot > 0 ? "BACK FLIP" : "FLIP", 1000, 1);
-    }
-  } else if (run.air_t > 0) {
-    if (!c->head_hit && run.air_value) {
-      run.bonus += run.air_value;
-      popup(run.air_value >= 1000 ? "INSANE AIR TIME" : run.air_value >= 200 ? "BIG AIR TIME" : "AIR TIME",
-            run.air_value, run.air_value >= 1000);
-      uint32_t ms = (uint32_t)(run.air_t * 1000);
+  if (c->flip == FLIP_FRONT || c->flip == FLIP_BACK) {
+    run.flips++;
+    run.bonus += 1000;
+    popup(c->flip == FLIP_BACK ? "BACK FLIP" : "FLIP", 1000, 1);
+  } else if (c->flip == FLIP_NECK) {
+    run.bonus += 2500;
+    popup("NECK FLIP", 2500, 1);
+  }
+  /* air time counts from 0.75 s up, a step every 0.2 s: 25 each up to the 4th, 100 to the 8th, then 500;
+   * not in the run's first 3 seconds */
+  if (run.t < 3) return;
+  float t = (float)c->air / CAR_HZ;
+  if (t < 0.75f) {
+    if (run.air_value) {
+      uint32_t ms = (uint32_t)(run.air_best * 1000);
       if (ms > run.air_best_ms) run.air_best_ms = ms;
     }
-    run.air_t = 0, run.air_rot = 0, run.air_flips = 0, run.air_value = 0;
+    run.air_best = 0, run.air_step = 0, run.air_value = 0;
+    return;
   }
+  if (t > run.air_best) run.air_best = t;
+  int n = (int)floorf(1 + (run.air_best - 0.75f) * 5);
+  if (n == run.air_step) return;
+  uint32_t v = n > 8 ? 500 : n > 4 ? 100 : 25;
+  run.bonus += v;
+  run.air_value += v;
+  run.air_step = n;
+  popup_update(n > 8 ? "INSANE AIR TIME" : n > 4 ? "BIG AIR TIME" : "AIR TIME", run.air_value, n > 4);
 }
 
+/* coins and fuel cans are picked up by touching them (GameContentLayer::PreSolve) */
 static void pickups(void) {
   Car *c = &run.car;
-  /* the points of the vehicle that take things: its middle, wheels and Bill */
-  float px[CAR_MAXW + 2], py[CAR_MAXW + 2];
-  int n = 0;
-  px[n] = c->ch.x, py[n] = c->ch.y, n++;
-  car_head(c, &px[n], &py[n]), n++;
-  for (int i = 0; i < c->nw; i++) px[n] = c->wh[i].x, py[n] = c->wh[i].y, n++;
-  float xmin = c->ch.x - 3, xmax = c->ch.x + 3;
-  /* coins */
-  int k0 = (int)((xmin - 8) / COIN_SPACING), k1 = (int)((xmax + 8) / COIN_SPACING) + 1;
+  float half = COIN_SIZE * 0.5f, xmin = c->ch.x - 5, xmax = c->ch.x + 5;
+  int k0 = (int)((xmin - 30) / COIN_SPACING), k1 = (int)(xmax / COIN_SPACING) + 1;
   for (int k = k0 < 1 ? 1 : k0; k <= k1 && k < COIN_GROUPS; k++) {
     float cx[14], cy[14];
     int val[14];
     int m = stage_coin_group(k, cx, cy, val);
     for (int i = 0; i < m; i++) {
-      if (run.got[k] >> i & 1) continue;
-      for (int j = 0; j < n; j++) {
-        float dx = cx[i] - px[j], dy = cy[i] - py[j], r = j >= 2 ? c->wr[j - 2] + 0.35f : 1.1f;
-        if (dx * dx + dy * dy < r * r) {
-          run.got[k] |= (uint16_t)(1 << i);
-          run.coins += (uint32_t)val[i];
-          for (int s = 0; s < 3; s++) particle(cx[i], cy[i], rndf() * 2 - 1, rndf() * 2 + 1, 0.4f, 0.3f, 2);
-          break;
-        }
+      if (run.got[k] >> i & 1 || cx[i] < xmin || cx[i] > xmax) continue;
+      if (car_touches_box(c, cx[i], cy[i], half)) {
+        run.got[k] |= (uint16_t)(1 << i);
+        run.coins += (uint32_t)val[i];
+        for (int s = 0; s < 3; s++) particle(cx[i], cy[i], rndf() * 2 - 1, rndf() * 2 + 1, 0.4f, 0.5f, 2);
       }
     }
   }
-  /* fuel */
-  for (int k = 0; k < 4096; k++) {
-    float fx;
-    if (!stage_fuel(k, &fx) || fx > xmax + 2) break;
-    if (fx < xmin - 2 || (k < 4096 && run.fuel_got[k >> 3] >> (k & 7) & 1)) continue;
-    float fy = stage_floor(fx) + 0.45f;
-    for (int j = 0; j < n; j++) {
-      float dx = fx - px[j], dy = fy - py[j], r = j >= 2 ? c->wr[j - 2] + 0.45f : 1.2f;
-      if (dx * dx + dy * dy < r * r) {
-        run.fuel_got[k >> 3] |= (uint8_t)(1 << (k & 7));
-        run.fuel = run.fuel_max;
-        popup("FUEL", 0, 0);
-        break;
-      }
+  for (int k = 0; k < 512; k++) {
+    float fx, fy;
+    if (!stage_fuel(k, &fx, &fy) || fx > xmax) break;
+    if (fx < xmin || run.fuel_got[k >> 3] >> (k & 7) & 1) continue;
+    if (car_touches_box(c, fx, fy, half)) {
+      run.fuel_got[k >> 3] |= (uint8_t)(1 << (k & 7));
+      run.fuel = 100;
+      popup("FUEL", 0, 0);
     }
   }
 }
@@ -167,89 +165,83 @@ static void pickups(void) {
 void run_frame(uint32_t keys) {
   Car *c = &run.car;
   run.frame++;
-  bool gas = !run.over && (keys & (K_RIGHT | K_OK)), brake = !run.over && (keys & K_LEFT);
-  /* the pedals go down quickly and come up a little slower, as feet do */
-  run.gas += ((gas ? 1.0f : 0.0f) - run.gas) * (gas ? 0.5f : 0.35f);
-  run.brake += ((brake ? 1.0f : 0.0f) - run.brake) * (brake ? 0.5f : 0.35f);
-  if (run.over) run.gas = run.brake = 0;
-  bool fuel = run.fuel > 0;
-  /* the bridge under the vehicle sags with its weight */
-  stage_bridge_load(c->ch.x, 0.35f * (vehicles[run.vehicle].mass / 300.0f));
-  car_step(c, run.gas, run.brake, fuel && !c->head_hit);
+  run.t += DT;
+  /* the brake wins over the gas (GameContentLayer::preFrameUpdate) */
+  bool brake = !run.over && (keys & K_LEFT), gas = !run.over && !brake && (keys & (K_RIGHT | K_OK));
+  run.gas = gas, run.brake = brake;
+  car_step(c, gas ? 1 : brake ? -1 : 0, run.fuel > 0);
   if (c->tree_broken >= 0) {
-    float tx;
-    if (stage_tree(c->tree_broken, &tx))
+    float tx, ty;
+    if (stage_tree(c->tree_broken, &tx, &ty))
       for (int s = 0; s < 14; s++)
-        particle(tx, stage_floor(tx) + 0.3f + rndf() * 2.0f, c->ch.vx * 0.5f + rndf() * 4 - 1, rndf() * 4, 0.9f,
-                 0.3f + rndf() * 0.2f, 0);
+        particle(tx, ty + 0.3f + rndf() * 2.0f, c->vx * 0.5f + rndf() * 4 - 1, rndf() * 4, 0.9f, 0.3f + rndf() * 0.2f, 0);
   }
-  /* fuel burns while the run goes on */
-  if (!run.over && run.fuel > 0) {
-    run.fuel -= 1.0f / CAR_HZ;
-    if (run.fuel < 0) run.fuel = 0;
+  /* fuel: 2.5 a second (and the vehicle's rate) out of 100; empty, the run ends 4 s later */
+  if (run.fuel > 0) {
+    run.fuel -= run.burn * DT;
+    if (run.fuel <= 0) run.fuel = 0;
+    run.empty_t = 0;
+  } else if (!run.over && (run.empty_t += DT) > 4) {
+    end_run(END_OUT_OF_FUEL);
   }
-  /* distance and levels */
+  /* Bill down: the run ends 4 s later */
+  if (c->dead && !run.over && (run.down_t += DT) > 4) end_run(END_DRIVER_DOWN);
+  /* distance and levels (GameLayer::setScore): reaching the goal completes the level and pays its bonus; the
+   * next one is kept for the next runs */
   float d = c->ch.x - run.start_x;
   if (d > run.dist) run.dist = d;
-  if (!run.over)
-    while (run.dist >= stage_level_end(run.level + 1)) {
-      run.level++;
-      uint32_t r = stage_level_reward(run.level);
-      run.bonus += r;
-      char t[24];
-      snprintf(t, sizeof t, "LEVEL %d", run.level);
-      popup(t, r, 1);
-    }
+  if (!run.over && run.level < 255 && run.dist >= (float)stage_level_goal(run.level)) {
+    uint32_t r = stage_level_bonus(run.level);
+    run.bonus += r;
+    run.levels_done++;
+    char t[32];
+    snprintf(t, sizeof t, "LEVEL %d COMPLETE", run.level + 1);
+    popup(t, 0, 1);
+    popup_later("LEVEL BONUS", r, 1, 60);   /* (the game's: a second later, then the next goal) */
+    run.level++;
+    sv.stage_level[run.stage] = (uint8_t)run.level;
+    snprintf(t, sizeof t, "LEVEL %d: REACH %um", run.level + 1, (unsigned)stage_level_goal(run.level));
+    popup_later(t, 0, 0, 120);
+  }
   if (!run.over) {
     tricks();
     pickups();
   }
-  /* Bill's neck */
-  if (c->head_hit && !run.over) {
-    if (fabsf(run.air_rot) >= PI * 0.75f || run.air_flips) {
-      run.bonus += 2500;
-      popup("NECK FLIP", 2500, 1);
-    }
-    end_run(END_DRIVER_DOWN);
-  }
-  /* out of fuel: when the vehicle has stopped */
-  if (!run.over && run.fuel <= 0) {
-    if (car_speed(c) < 0.6f) run.empty_t++;
-    else run.empty_t = 0;
-    if (run.empty_t > 90) end_run(END_OUT_OF_FUEL);
-  }
   if (run.over) run.over_t++;
   /* dust from the wheels that spin on the ground, smoke from the exhaust */
   for (int i = 0; i < c->nw; i++) {
-    float slip = fabsf(c->wh[i].w * c->wr[i] - (c->wh[i].vx)), sp = fabsf(c->wh[i].vx);
-    if (c->ground[i] && (slip > 2.0f || (sp > 9 && run.frame % 2)) && (run.frame + (uint32_t)i) % 4 == 0)
-      particle(c->wh[i].x - c->wr[i] * 0.6f, c->wh[i].y - c->wr[i] * 0.8f, -c->wh[i].vx * 0.2f - rndf() * 2,
+    float sp = fabsf(c->vx);
+    if (c->ground[i] && (sp > 4 || gas) && (run.frame + (uint32_t)i) % 5 == 0)
+      particle(c->wh[i].x - c->wr[i] * 0.6f, c->wh[i].y - c->wr[i] * 0.8f, -c->vx * 0.2f - rndf() * 2,
                1 + rndf() * 2, 0.5f, 0.22f + rndf() * 0.12f, 0);
   }
-  if (run.gas > 0.5f && fuel && run.frame % 9 == 0 && car_speed(c) < 6) {
+  if (gas && run.fuel > 0 && !c->dead && run.frame % 9 == 0 && car_speed(c) < 6) {
     float ex, ey;
-    car_point(c, -1.4f, 0.2f, &ex, &ey);
-    particle(ex, ey, -1.0f + c->ch.vx * 0.5f, 0.5f, 0.6f, 0.16f, 1);
+    car_point(c, -1.5f, 0.1f, &ex, &ey);
+    particle(ex, ey, -1.0f + c->vx * 0.5f, 0.5f, 0.6f, 0.16f, 1);
   }
   for (int i = 0; i < run.npart; i++) {
     Particle *p = &run.part[i];
     if (p->life <= 0) continue;
-    p->life -= 1.0f / CAR_HZ;
-    p->x += p->vx / CAR_HZ, p->y += p->vy / CAR_HZ;
-    if (p->kind == 0) p->vy -= 6.0f / CAR_HZ;
-    else if (p->kind == 1) p->size += 0.5f / CAR_HZ;
+    p->life -= DT;
+    p->x += p->vx * DT, p->y += p->vy * DT;
+    if (p->kind == 0) p->vy -= 6.0f * DT;
+    else if (p->kind == 1) p->size += 0.5f * DT;
   }
   for (int i = 0; i < NPOPUPS; i++)
-    if (run.pop[i].text[0] && ++run.pop[i].t > 110) run.pop[i].text[0] = 0;
-  /* the camera: ahead of the vehicle as it goes, zooming out with speed */
-  float sp = car_speed(c), lead = c->ch.vx * 0.2f;
-  if (lead > 3.5f) lead = 3.5f;
-  if (lead < -1.5f) lead = -1.5f;
-  float tx = c->ch.x + lead, ty = c->ch.y + 0.4f;
-  run.cam_x += (tx - run.cam_x) * 0.12f;
-  run.cam_y += (ty - run.cam_y) * 0.12f;
-  float ts = 22 - (sp > 20 ? 20 : sp) * 0.3f;
-  run.cam_s += (ts - run.cam_s) * 0.03f;
+    if (run.pop[i].text[0] && !(run.pop[i].wait ? run.pop[i].wait-- : 0) && ++run.pop[i].t > 110)
+      run.pop[i].text[0] = 0;
+  /* the camera (GameContentLayer::updateCamera): half a second ahead of the vehicle, zooming out with its speed,
+   * a quarter second once Bill is down */
+  float sp = car_speed(c);
+  if (sp > 20) sp = 20;
+  if (c->dead) sp *= 0.5f;
+  float z = 40 - 0.75f * sp;
+  if (c->dead) z *= 1.5f;
+  run.zoom += (z - run.zoom) * 0.05f;
+  run.cam_x += (c->ch.x + (c->dead ? 0.25f : 0.5f) * c->vx - run.cam_x) * (3 * DT);
+  run.cam_y += (c->ch.y - run.cam_y) * (3 * DT);
+  run.cam_s = 22 * run.zoom / 40;
 }
 
 /* ------------------------------------------------------------------ drawing */
@@ -331,7 +323,7 @@ static void draw_ground(void) {
     float wx = wld_x((float)(i * 2));
     fl[i] = scr_y(stage_ground(wx));
     float c;
-    ce[i] = g->ceiling && stage_ceiling(wx, &c) ? scr_y(c) : -4000;
+    ce[i] = g->ceiling && stage_roof(wx, &c) ? scr_y(c) : -4000;
   }
   for (int x = 0; x < SCREEN_W; x++) {
     int i = x >> 1;
@@ -350,55 +342,6 @@ static void draw_ground(void) {
   gfx_ground_draw();
 }
 
-static void draw_bridges(void) {
-  if (stage->feature != FEAT_BRIDGES) return;
-  float x0w = wld_x(-20), x1w = wld_x(SCREEN_W + 20);
-  for (float x = x0w; x < x1w;) {
-    float b0, b1;
-    if (!stage_bridge(x, &b0, &b1)) {
-      x += 2;
-      continue;
-    }
-    float s = run.cam_s;
-    /* the posts at each end, the ropes over the planks */
-    for (int e = 0; e < 2; e++) {
-      float px = e ? b1 : b0, py = stage_floor(px);
-      gfx_tube(scr_x(px), scr_y(py - 0.3f), scr_x(px), scr_y(py + 1.3f), 0.12f * s, rgb565(0x6B4423), 255);
-    }
-    int n = (int)((b1 - b0) / 0.8f);
-    float lx = 0, ly = 0;
-    for (int i = 0; i <= n; i++) {
-      float px = b0 + (b1 - b0) * (float)i / (float)n, py = stage_floor(px);
-      float a = atan2f(stage_floor(px + 0.1f) - stage_floor(px - 0.1f), 0.2f);
-      float sx = scr_x(px), sy = scr_y(py - 0.14f);
-      gfx_image(IMG_PLANK, sx, sy, s / img(IMG_PLANK)->ppm4 * 4.0f * 0.8f, a, 255);
-      float rx = scr_x(px), ry = scr_y(py + 1.0f);
-      if (i) gfx_tube(lx, ly, rx, ry, 0.035f * s, rgb565(0x8A6A3A), 255);
-      lx = rx, ly = ry;
-    }
-    x = b1 + 1;
-  }
-}
-
-static void draw_trees(void) {
-  if (stage->feature != FEAT_TREES) return;
-  float x0w = wld_x(-40), x1w = wld_x(SCREEN_W + 40), s = run.cam_s;
-  for (int k = stage_tree_first(x0w);; k++) {
-    float tx;
-    if (!stage_tree(k, &tx)) {
-      if (k % 6 == 0 && k > stage_tree_first(x1w) + 6) break;
-      continue;
-    }
-    if (tx > x1w) break;
-    float ty = stage_floor(tx), sc = s / (img(IMG_TREE_TOP)->ppm4 / 4.0f);
-    if (!stage_tree_standing(k)) continue;   /* (knocked down: gone in a burst of needles and bark) */
-    /* a pine: the trunk, then three tiers of branches, each smaller */
-    gfx_image(IMG_TREE_TRUNK, scr_x(tx), scr_y(ty) + 2, sc, 0, 255);
-    for (int i = 0; i < 3; i++)
-      gfx_image(IMG_TREE_TOP, scr_x(tx), scr_y(ty + 0.75f + 0.55f * (float)i), sc * (1 - 0.18f * (float)i), 0, 255);
-  }
-}
-
 static void draw_icicles(void) {
   if (stage->feature != FEAT_ICICLES) return;
   float s = run.cam_s, x0 = floorf(wld_x(-20) / 3.0f) * 3.0f, x1 = wld_x(SCREEN_W + 20);
@@ -406,32 +349,100 @@ static void draw_icicles(void) {
     uint32_t h = hash2((uint32_t)(int32_t)(x * 10) + 99u);
     if (h % 3 == 0) continue;
     float px = x + (float)(h >> 8 & 255) / 256.0f * 2.5f, c;
-    if (!stage_ceiling(px, &c)) continue;
+    if (!stage_roof(px, &c)) continue;
     gfx_image(IMG_ICICLE, scr_x(px), scr_y(c) - 2, s / (img(IMG_ICICLE)->ppm4 / 4.0f) * (0.6f + (float)(h >> 16 & 7) * 0.06f),
               0, 255);
   }
+}
+
+/* the game's rope bridges: planks on joints (where the car is near, as they move) */
+static void plank(float x, float y, float a, float s) {
+  gfx_image(IMG_PLANK, scr_x(x), scr_y(y), s / (img(IMG_PLANK)->ppm4 / 4.0f), a, 255);
+}
+
+static void draw_bridges(void) {
+  if (!stage->bridges) return;
+  float s = run.cam_s, x0w = wld_x(-30), x1w = wld_x(SCREEN_W + 30);
+  CarBody pl[40];
+  int np = car_planks(pl, 40);
+  for (int k = stage_bridge_first(x0w);; k++) {
+    float b0, len, by;
+    if (!stage_bridge_k(k, &b0, &len, &by) || b0 > x1w) break;
+    float b1 = b0 + len, w = len / (len - 1);
+    /* the posts at each end */
+    for (int e = 0; e < 2; e++) {
+      float px = e ? b1 + w * 0.5f : b0 + w * 0.5f;
+      gfx_tube(scr_x(px), scr_y(by - 0.3f), scr_x(px), scr_y(by + 1.3f), 0.12f * s, rgb565(0x6B4423), 255);
+    }
+    bool moving = false;
+    for (int i = 0; i < np; i++) moving = moving || (pl[i].x > b0 && pl[i].x < b1 + 1);
+    float lx = scr_x(b0 + w * 0.5f), ly = scr_y(by + 1.0f);
+    int n = (int)len;
+    for (int i = 0; i < n; i++) {
+      float px = b0 + w + (float)i, py = by - 0.15f, a = 0;
+      if (moving) {
+        for (int j = 0; j < np; j++)
+          if (fabsf(pl[j].x - px) < 0.6f) px = pl[j].x, py = pl[j].y, a = pl[j].a;
+      }
+      plank(px, py, a, s);
+      /* the rope over the planks */
+      float rx = scr_x(px), ry = scr_y(py + 1.15f);
+      gfx_tube(lx, ly, rx, ry, 0.035f * s, rgb565(0x8A6A3A), 255);
+      lx = rx, ly = ry;
+    }
+    gfx_tube(lx, ly, scr_x(b1 + w * 0.5f), scr_y(by + 1.0f), 0.035f * s, rgb565(0x8A6A3A), 255);
+  }
+}
+
+/* a pine: the trunk, then three tiers of branches, each smaller, from its foot turned by a */
+static void tree(float tx, float ty, float a, float s) {
+  float sc = s / (img(IMG_TREE_TOP)->ppm4 / 4.0f), ux = -sinf(a), uy = cosf(a);
+  gfx_image(IMG_TREE_TRUNK, scr_x(tx), scr_y(ty) + 2, sc, a, 255);
+  for (int i = 0; i < 3; i++) {
+    float h = 0.75f + 0.55f * (float)i;
+    gfx_image(IMG_TREE_TOP, scr_x(tx + ux * h), scr_y(ty + uy * h), sc * (1 - 0.18f * (float)i), a, 255);
+  }
+}
+
+static void draw_trees(void) {
+  if (stage->feature != FEAT_TREES) return;
+  float x0w = wld_x(-40), x1w = wld_x(SCREEN_W + 40), s = run.cam_s;
+  CarBody tb[12];
+  int which[12], nt = car_trees(tb, which, 12);
+  for (int k = stage_tree_first(x0w);; k++) {
+    float tx, ty;
+    if (k >= TREES_MAX) break;
+    if (!stage_tree(k, &tx, &ty)) {
+      if (stage_tree_first(x1w) <= k) break;
+      continue;
+    }
+    if (tx > x1w) break;
+    bool body = false;
+    for (int i = 0; i < nt; i++) body = body || which[i] == k;
+    if (!body && stage_tree_standing(k)) tree(tx, ty, 0, s);
+  }
+  for (int i = 0; i < nt; i++) tree(tb[i].x, tb[i].y, tb[i].a, s);
 }
 
 static void draw_things(void) {
   float s = run.cam_s, x0 = wld_x(-30), x1 = wld_x(SCREEN_W + 30);
   /* the flag at the best distance */
   if (run.best > 1) {
-    float fx = run.start_x + run.best, fy = stage_floor(fx);
+    float fx = run.start_x + run.best, fy = stage_deck(fx);
     if (fx > x0 && fx < x1) {
       gfx_tube(scr_x(fx), scr_y(fy), scr_x(fx), scr_y(fy + 2.4f), 0.05f * s, rgb565(0x3A3A3A), 255);
       gfx_image(IMG_FLAG, scr_x(fx), scr_y(fy + 2.4f), s / (img(IMG_FLAG)->ppm4 / 4.0f), 0, 255);
     }
   }
   /* fuel cans */
-  for (int k = 0; k < 4096; k++) {
-    float fx;
-    if (!stage_fuel(k, &fx) || fx > x1) break;
+  for (int k = 0; k < 512; k++) {
+    float fx, fy;
+    if (!stage_fuel(k, &fx, &fy) || fx > x1) break;
     if (fx < x0 || run.fuel_got[k >> 3] >> (k & 7) & 1) continue;
-    float bob = sinf((float)run.frame * 0.08f + fx) * 0.06f;
-    gfx_image(IMG_FUELCAN, scr_x(fx), scr_y(stage_floor(fx) + bob), s / (img(IMG_FUELCAN)->ppm4 / 4.0f), 0, 255);
+    gfx_image(IMG_FUELCAN, scr_x(fx), scr_y(fy), s / (img(IMG_FUELCAN)->ppm4 / 4.0f), 0, 255);
   }
   /* coins */
-  int k0 = (int)((x0 - 8) / COIN_SPACING), k1 = (int)((x1 + 8) / COIN_SPACING) + 1;
+  int k0 = (int)((x0 - 20) / COIN_SPACING), k1 = (int)(x1 / COIN_SPACING) + 1;
   for (int k = k0 < 1 ? 1 : k0; k <= k1 && k < COIN_GROUPS; k++) {
     float cx[14], cy[14];
     int val[14];
@@ -444,23 +455,28 @@ static void draw_things(void) {
   }
 }
 
-/* a picture at a point of the vehicle's frame, turned with it */
+/* a picture on a body: at (x, y), turned by a */
+static void body_image(int id, float x, float y, float a) {
+  gfx_image(id, scr_x(x), scr_y(y), run.cam_s / (img(id)->ppm4 / 4.0f), a, 255);
+}
+
+/* a picture at a point of the chassis' frame, turned with it */
 static void car_image(int id, float lx, float ly, float extra) {
   const Car *c = &run.car;
   float wx, wy;
   car_point(c, lx, ly, &wx, &wy);
-  gfx_image(id, scr_x(wx), scr_y(wy), run.cam_s / (img(id)->ppm4 / 4.0f), c->ch.a + extra, 255);
+  body_image(id, wx, wy, c->ch.a + extra);
 }
 
+/* Bill: his torso and head are bodies of their own (upside down in the game's frame: their angle less pi) */
 static void draw_bill(const VehArt *a) {
   const Car *c = &run.car;
-  if (a->legs) car_image(IMG_BILL_LEG, a->hips[0] + 0.05f, a->hips[1] + 0.02f, a->lean * 0.3f);
-  car_image(IMG_BILL_BODY, a->hips[0], a->hips[1], a->lean);
-  /* the head on the neck, nodding; dropped to the side once Bill is down */
-  float nx = BILL_NECK_X, ny = BILL_NECK_Y, ca = cosf(a->lean), sa = sinf(a->lean);
-  float lx = a->hips[0] + ca * nx - sa * ny + c->wob[0], ly = a->hips[1] + sa * nx + ca * ny + c->wob[1];
-  float tilt = c->head_hit ? -0.9f : -c->wob[0] * 2.0f;
-  car_image(IMG_BILL_HEAD, lx, ly, a->lean + tilt);
+  float ta = c->torso.a - PI, ha = c->head.a - PI;
+  /* his hips: the bottom of his torso */
+  float hx = c->torso.x + sinf(ta) * 0.3f, hy = c->torso.y - cosf(ta) * 0.3f;
+  if (a->legs) body_image(IMG_BILL_LEG, hx, hy, c->ch.a);
+  body_image(IMG_BILL_BODY, hx, hy, ta);
+  body_image(IMG_BILL_HEAD, c->head.x, c->head.y, ha);
 }
 
 static void draw_car(void) {
@@ -468,29 +484,30 @@ static void draw_car(void) {
   const VehArt *a = &veh_art[run.vehicle];
   float s = run.cam_s;
   bool rider = a->legs;
-  /* behind: the tank's tracks, and the bikes' swingarm */
   for (int i = 0; i < a->nlayers; i++)
     if (!a->layer[i][3]) car_image((int)a->layer[i][0], a->layer[i][1], a->layer[i][2], 0);
   if (run.vehicle == V_TANK) {   /* the track around the wheels */
-    float x0 = scr_x(c->wh[0].x), y0 = scr_y(c->wh[0].y), x1 = scr_x(c->wh[c->nw - 1].x), y1 = scr_y(c->wh[c->nw - 1].y);
-    gfx_tube(x0, y0, x1, y1, (c->wr[0] + 0.07f) * s, rgb565(0x2A2A2A), 255);
-    gfx_tube(x0, y0, x1, y1, (c->wr[0] - 0.02f) * s, rgb565(0x4A4A4A), 255);
+    for (int pass = 0; pass < 2; pass++)
+      for (int i = 0; i < c->nw; i++) {
+        int j = (i + 1) % c->nw;
+        gfx_tube(scr_x(c->wh[i].x), scr_y(c->wh[i].y), scr_x(c->wh[j].x), scr_y(c->wh[j].y),
+                 (c->wr[0] + (pass ? -0.02f : 0.07f)) * s, rgb565(pass ? 0x4A4A4A : 0x2A2A2A), 255);
+      }
   }
-  if (a->ntubes) {
-    int i = 0;
+  if (a->ntubes) {   /* the swingarm, behind */
     float tx, ty;
-    car_point(c, a->tube[i][0], a->tube[i][1], &tx, &ty);
-    int w = (int)a->tube[i][2];
-    gfx_tube(scr_x(tx), scr_y(ty), scr_x(c->wh[w].x), scr_y(c->wh[w].y), a->tube[i][4] * s,
-             rgb565((uint32_t)a->tube[i][3]), 255);
+    car_point(c, a->tube[0][0], a->tube[0][1], &tx, &ty);
+    int w = (int)a->tube[0][2];
+    gfx_tube(scr_x(tx), scr_y(ty), scr_x(c->wh[w].x), scr_y(c->wh[w].y), a->tube[0][4] * s,
+             rgb565((uint32_t)a->tube[0][3]), 255);
   }
   if (!rider) draw_bill(a);
   car_image(a->chassis, 0, 0, 0);
   if (rider) draw_bill(a);
   for (int i = 0; i < c->nw; i++)
-    gfx_image(a->wheel, scr_x(c->wh[i].x), scr_y(c->wh[i].y), s / (img(a->wheel)->ppm4 / 4.0f) * c->wr[i] / a->wheel_r[0],
-              c->spin[i], 255);
-  for (int i = 1; i < a->ntubes; i++) {
+    gfx_image(a->wheel, scr_x(c->wh[i].x), scr_y(c->wh[i].y), s / (img(a->wheel)->ppm4 / 4.0f) * c->wr[i] / a->wheel_r,
+              c->wh[i].a, 255);
+  for (int i = 1; i < a->ntubes; i++) {   /* the fork, in front */
     float tx, ty;
     car_point(c, a->tube[i][0], a->tube[i][1], &tx, &ty);
     int w = (int)a->tube[i][2];
@@ -524,7 +541,6 @@ void format_number(char *out, uint32_t n) {
   }
   out[j] = 0;
 }
-
 void draw_coins_counter(int x, int y, uint32_t n, int align) {
   char t[20];
   format_number(t, n);
@@ -534,11 +550,17 @@ void draw_coins_counter(int x, int y, uint32_t n, int align) {
   gfx_text(FONT_M, x0 + 20, y, t, rgb565(0xFFE14A), C_BLACK, 0);
 }
 
+/* the meters' needles: the game turns them 23 degrees a unit of revs and 87 of turbo pressure, from 135 */
+static float needle(float v, float per) {
+  v = v * per / 270;
+  return 2.2f - (v < 0 ? 0 : v > 1 ? 1 : v) * 4.4f;
+}
+
 static void draw_hud(void) {
   const Car *c = &run.car;
   char t[40];
   /* fuel: the can, then the gauge */
-  float f = run.fuel / run.fuel_max;
+  float f = run.fuel / 100;
   gfx_image(IMG_FUEL_ICON, 14, 13, 1, 0, 255);
   gfx_rrect(26, 7, 64, 12, 3, C_BLACK, 200);
   uint32_t col = f > 0.5f ? 0x5BE33A : f > 0.25f ? 0xF2C230 : 0xE8392E;
@@ -549,7 +571,7 @@ static void draw_hud(void) {
   /* distance and the level */
   snprintf(t, sizeof t, "%dm", (int)run.dist);
   gfx_text(FONT_L, 160, 24, t, C_WHITE, C_BLACK, 1);
-  float l0 = stage_level_end(run.level), l1 = stage_level_end(run.level + 1);
+  float l0 = run.level ? (float)stage_level_goal(run.level - 1) : 0, l1 = (float)stage_level_goal(run.level);
   float p = (run.dist - l0) / (l1 - l0);
   gfx_rrect(122, 30, 76, 6, 3, C_BLACK, 170);
   if (p > 0) gfx_rrect(123, 31, (int)(74 * (p > 1 ? 1 : p)), 4, 2, rgb565(0xFFC21A), 255);
@@ -563,20 +585,27 @@ static void draw_hud(void) {
   int pb = run.brake > 0.5f ? IMG_PEDAL_BRAKE_DOWN : IMG_PEDAL_BRAKE, pg = run.gas > 0.5f ? IMG_PEDAL_GAS_DOWN : IMG_PEDAL_GAS;
   gfx_image(pb, 23, 218, 1, 0, 255);
   gfx_image(pg, 297, 218, 1, 0, 255);
-  float rpm = c->rpm * (run.fuel > 0 ? 1 : 0.1f), boost = car_speed(c) / (vehicles[run.vehicle].speed * 1.6f);
-  if (boost > 1) boost = 1;
+  /* (each vehicle's own scale: PlayerCar*::getEngineRev, getTurboPressure) */
+  float rk = run.vehicle == V_MONSTER ? 1.65f : run.vehicle == V_BUGGY ? 1.09f : 1;
+  float tk = run.vehicle == V_MONSTER ? 0.87f : run.vehicle == V_BUGGY ? 0.66f : run.vehicle == V_TANK ? 0.44f : 1;
+  float rpm = run.fuel > 0 && !c->dead ? needle(c->rev * rk, 23) : needle(0, 23);
+  float boost = needle(c->turbo * tk, 87);
   for (int m = 0; m < 2; m++) {
-    float mx = m ? 186 : 134, my = 216, v = m ? rpm : boost;
+    float mx = m ? 186 : 134, my = 216;
     gfx_image(m ? IMG_METER_RPM : IMG_METER_BOOST, mx, my, 1, 0, 255);
-    gfx_image(IMG_NEEDLE, mx, my, 1, 2.2f - v * 4.4f, 255);
+    gfx_image(IMG_NEEDLE, mx, my, 1, m ? rpm : boost, 255);
   }
-  /* what was just earned */
-  int row = 0;
-  for (int i = 0; i < NPOPUPS; i++) {
-    const Popup *q = &run.pop[i];
-    if (!q->text[0]) continue;
+  /* what was just earned, in the order it came, one under the other */
+  int y = 52;
+  uint16_t last = 0;
+  for (int n = 0; n < NPOPUPS; n++) {
+    const Popup *q = NULL;
+    for (int i = 0; i < NPOPUPS; i++)
+      if (run.pop[i].text[0] && run.pop[i].seq > last && (!q || run.pop[i].seq < q->seq)) q = &run.pop[i];
+    if (!q) break;
+    last = q->seq;
     int a = q->t < 80 ? 255 : 255 - (q->t - 80) * 8;
-    if (a <= 0) continue;
+    if (a <= 0 || q->wait) continue;
     char v[16];
     if (q->value) {
       format_number(v, q->value);
@@ -584,14 +613,13 @@ static void draw_hud(void) {
     } else {
       snprintf(t, sizeof t, "%s", q->text);
     }
-    int y = 74 + row * 18 - (q->t < 8 ? 8 - q->t : 0);
-    gfx_text(q->big ? FONT_L : FONT_M, 160, y, t, q->big ? rgb565(0xFFE14A) : C_WHITE, C_BLACK, 1);
-    row++;
+    int f = q->big && gfx_text_width(FONT_L, t) <= 300 ? FONT_L : FONT_M;
+    y += f == FONT_L ? 22 : 15;   /* (down to its baseline) */
+    gfx_text(f, 160, y - (q->t < 8 ? 8 - q->t : 0), t, q->big ? rgb565(0xFFE14A) : C_WHITE, C_BLACK, 1);
+    y += 5;
   }
-  if (run.air_value && !run.over) {
-    snprintf(t, sizeof t, "AIR TIME +%lu", (unsigned long)run.air_value);
-    gfx_text(FONT_M, 160, 74 + row * 18, t, rgb565(0xBFF0FF), C_BLACK, 1);
-  }
+  if (c->dead && !run.over) gfx_text(FONT_XL, 160, 150, "DRIVER DOWN", rgb565(0xFF5A3C), C_BLACK, 1);
+  else if (run.fuel <= 0 && !run.over) gfx_text(FONT_XL, 160, 150, "OUT OF FUEL", rgb565(0xFFC21A), C_BLACK, 1);
 }
 
 void run_draw(bool hud) {

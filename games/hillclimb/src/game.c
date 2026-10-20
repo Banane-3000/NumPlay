@@ -127,7 +127,7 @@ void game_frame(uint32_t keys) {
         break;
       }
       run_frame(keys);
-      if (run.over && run.over_t > 75) {
+      if (run.over && run.over_t > 1) {
         run_finish();
         g_mode = MODE_END, end_t = 0;
       }

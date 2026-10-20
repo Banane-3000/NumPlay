@@ -1,6 +1,7 @@
 /* Saves: hillclimb.sav (coins, vehicles, stages, upgrades, bests), and a copy of it in a Python script:
  * installing apps from the NumWorks website keeps only Python scripts, so the save comes back from it when the
  * file itself is gone. The copy is a comment line "#>name:base64" (the way NumPlay and its big games keep theirs). */
+#include <stddef.h>
 #include <string.h>
 #include "game.h"
 #include "plat.h"
@@ -15,6 +16,7 @@ typedef struct {
   uint32_t magic, size;
   Save s;
 } SaveFile;
+_Static_assert(offsetof(Save, stage_level) == SAVE_V1_SIZE, "the old saves' part comes first");
 
 static const char copy_head[] =
   "# Hill Climb Racing keeps a copy of your progress here, so\n"
@@ -107,10 +109,11 @@ void save_load(void) {
   defaults();
   uint32_t len;
   const uint8_t *d = plat_load(SAVE_NAME, &len);
-  if (!d || len != sizeof(SaveFile)) return;
+  if (!d || (len != sizeof(SaveFile) && len != 8 + SAVE_V1_SIZE)) return;
   SaveFile f;
-  memcpy(&f, d, sizeof f);
-  if (f.magic != MAGIC || f.size != sizeof(Save)) return;
+  memset(&f, 0, sizeof f);
+  memcpy(&f, d, len);
+  if (f.magic != MAGIC || f.size != len - 8) return;
   sv = f.s;
   /* (whatever the file says, the first vehicle and stage are owned and levels stay in range) */
   sv.vehicles |= 1, sv.stages |= 1;

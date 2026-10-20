@@ -17,7 +17,10 @@ typedef struct {
   uint16_t best[NSTAGES][NVEHICLES];    /* meters */
   uint8_t vehicle, stage, seen_help, pad;
   uint32_t runs, meters, flips, best_air_ms, coins_earned;
+  uint8_t stage_level[NSTAGES];         /* each stage's level, from 0 (the game keeps them from run to run) */
+  uint8_t pad2[2];
 } Save;
+#define SAVE_V1_SIZE 224                /* (saves from before the levels were kept) */
 extern Save sv;
 
 enum { END_DRIVER_DOWN, END_OUT_OF_FUEL, END_QUIT };
@@ -26,7 +29,8 @@ typedef struct {
   char text[24];
   uint32_t value;
   uint16_t t;           /* frames shown so far */
-  uint8_t big;
+  uint16_t seq;         /* the order they came in */
+  uint8_t big, wait;    /* (frames before it shows) */
 } Popup;
 
 typedef struct {
@@ -34,30 +38,33 @@ typedef struct {
   uint8_t kind;          /* 0 the stage's dirt, 1 smoke, 2 a coin's sparkle */
 } Particle;
 
-#define NPOPUPS 4
+#define NPOPUPS 5
 #define NPARTICLES 40
 
 typedef struct {
   Car car;
   int vehicle, stage;
-  float fuel, fuel_max;          /* seconds */
+  float fuel, burn;              /* the game's fuel: 100 full, burning `burn` a second */
   uint32_t coins, bonus;         /* collected, and from tricks and levels */
   float start_x, dist, best;     /* meters: the farthest reached this run, the best before it */
-  int level;                     /* levels done */
-  float air_t, air_rot;          /* in the air: for how long, turned how far (radians) */
-  int air_flips, neck_ready;
-  uint32_t air_value;            /* what the air time is worth so far */
+  int level;                     /* the stage's level (from 0), and how many this run completed */
+  int levels_done;
+  float t;                       /* seconds since the start */
+  float air_best;                /* this time in the air: the longest it has been (seconds) */
+  int air_step;                  /* the air time's step paid so far */
+  uint32_t air_value;            /* what this air time has paid so far */
+  float down_t, empty_t;         /* seconds since Bill went down, since the fuel ran out */
   bool over;
   int end;                       /* END_* */
   int over_t;                    /* frames since */
-  int empty_t;                   /* frames stopped without fuel */
   bool new_best;
-  float cam_x, cam_y, cam_s;
+  float cam_x, cam_y, cam_s, zoom;
   uint32_t frame;
-  float gas, brake;              /* the pedals, eased */
+  float gas, brake;              /* the pedals (drawn pressed) */
   uint16_t got[COIN_GROUPS];     /* coins taken: a bit each */
-  uint8_t fuel_got[512];         /* fuel cans taken */
+  uint8_t fuel_got[64];          /* fuel cans taken */
   Popup pop[NPOPUPS];
+  uint16_t pop_seq;
   Particle part[NPARTICLES];
   int npart;
   uint32_t flips;
