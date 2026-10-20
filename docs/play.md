@@ -170,8 +170,8 @@ Choose a scenario or a free play map. Build woodcutters and stone mines for mate
 
 | Key | What it does |
 | --- | --- |
-| **Right** | Drive forward |
-| **Left** | Brake and reverse |
+| **Right** or **6** | Drive forward |
+| **Left** or **4** | Brake and reverse |
 | **OK** or **Back** | Pause. **Back** again resumes |
 | **Levels** on the pause card | Pick any level |
 
