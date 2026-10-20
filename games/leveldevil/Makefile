@@ -6,7 +6,8 @@
 #
 # The rooms are the game's own: tools/scenes.json has their tiles and actors (tools/fetch.py takes
 # them from the game's web build) and tools/rooms.py their scripts, which it packs into
-# output/rooms.inc (Python 3). The game draws with the launcher's strips, shapes and fonts.
+# output/rooms.inc (Python 3). Its pictures and fonts are the game's own, in src/pictures.h
+# (tools/pictures.py takes them from the game's web build); it draws them in the launcher's strips.
 Q ?= @
 CC = arm-none-eabi-gcc
 NWLINK ?= npx --yes -- nwlink@1.0.0
@@ -35,7 +36,7 @@ $(ROOMS): tools/rooms.py tools/scenes.json | $(BUILD_DIR)
 	$(Q) python3 tools/rooms.py $(BUILD_DIR)
 
 # compiled, then linked (the link options would upset the compiler)
-$(BUILD_DIR)/main.o: $(SRC) $(ROOMS) $(HEADERS) | $(BUILD_DIR)
+$(BUILD_DIR)/main.o: $(SRC) src/pictures.h $(ROOMS) $(HEADERS) | $(BUILD_DIR)
 	@echo "CC      $<"
 	$(Q) $(CC) $(CFLAGS) -c $(SRC) -o $@
 $(BUILD_DIR)/gfx.o: ../../launcher/src/gfx.c $(HEADERS) | $(BUILD_DIR)
@@ -65,7 +66,7 @@ clean:
 HOST_FLAGS = -std=gnu11 -O1 -g -Wall -Wextra -Wno-unused-parameter -DPLATFORM_DEVICE=1 -DHOST -I$(BUILD_DIR) \
   $(shell $(NWLINK) eadk-cflags-simulator) -fsanitize=address,undefined -fno-sanitize-recover=undefined
 host: build/play
-build/play: $(SRC) $(ROOMS) tests/play.c $(HEADERS)
+build/play: $(SRC) src/pictures.h $(ROOMS) tests/play.c $(HEADERS)
 	$(Q) mkdir -p build
 	$(Q) cc $(HOST_FLAGS) tests/play.c ../../launcher/src/gfx.c ../../launcher/src/font_data.c \
 	  ../../launcher/src/xfont.c -lm -o $@

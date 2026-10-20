@@ -14,7 +14,7 @@
  *   play rooms DIR        a picture of every room as it starts (DIR/room_LL_R.ppm)
  *   play film L R DIR [KEYS]  the room played with its keys (or these), a picture every 2 steps
  *                         (DIR/f_NNNN.ppm)
- *   play screens DIR      the map and the menus
+ *   play screens DIR      the title, the map, the pause and the end
  */
 #define main ld_main
 #include "../src/main.c"
@@ -76,7 +76,7 @@ static void setup(int i) {
   gfx_buf = strip, seed = 1;
   scr = SC_PLAY, ov = 0, level = i / ROOMS, rnum = i % ROOMS;
   enter();
-  fade = 0;
+  jaw = J_OPEN;
 }
 static int keys_of(char c) {
   return c == 'L' ? I_LEFT : c == 'R' ? I_RIGHT : c == 'J' ? I_UP : c == 'D' ? I_DOWN : 0;
@@ -326,19 +326,24 @@ int main(int argc, char **argv) {
     }
     return 0;
   }
-  if (!strcmp(cmd, "screens") && argc > 2) {
+  if (!strcmp(cmd, "screens") && argc > 2) { /* the title, the map, the pause and the end */
     static const struct {
-      int scr, ov, sel;
+      int scr, ov, sel, jaw;
       const char *name;
-    } screens[] = {{SC_HUB, OV_NONE, 0, "map"}, {SC_HUB, OV_HELP, 0, "help"}, {SC_PLAY, OV_PAUSE, 1, "pause"},
-                   {SC_PLAY, OV_QUIT, 1, "quit"}, {SC_HUB, OV_END, 0, "end"}, {SC_HUB, OV_NONE, 0, "banner"}};
-    setup(15 * ROOMS + 4);
-    sv.open = 12, sv.done = 0x7FF, sv.deaths = 173, sv.sel = 6, sv.run = 4;
+    } screens[] = {{SC_TITLE, OV_NONE, 0, J_OPEN, "title"}, {SC_TITLE, OV_NONE, 0, J_SHUT, "jaws"},
+                   {SC_MAP, OV_NONE, 6, J_OPEN, "map"},     {SC_MAP, OV_NONE, 13, J_OPEN, "map_right"},
+                   {SC_PLAY, OV_PAUSE, 1, J_SHUT, "pause"}, {SC_PLAY, OV_QUIT, 1, J_SHUT, "quit"},
+                   {SC_END, OV_NONE, 0, J_OPEN, "end"}};
+    sv.open = 15, sv.done = 0x3FFF, sv.deaths = 173;
     for (int l = 0; l < LEVELS; l++) sv.best[l] = (uint16_t)(l * 3 % 7);
     for (unsigned k = 0; k < sizeof screens / sizeof screens[0]; k++) {
-      scr = screens[k].scr, ov = screens[k].ov, sel = screens[k].sel, banner = k == 5 ? 4 : 0;
-      if (scr == SC_PLAY) setup(15 * ROOMS + 4), scr = SC_PLAY, ov = screens[k].ov, sel = screens[k].sel;
-      gfx_render(scr == SC_HUB ? hub_scene : play_scene, 0, 0, SCREEN_H);
+      setup(0);
+      scr = screens[k].scr, ov = screens[k].ov, sel = screens[k].sel, jaw = screens[k].jaw;
+      if (scr == SC_MAP) sv.sel = (uint16_t)sel, pan = pan_for(sel);
+      credits_y = 100, menu_anim = 0;
+      for (int s = 0; s < 60; s++) step(0);
+      gfx_render(scr == SC_PLAY ? play_scene : scr == SC_MAP ? map_scene : scr == SC_END ? end_scene : title_scene, 0, 0,
+                 SCREEN_H);
       snprintf(path, sizeof path, "%s/%s.ppm", argv[2], screens[k].name);
       shot(path);
     }

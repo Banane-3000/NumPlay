@@ -10,7 +10,11 @@
  * room starting, the runner touching a trigger, a key) after so many 60ths of a second, that move,
  * grow, show or hide objects, or change the runner (its speed, its jump, its size, gravity). The
  * game steps 60 times a second, in the scene's pixels; it is drawn at 3/4 (the screen shows x 50
- * to 477 of the 528 pixels, all 240 high), in the launcher's strips (launcher/src/gfx.c). */
+ * to 477 of the 528 pixels, all 240 high), in the launcher's strips (launcher/src/gfx.c).
+ *
+ * All it shows is the game's own: its pictures and fonts (src/pictures.h, tools/pictures.py), its
+ * title and its 1 Player card, its map of the worlds with their portals, the jaws with the Devil's
+ * eyes that shut between two screens, its buttons. */
 #include <eadk.h>
 #include "../../../launcher/src/gfx.h"
 #include "../../common/np_text.h"
@@ -54,7 +58,7 @@ void np_push(int x, int y, int w, int h, const color_t *px) {
 #define D_C (D_B + 2 * STEPS)
 #define D_K (D_C + 2 * STEPS)
 
-enum { K_BLOCK, K_SPIKE, K_SAW, K_SPRING, K_DOOR, K_TRIG, K_COIN, K_BAD, K_WARP, K_BUTTON, K_THRU, K_GSPIKE, K_DEATH };
+enum { K_BLOCK, K_SPIKE, K_SAW, K_SPRING, K_DOOR, K_TRIG, K_COIN, K_BAD, K_WARP, K_BUTTON, K_THRU, K_GSPIKE, K_DEATH, K_SIGN };
 #define F_HIDE 1
 #define F_GHOST 2  /* nothing to stand on */
 #define F_OFF 4    /* not there (yet, or any more) */
@@ -80,9 +84,6 @@ static const uint32_t colors[LEVELS][2] = {
 };
 #define BLACK 0
 #define WHITE 0xFFFF
-#define GREY HEX(0xC8C8C8)
-#define DARK HEX(0x6D1102) /* the game's dark red: its transitions, its buttons */
-#define YELLOW HEX(0xFCF965)
 
 /* leveldevil.sav */
 static struct {
@@ -119,22 +120,22 @@ static int no, ns, nr;
 static uint16_t gcol[33];
 
 static color_t strip[SCREEN_W * STRIP_H];
-static int level, rnum, ri, scr, ov, sel, banner, full, tries, modes, frame, shake, shake_n;
+static int level, rnum, ri, scr, ov, sel, tries, modes, frame, shake, shake_n;
 static uint8_t cnt[EVENTS];
 static uint16_t at_[EVENTS];
 /* the runner: its box's corner and its speed (256ths of a pixel, a step), its size (pixels) */
 static int32_t hx, hy, vx, vy;
 static int hw, hh, hsx, hsy, tsx, tsy, hgl;
 static int run, jumpv, maxup, maxdown, back, downjump, dir, slide, pushx, gx, gy, keyev;
-static int face, ground, coyote, jumping, anim, dead, won, frozen, born, started, flapped, held_in, fade, waiting;
-static uint32_t seed, banner_t, now;
+static int face, ground, coyote, jumping, anim, dead, won, frozen, born, started, flapped, held_in, waiting;
+static uint32_t seed, now;
 static color_t bg, fg;
 static struct {
   int32_t x, y;
   int16_t vx, vy;
-} bits[8]; /* the runner, in pieces */
-enum { SC_HUB, SC_PLAY };
-enum { OV_NONE, OV_PAUSE, OV_HELP, OV_QUIT, OV_END };
+} bits[8]; /* the runner in pieces (or coming together: where from, and its place about the middle) */
+enum { SC_TITLE, SC_MAP, SC_PLAY, SC_END };
+enum { OV_NONE, OV_PAUSE, OV_QUIT };
 enum { I_LEFT = 1, I_RIGHT = 2, I_UP = 4, I_DOWN = 8 };
 
 static uint32_t rnd(void) {
@@ -147,11 +148,6 @@ static int imax(int a, int b) { return a > b ? a : b; }
 static int clampi(int v, int a, int b) { return v < a ? a : v > b ? b : v; }
 static int iabs(int v) { return v < 0 ? -v : v; }
 static int rd16(int at) { return (int16_t)(data[at] | data[at + 1] << 8); }
-static char *cat(char *o, const char *s) {
-  while (*s) *o++ = *s++;
-  *o = 0;
-  return o;
-}
 static char *num(char *o, uint32_t v) {
   char t[10];
   int n = 0;
@@ -161,7 +157,9 @@ static char *num(char *o, uint32_t v) {
   return o;
 }
 static char *label(char *o, const char *s, uint32_t v) {
-  num(cat(o, s), v);
+  char *e = o;
+  while (*s) *e++ = *s++;
+  num(e, v);
   return o;
 }
 /* The save, and a copy of it in a Python script: installing apps from the NumWorks website keeps only
@@ -312,7 +310,11 @@ static void reset(void) { /* the room as it starts */
   run = PS(fl ? 70 : 80), jumpv = PS(fl ? 251 : 188), maxup = PS(fl ? 9999 : 300), maxdown = PS(fl ? 300 : 200);
   gx = 0, gy = PS2(fl ? 1200 : 800), back = downjump = slide = pushx = 0, dir = 1, keyev = -1;
   face = 1, ground = coyote = jumping = dead = won = frozen = started = flapped = waiting = 0, born = 18;
-  frame = 0, shake = 0, full = 1;
+  frame = 0, shake = 0;
+  for (int i = 0; i < 8; i++) { /* the game's eight pieces, from up to 40 pixels away */
+    bits[i].x = hx + hw * 128 + ((int)(rnd() % 81) - 40) * 256, bits[i].y = hy + hh * 128 + ((int)(rnd() % 81) - 40) * 256;
+    bits[i].vx = (int16_t)(rnd() % 7) - 3, bits[i].vy = (int16_t)(rnd() % 11) - 5;
+  }
   fire(0);
 }
 static void enter(void) { /* room rnum of the level */
@@ -322,13 +324,17 @@ static void enter(void) { /* room rnum of the level */
   reset();
 }
 
+/* the runner in eight pieces, thrown up at 300 to 400 pixels a second, anywhere from left to right */
+static const int16_t sine[33] = {0,   25,  50,  74,  98,  121, 142, 162, 181, 198, 213, 226, 237, 245, 251, 255, 256,
+                                 255, 251, 245, 237, 226, 213, 198, 181, 162, 142, 121, 98,  74,  50,  25,  0};
 static void die(void) {
   if (dead || won) return;
   dead = 1, shake = 5, shake_n = 30;
   sv.deaths++, sv.run++;
   for (int i = 0; i < 8; i++) {
+    int a = (int)(rnd() % 33), v = PS(300 + (int)(rnd() % 101)), c = a <= 16 ? sine[16 - a] : -sine[a - 16];
     bits[i].x = hx + hw * 128, bits[i].y = hy + hh * 128;
-    bits[i].vx = (int16_t)PS((int)(rnd() % 361) - 180), bits[i].vy = (int16_t)-PS(300 + (int)(rnd() % 100));
+    bits[i].vx = (int16_t)(v * c / 256), bits[i].vy = (int16_t)(-v * sine[a] / 256);
   }
   save();
 }
@@ -492,8 +498,8 @@ static void contacts(void) {
       o->f |= F_OFF;
     } else if (kind == K_BUTTON) {
       o->f |= F_USED;
-    } else if (kind == K_DOOR) {
-      won = 1;
+    } else if (kind == K_DOOR) { /* (and the screen shakes a little, a quarter of a second) */
+      won = 1, shake = 0, shake_n = 15;
     }
   }
 }
@@ -579,94 +585,149 @@ static void step(int in) {
 }
 
 /* ------------------------------------------------------------ drawing */
+/* The game's own pictures and fonts (tools/pictures.py): the rooms are drawn at 3/4, as the scene is,
+   the rest (the jaws, the title, the map, what is written) as the game has them, a pixel a pixel. */
+#include "pictures.h"
+#define DARK HEX(0x6D1102) /* the game's dark red: the jaws, its buttons, its writing */
+#define YELLOW HEX(0xFCF965)
+#define ORANGE HEX(0xFFAB33) /* the title's */
+#define BTN HEX(0xC57D17)    /* its buttons, and their lower edge */
+#define BTN_EDGE HEX(0xA2650F)
+
 static int sxp(int32_t x) { return (int)((x * 3 >> 10) - 38) + sdx; } /* 256ths of a scene pixel: the screen's */
 static int syp(int32_t y) { return (int)((y * 3 >> 10) + 30) + sdy; }
 static void put(int x, int y, color_t c) {
   if (x >= 0 && x < SCREEN_W && y >= gfx_y0 && y < gfx_y1) gfx_buf[(y - gfx_y0) * SCREEN_W + x] = c;
 }
 
-/* pictures: 16 rows of 16 bits (the first pixel the lowest) */
-static const uint16_t spike_px[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x318C, 0x318C, 0x7BDE, 0x7BDE, 0xFFFF};
-static const uint16_t button_px[2][16] = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x7E0, 0xFF0, 0xFF0, 0xFF0, 0xFF0, 0x1FF8},
-                                          {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF0, 0x1FF8}};
-/* the runner (columns 3 to 11, rows 2 to 15): standing, jumping, running (four) */
-static const uint16_t hero_px[6][14] = {
-  {0, 0x1C0, 0x1C0, 0x1C0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x360, 0x360, 0x360},
-  {0, 0x1C0, 0x1C0, 0x1C0, 0x7E0, 0x7E0, 0x7E0, 0x7E0, 0x3E0, 0x3F8, 0xFF8, 0xF18, 0, 0},
-  {0, 0, 0x1C0, 0x1C0, 0x1C0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3F0, 0x3F0, 0x330, 0x630},
-  {0x1C0, 0x1C0, 0x1C0, 0x7E0, 0x7E0, 0x7E0, 0x3E0, 0x3E0, 0xFE0, 0xFF8, 0xF18, 0, 0, 0},
-  {0, 0x1C0, 0x1C0, 0x1C0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x3E0, 0x7E0, 0x7E0, 0x660, 0xC60},
-  {0x1C0, 0x1C0, 0x3F0, 0x3F0, 0x3F0, 0x3E0, 0x3E0, 0xFE0, 0xFF8, 0xF18, 0, 0, 0, 0},
-};
-
-/* a picture over the box (x0, y0)-(x1, y1) of the screen, turned t quarters, upside down if fy */
-static void picture(const uint16_t *px, int rows, int x0, int y0, int x1, int y1, int t, int fx, int fy, color_t c) {
+/* a picture into the box (x0, y0)-(x1, y1) of the screen, each pixel the nearest of the picture's,
+   turned t quarters (clockwise), mirrored if fx, upside down if fy; its grey in tint (the room's colour) */
+static void spr(int id, int x0, int y0, int x1, int y1, int t, int fx, int fy, color_t tint) {
+  const pic_t *p = &pics[id];
   int w = x1 - x0, h = y1 - y0;
-  if (w <= 0 || h <= 0 || y1 <= gfx_y0 || y0 >= gfx_y1) return;
-  for (int y = imax(y0, gfx_y0); y < imin(y1, gfx_y1); y++)
-    for (int x = x0; x < x1; x++) {
-      int u = (x - x0) * 16 / w, v = (y - y0) * 16 / h, s;
-      if (fx) u = 15 - u;
-      if (fy) v = 15 - v;
-      if (t & 1) s = u, u = v, v = 15 - s;
-      if (t & 2) u = 15 - u, v = 15 - v;
-      v -= 16 - rows;
-      if (v >= 0 && px[v] >> u & 1) put(x, y, c);
+  if (w <= 0 || h <= 0 || y1 <= gfx_y0 || y0 >= gfx_y1 || x1 <= 0 || x0 >= SCREEN_W) return;
+  const uint8_t *d = pic_data + p->at;
+  int stride = (p->w + 1) >> 1, tw = t & 1 ? p->h : p->w, th = t & 1 ? p->w : p->h;
+  for (int y = imax(y0, gfx_y0); y < imin(y1, gfx_y1); y++) {
+    int v = ((y - y0) * 2 + 1) * th / (2 * h);
+    color_t *row = gfx_buf + (y - gfx_y0) * SCREEN_W;
+    if (fy) v = th - 1 - v;
+    for (int x = imax(x0, 0); x < imin(x1, SCREEN_W); x++) {
+      int u = ((x - x0) * 2 + 1) * tw / (2 * w), sx, sy;
+      if (fx) u = tw - 1 - u;
+      if (t == 0) sx = u, sy = v;
+      else if (t == 1) sx = v, sy = p->h - 1 - u;
+      else if (t == 2) sx = p->w - 1 - u, sy = p->h - 1 - v;
+      else sx = p->w - 1 - v, sy = u;
+      int n = d[sy * stride + (sx >> 1)] >> (sx & 1) * 4 & 15;
+      if (n) row[x] = n == p->tint ? tint : pic_pal[p->pal + n - 1];
     }
+  }
 }
 
-static void draw_hero(int32_t x, int32_t y, int w, int h, int flip, int f) {
-  /* its picture is 16 x 16 about the 5 x 13 box, the box at (5, 3) */
-  int32_t px = x - w * 256, py = y - h * 3 * 256 / 13, pw = w * 16 * 256 / 5, ph = h * 16 * 256 / 13;
-  if (flip) py = y + h * 256 - ph + h * 3 * 256 / 13; /* (upside down: the box at the picture's top) */
-  picture(hero_px[f], 14, sxp(px), syp(py), sxp(px + pw), syp(py + ph), 0, face < 0, flip, BLACK);
+/* a picture as it is, its rows r0 to r1 (its row r at y + r), its corner at x */
+static void blit_rows(int id, int x, int y, int r0, int r1, color_t tint) {
+  const pic_t *p = &pics[id];
+  const uint8_t *d = pic_data + p->at;
+  r0 = imax(r0, gfx_y0 - y), r1 = imin(imin(r1, p->h), gfx_y1 - y);
+  for (int r = r0; r < r1; r++) {
+    color_t *row = gfx_buf + (y + r - gfx_y0) * SCREEN_W;
+    if (p->runs) { /* a byte a run (its colour, its length less one; 15: 16 and the next byte) */
+      const uint8_t *q = d + (d[2 * r] | d[2 * r + 1] << 8);
+      for (int u = 0; u < p->w;) {
+        int b = *q++, n = (b & 15) + 1, c = b >> 4;
+        if (n == 16) n += *q++;
+        if (c) {
+          color_t k = c == p->tint ? tint : pic_pal[p->pal + c - 1];
+          for (int i = imax(0, x + u); i < imin(SCREEN_W, x + u + n); i++) row[i] = k;
+        }
+        u += n;
+      }
+    } else {
+      const uint8_t *q = d + r * ((p->w + 1) >> 1);
+      for (int u = imax(0, -x); u < p->w && x + u < SCREEN_W; u++) {
+        int n = q[u >> 1] >> (u & 1) * 4 & 15;
+        if (n) row[x + u] = n == p->tint ? tint : pic_pal[p->pal + n - 1];
+      }
+    }
+  }
+}
+static void blit(int id, int x, int y) { blit_rows(id, x, y, 0, SCREEN_H, 0); }
+
+/* the game's writing: y is the top of the line */
+static const glyph_t *glyph(const pfont_t *f, char c) { return &f->g[(c < 32 || c > 126 ? '?' : c) - 32]; }
+static int text_w(const pfont_t *f, const char *s) {
+  int w = 0;
+  for (; *s; s++) w += glyph(f, *s)->adv;
+  return w;
+}
+static int text(const pfont_t *f, int x, int y, const char *s, color_t c) {
+  for (; *s; s++) {
+    const glyph_t *g = glyph(f, *s);
+    const uint8_t *b = f->bits + g->at;
+    int bw = (g->w + 7) >> 3;
+    if (y + g->y + g->h > gfx_y0 && y + g->y < gfx_y1)
+      for (int j = 0; j < g->h; j++)
+        for (int i = 0; i < g->w; i++)
+          if (b[j * bw + (i >> 3)] >> (i & 7) & 1) put(x + g->x + i, y + g->y + j, c);
+    x += g->adv;
+  }
+  return x;
+}
+static void text_c(const pfont_t *f, int cx, int y, const char *s, color_t c) { text(f, cx - text_w(f, s) / 2, y, s, c); }
+
+/* ---- the jaws: the game's scene change, the Devil's eyes on its upper jaw. They shut (500 ms, slow
+   then fast), stay shut a while, then something changes behind them (then) and they open again. */
+static const uint16_t expo[31] = {0,   1,   2,   2,   3,   3,   4,   5,   6,   8,   10,  13,  16,  20,  25, 32,
+                                  40,  51,  64,  81,  102, 128, 161, 203, 256, 323, 406, 512, 645, 813, 1024};
+enum { J_OPEN, J_CLOSING, J_SHUT, J_OPENING };
+enum { THEN_NONE, THEN_MAP, THEN_ROOM, THEN_NEXT };
+static int jaw = J_SHUT, jaw_t, jaw_hold = 40, jaw_then, jaw_still; /* still: the room waits until they open */
+static void jaws_close(int hold, int then) { jaw = J_CLOSING, jaw_t = 0, jaw_hold = hold, jaw_then = then; }
+static void jaws_shut(void) { jaw = J_SHUT, jaw_t = 0, jaw_hold = -1; } /* at once, until told */
+static void jaws_open(void) { jaw = J_OPENING, jaw_t = 0; }
+static void draw_jaws(void) {
+  int e = expo[imin(jaw_t, 30)], top, bot;
+  if (jaw == J_OPEN) return;
+  if (jaw == J_CLOSING) top = -136 + 136 * e / 1024, bot = 336 - 233 * e / 1024;
+  else if (jaw == J_SHUT) top = 0, bot = 103;
+  else top = -136 * e / 1024, bot = 103 + 466 * e / 1024;
+  if (jaw == J_SHUT) gfx_fill(0, 0, SCREEN_W, SCREEN_H, DARK); /* (a pixel shows between the teeth) */
+  if (bot < SCREEN_H) blit(P_JAW_BOTTOM, -56, bot), gfx_fill(0, bot + 135, SCREEN_W, SCREEN_H, DARK);
+  blit(P_JAW_TOP, -56, top);
 }
 
-static void draw_door(int x0, int y0, int x1, int y1, int shut) {
-  int w = x1 - x0, h = y1 - y0, e = imax(1, w / 8);
-  gfx_rrect(x0, y0, w, h + e, e * 2, fg, 256);
-  gfx_fill(x0 + e, y0 + e, w - 2 * e, h - e, GREY);
-  if (shut) gfx_fill(x0 + e, y0 + e, w - 2 * e, (h - e) * imin(shut, 12) / 12, fg);
-}
-
+/* ---- the room */
 static void draw_object(obj_t *o) {
   int kind = o->kind & 15, t = o->kind >> 4 & 3, b[4];
-  if (o->f & (F_HIDE | F_OFF) || kind == K_TRIG || o->w <= 0 || o->h <= 0) return;
+  if (o->f & (F_HIDE | F_OFF) || kind == K_TRIG || kind == K_SIGN || o->w <= 0 || o->h <= 0) return;
   box(o, b);
-  int x0 = sxp(b[0] * 256), y0 = syp(b[1] * 256), x1 = sxp(b[2] * 256), y1 = syp(b[3] * 256), w = x1 - x0, h = y1 - y0;
-  if (y1 < gfx_y0 - 4 || y0 > gfx_y1 + 4) return;
-  if (kind == K_BLOCK && b[1] <= 0) y0 = 0, h = y1; /* (on through the margins, as the ground) */
-  if (kind == K_BLOCK && b[3] >= 240) h = SCREEN_H - y0;
-  if (kind == K_BLOCK || kind == K_GSPIKE) {
-    int s = kind == K_GSPIKE ? h * 5 / 26 : 0;
-    gfx_fill(x0, y0 + s, w, h - 2 * s, fg);
-    if (s) picture(spike_px, 5, x0, y0 - h * 11 / 26, x1, y0 + s, 0, 0, 0, fg), picture(spike_px, 5, x0, y1 - s, x1, y1 + h * 11 / 26, 2, 0, 0, fg);
-  } else if (kind == K_SPIKE) {
-    picture(spike_px, 5, x0, y0, x1, y1, t, 0, 0, fg);
-  } else if (kind == K_SAW) {
-    int r = w / 2;
-    gfx_circle(x0 + r, y0 + r, r, fg, 256);
-    gfx_fill(x0 + r - imax(1, r / 8), y0 + r - imax(1, r / 8), imax(2, r / 4), imax(2, r / 4), bg);
-  } else if (kind == K_SPRING) { /* its plate, up on its stem while it pushes */
-    int up = o->t ? 8 : 0;
-    gfx_fill(x0, y0 + h * (13 - up) / 16, w, imax(1, h / 16), fg);
-    gfx_fill(x0 + w * 6 / 16, y0 + h * (14 - up) / 16, w / 4, h * (2 + up) / 16, fg);
-  } else if (kind == K_DOOR) {
-    if (modes & R_SWAP) draw_hero(o->x - 5 * 128 + 256, o->y - 128, 5, 13, 0, 0);
-    else draw_door(x0, y0, x1, y1, won ? won : 0);
-  } else if (kind == K_COIN || kind == K_BAD) {
-    gfx_rrect(x0 + w * 5 / 16, y0 + h * 5 / 16, w * 6 / 16, h * 6 / 16, 1, fg, 256);
-  } else if (kind == K_WARP) { /* rings of squares, turning */
-    for (int i = (anim >> 3 & 1); i < 7; i += 2) {
-      int d = w * (i + 1) / 16;
-      gfx_fill(x0 + d, y0 + d, w - 2 * d, imax(1, w / 16), fg), gfx_fill(x0 + d, y1 - d - 1, w - 2 * d, imax(1, w / 16), fg);
-      gfx_fill(x0 + d, y0 + d, imax(1, w / 16), h - 2 * d, fg), gfx_fill(x1 - d - 1, y0 + d, imax(1, w / 16), h - 2 * d, fg);
-    }
-  } else if (kind == K_BUTTON) {
-    picture(button_px[!!(o->f & F_USED)], 6, x0, y0, x1, y1, t, 0, 0, fg);
-  } else if (kind == K_THRU) {
-    for (int i = 0; i < 3; i++) gfx_fill(x0 + w * (1 + 5 * i) / 16, y0, w / 4, imax(1, h / 8), fg);
+  int x0 = sxp(b[0] * 256), y0 = syp(b[1] * 256), x1 = sxp(b[2] * 256), y1 = syp(b[3] * 256);
+  if (kind == K_BLOCK) { /* (on through the margins, as the ground) */
+    if (b[1] <= 0) y0 = 0;
+    if (b[3] >= 240) y1 = SCREEN_H;
   }
+  if (y1 < gfx_y0 - 4 || y0 > gfx_y1 + 4) return;
+  if (kind == K_BLOCK) {
+    gfx_fill(x0, y0, x1 - x0, y1 - y0, fg);
+    return;
+  }
+  int id = kind == K_SPIKE    ? P_SPIKE
+           : kind == K_GSPIKE ? P_GSPIKE
+           : kind == K_SAW    ? (o->f & F_BIG ? P_SAW_BIG : P_SAW)
+           : kind == K_SPRING ? (o->t ? P_SPRING_UP : P_SPRING)
+           : kind == K_COIN   ? P_COIN
+           : kind == K_BAD    ? P_BAD_COIN
+           : kind == K_WARP   ? P_WARP0 + (anim % 33 >= 24) /* (400 ms, then 150) */
+           : kind == K_BUTTON ? (o->f & F_USED ? P_BUTTON_DOWN : P_BUTTON)
+           : kind == K_THRU   ? P_THRU
+                              : -1;
+  if (kind == K_DOOR) { /* the door; once reached, it shuts (300, 100, 75, 50, 25 ms) and is gone at 600 */
+    if (modes & R_SWAP) id = P_DOOR_HERO; /* (dressed as the runner) */
+    else if (!won) id = P_DOOR;
+    else if (won < 36) id = P_DOOR_SHUT0 + (won >= 18) + (won >= 24) + (won >= 29) + (won >= 32);
+  }
+  if (id >= 0) spr(id, x0, y0, x1, y1, t, 0, 0, fg);
 }
 
 static void ground_draw(void) {
@@ -685,126 +746,139 @@ static void ground_draw(void) {
   }
 }
 
-static void say(int cx, int base, const char *s) {
-  gfx_text_center(&np_font_title, cx + 1, base + 2, s, BLACK, 256);
-  gfx_text_center(&np_font_title, cx, base, s, YELLOW, 256);
+/* the runner: its 16 x 16 picture about its 5 x 13 box (the box at 5, 3), standing, running (60 ms a
+   picture), jumping, or flapping; in the swap room it looks like the door */
+static void draw_hero(void) {
+  int flip = gy < 0, id;
+  int32_t px = hx - hw * 256, py = hy - hh * 3 * 256 / 13, pw = hw * 16 * 256 / 5, ph = hh * 16 * 256 / 13;
+  if (flip) py = hy + hh * 256 - ph + hh * 3 * 256 / 13; /* (upside down: the box at the picture's top) */
+  if (modes & R_SWAP) id = P_DOOR_DUMMY;
+  else if (modes & R_FLAPPY) id = vx > 0 ? P_FLAP_R : vx < 0 ? P_FLAP_L : P_FLAP_STAND;
+  else if (!ground) id = face < 0 ? P_HERO_JUMP_L : P_HERO_JUMP_R;
+  else if (vx) id = (face < 0 ? P_HERO_RUN_L0 : P_HERO_RUN_R0) + anim * 5 / 18 % 4;
+  else id = P_HERO_IDLE;
+  spr(id, sxp(px), syp(py), sxp(px + pw), syp(py + ph), 0, 0, flip, fg);
 }
-static void button(int y, const char *s, bool on) {
-  if (on) gfx_rrect(96, y, 128, 24, 12, YELLOW, 256);
-  gfx_text_center(&np_font_body, 160, y + 17, s, on ? DARK : WHITE, 256);
+static void piece(int id, int32_t x, int32_t y) { /* 4 x 3, about (2, 1) */
+  spr(id, sxp(x - 512), syp(y - 256), sxp(x + 512), syp(y + 512), 0, 0, 0, BLACK);
 }
 
+static void play_hud(void) {
+  for (int i = 0; i < ROOMS; i++) { /* the five rooms: those reached fill in, growing and back, at 750 ms */
+    int t = frame - 45, d = 6 * (i + 1), s = 0, x = 136 + 10 * i;
+    if (i <= rnum && t >= 0 && t < 2 * d) s = t < d ? t * 4 / d : (2 * d - t) * 4 / d; /* (8ths of its size) */
+    spr(i <= rnum && t >= 0 ? P_ROOM_DONE : P_ROOM_SQUARE, x - s / 2, 4 - s / 2, x + 9 + s / 2 + s % 2, 12 + s / 2 + s % 2, 0, 0,
+        0, 0);
+  }
+  if (frame >= 30 && !ov && (jaw == J_OPEN || jaw == J_OPENING)) { /* the game's back button, the calculator's key */
+    blit(P_BACK, 8, 6);
+    text(&font, 4, 22, T("back"), YELLOW);
+  }
+  if (waiting && sv.open <= 3) text_c(&font, 160, 40, T("PRESS ANY KEY"), YELLOW); /* (the first worlds) */
+}
+
+/* ---- the menus: the game's buttons */
+static void button(int x, int y, int w, const char *s, int on) {
+  int tx = x + (w - text_w(&font, s)) / 2;
+  gfx_fill(x, y, w, 14, on ? YELLOW : BTN);
+  gfx_fill(x, y + 14, w, 2, on ? BTN : BTN_EDGE);
+  if (!on) text(&font, tx, y + 3, s, BTN_EDGE);
+  text(&font, tx, y + 2, s, on ? DARK : YELLOW);
+}
 static const char *const pause_items[] = {T("Resume"), T("Restart"), T("Levels"), T("Quit game")};
-static void overlay(void) {
-  char s[24];
-  gfx_fill_alpha(0, 0, SCREEN_W, SCREEN_H, BLACK, 100);
-  gfx_rrect(56, 36, 208, 168, 12, DARK, 256);
-  if (ov == OV_PAUSE) {
-    say(160, 68, T("Paused"));
-    for (int i = 0; i < 4; i++) button(84 + 28 * i, pause_items[i], sel == i);
-  } else if (ov == OV_QUIT) {
-    say(160, 100, T("Quit game?"));
-    for (int i = 0; i < 2; i++) {
-      if (sel == i) gfx_rrect(92 + 72 * i, 128, 64, 24, 12, YELLOW, 256);
-      gfx_text_center(&np_font_body, 124 + 72 * i, 145, i ? T("Yes") : T("No"), sel == i ? DARK : WHITE, 256);
-    }
-  } else if (ov == OV_HELP) {
-    static const char *const keys[][2] = {{T("Left Right"), T("run")}, {T("Up, OK, EXE"), T("jump")}, {T("Back"), T("pause")}};
-    say(160, 66, T("How to play"));
-    gfx_paragraph(&np_font_body, 160, 88, 192, 15, T("Reach the door. The level has other plans: trust nothing."), WHITE,
-                  256);
-    for (int i = 0; i < 3; i++) {
-      gfx_text_right(&np_font_body, 136, 136 + 16 * i, keys[i][0], YELLOW, 256);
-      gfx_text(&np_font_body, 146, 136 + 16 * i, keys[i][1], WHITE, 256);
-    }
-    button(172, T("Play"), true);
-  } else { /* OV_END: the Devil beaten */
-    say(160, 80, T("You beat the Devil!"));
-    gfx_paragraph(&np_font_body, 160, 106, 184, 15, T("Every door of Level Devil is open behind you."), WHITE, 256);
-    gfx_text_center(&np_font_body, 160, 150, label(s, T("Deaths in all: "), sv.deaths), WHITE, 256);
-    button(164, T("OK"), true);
+static void overlay(void) { /* over the shut jaws */
+  if (ov == OV_PAUSE)
+    for (int i = 0; i < 4; i++) button(112, 134 + 22 * i, 96, pause_items[i], sel == i);
+  if (ov == OV_QUIT) {
+    text_c(&font, 160, 142, T("Quit game?"), YELLOW);
+    button(100, 168, 52, T("No"), sel == 0), button(168, 168, 52, T("Yes"), sel == 1);
   }
 }
 
 static void play_scene(void *ctx) {
-  char s[16];
   gfx_fill(0, 0, SCREEN_W, SCREEN_H, bg);
   for (int k = 0; k < no; k++) draw_object(&ob[k]);
   ground_draw();
+  for (int k = 0; k < no; k++) /* (the sign with the keys, over the ground, as it is: small, its arrows would go) */
+    if ((ob[k].kind & 15) == K_SIGN) blit(P_KEYS, sxp(ob[k].x) - pics[P_KEYS].w / 2, syp(ob[k].y) - pics[P_KEYS].h / 2);
   if (dead) {
-    for (int i = 0; i < 8; i++) gfx_fill(sxp(bits[i].x), syp(bits[i].y), 3, 2, BLACK);
+    for (int i = 0; i < 8; i++)
+      if (dead < 42 + i) piece(P_BODY0 + (i & 3), bits[i].x, bits[i].y);
   } else if (!won && !born && !(frozen && frozen < 45)) {
-    int f = !ground && !(modes & R_FLAPPY) ? 1 : vx ? 2 + (anim >> 2 & 3) : 0;
-    if (modes & R_SWAP) {
-      int b[4] = {(hx >> 8) - 6, (hy >> 8) - 3, (hx >> 8) + 11, (hy >> 8) + 13};
-      draw_door(sxp(b[0] * 256), syp(b[1] * 256), sxp(b[2] * 256), syp(b[3] * 256), 0);
-    } else {
-      draw_hero(hx, hy, hw, hh, gy < 0, f);
-    }
+    draw_hero();
   }
-  if (born) /* coming together */
+  if (born) /* the pieces coming together, faster and faster (300 ms) */
     for (int i = 0; i < 8; i++) {
-      int d = born * born / 6;
-      gfx_fill(sxp(hx + hw * 128 + (i & 3) * d * 64 - d * 96), syp(hy + hh * 128 + (i >> 2) * d * 128 - d * 64), 3, 2, BLACK);
+      int e = expo[(18 - born) * 30 / 18];
+      int32_t tx = hx + hw * 128 + bits[i].vx * 256, ty = hy + hh * 128 + bits[i].vy * 256;
+      piece(P_PRE0 + (i & 3), bits[i].x + (tx - bits[i].x) / 1024 * e, bits[i].y + (ty - bits[i].y) / 1024 * e);
     }
-  for (int i = 0; i < ROOMS; i++) { /* the rooms of the level, as the game shows them */
-    int x = 136 + 10 * i;
-    gfx_fill(x, 6, 9, 8, BLACK);
-    if (i > rnum || (i == rnum && frame < 45)) gfx_fill(x + 1, 7, 7, 6, gfx_mix(BLACK, fg, 20));
-  }
-  if (waiting) { /* the game's retry button */
-    gfx_rrect(134, 104, 52, 30, 4, DARK, 256);
-    gfx_circle(160, 119, 9, YELLOW, 256), gfx_circle(160, 119, 6, DARK, 256);
-    gfx_fill(146, 110, 14, 9, DARK), gfx_fill(152, 106, 4, 13, YELLOW);
-    gfx_text_center(&np_font_body, 160, 96, T("Press any key"), WHITE, 256);
-  }
-  (void)s;
-  if (fade) gfx_fill_alpha(0, 0, SCREEN_W, SCREEN_H, DARK, fade * 16);
+  draw_jaws();
+  play_hud();
   if (ov) overlay();
 }
 
-/* the doors to the levels: two rows of eight, on two floors */
-static void hub_door(int i, int *x, int *y) { *x = 13 + 38 * (i & 7), *y = 70 + 80 * (i >> 3); }
-static void hub_scene(void *ctx) {
-  char s[48];
-  int sel_ = sv.sel;
-  bg = gfx_rgb(colors[0][0]);
-  gfx_fill(0, 0, SCREEN_W, SCREEN_H, bg);
-  gfx_fill(0, 0, SCREEN_W, 44, DARK);
-  if (banner) say(160, 32, label(s, T("Level cleared! Deaths: "), (uint32_t)banner - 1));
-  else say(160, 32, "LEVEL DEVIL");
-  for (int i = 0; i < LEVELS; i++) {
-    int x, y, open = i < sv.open;
-    hub_door(i, &x, &y);
-    fg = gfx_rgb(colors[i][1]);
-    if (!(i & 7)) gfx_fill(0, y + 40, SCREEN_W, 8, gfx_rgb(colors[0][1]));
-    if (!open) fg = gfx_mix(fg, bg, 20);
-    draw_door(x, y, x + 22, y + 40, open ? 0 : 12); /* (a world cleared: its colour in the window) */
-    if (sv.done >> i & 1) gfx_fill(x + 3, y + 3, 16, 34, gfx_rgb(colors[i][0]));
-    num(s, (uint32_t)i + 1);
-    gfx_text_center(&np_font_small, x + 11, y - 6, s, fg, 256);
-    if (i == sel_) picture(hero_px[0], 14, x - 22, y + 8, x - 2, y + 40, 0, 0, 0, BLACK);
-  }
-  fg = gfx_rgb(colors[0][1]);
-  gfx_fill(0, 214, SCREEN_W, 26, fg);
-  if (sel_ >= sv.open) cat(s, T("Locked"));
-  else if (sv.done >> sel_ & 1) label(s, T("Cleared. Fewest deaths: "), sv.best[sel_]);
-  else cat(s, T("Not cleared yet"));
-  gfx_text(&np_font_body, 8, 232, s, bg, 256);
-  gfx_text_right(&np_font_body, 312, 232, label(s, T("Deaths "), sv.deaths), bg, 256);
+/* ---- the title (the game's 1 Player card) and the map of the worlds (its title, its portals on their paths) */
+static const char *const world_names[LEVELS] = {"Pits",     "Spikes", "Push",  "Coins", "Controls", "Platforms",
+                                                 "Springs",  "Warps",  "Scale", "Doors", "Saws",     "Flappy",
+                                                 "Gravity",  "Movement", "Wraparound", "Boss"};
+static const int16_t portal_at[LEVELS][2] = { /* the game's (its screen's pixels: the scene's less 48) */
+  {42, 109}, {85, 97},   {135, 100}, {171, 121}, {147, 158}, {160, 198}, {207, 193}, {235, 160},
+  {227, 118}, {262, 100}, {295, 129}, {307, 172}, {331, 203}, {373, 207}, {390, 169}, {365, 113}};
+static int pan, menu_anim, credits_y; /* the map scrolled (its 432 pixels on the screen's 320) */
+static int pan_for(int i) { return clampi(portal_at[i][0] + (i == 15 ? 16 : 8) - 160, 0, 112); }
+
+static void title_scene(void *ctx) {
+  blit_rows(P_TITLE, -56, 0, 0, 90, 0); /* (its top: LEVEL DEVIL, and the flames) */
+  gfx_fill(0, 90, SCREEN_W, SCREEN_H - 90, ORANGE);
+  if (!ov) blit(P_CARD_ON, 122, 120), text_c(&font_small, 160, 206, T("press OK"), YELLOW);
+  draw_jaws();
   if (ov) overlay();
+}
+
+static void map_scene(void *ctx) {
+  char s[24];
+  int i = sv.sel, f = menu_anim / 9 & 3, boss = i == LEVELS - 1;
+  blit_rows(P_TITLE, -56, 0, 0, 90, 0); /* its top stays */
+  blit_rows(P_TITLE, -pan, 0, 90, SCREEN_H, 0);
+  for (int k = 0; k < LEVELS; k++) {
+    int x = portal_at[k][0] - pan, y = portal_at[k][1];
+    if (k == LEVELS - 1) blit(k < sv.open ? P_BOSS_OPEN : P_BOSS_LOCKED, x, y);
+    else blit(P_DIRT, x - 2, y + 15), blit(k < sv.open ? P_PORTAL0 + k : P_PORTAL_LOCKED, x, y);
+  }
+  if (!ov) { /* the one picked: the game's highlight, its name, and the key */
+    int x = portal_at[i][0] - pan, y = portal_at[i][1], cx = x + (boss ? 16 : 8), ty = y + (boss ? 33 : 18);
+    if (boss) blit(P_HILITE_BOSS0 + f, x + 9, y - 6);
+    else blit(P_HILITE0 + f, x + 2, y - 15);
+    text_c(&font_small, cx, ty, world_names[i], DARK);
+    text_c(&font_small, cx, ty + 7, T("press"), YELLOW);
+    text_c(&font_small, cx, ty + 13, T("OK"), YELLOW);
+    text(&font_small, 4, 231, label(s, T("deaths "), sv.deaths), DARK);
+    if (sv.done >> i & 1) label(s, T("best "), sv.best[i]), text(&font_small, 316 - text_w(&font_small, s), 231, s, DARK);
+  }
+  draw_jaws();
+  if (ov) overlay();
+}
+
+/* the end: the Devil laughs, and the game's credits come up */
+static void end_scene(void *ctx) {
+  char s[24];
+  gfx_fill(0, 0, SCREEN_W, SCREEN_H, ORANGE);
+  blit(menu_anim / 12 & 1 ? P_EYES_LAUGH : P_EYES, 40, 20);
+  blit(P_CREDITS, 20, credits_y);
+  if (credits_y <= 100) {
+    text_c(&font, 160, 184, label(s, T("Deaths: "), sv.deaths), DARK);
+    text_c(&font_small, 160, 206, T("press OK"), DARK);
+  }
+  draw_jaws();
 }
 
 /* ------------------------------------------------------------ the levels */
-static void open_room(void) { /* room rnum, coming out of the game's dark red */
-  enter();
-  fade = 15;
-}
 static void start_level(int l) {
   if (l != sv.level || sv.room >= ROOMS) sv.room = 0, sv.run = 0;
   level = sv.level = (uint8_t)l, rnum = sv.room;
-  scr = SC_PLAY;
-  open_room();
+  scr = SC_PLAY, ov = OV_NONE;
+  enter();
   save();
 }
 static void level_done(void) {
@@ -812,28 +886,39 @@ static void level_done(void) {
   if (first || sv.run < sv.best[level]) sv.best[level] = sv.run;
   sv.done |= (uint16_t)(1u << level);
   sv.open = (uint8_t)imax(sv.open, imin(level + 2, LEVELS));
-  banner = sv.run + 1, banner_t = now;
   sv.room = 0, sv.run = 0, sv.sel = (uint16_t)imin(level + 1, LEVELS - 1);
-  scr = SC_HUB, full = 1;
-  if (level == LEVELS - 1 && first) ov = OV_END;
+  scr = level == LEVELS - 1 && first ? SC_END : SC_MAP, pan = pan_for(sv.sel), credits_y = SCREEN_H;
   save();
 }
-
-/* a step of the room: the fade, the door reached (it shuts), or the runner */
-static void tick(int in) {
-  full = 1;
-  if (fade && !won) {
-    fade--;
-    return;
-  }
-  if (won > 30) fade = imin(won - 30, 15);
-  if (won > 46) {
-    won = 0, fade = 15;
+/* what changes behind the shut jaws */
+static void then_do(int what) {
+  if (what == THEN_MAP) scr = SC_MAP, ov = OV_NONE, pan = pan_for(sv.sel);
+  if (what == THEN_ROOM) start_level(sv.sel);
+  if (what == THEN_NEXT) { /* the next room, or the map */
     if (++rnum == ROOMS) level_done();
     else sv.room = (uint8_t)rnum, save(), enter();
-    return;
   }
-  step(in);
+}
+
+/* a 60th of a second: the jaws, the room (unless paused, or waiting for the jaws), the map scrolling */
+static void frame_step(int in) {
+  menu_anim++;
+  if (jaw == J_CLOSING && ++jaw_t >= 30) jaw = J_SHUT, jaw_t = 0;
+  else if (jaw == J_SHUT && jaw_hold >= 0 && ++jaw_t >= jaw_hold) {
+    int what = jaw_then;
+    jaw_then = THEN_NONE;
+    jaws_open();
+    then_do(what);
+  } else if (jaw == J_OPENING && ++jaw_t >= 30) jaw = J_OPEN, jaw_still = 0;
+  if (scr == SC_PLAY && !ov && !jaw_still) {
+    if (won == 45) jaws_close(45, THEN_NEXT); /* (the door shut: the jaws at 750 ms, the next room at 2 s) */
+    step(in);
+  }
+  if (scr == SC_MAP) {
+    int to = pan_for(sv.sel);
+    pan += (to - pan) / 4 + (to > pan) - (to < pan);
+  }
+  if (scr == SC_END && credits_y > 100 && !(menu_anim % 3)) credits_y--;
 }
 
 static void load(void) {
@@ -843,8 +928,21 @@ static void load(void) {
   uint8_t *v = (uint8_t *)&sv;
   bool ok = d && len == sizeof sv && d[0] == 'L' && d[1] == 1;
   for (uint32_t i = 0; i < sizeof sv; i++) v[i] = ok ? d[i] : 0;
-  sv.open = (uint8_t)clampi(sv.open, 1, LEVELS), sv.sel = (uint16_t)clampi(sv.sel, 0, LEVELS - 1);
+  sv.open = (uint8_t)clampi(sv.open, 1, LEVELS), sv.sel = (uint16_t)clampi(sv.sel, 0, sv.open - 1);
   if (sv.level >= LEVELS) sv.level = 0;
+}
+
+static void ask_quit(void) { ov = OV_QUIT, sel = 0, jaws_shut(); }
+/* the map: Left and Right the world before and after, Up and Down the nearest one up or down */
+static void map_move(int dx, int dy) {
+  int best = -1, bd = 1 << 30, x = portal_at[sv.sel][0], y = portal_at[sv.sel][1];
+  if (dx) best = clampi(sv.sel + dx, 0, sv.open - 1);
+  else
+    for (int k = 0; k < sv.open; k++) {
+      int ex = portal_at[k][0] - x, ey = (portal_at[k][1] - y) * dy, d = ex * ex * 2 + ey * ey;
+      if (ey > 8 && d < bd) bd = d, best = k;
+    }
+  if (best >= 0) sv.sel = (uint16_t)best;
 }
 
 int main(void) {
@@ -855,8 +953,7 @@ int main(void) {
   seed = eadk_random() ^ now;
   if (!seed) seed = 1;
   load();
-  if (!(sv.flags & 1)) ov = OV_HELP;
-  full = 1;
+  scr = SC_TITLE; /* (the jaws shut, then open on the title: the game's start) */
   const uint64_t left = KEY(eadk_key_left) | KEY(eadk_key_four), right = KEY(eadk_key_right) | KEY(eadk_key_six);
   const uint64_t up = KEY(eadk_key_up) | KEY(eadk_key_eight), down = KEY(eadk_key_down) | KEY(eadk_key_two);
   const uint64_t ok = KEY(eadk_key_ok) | KEY(eadk_key_exe) | KEY(eadk_key_five), back_k = KEY(eadk_key_back);
@@ -868,46 +965,49 @@ int main(void) {
     stale &= k, held = k, k &= ~stale, hitk &= ~stale;
     if (k & (KEY(eadk_key_home) | KEY(eadk_key_on_off))) break;
     int dx = !!(hitk & right) - !!(hitk & left), dy = !!(hitk & down) - !!(hitk & up), quit = 0;
-    if (hitk) full |= scr == SC_HUB || ov;
-    if (ov) {
-      if (ov == OV_PAUSE) sel = (sel + dy + 4) % 4;
-      if (ov == OV_QUIT) sel ^= dx != 0;
-      if (hitk & ok) {
-        if (ov == OV_PAUSE && sel == 1) ov = OV_NONE, reset(); /* Restart */
-        else if (ov == OV_PAUSE && sel) ov = sel == 2 ? (scr = SC_HUB, save(), OV_NONE) : OV_QUIT, sel = 0;
-        else if (ov == OV_QUIT && sel) quit = 1;
-        else ov = ov == OV_QUIT && scr == SC_PLAY ? (sel = 3, OV_PAUSE) : OV_NONE;
-        if (!(sv.flags & 1)) sv.flags |= 1, save();
-      } else if (hitk & back_k) {
-        ov = ov == OV_QUIT && scr == SC_PLAY ? (sel = 3, OV_PAUSE) : OV_NONE;
+    int moving = jaw == J_CLOSING || (jaw == J_SHUT && !ov); /* (between two screens: keys wait) */
+    if (ov == OV_PAUSE) {
+      sel = (sel + dy + 4) % 4;
+      if (hitk & back_k || (hitk & ok && sel == 0)) ov = OV_NONE, jaws_open(), jaw_still = 1; /* Resume */
+      else if (hitk & ok && sel == 1) ov = OV_NONE, reset(), jaws_open();                     /* Restart */
+      else if (hitk & ok && sel == 2) ov = OV_NONE, sv.room = (uint8_t)rnum, save(), jaw_hold = 20, jaw_then = THEN_MAP;
+      else if (hitk & ok) ov = OV_QUIT, sel = 0;
+    } else if (ov == OV_QUIT) {
+      if (dx || dy) sel ^= 1;
+      if (hitk & ok && sel) quit = 1;
+      else if (hitk & (ok | back_k)) {
+        if (scr == SC_PLAY) ov = OV_PAUSE, sel = 3;
+        else ov = OV_NONE, jaws_open();
       }
-    } else if (scr == SC_HUB) {
-      sv.sel = (uint16_t)clampi(sv.sel + dx + 8 * dy, 0, LEVELS - 1);
-      if (hitk & ok && sv.sel < sv.open) start_level(sv.sel);
-      if (hitk & back_k) ov = OV_QUIT, sel = 0;
-    } else if (hitk & back_k) {
-      ov = OV_PAUSE, sel = 0, full = 1;
+    } else if (moving) {
+    } else if (scr == SC_TITLE) {
+      if (hitk & ok) jaws_close(10, THEN_MAP);
+      else if (hitk & back_k) ask_quit();
+    } else if (scr == SC_MAP) {
+      if (dx || dy) map_move(dx, dy);
+      if (hitk & ok) jaws_close(30, THEN_ROOM);
+      else if (hitk & back_k) ask_quit();
+    } else if (scr == SC_END) {
+      if (hitk & (ok | back_k) && credits_y <= 100) jaws_close(10, THEN_MAP);
+    } else if (hitk & back_k) { /* in a room: the jaws shut, and the game's buttons on them */
+      ov = OV_PAUSE, sel = 0, jaws_shut();
       save();
     } else if (waiting && hitk) { /* the game's retry: any key */
       tries++, reset();
       hitk = 0;
     }
     if (quit) break;
-    if (banner && now - banner_t > 2600) banner = 0, full = 1;
     acc += (now - last) * 3, last = now;
-    if (scr == SC_PLAY && !ov) {
-      int in = (k & left ? I_LEFT : 0) | (k & right ? I_RIGHT : 0) | (k & (up | ok) ? I_UP : 0) | (k & down ? I_DOWN : 0);
-      for (int n = 0; acc >= 50 && n < 4; acc -= 50, n++) tick(in);
-      if (acc >= 50) acc = 0; /* (too far behind: let it go) */
-    } else {
-      acc = 0;
-    }
-    if (full) {
+    int in = (k & left ? I_LEFT : 0) | (k & right ? I_RIGHT : 0) | (k & (up | ok) ? I_UP : 0) | (k & down ? I_DOWN : 0);
+    int n = 0;
+    for (; acc >= 50 && n < 4; acc -= 50) frame_step(in), n++;
+    if (acc >= 50) acc = 0; /* (too far behind: let it go) */
+    if (n || hitk) {
       eadk_display_wait_for_vblank();
-      gfx_render(scr == SC_HUB ? hub_scene : play_scene, 0, 0, SCREEN_H);
-      full = 0;
+      gfx_render(scr == SC_PLAY ? play_scene : scr == SC_MAP ? map_scene : scr == SC_END ? end_scene : title_scene, 0, 0,
+                 SCREEN_H);
     } else {
-      eadk_timing_msleep(8);
+      eadk_timing_msleep(2);
     }
   }
   if (scr == SC_PLAY) sv.room = (uint8_t)rnum;

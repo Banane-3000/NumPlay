@@ -31,7 +31,7 @@ FPS = 60
 
 # kinds, flags, modes, ops (src/main.c)
 (K_BLOCK, K_SPIKE, K_SAW, K_SPRING, K_DOOR, K_TRIG, K_COIN, K_BAD, K_WARP, K_BUTTON, K_THRU, K_GSPIKE,
- K_DEATH) = range(13)
+ K_DEATH, K_SIGN) = range(14)
 F_HIDE, F_GHOST, F_OFF, F_BIG, F_USED, F_ICE = 1, 2, 4, 8, 16, 32
 R_WRAP, R_WRAPY, R_SWAP, R_FLAPPY, R_GRAVITY = 1, 2, 4, 16, 32
 (O_VEL, O_MOVE, O_SET, O_GROW, O_FLAG, O_SPAWN, O_WARP, O_HERO, O_GRAV, O_HGROW, O_SHAKE, O_FIRE, O_REARM,
@@ -48,8 +48,8 @@ WORLDS = ["Pits", "Spikes", "Push", "Coins", "Controls", "Platforms", "Springs",
 FAKE = [600, 645, 647, 649, 651, 653, 655, 657]           # Fake_Tile_1 to 8 (Enemy_Fake_Tile is a 600 too)
 TRIGGER = [602, 604, 615, 617, 665, 667, 673, 675]        # Trigger_1 to 8
 KINDS = {609: K_SPIKE, 684: K_SAW, 621: K_SPRING, 598: K_DOOR, 613: K_COIN, 659: K_BAD, 619: K_WARP, 661: K_BUTTON,
-         562: K_THRU, 698: K_GSPIKE, 846: K_DEATH, 682: K_DOOR}
-SKIP = {596, 766, 682}                                    # blood, the keyboard sign, the door's double (Doors_5)
+         562: K_THRU, 698: K_GSPIKE, 846: K_DEATH, 682: K_DOOR, 766: K_SIGN}
+SKIP = {596, 682}                                         # blood, the door's double (Doors_5)
 SCENES = {r["name"]: r for r in json.load(open(os.path.join(HERE, "scenes.json")))}
 
 
@@ -62,7 +62,7 @@ class Obj:
         self.kind, self.x, self.y, self.sx, self.sy, self.angle = kind, x, y, sx, sy, angle
         self.typ, self.name, self.ev = typ, name, ev
         self.flags, self.back, self.index, self.made = 0, False, None, False
-        self.iw, self.ih = (16, 26) if kind == K_GSPIKE else (16, 16)
+        self.iw, self.ih = {K_GSPIKE: (16, 26), K_SIGN: (50, 31)}.get(kind, (16, 16))  # (the sign: the arrow keys)
 
     @property
     def cx(self):
