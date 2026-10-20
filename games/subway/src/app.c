@@ -398,7 +398,7 @@ static void draw_runner(void) {
   if (!title && (pl.chase > 0 || pl.dead)) {
     float back = pl.dead ? 1.3f - (pl.crash_t > 1 ? 1 : pl.crash_t) * 0.5f : 2.4f + (pl.chase < 1 ? (1 - pl.chase) * 9 : 0);
     if (run.start_t < 1) back = 2.4f + (1 - run.start_t) * 3;
-    float ix = pl.x + 0.55f, dx = pl.x - 0.75f;
+    float ix = pl.x + (pl.dead ? 0.85f : 0.55f), dx = pl.x - 0.8f;
     actor_draw(WHO_INSPECTOR, &a_guard, (V3){ix, pl.dead ? pl.ground : 0, pl.z - back}, 0, 0, lt);
     actor_draw(WHO_DOG, &a_dog, (V3){dx, pl.dead ? pl.ground : 0, pl.z - back + 0.7f}, 0, 0, lt);
   }
