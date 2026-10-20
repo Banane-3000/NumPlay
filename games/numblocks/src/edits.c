@@ -144,7 +144,10 @@ static bool journal_has(int rx, int rz, uint32_t key, int i, int j) {
 }
 #endif
 
-/* the journal's entries go into their regions' records */
+static inline void wr32(uint8_t *p, uint32_t v) { memcpy(p, &v, 4); }
+
+/* the journal's entries go into their regions' records: each record grows in place in storage and the two
+ * are merged from the end, so a record can be as big as storage lets it be */
 bool edits_flush(void) {
   bool ok = true;
   int i = 0;
@@ -152,33 +155,36 @@ bool edits_flush(void) {
     int rx = jn[i].rx, rz = jn[i].rz, j = i;
     while (j < nj && jn[j].rx == rx && jn[j].rz == rz) j++;
     int n;
-    const uint8_t *r = region(rx, rz, &n);
-    /* merge the record and the journal's entries for it into the scratch buffer */
-    uint32_t m = 0;
-    int a = 0, b = i;
-    while ((a < n || b < j) && m < scratch_n) {
-#if NB_DIMS
-      if (a < n && (b >= j || KEY(R(a)) < KEY(jn[b].e)) && journal_has(rx, rz, KEY(R(a)) ^ HI, i, j)) {
-        a++;   /* (the journal has its spot, as the other kind) */
-        continue;
-      }
-#endif
-      if (b >= j || (a < n && KEY(R(a)) < KEY(jn[b].e))) scratch[m++] = R(a), a++;
-      else {
-        if (a < n && KEY(R(a)) == KEY(jn[b].e)) a++;
-        scratch[m++] = jn[b++].e;
-      }
-    }
+    region(rx, rz, &n);
     char name[32];
     region_name(name, rx, rz);
     cache_ok = false;
-    if (a < n || b < j || !plat_save(name, scratch, m * 4)) {
+    int top = n + (j - i);
+    uint8_t *r = plat_save_grow(name, (uint32_t)top * 4);
+    if (!r) {
       /* no room: these changes stay in the journal */
       ok = false;
       full = true;
       i = j;
       continue;
     }
+    int a = n - 1, b = j - 1, o = top;
+    while (a >= 0 || b >= i) {
+      if (a >= 0 && (b < i || KEY(R(a)) > KEY(jn[b].e))) {
+#if NB_DIMS
+        if (journal_has(rx, rz, KEY(R(a)) ^ HI, i, j)) {
+          a--;   /* (the journal has its spot, as the other kind) */
+          continue;
+        }
+#endif
+        wr32(r + 4 * --o, R(a)), a--;   /* (never past what is still to read: o > a) */
+      } else {
+        if (a >= 0 && KEY(R(a)) == KEY(jn[b].e)) a--;
+        wr32(r + 4 * --o, jn[b--].e);
+      }
+    }
+    if (o) memmove(r, r + 4 * o, (size_t)(top - o) * 4);
+    plat_save_done(name, (uint32_t)(top - o) * 4);
     memmove(&jn[i], &jn[j], (size_t)(nj - j) * sizeof jn[0]);
     nj -= j - i;
   }

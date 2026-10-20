@@ -384,7 +384,7 @@ static void random_tick(int x, int y, int z) {
     fire_schedule(x, y, z, 8);
     return;
   }
-  if (b == B_LAVA && rule(GR_FIRE_TICK)) {
+  if (is_lava(b) && rule(GR_FIRE_TICK)) {   /* (a flow that has settled is still lava: BlockStaticLiquid) */
     lava_fire(x, y, z);
     return;
   }

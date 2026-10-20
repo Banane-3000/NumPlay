@@ -47,6 +47,8 @@ uint32_t plat_storage_free(void);
 bool plat_record(int i, char *name, int max);   /* the i-th record's name; false past the last */
 uint8_t *plat_save_open(const char *name, uint32_t len);   /* a record of len bytes to fill (NULL: no room, nothing changed) */
 void plat_save_close(const char *name);         /* (done filling it) */
+uint8_t *plat_save_grow(const char *name, uint32_t len);   /* the record made len bytes long, keeping what it holds */
+void plat_save_done(const char *name, uint32_t len);       /* (done with it: len bytes long, at most as grown) */
 bool plat_in_launcher(void);                    /* running inside NumPlay (which keeps its own copy of the saves) */
 void plat_begin(void);
 int plat_end(void);
