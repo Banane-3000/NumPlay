@@ -92,6 +92,7 @@ def main():
     ap.add_argument("--ram", type=int, required=True)
     ap.add_argument("--upsilon-ram", type=int, required=True)
     ap.add_argument("--nwlink", default="nwlink")
+    ap.add_argument("--langs", default="", help="the languages make kit-langs adds (site-kit/<code>)")
     a = ap.parse_args()
     B, O = a.build, a.out
     manifest = json.load(open(a.manifest))
@@ -138,6 +139,7 @@ def main():
         icon = icon_of(i)
         if icon:
             shutil.copy(icon, os.path.join(O, "icons", i + ".png"))
+        preview = os.path.exists(os.path.join(ROOT, "docs", "media", "gallery", f"{i}.gif"))
         thumb = os.path.join(ROOT, "docs", "media", f"thumb_{i}.png")
         if os.path.exists(thumb):
             shutil.copy(thumb, os.path.join(O, "thumbs", i + ".png"))
@@ -147,7 +149,7 @@ def main():
             "flash": flash, "ram": ram, "default": i in default, "upsilon": i in upsilon,
             "roms": bool(g.get("roms")), "systems": g.get("systems"), "xl": bool(g.get("xl")),
             "bytes": os.path.getsize(os.path.join(O, "games", i + ".o.gz")),
-            "icon": bool(icon), "thumb": os.path.exists(thumb)})
+            "icon": bool(icon), "thumb": os.path.exists(thumb), "preview": preview})
 
     # ---- check: the default games, linked from the kit, are NumPlay.nwa on the calculator
     ld_script = os.path.join(tmp, "custom.ld")
@@ -183,7 +185,7 @@ def main():
     kit = {"version": a.version, "appSpace": a.app_space, "ram": a.ram, "upsilonRam": a.upsilon_ram,
            "arena": int(re.search(r"\.space (\d+)", open(os.path.join(B, "gen", "arena.s")).read()).group(1)),
            "base": base, "runtime": runtime, "numplay": len(bins[0]), "link": LINK, "variants": variants,
-           "script": script, "games": games}
+           "langs": ["en"] + a.langs.split(), "script": script, "games": games}
     json.dump(kit, open(os.path.join(O, "kit.json"), "w"), indent=1)
     shutil.rmtree(tmp)
     print(f"kit: {len(games)} games, NumPlay.nwa's {len(bins[0])} bytes linked again from {O}")

@@ -62,7 +62,7 @@ ARM_CFLAGS = -std=gnu11 $(EADK_CFLAGS) -DNP_VERSION='"$(VERSION)"' -Os -Wall -We
 ARM_LINK = -nostartfiles --specs=nano.specs -Wl,--relocatable -Wl,--gc-sections -Wl,-e,main \
   -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
 
-.PHONY: all nwa apps check sim emu clean lang kit FORCE
+.PHONY: all nwa apps check sim emu clean lang kit kit-langs FORCE
 all: nwa apps
 nwa: $(foreach v,$(VARIANTS),$(B)/$(v).nwa) $(B)/NumPlay-Upsilon.nwa
 
@@ -176,7 +176,17 @@ kit: $(KIT)/base.o $(B)/arm/arena.o $(KIT_GAMES) $(B)/NumPlay.nwa \
   $(foreach v,$(VARIANTS),$(B)/variant/$(v)-name.o $(B)/variant/$(v)-icon.o)
 	$(PY) tools/kit.py games/games.json $(B) $(B)/site-kit --version $(VERSION) --variants "$(VARIANTS)" \
 	  --default "$(GAMES)" --upsilon "$(UPSILON_GAMES)" --app-space $(APP_SPACE) --ram $(CUSTOM_RAM) \
-	  --upsilon-ram $(UPSILON_RAM) --nwlink "$(NWLINK)"
+	  --upsilon-ram $(UPSILON_RAM) --nwlink "$(NWLINK)" --langs "$(LANGS)"
+
+# ...and in French and Chinese, from each language's tree (make lang), in site-kit/<code>
+kit-langs: kit
+	@for l in $(LANGS); do \
+	  [ -d $(B)/lang/$$l ] || $(PY) tools/lang.py tree $$l $(B)/lang/$$l || exit 1; \
+	  $(MAKE) -C $(B)/lang/$$l kit NWLINK="$(NWLINK)" || exit 1; \
+	  rm -rf $(B)/site-kit/$$l && mkdir -p $(B)/site-kit/$$l && \
+	  cp -R $(B)/lang/$$l/build/site-kit/kit.json $(B)/lang/$$l/build/site-kit/base.o.gz \
+	    $(B)/lang/$$l/build/site-kit/arena.o.gz $(B)/lang/$$l/build/site-kit/games $(B)/site-kit/$$l/ || exit 1; \
+	done
 
 check: nwa apps
 	@x=$$(cat $(B)/gen/arena_extra); \

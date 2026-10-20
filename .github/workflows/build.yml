@@ -42,7 +42,7 @@ jobs:
           rustup target add thumbv7em-none-eabihf
 
       - name: Build
-        run: make -j4 nwa apps check NWLINK=nwlink && make lang NWLINK=nwlink && make kit NWLINK=nwlink
+        run: make -j4 nwa apps check NWLINK=nwlink && make lang NWLINK=nwlink && make kit-langs NWLINK=nwlink
         
       - uses: actions/upload-artifact@v4
         with:

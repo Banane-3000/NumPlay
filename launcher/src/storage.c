@@ -60,10 +60,21 @@ bool np_reset_game(int game) {
 #define CONFIG_NAME "numplay.set"
 #define CONFIG_MAGIC 0x4E /* 'N' */
 
+#if !NP_SIMULATOR
+extern const uint8_t np_defaults[4];  /* how this NumPlay starts: launcher/app_name.c, or the website */
+#endif
+
 void np_config_load(np_config_t *c) {
   c->disguise = false;
   c->secret = NP_SECRET_XNT;
   c->hint = true;
+#if !NP_SIMULATOR
+  if (np_defaults[0] == 'D' && np_defaults[1] == 1) {
+    c->disguise = np_defaults[2] & 1;
+    c->hint = !(np_defaults[2] & 2);
+    if (np_defaults[3] < NP_SECRET_COUNT) c->secret = np_defaults[3];
+  }
+#endif
   uint32_t len = 0;
   const uint8_t *d = ef_read(CONFIG_NAME, &len);
   if (!d || len != 4 || d[0] != CONFIG_MAGIC || d[1] != 1) return;
