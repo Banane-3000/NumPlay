@@ -476,12 +476,12 @@ Google's brick breaker: seven bricks across in blue, red, yellow and green, wall
 | Key | What it does |
 | --- | --- |
 | **Arrows** | Choose a system, then a game. In a game: the D-pad |
-| **OK** | Open it. In a game: **A** |
-| **Back** | Back to the systems. In a game: **B** |
-| **shift** / **EXE** | In a game: **Select** / **Start** |
+| **OK** | Open it. In a game: **A** (**2** on Sega's pads) |
+| **Back** | Back to the systems. In a game: **B** (**1**) |
+| **shift** / **EXE** | In a game: **Select** / **Start** (the Master System's **Pause**) |
 | **Backspace** | Retro-Go's menu: save, load, reset, options |
 | **Home** | Save and quit |
 
-Game Boy, Game Boy Color and NES games you pick on NumPlay's customizer website. Open a game for New game, or Resume game from one of its 4 save slots. In a game, Backspace opens Retro-Go's menu: Save & Continue, Save & Quit, Load game, Reset and Options, where the picture can be 1x, Fit or Full screen. The cartridges' own saves are kept as well.
+Game Boy, Game Boy Color, NES, Master System and Game Gear games you pick on NumPlay's customizer website. Open a game for New game, or Resume game from one of its 4 save slots. In a game, Backspace opens Retro-Go's menu: Save & Continue, Save & Quit, Load game, Reset and Options, where the picture can be 1x, Fit or Full screen. The cartridges' own saves are kept as well.
 
 <br clear="right">

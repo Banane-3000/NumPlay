@@ -381,7 +381,7 @@
   {
     "id": "retrogo",
     "title": "Retro-Go",
-    "tagline": "Game Boy and NES games",
+    "tagline": "Game Boy, NES and Sega games",
     "credit": "Based on Retro-Go by ducalex",
     "top": "0xE84B39",
     "bottom": "0x1E1430",
@@ -403,7 +403,9 @@
     "systems": [
       1,
       2,
-      3
+      3,
+      4,
+      5
     ]
   }
 ]

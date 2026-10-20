@@ -1,4 +1,4 @@
-# Retro-Go: Game Boy, Game Boy Color and NES games on the calculator.
+# Retro-Go: Game Boy, Game Boy Color, NES, Master System and Game Gear games on the calculator.
 #   make          build output/retrogo.nwa (RetroGo.nwa), its ROM table from ROMS (none: empty)
 #   make ROMS="a.gb b.nes"   the same with those games in it, to try them (or ROMS_LIST=file:
 #                            one a line, for names with spaces)
@@ -20,9 +20,10 @@ ROMS ?=
 GB_SRC = $(addprefix src/gb/,cpu.c hw.c mem.c lcdc.c rtc.c lcd.c gb.c)
 NES_SRC = $(addprefix src/nes/,nes6502.c nes_ppu.c nes_mmc.c mmclist.c nes_apu.c nes.c) \
   $(sort $(wildcard src/nes/mappers/*.c))
-CORE_SRC = $(GB_SRC) $(NES_SRC)
+SMS_SRC = src/sms/z80.c src/sms/sms.c
+CORE_SRC = $(GB_SRC) $(NES_SRC) $(SMS_SRC)
 APP_SRC = src/main.c src/romtable.c src/pack.c
-CORE_H = $(wildcard src/*.h src/gb/*.h src/nes/*.h)
+CORE_H = $(wildcard src/*.h src/gb/*.h src/nes/*.h src/sms/*.h)
 HEADERS = $(CORE_H) ../common/epsilon_app.h ../common/epsilon_files.h ../common/np_text.h \
   ../../launcher/src/gfx.h ../../launcher/src/np.h ../../launcher/src/font.h
 
@@ -116,8 +117,12 @@ $(BUILD_DIR)/host/romtable: tests/host_romtable.c src/romtable.c src/romtable.h
 $(BUILD_DIR)/host/pack: tests/host_pack.c src/pack.c src/pack.h
 	@mkdir -p $(BUILD_DIR)/host
 	$(Q) $(HOST_CC) $(HOST_CFLAGS) tests/host_pack.c src/pack.c -o $@
-test: $(BUILD_DIR)/host/core $(BUILD_DIR)/host/romtable $(BUILD_DIR)/host/pack
+# (the Z80 at full speed: zexall runs 46.7 billion clocks)
+$(BUILD_DIR)/host/z80: tests/host_z80.c src/sms/z80.c src/sms/z80.h
+	@mkdir -p $(BUILD_DIR)/host
+	$(Q) $(HOST_CC) -std=gnu11 -O2 -Wall -Wextra tests/host_z80.c src/sms/z80.c -o $@
+test: $(BUILD_DIR)/host/core $(BUILD_DIR)/host/romtable $(BUILD_DIR)/host/pack $(BUILD_DIR)/host/z80
 	$(Q) $(BUILD_DIR)/host/pack
 	$(Q) $(PY) tests/test_romtable.py $(BUILD_DIR)/host/romtable
-	$(Q) $(PY) tests/test_cores.py $(BUILD_DIR)/host/core $(TEST_ROMS)
+	$(Q) $(PY) tests/test_cores.py $(BUILD_DIR)/host/core $(TEST_ROMS) $(BUILD_DIR)/host/z80
 	$(Q) NWLINK="$(NWLINK)" $(PY) tests/test_app.py

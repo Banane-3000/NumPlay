@@ -97,7 +97,7 @@ Clear the field, flag the mines	清理雷区，标出地雷
 Block Breaker	打砖块
 Break every brick	打碎每一块砖
 Backgrounds, clocks, timers	背景、时钟、计时器
-Game Boy and NES games	Game Boy 和 NES 游戏
+Game Boy, NES and Sega games	Game Boy、NES 和 Sega 游戏
 # (names that stay as they are)
 NumDash	NumDash
 NumBlocks	NumBlocks

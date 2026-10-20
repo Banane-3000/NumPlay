@@ -98,7 +98,7 @@ Clear the field, flag the mines	Déblaie le terrain, pose les drapeaux
 Block Breaker	Casse-briques
 Break every brick	Casse toutes les briques
 Backgrounds, clocks, timers	Fonds, horloges, minuteurs
-Game Boy and NES games	Jeux Game Boy et NES
+Game Boy, NES and Sega games	Jeux Game Boy, NES et Sega
 # (names that stay as they are)
 NumDash	NumDash
 NumBlocks	NumBlocks
