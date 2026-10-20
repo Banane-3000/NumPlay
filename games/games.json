@@ -193,6 +193,23 @@
     "repo": "https://github.com/Tatone26/Numworks-games/tree/main/apps/tetris"
   },
   {
+    "id": "dinorun",
+    "title": "Chrome Dino",
+    "tagline": "Jump, duck, survive",
+    "credit": "Based on Chrome's dinosaur game by Google",
+    "top": "0xE5E5E5",
+    "bottom": "0x555555",
+    "accent": "0x71A050",
+    "records": [
+      "dinorun.sav"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "app": "ChromeDino.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/dinorun"
+  },
+  {
     "id": "chess",
     "title": "Chess",
     "tagline": "Bots, puzzles, 2 players",

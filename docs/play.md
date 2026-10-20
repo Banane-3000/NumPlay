@@ -521,6 +521,21 @@ Run to the door. These are the game's 80 rooms in its order: sixteen worlds of f
 
 <br clear="right">
 
+## Chrome Dino
+
+<img src="../games/dinorun/docs/shot.png" width="320" align="right" alt="Chrome Dino: the T-rex jumps over a low pterodactyl">
+
+| Key | What it does |
+| --- | --- |
+| **OK** or **Up** (or 8) | Jump: hold it to jump higher |
+| **Down** (or 2) | Duck, or in the air, come down faster |
+| **EXE** | After a crash, play again at once |
+| **Back** | Pause menu (with Quit game) |
+
+Chrome's game when you're offline, as Chrome plays it. Run as far as you can: jump the cacti and the low pterodactyls, duck under the ones flying at head height. You go faster and faster, and every 700 points night falls for a while. Your best score is kept.
+
+<br clear="right">
+
 ## Chess
 
 <img src="media/chess.gif" width="320" align="right" alt="Chess against a bot">
