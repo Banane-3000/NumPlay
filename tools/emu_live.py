@@ -2,10 +2,9 @@
 """Live NumWorks emulator for macOS, Linux and Windows: a calculator you can click, around tools/emu.py.
 
 Put this file beside tools/emu.py. Requires Pillow, numpy, unicorn,
-pyelftools and nwlink (tkinterdnd2 for dropping files, if you like). It shows the
-NumWorks keyboard artwork of the k-kuroguro VS Code extension (CC BY-NC-SA) when
-that extension is installed, read in place and never copied; otherwise it draws a
-calculator of its own.
+pyelftools and nwlink (tkinterdnd2 for dropping files, if you like). It shows a
+picture of the NumWorks N0120 (emu_live_calculator.webp, beside this file), with the
+screen and every key where they are on it.
 
 Runs an ARM .nwa through the project's existing emu.Calculator, shows the
 320x240 display, supports 46 clickable keys, keyboard, .nwa drops and reload.
@@ -72,7 +71,6 @@ HOME_NWA = Path.home() / "Downloads" / "nwa"
 SAVE_DIR = Path.home() / ".numplay-emulator" / "saves"
 LIVE_NWA = REPO_ROOT / "dist" / "live" / "NumPlay.nwa"
 BUILD_SCRIPT = REPO_ROOT / "tools" / ("build_windows.py" if os.name == "nt" else "watch.py")
-BUILTIN_SKIN = Path.home() / ".numplay-emulator" / "calculator.png"
 LCD_WIDTH = 320
 LCD_HEIGHT = 240
 FRAME_VIRTUAL_MS = 32
@@ -1416,24 +1414,16 @@ class LiveApp:
             self.root.after(100, self._finish_close)
 
 
-# ---------- Calculator artwork + interface (merged from V4 skin) ----------
-ART_SOURCE = "https://github.com/k-kuroguro/vscode-numworks/blob/master/resources/webview/background.png"
-ART_LICENSE = "https://github.com/k-kuroguro/vscode-numworks/blob/master/resources/LICENSE"
-
-# Matches resources/webview/index.css and index.ejs in the extension.
-# Coordinates are normalized against the background.png image.
-SCREEN = (0.1625, 0.085, 0.675, 0.263)
-NAV = {
-    "left": (0.020, 0.370, 0.150, 0.280),
-    "right": (0.170, 0.370, 0.150, 0.280),
-    "up": (0.120, 0.090, 0.100, 0.400),
-    "down": (0.120, 0.530, 0.100, 0.400),
-    "home": (0.410, 0.150, 0.165, 0.310),
-    "onoff": (0.410, 0.554, 0.165, 0.310),
-    "ok": (0.670, 0.310, 0.135, 0.380),
-    "back": (0.833, 0.310, 0.135, 0.380),
+# ---------- The calculator: a picture of a NumWorks N0120, its screen and keys measured on it ----------
+CALCULATOR = Path(__file__).resolve().parent / "emu_live_calculator.webp"
+CALCULATOR_SIZE = (1018, 2000)
+# (x, y, width, height) in the picture's pixels; the arrows' middle does nothing, as on the calculator
+SCREEN_PX = (148, 154, 722, 542)
+KEYS_PX = {
+    "up": (191, 799, 74, 88), "down": (191, 960, 74, 88), "left": (105, 887, 86, 73), "right": (265, 887, 88, 73),
+    "home": (439, 816, 139, 90), "onoff": (439, 941, 139, 90), "ok": (664, 866, 109, 112),
+    "back": (803, 866, 109, 112),
 }
-# Extension's HTML ordering, grouped by the extension's CSS rows.
 FUNCTIONS = (
     "shift", "alpha", "xnt", "var", "toolbox", "backspace",
     "exp", "ln", "log", "i", "comma", "power",
@@ -1445,53 +1435,22 @@ DIGITS = (
     "1", "2", "3", "plus", "minus",
     "0", "dot", "ee", "ans", "exe",
 )
+for _row, (_y0, _y1) in enumerate(((1094, 1168), (1204, 1280), (1316, 1392))):
+    for _col, (_x0, _x1) in enumerate(((105, 214), (244, 354), (384, 493), (524, 633), (664, 773), (803, 912))):
+        KEYS_PX[FUNCTIONS[_row * 6 + _col]] = (_x0, _y0, _x1 - _x0, _y1 - _y0)
+for _row, (_y0, _y1) in enumerate(((1431, 1517), (1556, 1641), (1678, 1766), (1805, 1890))):
+    for _col, (_x0, _x1) in enumerate(((105, 239), (273, 407), (442, 576), (610, 744), (779, 912))):
+        KEYS_PX[DIGITS[_row * 5 + _col]] = (_x0, _y0, _x1 - _x0, _y1 - _y0)
 
 
-def skin_hotspots() -> dict[str, tuple[float, float, float, float]]:
-    """Recover key rectangles from the extension's CSS, in image fractions."""
-    kx, ky, kw, kh = 0.10, 0.385, 0.81, 0.565
-    boxes = {}
-    for key, (x, y, w, h) in NAV.items():
-        # .nav itself is only 27% of the keyboard height.
-        boxes[key] = (kx + x * kw, ky + y * kh * .27, w * kw, h * kh * .27)
-
-    # CSS percentage top/bottom margins use the containing block WIDTH.
-    for keys, top, left, width, per_row, cell_w, cell_h, mx, my in (
-        (FUNCTIONS, .2675, .005, .98, 6, .1465, .10, .01, .017),
-        (DIGITS, .565, .005, .98, 5, .16, .113, .02, .018),
-    ):
-        cw = kw * width       # child group width as a fraction of image width
-        for index, key in enumerate(keys):
-            row, col = divmod(index, per_row)
-            x = kx + kw * left + cw * (col * (cell_w + 2 * mx) + mx)
-            # Vertical CSS %-margins/paddings are percentages of group width
-            # (pixel width), so convert image-width units into image-height units.
-            # Exact source dimensions: background.png is 1160x2221.
-            y = ky + kh * top + (cw * 1160 / 2221) * (row * (cell_h + 2 * my) + my)
-            w = cw * cell_w
-            h = (cw * 1160 / 2221) * cell_h
-            boxes[key] = (x, y, w, h)
-    return boxes
+def _fraction(box):
+    x, y, w, h = box
+    return (x / CALCULATOR_SIZE[0], y / CALCULATOR_SIZE[1], w / CALCULATOR_SIZE[0], h / CALCULATOR_SIZE[1])
 
 
-HOTSPOTS = skin_hotspots()
+SCREEN = _fraction(SCREEN_PX)
+HOTSPOTS = {key: _fraction(box) for key, box in KEYS_PX.items()}
 assert set(HOTSPOTS) == set(emu.KEYS), (set(emu.KEYS) - set(HOTSPOTS))
-assert all(0 <= x < 1 and 0 <= y < 1 and x + w <= 1.01 and y + h <= 1.01
-           for x, y, w, h in HOTSPOTS.values())
-
-
-def installed_artwork() -> Path | None:
-    """Use the user's own VS Code extension installation, without copying art."""
-    locations = (
-        Path.home() / ".vscode" / "extensions",
-        Path.home() / ".vscode-insiders" / "extensions",
-        Path.home() / ".vscode-oss" / "extensions",
-    )
-    files = []
-    for root in locations:
-        files.extend(root.glob("k-kuroguro.numworks-simulator-*/resources/webview/background.png"))
-    files = [p for p in files if p.is_file()]
-    return max(files, key=lambda x: x.stat().st_mtime_ns) if files else None
 
 
 class FlatButton(tk.Label):
@@ -1519,41 +1478,6 @@ class FlatButton(tk.Label):
     config = configure
 
 
-def builtin_artwork() -> Path:
-    """A calculator of its own, for when the VS Code extension isn't installed: the same layout (HOTSPOTS,
-    SCREEN) on a 1160 x 2221 picture, drawn once and kept in ~/.numplay-emulator."""
-    if BUILTIN_SKIN.is_file():
-        return BUILTIN_SKIN
-    w, h = 1160, 2221
-    im = Image.new("RGB", (w, h), (232, 234, 238))
-    d = ImageDraw.Draw(im)
-    d.rounded_rectangle((6, 6, w - 7, h - 7), radius=96, fill=(250, 250, 251), outline=(200, 204, 211), width=6)
-    sx, sy, sw, sh = SCREEN[0] * w, SCREEN[1] * h, SCREEN[2] * w, SCREEN[3] * h
-    d.rounded_rectangle((sx - 36, sy - 36, sx + sw + 36, sy + sh + 36), radius=28, fill=(38, 40, 46))
-    d.rectangle((sx, sy, sx + sw, sy + sh), fill=(0, 0, 0))
-    font = None
-    for name in ("DejaVuSans.ttf", "/System/Library/Fonts/Supplemental/Arial.ttf", "/Library/Fonts/Arial.ttf",
-                 str(Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts" / "arial.ttf")):
-        try:
-            font = ImageFont.truetype(name, 42)
-            break
-        except OSError:
-            pass
-    font = font or ImageFont.load_default()
-    nav = {"left", "right", "up", "down", "home", "onoff", "ok", "back"}
-    for key, (x, y, kw, kh) in HOTSPOTS.items():
-        box = (x * w, y * h, (x + kw) * w, (y + kh) * h)
-        fill = (212, 216, 222) if key in nav else (225, 228, 233) if key in FUNCTIONS else (255, 255, 255)
-        d.rounded_rectangle(box, radius=min(box[2] - box[0], box[3] - box[1]) * 0.22, fill=fill,
-                            outline=(178, 183, 192), width=4)
-        label = "DEL" if key == "backspace" else LABEL.get(key, key)  # (⌫ isn't in most fonts)
-        tw, th = d.textbbox((0, 0), label, font=font)[2:]
-        d.text(((box[0] + box[2] - tw) / 2, (box[1] + box[3] - th) / 2), label, fill=(48, 52, 60), font=font)
-    BUILTIN_SKIN.parent.mkdir(parents=True, exist_ok=True)
-    im.save(BUILTIN_SKIN)
-    return BUILTIN_SKIN
-
-
 class CalculatorSkinApp(LiveApp):
     """NumWorks skin with mutually exclusive file and live-development modes.
 
@@ -1565,7 +1489,8 @@ class CalculatorSkinApp(LiveApp):
                  art_path: Path, max_sleep_ms: int = 0,
                  profile_speed: bool = False, start_live: bool = False):
         self.art_path = art_path
-        self.art = Image.open(art_path).convert("RGB")
+        art = Image.open(art_path).convert("RGBA")   # (its corners and shadow are see-through)
+        self.art = Image.alpha_composite(Image.new("RGBA", art.size, BG), art).convert("RGB")
         self.art_px = self.art.size
         self._canvas_image = None
         self._canvas_screen = None
@@ -1674,9 +1599,6 @@ class CalculatorSkinApp(LiveApp):
         clock_submenu.add_cascade(label="Clock", menu=self._manual_clock_menu, state="normal")
         self._clock_submenu = clock_submenu
         self._options_menu.add_cascade(label="Processor", menu=clock_submenu)
-        if self.art_path != BUILTIN_SKIN:
-            self._options_menu.add_command(label="Calculator picture license",
-                                           command=lambda: webbrowser.open(ART_LICENSE))
 
         self._section(inner, "View")
         self._segmented(inner, self.view_var, (("Calculator", "calculator"), ("Screen only", "screen")),
@@ -2607,7 +2529,6 @@ def main():
     ap = argparse.ArgumentParser(description="NumWorks-shaped .nwa emulator: single-file and live-build modes, on macOS, Linux and Windows")
     ap.add_argument("nwa", nargs="?", type=Path, help="optional .nwa path, or drop it after launching")
     ap.add_argument("--nwlink", default=nwlink_command())
-    ap.add_argument("--skin-image", type=Path, help="path to extension's resources/webview/background.png")
     ap.add_argument("--model", choices=("n0120", "n0110"), default="n0120")
     ap.add_argument("--system", choices=("epsilon", "upsilon"), default="epsilon")
     ap.add_argument("--live", action="store_true", help="open Live development mode and start the build watcher inside the GUI")
@@ -2626,10 +2547,7 @@ def main():
               "Game timing may differ from the calculator.", file=sys.stderr)
     if not args.nwlink:
         ap.error("nwlink not found. Run: npm install -g nwlink@1.0.0")
-    art = args.skin_image or installed_artwork()
-    if not art or not art.is_file():
-        # (k-kuroguro's Numworks Simulator for VS Code gives the real calculator's picture: see ART_SOURCE)
-        art = builtin_artwork()
+    art = CALCULATOR
     if os.name == "nt":
         # Avoid Windows silently bitmap-scaling the *whole* Tk window at 125%/
         # 150% display scale, which would defeat the native 1:1 LCD view.
