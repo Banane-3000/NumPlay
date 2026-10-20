@@ -9,6 +9,8 @@ Thanks for wanting to help! Bug reports, game ideas, fixes, translations and who
 - **Found a bug?** [Open a bug report](https://github.com/Mason363/NumPlay/issues/new/choose) with your calculator's model and software (Settings, then About), the NumPlay version and what happened.
 - **Want a game?** Check the [roadmap](README.md#roadmap) first, then [ask for it](https://github.com/Mason363/NumPlay/issues/new/choose), one game per issue.
 - **Want to make a game for NumPlay?** Open an issue first and say what you'd like to build and how. Space on the calculator is short, so we'll agree on where it goes (inside NumPlay or as its own app) before you spend time on it.
+- **Want to work on an issue?** Say so in a comment and it's yours: an issue with someone assigned is taken, any other is free. Issues are assigned only to whoever is working on them.
+- **Want to talk it over first?** Use [Discussions](https://github.com/Mason363/NumPlay/discussions): what you're working on, questions, ideas. Changes to `main` are listed under [commits](https://github.com/Mason363/NumPlay/commits/main); pull before you start.
 - Small fixes (a typo, a crash, a clearer key hint) can go straight to a pull request.
 
 ## Set up your computer
