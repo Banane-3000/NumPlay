@@ -795,7 +795,7 @@ static void piece(int id, int32_t x, int32_t y) { /* 4 x 3, about (2, 1) */
 static void play_hud(void) {
   for (int i = 0; i < ROOMS; i++) { /* the five rooms: those reached fill in, growing and back, at 750 ms */
     int t = frame - 45, d = 6 * (i + 1), s = 0, x = 136 + 10 * i;
-    if (i <= rnum && t >= 0 && t < 2 * d) s = t < d ? t * 4 / d : (2 * d - t) * 4 / d; /* (8ths of its size) */
+    if (i <= rnum && t >= 0 && t < 2 * d) s = t < d ? t * 4 / d : (2 * d - t) * 4 / d; /* (9 to 13 pixels) */
     spr(i <= rnum && t >= 0 ? P_ROOM_DONE : P_ROOM_SQUARE, x - s / 2, 4 - s / 2, x + 9 + s / 2 + s % 2, 12 + s / 2 + s % 2, 0, 0,
         0, 0);
   }
