@@ -64,8 +64,14 @@ typedef struct {
 } np_game_t;
 
 #define NP_MAX_GAMES 32                  /* tools/gen_games.py checks games.json against it */
+#if NP_SIMULATOR
 extern const np_game_t np_games[];
 extern const int np_game_count;
+#else
+/* Each game's entry is a section of its own; numplay.ld puts those of the games it links in a row. */
+extern const np_game_t np_games[], np_games_end[];
+#define np_game_count ((int)(np_games_end - np_games))
+#endif
 
 bool np_game_installed(int i);
 uint32_t np_game_size(int i);            /* bytes of flash */

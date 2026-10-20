@@ -62,7 +62,7 @@ ARM_CFLAGS = -std=gnu11 $(EADK_CFLAGS) -DNP_VERSION='"$(VERSION)"' -Os -Wall -We
 ARM_LINK = -nostartfiles --specs=nano.specs -Wl,--relocatable -Wl,--gc-sections -Wl,-e,main \
   -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
 
-.PHONY: all nwa apps check sim emu clean lang FORCE
+.PHONY: all nwa apps check sim emu clean lang kit FORCE
 all: nwa apps
 nwa: $(foreach v,$(VARIANTS),$(B)/$(v).nwa) $(B)/NumPlay-Upsilon.nwa
 
@@ -107,26 +107,47 @@ $(foreach g,$(STD_GAMES),$(eval MOD_$(g) = games/$(g)/output/module.o)$(eval SIM
 MODULES = $(foreach g,$(GAMES),$(B)/modules/$(g).o)
 
 # ------------------------------------------------------------------ generated glue
-$(B)/gen/gametable.c: games/games.json tools/gen_games.py $(MODULES)
+$(B)/gen/numplay.ld: games/games.json tools/gen_games.py $(foreach g,$(KIT_ALL),$(B)/modules/$(g).o)
 	$(PY) tools/gen_games.py games/games.json $(B)/modules $(B)/gen
 
 $(B)/gen/shots_%.c: games/games.json tools/shots.py $$(SHOTS_$$*) | $(B)
 	cd games/$* && $(PY) ../../tools/shots.py --id $* --index $(INDEX_$*) $(COLORS_$*) ../../$@ $(SHOTS_REL_$*)
 
-# ------------------------------------------------------------------ NumPlay.nwa
-ARM_OBJS = $(patsubst launcher/src/%.c,$(B)/arm/%.o,$(LAUNCHER_SRC)) $(B)/arm/gametable.o $(B)/arm/arena.o \
-  $(B)/arm/marks.o $(foreach g,$(GAMES),$(B)/arm/shots_$(g).o)
+# ------------------------------------------------------------------ the kit
+# NumPlay.nwa is linked from a kit, the same pieces the customizer website links in the browser
+# for a NumPlay with the games you pick (site/): base.o, the launcher with every library function
+# a game calls; arena.o, the RAM the games share; the app's name and icon; and one object per game
+# with its module, its entry in the launcher's table, its screenshots and the marks of its block.
+# Games marked "default": false in games.json (OPTIONAL_GAMES) are only in the kit.
+KIT = $(B)/kit
+KIT_ALL = $(GAMES) $(OPTIONAL_GAMES)
+LAUNCHER_OBJS = $(patsubst launcher/src/%.c,$(B)/arm/%.o,$(LAUNCHER_SRC))
+KIT_GAMES = $(foreach g,$(KIT_ALL),$(KIT)/games/$(g).o)
+NP_GAMES = $(foreach g,$(GAMES),$(KIT)/games/$(g).o)
+KIT_LINK = -r --gc-sections -z noexecstack -e main -u eadk_app_name -u eadk_app_icon -u eadk_api_level
 
 $(B)/arm/%.o: launcher/src/%.c $(LAUNCHER_H) VERSION | $(B)
 	$(ARM_CC) $(ARM_CFLAGS) -flto -c $< -o $@
-$(B)/arm/gametable.o: $(B)/gen/gametable.c launcher/src/np.h
-	$(ARM_CC) $(ARM_CFLAGS) -c $< -o $@
 $(B)/arm/shots_%.o: $(B)/gen/shots_%.c launcher/src/np.h
 	$(ARM_CC) $(ARM_CFLAGS) -c $< -o $@
-$(B)/arm/arena.o $(B)/arm/marks.o: $(B)/arm/%.o: $(B)/gen/gametable.c
-	$(ARM_CC) $(EADK_CFLAGS) -c $(B)/gen/$*.s -o $@
+$(B)/arm/entry_%.o: $(B)/gen/numplay.ld launcher/src/np.h
+	$(ARM_CC) $(ARM_CFLAGS) -c $(B)/gen/entry_$*.c -o $@
+$(B)/arm/marks_%.o: $(B)/gen/numplay.ld
+	$(ARM_CC) $(EADK_CFLAGS) -c $(B)/gen/marks_$*.s -o $@
+$(B)/arm/arena.o: $(B)/gen/numplay.ld
+	$(ARM_CC) $(EADK_CFLAGS) -c $(B)/gen/arena.s -o $@
+$(KIT)/games/%.o: $(B)/modules/%.o $(B)/arm/entry_%.o $(B)/arm/shots_%.o $(B)/arm/marks_%.o
+	@mkdir -p $(KIT)/games
+	$(ARM_LD) -r -z noexecstack $^ -o $@
+# Every symbol a game needs from the C library, libm or libgcc goes in base.o; each stays a
+# section of its own (tools/kit_base.ld), so the final link keeps only those its games call.
+$(KIT)/base.o: $(LAUNCHER_OBJS) $(KIT_GAMES) tools/kit_base.ld
+	$(ARM_CC) $(ARM_CFLAGS) -nostartfiles --specs=nano.specs -Wl,--relocatable -Wl,--unique -Wl,--gc-sections \
+	  -Wl,-e,main -Wl,-u,eadk_api_level -Wl,-T,tools/kit_base.ld -flinker-output=nolto-rel $(LAUNCHER_OBJS) \
+	  $$(arm-none-eabi-nm -u $(KIT_GAMES) | awk '$$1 == "U" || $$1 == "w" {print "-Wl,-u," $$2}' | sort -u) -lm -lgcc -o $@
+
 .SECONDARY: $(foreach v,$(VARIANTS),$(B)/variant/$(v)-name.o $(B)/variant/$(v)-icon.o) \
-  $(foreach g,$(GAMES),$(B)/arm/shots_$(g).o)
+  $(foreach g,$(KIT_ALL),$(B)/arm/shots_$(g).o $(B)/arm/entry_$(g).o $(B)/arm/marks_$(g).o)
 $(B)/variant/%-name.o: launcher/app_name.c Makefile | $(B)
 	mkdir -p $(B)/variant
 	$(ARM_CC) $(ARM_CFLAGS) '-DNP_APP_NAME=$(NAME_$*)' -c $< -o $@
@@ -134,11 +155,21 @@ $(B)/variant/%-icon.o: $$(ICON_$$*) | $(B)
 	mkdir -p $(B)/variant
 	$(NWLINK) png-icon-o $< $@
 
-$(B)/%.nwa: $(ARM_OBJS) $(MODULES) $(B)/variant/%-name.o $(B)/variant/%-icon.o
-	$(ARM_CC) $(ARM_CFLAGS) $(ARM_LINK) -Wl,-T,$(B)/gen/numplay.ld -flinker-output=nolto-rel \
-	  $(ARM_OBJS) $(MODULES) $(B)/variant/$*-name.o $(B)/variant/$*-icon.o -lm -lgcc -o $@
+# ------------------------------------------------------------------ NumPlay.nwa
+$(B)/%.nwa: $(KIT)/base.o $(B)/arm/arena.o $(NP_GAMES) $(B)/variant/%-name.o $(B)/variant/%-icon.o
+	$(ARM_LD) $(KIT_LINK) -T $(B)/gen/numplay.ld $(KIT)/base.o $(B)/arm/arena.o \
+	  $(B)/variant/$*-name.o $(B)/variant/$*-icon.o $(NP_GAMES) -o $@
 	arm-none-eabi-strip --strip-unneeded $@
 	@if [ "$*" = NumPlay ]; then $(PY) tools/sizes.py $@ $(B)/modules; fi
+
+# ------------------------------------------------------------------ the website's kit
+# build/site-kit: what the customizer website (site/) downloads to link a NumPlay of your own
+# (tools/kit.py checks it links NumPlay.nwa to the same bytes the Makefile does).
+kit: $(KIT)/base.o $(B)/arm/arena.o $(KIT_GAMES) $(B)/NumPlay.nwa \
+  $(foreach v,$(VARIANTS),$(B)/variant/$(v)-name.o $(B)/variant/$(v)-icon.o)
+	$(PY) tools/kit.py games/games.json $(B) $(B)/site-kit --version $(VERSION) --variants "$(VARIANTS)" \
+	  --default "$(GAMES)" --upsilon "$(UPSILON_GAMES)" --app-space $(APP_SPACE) --ram $(CUSTOM_RAM) \
+	  --upsilon-ram $(UPSILON_RAM) --nwlink "$(NWLINK)"
 
 check: nwa apps
 	@x=$$(cat $(B)/gen/arena_extra); \
@@ -157,20 +188,13 @@ check: nwa apps
 	  [ $$n -le $(APP_SPACE) ] || { echo "$$v.nwa is bigger than the calculator's app space ($(APP_SPACE) bytes)"; exit 1; }; done
 
 # ------------------------------------------------------------------ NumPlay-Upsilon.nwa
-$(B)/gen-upsilon/gametable.c: games/games.json tools/gen_games.py $(foreach g,$(UPSILON_GAMES),$(B)/modules/$(g).o)
+# The same kit, with the games that fit Upsilon's RAM (its arena is NumPlay's: each game's place
+# in it doesn't depend on the others).
+$(B)/gen-upsilon/numplay.ld: games/games.json tools/gen_games.py $(foreach g,$(UPSILON_GAMES),$(B)/modules/$(g).o)
 	$(PY) tools/gen_games.py games/games.json $(B)/modules $(B)/gen-upsilon --only "$(UPSILON_GAMES)"
-$(B)/arm-upsilon/gametable.o: $(B)/gen-upsilon/gametable.c launcher/src/np.h
-	mkdir -p $(B)/arm-upsilon
-	$(ARM_CC) $(ARM_CFLAGS) -c $< -o $@
-$(B)/arm-upsilon/arena.o $(B)/arm-upsilon/marks.o: $(B)/arm-upsilon/%.o: $(B)/gen-upsilon/gametable.c
-	mkdir -p $(B)/arm-upsilon
-	$(ARM_CC) $(EADK_CFLAGS) -c $(B)/gen-upsilon/$*.s -o $@
-UPSILON_OBJS = $(patsubst launcher/src/%.c,$(B)/arm/%.o,$(LAUNCHER_SRC)) $(B)/arm-upsilon/gametable.o \
-  $(B)/arm-upsilon/arena.o $(B)/arm-upsilon/marks.o $(foreach g,$(UPSILON_GAMES),$(B)/arm/shots_$(g).o) \
-  $(foreach g,$(UPSILON_GAMES),$(B)/modules/$(g).o)
-$(B)/NumPlay-Upsilon.nwa: $(UPSILON_OBJS) $(B)/variant/NumPlay-name.o $(B)/variant/NumPlay-icon.o
-	$(ARM_CC) $(ARM_CFLAGS) $(ARM_LINK) -Wl,-T,$(B)/gen-upsilon/numplay.ld -flinker-output=nolto-rel \
-	  $^ -lm -lgcc -o $@
+$(B)/NumPlay-Upsilon.nwa: $(KIT)/base.o $(B)/arm/arena.o $(foreach g,$(UPSILON_GAMES),$(KIT)/games/$(g).o) \
+  $(B)/variant/NumPlay-name.o $(B)/variant/NumPlay-icon.o $(B)/gen-upsilon/numplay.ld
+	$(ARM_LD) $(KIT_LINK) -T $(B)/gen-upsilon/numplay.ld $(filter %.o,$^) -o $@
 	arm-none-eabi-strip --strip-unneeded $@
 
 # ------------------------------------------------------------------ NumPlay in other languages
