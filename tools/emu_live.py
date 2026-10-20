@@ -947,7 +947,7 @@ class EmulatorWorker(threading.Thread):
                 # The caller must blank the screen; the final framebuffer is
                 # NOT a valid representation of a powered-off calculator.
                 self.end_reason = "exited"
-                self.emit("ended", "Application exited — press Power or Reload to restart")
+                self.emit("ended", "The app quit. Press On/Off or Restart to start it again")
         except Exception:
             self.set_phase("error")
             error_report = traceback.format_exc()
@@ -1012,7 +1012,7 @@ class LiveApp:
         self.watch_candidate: tuple[tuple[str, tuple[int, int]], int] | None = None
         self.watch_var = tk.BooleanVar(value=True)
         self.follow_var = tk.BooleanVar(value=auto_follow)
-        self.status = tk.StringVar(value="Ready — drop or open a .nwa")
+        self.status = tk.StringVar(value="Drop a .nwa on the calculator, or choose Open")
         self.file_label = tk.StringVar(value="No application loaded")
         self.time_label = tk.StringVar(value="0 ms")
         self._screen_rgb: Image.Image | None = None
@@ -1206,7 +1206,7 @@ class LiveApp:
             self.pause_event.clear()
             self.pause_button.configure(text="Pause")
             self.clear_keys()
-            self.black_screen("Powered off — press Power or Reload to restart")
+            self.black_screen("Turned off. Press On/Off or Restart to start again")
 
     def toggle_pause(self):
         if self.pause_event.is_set():
@@ -1393,9 +1393,9 @@ class LiveApp:
         elif (self.worker is not None and self.worker.end_reason == "exited"
               and not self.powered_off):
             # Also handle a full message queue dropping an end notification.
-            self.black_screen("Application exited — press Reload to restart")
+            self.black_screen("The app quit. Press Restart to start it again")
         if error and not self.powered_off:
-            self.set_status("Emulator error — see dialog")
+            self.set_status("The emulator stopped with an error")
             messagebox.showerror("NumPlay emulator", error)
         if self.pending is not None and (self.worker is None or not self.worker.is_alive()):
             self.start_pending()
@@ -2533,7 +2533,7 @@ class CalculatorSkinApp(LiveApp):
         self.upload_progress.configure(mode="indeterminate")
         self.upload_progress_panel.pack(fill="x", pady=(2, 7), after=self.upload_status_label)
         self.upload_progress.start(12)
-        self.set_status("Installing on physical NumWorks — do not unplug")
+        self.set_status("Installing on the calculator. Keep it plugged in")
         self._update_upload_controls()
         threading.Thread(target=self._upload_worker,
                          args=(snapshot, snapshot_dir), daemon=True).start()
@@ -2629,7 +2629,7 @@ class CalculatorSkinApp(LiveApp):
         self._upload_poll_id = self.root.after(160, self._poll_upload)
 
     def _upload_failure(self, detail):
-        self.set_status("USB upload failed — current .nwa is safe on disk")
+        self.set_status("The install didn't finish. The .nwa is still safe on this computer")
         msg = ("The USB installer reported a problem:\n\n" + detail[-1700:] +
                "\n\nCheck the cable and calculator connection. "
                "The NumWorks website is an alternative.\n\n"
@@ -3001,9 +3001,9 @@ class CalculatorSkinApp(LiveApp):
             self.black_screen(ended)
         elif (self.worker is not None and self.worker.end_reason == "exited"
               and not self.powered_off):
-            self.black_screen("Application exited — press Power or Reload to restart")
+            self.black_screen("The app quit. Press On/Off or Restart to start it again")
         if error and not self.powered_off:
-            self.set_status("Emulator error — see dialog")
+            self.set_status("The emulator stopped with an error")
             messagebox.showerror("NumPlay emulator", error)
         if self.pending is not None and (self.worker is None or not self.worker.is_alive()):
             self.start_pending()
