@@ -1138,8 +1138,10 @@ static void shift_click(int i) {
   }
   int pmain = nslots - 36, phot = nslots - 9;   /* the player's rows, then the hotbar */
   if (sl->kind == SL_RESULT) {
-    /* craft as many as fit */
-    for (int n = 0; n < 64 && result.id; n++) {
+    /* craft as many as fit, while the grid still makes the same thing (Container.slotClick's shift-click goes on
+       only while the result is the item it took first) */
+    int first_id = result.id, first_aux = result.aux;
+    for (int n = 0; n < 64 && result.id == first_id && result.aux == first_aux; n++) {
       Stack r = result;
       if (!merge(&r, pmain, nslots, true)) {
         if (r.id != result.id || r.aux != result.aux) {
