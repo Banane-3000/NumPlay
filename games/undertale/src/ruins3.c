@@ -107,8 +107,8 @@ void ruins3_setup(int room, int from) {
   }
 }
 
-/* the hallway's mirror: Frisk in its glass, as far behind the wall as he stands in front of it (his face when he
- * faces it) */
+/* the hallway's mirror: Frisk in its glass, as far behind the wall as they stand in front of it (their face when
+ * they face it) */
 #define MIRROR_X 9819
 #define MIRROR_Y 2786
 #define MIRROR_W 45
