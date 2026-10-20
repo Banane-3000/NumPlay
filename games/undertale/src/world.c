@@ -287,12 +287,13 @@ static void player_move(uint32_t keys, uint32_t pressed) {
   }
   bool moved = false;
   int sp = room_speed(pl.x + PBX + PBW / 2, pl.y + PBY + PBH / 2);
+  if (g_walk_fast) sp *= 2;   /* (Settings: fast walking) */
   for (int i = 0; i < sp; i++) {
     if (dx) moved |= step(dx, 0, !dy);
     if (dy) moved |= step(0, dy, !dx);
   }
   if (dx || dy) {
-    pl.anim++;
+    pl.anim = (uint8_t)(pl.anim + 1 + g_walk_fast);
     pl.frame = (uint8_t)((1 + pl.anim / 6) % frames_of[pl.dir]);
     if (moved) pl.steps++;
   } else {
