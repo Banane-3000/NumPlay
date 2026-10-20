@@ -1,7 +1,6 @@
 name: Bug report
 description: Something in NumPlay or one of its games doesn't work
 labels: ["bug"]
-assignees: ["Mason363"]
 body:
   - type: input
     id: game

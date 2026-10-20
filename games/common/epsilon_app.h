@@ -42,6 +42,7 @@ typedef struct {
 } epsilon_userland_t;
 
 #if PLATFORM_DEVICE && !defined(HOST)
+#include <eadk.h>
 
 /* The header of the software running this app, or NULL; *upsilon tells which. */
 __attribute__((unused)) static const epsilon_userland_t *epsilon_userland_of(bool *upsilon) {
@@ -109,9 +110,12 @@ __attribute__((unused)) static void np_app_begin(void) {
   epsilon_home_held = true;
 }
 
-/* Call as `return np_app_end();` from main: nothing in RAM is used after. */
+/* Call as `return np_app_end();` from main: nothing in RAM is used after.
+ * A key still held as the app ends (OK or EXE on a Quit button) would reach the home screen, which opens the
+ * app again at once: the keys are let go first (for two seconds at most). */
 __attribute__((unused, noinline)) static int np_app_end(void) {
   if (numplay_launcher) return 0;
+  for (int i = 0; i < 200 && eadk_keyboard_scan(); i++) eadk_timing_msleep(10);
   bool unlock = epsilon_home_held;
   for (volatile uint32_t *p = (volatile uint32_t *)(void *)_data_section_start_ram; p < (volatile uint32_t *)(void *)_heap_end; p++)
     *p = 0;

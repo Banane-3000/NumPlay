@@ -106,7 +106,26 @@ static inline int texel_rgb(int b, int tex, int u, int v, int col, int *r, int *
 }
 
 /* ---------------------------------------------------------------- the sky */
+#if NB_DIMS
+#define CLOUDS (opt.clouds && dim == DIM_OVERWORLD)
+/* RenderGlobal.renderSkyEnd: the End's sky, end_sky on the six sides of a box (16 times across each),
+ * dimmed to 0x28 */
+static uint16_t end_sky(float dx, float dy, float dz) {
+  float ax = fabsf(dx), ay = fabsf(dy), az = fabsf(dz), u, v, m;
+  if (ax >= ay && ax >= az) m = ax, u = dz, v = dy;
+  else if (ay >= az) m = ay, u = dx, v = dz;
+  else m = az, u = dx, v = dy;
+  int tu = (int)((u / m + 1) * 128) & 15, tv = (int)((v / m + 1) * 128) & 15;
+  uint16_t c = tex_pal[TX_END_SKY][texel(TX_END_SKY, tu, tv)];
+  return pack(r5(c) * 40 >> 8, g6(c) * 40 >> 8, b5(c) * 40 >> 8);
+}
+#else
+#define CLOUDS opt.clouds
+#endif
 static __attribute__((noinline)) uint16_t sky(float dx, float dy, float dz, float len) {
+#if NB_DIMS
+  if (dim == DIM_END) return end_sky(dx, dy, dz);
+#endif
   float e = dy / len;   /* elevation, -1..1 */
   /* horizon (fog colour) to the sky's colour above; below the horizon, fog */
   uint32_t gc = sky_grad[e <= 0 ? 0 : e >= 0.4f ? 128 : (int)(e * 320)];
@@ -154,7 +173,7 @@ static __attribute__((noinline)) uint16_t sky(float dx, float dy, float dz, floa
     }
   }
   /* clouds: Minecraft's 12-block cells at y = 128.33 */
-  if (dy > 0.01f && opt.clouds) {
+  if (dy > 0.01f && CLOUDS) {
     float t = (128.33f - (oy + vc_y0)) / dy;
     float cx = (ox + vc_x0) + dx * t + cloud_off, cz = (oz + vc_z0) + dz * t;
     float dist = t * len;
@@ -178,7 +197,11 @@ static __attribute__((noinline)) uint16_t sky(float dx, float dy, float dz, floa
 typedef struct {
   float dy, len2, sd0, sds, tx0, txs, cx0, cxs, cz0, czs, ct;
 } SkyRow;
+#if NB_DIMS
+static bool sky_fast(void) { return ss_a <= 0 && star_k <= 0 && dim != DIM_END; }
+#else
 static bool sky_fast(void) { return ss_a <= 0 && star_k <= 0; }
+#endif
 static void sky_row(SkyRow *k, const float *row) {
   k->dy = row[1];
   k->len2 = row[0] * row[0] + row[1] * row[1] + row[2] * row[2];   /* (+ su^2: rg is square to the row) */
@@ -214,7 +237,7 @@ static inline __attribute__((always_inline)) uint16_t sky_px(const SkyRow *k, fl
       }
     }
   }
-  if (dy > 0.01f && k->ct > 0 && opt.clouds && k->ct * k->ct * l2 < 200 * 200) {
+  if (dy > 0.01f && k->ct > 0 && CLOUDS && k->ct * k->ct * l2 < 200 * 200) {
     int ix = (int)floorf((k->cx0 + k->cxs * su) / 12) & 255, iz = (int)floorf((k->cz0 + k->czs * su) / 12) & 255;
     extern const uint8_t clouds[256 * 256 / 8];
     if (clouds[(iz * 256 + ix) >> 3] & (1 << (ix & 7))) {
@@ -235,7 +258,7 @@ static int front_face(int x, int y, int z) {
   static const int8_t fx[4] = {0, 0, 1, -1}, fz[4] = {1, -1, 0, 0}, ff[4] = {3, 2, 5, 4};
   for (int k = 0; k < 4; k++) {
     int nx = x + fx[k], nz = z + fz[k];
-    if ((unsigned)nx >= VCX || (unsigned)nz >= VCZ || !(blk_flags[vc[VC_I(nx, y, nz)]] & BF_OPAQUE)) return ff[k];
+    if ((unsigned)nx >= VCX || (unsigned)nz >= VCZ || !(blk_flags[VB(VC_I(nx, y, nz))] & BF_OPAQUE)) return ff[k];
   }
   return 3;
 }
@@ -245,7 +268,7 @@ static int bed_way(int b, int x, int y, int z) {
   int other = b == B_BED_FOOT ? B_BED_HEAD : B_BED_FOOT;
   for (int k = 0; k < 4; k++) {
     int nx = x + fx[k], nz = z + fz[k];
-    if ((unsigned)nx < VCX && (unsigned)nz < VCZ && vc[VC_I(nx, y, nz)] == other) return b == B_BED_FOOT ? 2 + k : (2 + k) ^ 1;
+    if ((unsigned)nx < VCX && (unsigned)nz < VCZ && VB(VC_I(nx, y, nz)) == other) return b == B_BED_FOOT ? 2 + k : (2 + k) ^ 1;
   }
   return 2;
 }
@@ -450,7 +473,7 @@ static __attribute__((noinline)) int cell_hit(Ray *R, int b, int i, int x, int y
       /* BlockLiquid: (8 - level) / 9 high, full when falling or under the same liquid */
       static const int8_t LIQH[9] = {14, 12, 11, 9, 7, 5, 4, 2, 16};
       int lv = blk_meta[b] > 8 ? 8 : blk_meta[b];
-      int above = y + 1 < VCY ? vc[i + VCX * VCZ] : B_AIR;
+      int above = y + 1 < VCY ? VB(i + VCX * VCZ) : B_AIR;
       if (is_water(b) ? is_water(above) : is_lava(above)) lv = 8;
       shp[0][0] = shp[0][1] = shp[0][2] = 0, shp[0][3] = shp[0][5] = 16, shp[0][4] = LIQH[lv];
       nbx = 1;
@@ -503,10 +526,10 @@ static __attribute__((noinline)) int cell_hit(Ray *R, int b, int i, int x, int y
 
 /* the top of each block's shape, sixteenths (16: whole, or shaped by its place): a ray going
  * over a lower one (a snow layer, a slab) has nothing to meet in its cell */
-static uint8_t shape_top[B_COUNT];
-static uint8_t liquid[B_COUNT];   /* 1 water, 2 lava (a ray in one goes through more of it) */
+static uint8_t shape_top[B_N];
+static uint8_t liquid[B_N];   /* 1 water, 2 lava (a ray in one goes through more of it) */
 static void shape_tops(void) {
-  for (int b = 0; b < B_COUNT; b++) {
+  for (int b = 0; b < B_N; b++) {
     liquid[b] = blk_model[b] != M_LIQUID ? 0 : is_water(b) ? 1 : is_lava(b) ? 2 : 0;
     int m = blk_model[b], top = 16;
     if (blk_nbox[b] && !(m == M_LIQUID || m == M_LADDER || m == M_VINE || m == M_FENCE || m == M_PANE || m == M_DOOR)) {
@@ -572,7 +595,7 @@ static uint16_t trace(float dx, float dy, float dz) {
   if (!vmac[mi] || (vmac[mi] == 2 && in_liq == 1)) goto jump;
   for (;;) {
     ST(st_steps++);
-    int b = vc[i];
+    int b = VB(i);
     if (b != B_AIR && liquid[b] != in_liq) {
       float te = fminf(fminf(tx, ty), tz);
       /* (over a low shape the whole way through its cell: nothing there) */
@@ -674,7 +697,7 @@ static int face_pixel(float dx, float dy, float dz, int plane, int f, bool wet) 
   else if (a == 1) z = c;
   else x = c;
   if ((unsigned)x >= VCX || (unsigned)y >= VCY || (unsigned)z >= VCZ) return -1;
-  int i = VC_I(x, y, z), b = vc[i], m = blk_model[b];
+  int i = VC_I(x, y, z), b = VB(i), m = blk_model[b];
   float lx = hx - x, ly = hy - y, lz = hz - z;
   int edge = plane - c * 16;   /* where the face is in its cell (0, 16: on its side) */
   bool cube = m == M_CUBE || m == M_LEAVES || m == M_GLASS;
@@ -697,7 +720,7 @@ static int face_pixel(float dx, float dy, float dz, int plane, int f, bool wet) 
     if ((unsigned)px < VCX && (unsigned)py < VCY && (unsigned)pz < VCZ) {
       int fi = VC_I(px, py, pz);
       /* hidden, or something stands in front: trace (wet: water in front is clear) */
-      if (vc[fi] != B_AIR && !(wet && is_water(vc[fi]))) return -1;
+      if (vc[fi] != B_AIR && !(wet && is_water(VB(fi)))) return -1;
       light = vl[fi];
     }
   } else light = vl[i];
@@ -906,7 +929,7 @@ static __attribute__((unused)) void plane_fill(uint16_t (*cb)[RW], float (*zb)[R
       int i = VC_I(c[0], c[1], c[2]);
       if (i != last) {
         last = i;
-        int bk = vc[i], m = blk_model[bk];
+        int bk = VB(i), m = blk_model[bk];
         bool cube = m == M_CUBE || m == M_LEAVES || m == M_GLASS;
         q = NULL;
         if (cube) ok = !(edge & 15);
@@ -919,7 +942,7 @@ static __attribute__((unused)) void plane_fill(uint16_t (*cb)[RW], float (*zb)[R
           light = 15;
           if ((unsigned)px < VCX && (unsigned)py < VCY && (unsigned)pz < VCZ) {
             int fi = VC_I(px, py, pz);
-            if (vc[fi] != B_AIR && !(wet && is_water(vc[fi]))) {
+            if (vc[fi] != B_AIR && !(wet && is_water(VB(fi)))) {
               ok = 0;
               goto miss;
             }
@@ -971,7 +994,7 @@ static int water_pixel(float dx, float dy, float dz, int wplane, int plane, int 
   float hx = ox + dx * t, hz = oz + dz * t;
   int x = (int)hx, y = (wplane - 1) >> 4, z = (int)hz;
   if (hx < 0 || hz < 0 || (unsigned)x >= VCX || (unsigned)y >= VCY - 1 || (unsigned)z >= VCZ) return -1;
-  int i = VC_I(x, y, z), b = vc[i], above = vc[i + VCX * VCZ];
+  int i = VC_I(x, y, z), b = VB(i), above = VB(i + VCX * VCZ);
   if (!is_water(b) || above != B_AIR) return -1;
   static const int8_t LIQH[9] = {14, 12, 11, 9, 7, 5, 4, 2, 16};
   if (y * 16 + LIQH[blk_meta[b] > 8 ? 8 : blk_meta[b]] != wplane) return -1;   /* (not this height here) */
@@ -996,7 +1019,7 @@ static void sample_at(Sample *s, int px, int py) {
   s->plane = (int16_t)hit_p;
   s->cell = (uint16_t)hit_i;
   if (hit_kind == 1) {
-    int x = hit_i % VCX, z = hit_i / VCX % VCZ, y = hit_i / (VCX * VCZ), b = vc[hit_i], m = blk_model[b], f = hit_f;
+    int x = hit_i % VCX, z = hit_i / VCX % VCZ, y = hit_i / (VCX * VCZ), b = VB(hit_i), m = blk_model[b], f = hit_f;
     s->x = (uint8_t)x, s->z = (uint8_t)z, s->y = (uint8_t)y;
     s->light = (uint8_t)hit_l;
     s->tex = (uint16_t)(blk_front[b] ? face_tex(b, f, x, y, z) : blk_tex[b][f]);
@@ -1006,7 +1029,7 @@ static void sample_at(Sample *s, int px, int py) {
     int flags = 0;
     if (hit_p & 15) flags |= 1;   /* (inside its cell: nothing else there) */
     else {
-      int fb = vc[came_from(hit_i, f, x, y, z)];
+      int fb = VB(came_from(hit_i, f, x, y, z));
       if (fb == B_AIR || (is_water(fb) && is_water(cam_b))) flags |= 1;
     }
     if (m == M_CUBE || m == M_LEAVES || m == M_GLASS) flags |= 2;
@@ -1042,7 +1065,7 @@ static uint16_t agreed(float dx, float dy, float dz, const Sample *a, bool one) 
   }
   if (a->kind == 3) {
     /* the same plant: its two planes, from the camera */
-    int i = a->cell, x = i % VCX, z = i / VCX % VCZ, y = i / (VCX * VCZ), b = vc[i];
+    int i = a->cell, x = i % VCX, z = i / VCX % VCZ, y = i / (VCX * VCZ), b = VB(i);
     Hit h;
     if (hit_cross(blk_tex[b][3], ox - x, oy - y, oz - z, dx, dy, dz, 0, 1e9f, &h)) {
       last_t = h.t;
@@ -1173,13 +1196,22 @@ static void ents_frame(void) {
           ez = e->pz + (e->z - e->pz) * t - vc_z0;
     float dx = ex - ox, dy = ey - oy, dz = ez - oz;
     float dist = sqrtf(dx * dx + dy * dy + dz * dz);
+#if NB_DIMS
+    if (dist > MAX_T + (e->type == E_DRAGON ? 12 : 1)) continue;
+#else
     if (dist > MAX_T + 1) continue;
+#endif
     float w, h;
+#if NB_DIMS
+    if (e->type == E_FIREBALL || e->type == E_EYE) w = h = 1.2f, ey -= 0.4f;
+    else if (e->type == E_DRAGON) w = 24, h = 14, ey -= 4;
+    else
+#endif
     if (e->type == E_ITEM) w = 0.5f, h = 0.6f;
     else if (e->type == E_TNT) w = 1.2f, h = 1.1f;
     else if (e->type == E_ARROW || e->type == E_BOBBER) w = 0.6f, h = 0.6f, ey -= 0.3f;
     else w = mob_width(e->type) * 2.2f, h = mob_height(e->type) * 1.2f;
-    if (e->type >= E_ZOMBIE && e->type <= E_CHICKEN && e->state == 255) w = h = 2.4f;   /* dying: lying down */
+    if (IS_MOB(e->type) && e->state == 255) w = h = 2.4f;   /* dying: lying down */
     float c[8][3];
     for (int k = 0; k < 8; k++)
       c[k][0] = ex + ((k & 1) ? w : -w) / 2, c[k][1] = ey + ((k & 2) ? h : 0), c[k][2] = ez + ((k & 4) ? w : -w) / 2;
@@ -1215,9 +1247,14 @@ static void rot(float *m, int axis, float a) {   /* m = rotation about the axis 
 }
 
 /* M: model frame to world (Ry (180 - yaw) . death turn . S(-1,-1,1) . scale) */
+#if NB_DIMS
+static int make_boxes_in(const Draw *dr, Box *bx, Part *parts) {
+  const Entity *e = dr->e;
+#else
 static int make_boxes(const Draw *dr, Box *bx) {
   const Entity *e = dr->e;
   Part parts[MAX_PARTS];
+#endif
   int n = mob_parts(e, tick_frac, parts);
   float yaw = e->yaw * 0.017453292f;
   float M[9], R[9], Z[9];
@@ -1287,6 +1324,12 @@ static int make_boxes(const Draw *dr, Box *bx) {
   (void)light_sh;
   return n;
 }
+#if NB_DIMS
+static int make_boxes(const Draw *dr, Box *bx) {
+  Part parts[MAX_PARTS];
+  return make_boxes_in(dr, bx, parts);
+}
+#endif
 
 /* the skin texel the ray meets on a box face (ModelBox's layout), -1 if see-through */
 static int box_texel(const Box *b, int face, float x, float y, float z) {
@@ -1312,6 +1355,21 @@ static int box_texel(const Box *b, int face, float x, float y, float z) {
     case 4: u = U + d + lx, v = V + d + ly; break;                  /* z0 (the front) */
     default: u = U + d + w + d + (w - 1 - lx), v = V + d + ly; break;   /* z1 (the back) */
   }
+#if NB_DIMS
+  if (b->skin == SKIN_DRAGON) {   /* (256 x 256; its wings' skin starts at u -56: wrapped) */
+    u &= 255;
+    if ((unsigned)v >= 256) return -1;
+    uint8_t q = skin_dragon_px[(v * 256 + u) >> 1];
+    int k = (u & 1) ? q >> 4 : q & 15;
+    return k ? skin_dragon_pal[k] : -1;
+  }
+  if (b->skin == SKIN_CRYSTAL) {   /* (its 64 x 32 drawn at 128 x 64) */
+    if ((unsigned)u >= 64 || (unsigned)v >= 32) return -1;
+    uint8_t q = skin_crystal_px[(v * 2 * 128 + u * 2) >> 1];
+    int k = q & 15;
+    return k ? skin_crystal_pal[k] : -1;
+  }
+#endif
   if ((unsigned)u >= 64 || (unsigned)v >= 32) return -1;
   uint8_t p = skin_px[b->skin][(v * 64 + u) >> 1];
   int i = (u & 1) ? p >> 4 : p & 15;
@@ -1418,12 +1476,19 @@ static bool item_hit(const Draw *dr, const float *d, float *best_t, uint16_t *co
   /* a flat picture half a block wide, facing the camera */
   int ic = e->type == E_BOBBER ? SP_BOBBER : item_icon(id);
   if (ic < 0) return false;
+#if NB_DIMS
+  /* RenderFireball: the fire charge, 2 across (a ghast's) or a half (a blaze's); the eye of ender as an item */
+  float half = e->type == E_FIREBALL ? (e->item.aux ? 0.125f : 0.5f) : 0.25f;
+  if (e->type == E_FIREBALL) cy = dr->ey;
+#else
+  const float half = 0.25f;
+#endif
   float rel[3] = {cx - ox, cy + 0.125f - oy, cz - oz};
   float den = d[0] * fwx + d[1] * fwy + d[2] * fwz;
   float t = (rel[0] * fwx + rel[1] * fwy + rel[2] * fwz) / den;
   if (!(t > 0) || t >= *best_t) return false;
   float hx = d[0] * t - rel[0], hy = d[1] * t - rel[1], hz = d[2] * t - rel[2];
-  float u = (hx * rgx + hz * rgz) / 0.5f + 0.5f, v = 0.5f - (hx * upx + hy * upy + hz * upz) / 0.5f;
+  float u = (hx * rgx + hz * rgz) / (2 * half) + 0.5f, v = 0.5f - (hx * upx + hy * upy + hz * upz) / (2 * half);
   if (u < 0 || u >= 1 || v < 0 || v >= 1) return false;
   int w = spr_w[ic], hh = spr_h[ic], pxu = (int)(u * w), pyv = (int)(v * hh);
   const uint8_t *px = spr_px + spr_off[ic] + pyv * ((w + 1) / 2);
@@ -1828,14 +1893,31 @@ static void select_strip(int py0, int rows, uint16_t (*cb)[RW], float (*zb)[RW])
 }
 
 static void ents_strip(int py0, int rows, uint16_t (*cb)[RW], float (*zb)[RW]) {
+#if NB_DIMS
+  Box bxs[MAX_PARTS];
+#else
   Box bx[MAX_PARTS];
+#endif
   particles_strip(py0, rows, cb, zb);
   for (int k = 0; k < ndraws; k++) {
     const Draw *dr = &draws[k];
     if (dr->y1 <= py0 || dr->y0 >= py0 + rows) continue;
     const Entity *e = dr->e;
-    bool mob = e->type >= E_ZOMBIE && e->type <= E_CHICKEN;
+    bool mob = IS_MOB(e->type);
+#if NB_DIMS
+    /* the dragon's many parts: in the room the rain has (none falls in the End) */
+    Box *bx = bxs;
+    int n = 0;
+    if (e->type == E_DRAGON) {
+      Part *parts = (Part *)world_scratch(MAX_PARTS_DRAGON * (sizeof(Part) + sizeof(Box)));
+      if (!parts) continue;
+      bx = (Box *)(parts + MAX_PARTS_DRAGON);
+      n = make_boxes_in(dr, bx, parts);
+    } else if (mob)
+      n = make_boxes(dr, bx);
+#else
     int n = mob ? make_boxes(dr, bx) : 0;
+#endif
     /* hurt (and dying): a red tint; a creeper about to blow flashes white */
     int red = mob && (e->hurt > 0 || e->state == 255) ? 10 : 0;
     int white = e->type == E_CREEPER && e->delay > 0 && ((e->delay / 3) & 1) ? 16 : 0;
@@ -1869,6 +1951,39 @@ static void ents_strip(int py0, int rows, uint16_t (*cb)[RW], float (*zb)[RW]) {
 }
 
 /* ---------------------------------------------------------------- the frame */
+static float eye_bri = 1, eye_sky = 1;   /* (fogColor1; the same without the night) */
+#if NB_DIMS
+/* The Nether and the End: WorldProviderHell's light table (never under 0.1), the End's light (0.22 and
+ * more, EntityRenderer.updateLightmap); the fog's colour (WorldProvider*.getFogColor, mixed with the black
+ * of their sky as updateFogColor does) dimmed where the eyes are dark (fogColor1, eased); no sun, moon,
+ * stars or clouds; the Nether's fog close (doesXZShowFog: from 5% to half of 32 blocks) */
+static void dims_light(void) {
+  static const float face_shade[4] = {1.0f, 0.8f, 0.6f, 0.5f};
+  float table[16];
+  for (int l = 0; l < 16; l++) {
+    /* (the green of the lightmap: no sky light, the sun's brightness 0.2 in the Nether; block light x 1.5) */
+    float f = 1 - l / 15.0f, t = (1 - f) / (f * 3 + 1);
+    table[l] = dim == DIM_NETHER ? t * 0.9f + 0.1f : t;
+    float b = table[l] * 1.5f, g = b * ((b * 0.6f + 0.4f) * 0.6f + 0.4f), bri;
+    if (dim == DIM_NETHER) bri = table[0] * 0.24f * 0.48f + g, bri = (bri > 1 ? 1 : bri) * 0.96f + 0.03f;
+    else bri = 0.28f + g * 0.75f;   /* (the End's, after the first rounding) */
+    bri = (bri > 1 ? 1 : bri) * 0.96f + 0.03f;
+    for (int s = 0; s < 4; s++) shade[s][l] = shade_blk[s][l] = (int)(bri * face_shade[s] * 32 + 0.5f);
+  }
+  int lb = cam_i >= 0 ? vl[cam_i] : 0, l = (lb & 15) > (lb >> 4) ? lb & 15 : lb >> 4;
+  float want = table[l] * (1 - 2 / 32.0f) + 2 / 32.0f;
+  eye_bri += (want - eye_bri) * 0.1f;
+  float fr, fg, fb;
+  if (dim == DIM_NETHER) fr = 0.2f, fg = 0.03f, fb = 0.03f;
+  else fr = 160 / 255.0f * 0.15f, fg = 128 / 255.0f * 0.15f, fb = 160 / 255.0f * 0.15f;
+  float k = (1 - 0.26f) * eye_bri;
+  fog_r = (int)(fr * k * 255), fog_g = (int)(fg * k * 255), fog_b = (int)(fb * k * 255);
+  sky_r = fog_r, sky_g = fog_g, sky_b = fog_b;
+  sun_a = 0, star_k = 0, ss_a = 0;
+  if (dim == DIM_NETHER) fog0 = 1.6f, fog1 = 16;
+}
+#endif
+
 static void setup_light(float sun) {
   /* Minecraft's light table (gamma "Moody"): (1 - f) / (3f + 1), f = 1 - level / 15,
    * sky light scaled by the sun, then brightened to at least 0.03 */
@@ -2079,11 +2194,34 @@ void render_frame(const Camera *c, uint32_t tod) {
   fog0 = MAX_T * 0.75f;
   cam_x = (int)floorf(ox), cam_y = (int)floorf(oy), cam_z = (int)floorf(oz);
   cam_i = (unsigned)cam_x < VCX && (unsigned)cam_y < VCY && (unsigned)cam_z < VCZ ? VC_I(cam_x, cam_y, cam_z) : -1;
-  cam_b = cam_i < 0 ? B_AIR : vc[cam_i];
+  cam_b = cam_i < 0 ? B_AIR : VB(cam_i);
   cam_mi = cam_i < 0 ? 0 : MC_I(cam_x, cam_y, cam_z);
   cam_fr[0][0] = cam_x - ox, cam_fr[0][1] = cam_x + 1 - ox;
   cam_fr[1][0] = cam_y - oy, cam_fr[1][1] = cam_y + 1 - oy;
   cam_fr[2][0] = cam_z - oz, cam_fr[2][1] = cam_z + 1 - oz;
+#if NB_DIMS
+  if (dim != DIM_OVERWORLD) dims_light();
+  else
+#endif
+  {
+    /* EntityRenderer.updateFogColor: the fog is as light as the spot the eyes are in (fogColor1, eased),
+     * so in a dark cave what is past the view fades to black, not to the sky; and under y 32 it darkens
+     * on to black (getVoidFogYFactor). The sky too where the sky's light does not reach: at this view
+     * distance Minecraft's sky is mostly that fog */
+    int lb = cam_i >= 0 ? vl[cam_i] : 15, bl = lb >> 4, sl = lb & 15;
+    float want[2];
+    for (int n = 0; n < 2; n++) {
+      int l = sl - (n ? 0 : sky_sub());
+      if (bl > l) l = bl;
+      float f = 1 - l / 15.0f;
+      want[n] = (1 - f) / (f * 3 + 1) * (1 - 2 / 32.0f) + 2 / 32.0f;
+    }
+    eye_bri += (want[0] - eye_bri) * 0.1f;
+    eye_sky += (want[1] - eye_sky) * 0.1f;
+    float v = (c->y - 1.62f) / 32, deep = v >= 1 ? 1 : v < 0 ? 0 : v * v, k = eye_bri * deep, ks = eye_sky * deep;
+    fog_r = (int)(fog_r * k), fog_g = (int)(fog_g * k), fog_b = (int)(fog_b * k);
+    sky_r = (int)(sky_r * ks), sky_g = (int)(sky_g * ks), sky_b = (int)(sky_b * ks);
+  }
   under_water = is_water(cam_b);
   if (under_water) {
     fog_r = 10, fog_g = 30, fog_b = 110;

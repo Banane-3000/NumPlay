@@ -17,6 +17,8 @@ data.bin: "UTD1", the number of sections, their offsets, then the sections (SEC_
 - STRINGS: the room names and other texts the data refers to
 - DOORS: for each room its first door and how many (u16, u16), then the doors: 16 bytes each (x, y, w, h on
   the map, the room it leads to, where Frisk's top-left lands, the way he faces)
+- VIEWS: for each room what the camera keeps to (x, y, w, h on the map): the game's own room, where the room's
+  rectangle is less than it (its tiles cover both)
 - BLOCKS: the frames and tiles themselves, in LZMA streams the game unpacks when it needs them (blk.c): the
   count, the 5 LZMA properties bytes (3 of padding), then for each block its stream's offset (u32) and its size
   unpacked (u32), then the streams. FRAMES and TILES only say where each frame or tile is: its block and its
@@ -28,7 +30,7 @@ import struct
 import sys
 
 import numpy as np
-from scipy import ndimage
+from scipy import ndimage, signal
 from PIL import Image, ImageDraw, ImageFont, ImageSequence
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -38,7 +40,7 @@ import sprites as S  # noqa: E402
 
 OUT_BIN = os.path.join(HERE, "..", "src", "data.bin")
 OUT_H = os.path.join(HERE, "..", "src", "data.h")
-SECTIONS = ["SPRITES", "FRAMES", "TILES", "ROOMS", "GRID", "COLL", "FONTS", "STRINGS", "DOORS", "BLOCKS"]
+SECTIONS = ["SPRITES", "FRAMES", "TILES", "ROOMS", "GRID", "COLL", "FONTS", "STRINGS", "DOORS", "BLOCKS", "VIEWS"]
 BLOCK_TILES, BLOCK_FRAMES = 2048, 16384   # the most bytes a block holds, unpacked (a frame bigger: alone)
 MAX_BLOCKS = 4096                         # (blk.c's table)
 LZMA_FILTERS = [{"id": lzma.FILTER_LZMA1, "dict_size": 1 << 16, "lc": 0, "lp": 0, "pb": 0}]
@@ -323,6 +325,7 @@ class Area:
     """an area's map: its colours, as indices into a palette, and its tiles"""
 
     def __init__(self, ref, spec):
+        self.ref = ref
         im = Image.open(os.path.join(ref, "wiki", "maps", spec["map"]))
         if im.mode == "P":
             self.idx = np.array(im)
@@ -339,6 +342,8 @@ class Area:
             self.rgb = [(int(c) >> 16, int(c) >> 8 & 255, int(c) & 255) for c in cols]
             self.transparent = None
         self.spec = spec
+        # (what the patches take out: no background is copied from there)
+        self.covered = [tuple(q[1:5]) for q in spec.get("patches", []) if q[0] in ("erase", "heal")]
         for patch in spec.get("patches", []):
             self.patch(patch)
 
@@ -388,8 +393,78 @@ class Area:
         elif p[0] == "mirror":
             _, sx, sy, w, h, dx, dy = p
             self.idx[dy:dy + h, dx:dx + w] = self.idx[sy:sy + h, sx:sx + w][:, ::-1].copy()
+        elif p[0] == "heal":
+            self.heal(*p[1:])
+        elif p[0] == "shot":
+            self.shot(*p[1:])
         else:
             raise ValueError(p)
+
+    def shot(self, name, sx, sy, x, y, w, h):
+        """('shot', file, sx, sy, x, y, w, h): the rectangle taken from one of the wiki's screenshots of the game
+        (REF/wiki/sprites or screens, 640 x 480: the game's screen doubled), its top-left at (sx, sy) on the map: what
+        the room looks like when no one stands there"""
+        for d in ("sprites", "screens"):
+            path = os.path.join(self.ref, "wiki", d, name)
+            if os.path.exists(path):
+                break
+        im = np.asarray(Image.open(path).convert("RGB"))[::2, ::2].astype(np.int32)
+        part = im[y - sy:y - sy + h, x - sx:x - sx + w]
+        assert part.shape[:2] == (h, w), ("shot %s: the rectangle isn't in it" % name)
+        key = (part[..., 0] << 16) | (part[..., 1] << 8) | part[..., 2]
+        pal = np.array([(r << 16) | (g << 8) | b for r, g, b in self.rgb], np.int64)
+        out = np.zeros(key.shape, self.idx.dtype)
+        for k in np.unique(key):
+            hit = np.nonzero(pal == k)[0]
+            if len(hit):
+                i = int(hit[0])
+            else:   # (a colour the map hasn't: its nearest)
+                c = np.array([k >> 16, k >> 8 & 255, k & 255])
+                i = int(np.argmin(((np.array(self.rgb) - c) ** 2).sum(axis=1)))
+            out[key == k] = i
+        self.idx[y:y + h, x:x + w] = out
+
+    def heal(self, x, y, w, h, radius=320, m=6, rows=None):
+        """('heal', x, y, w, h[, radius[, border[, rows]]]): what's drawn there taken out, the background put back:
+        the rectangle of the map nearby (within radius; within `rows` up or down if given) whose border (m pixels
+        around it) is most like this one's is copied over it (pixel art repeats its tiles and patterns: the same
+        planks, bricks or snow)"""
+        H, W = self.idx.shape
+        tx0, ty0, tx1, ty1 = max(0, x - m), max(0, y - m), min(W, x + w + m), min(H, y + h + m)
+        t = self.idx[ty0:ty1, tx0:tx1]
+        ring = np.ones(t.shape, bool)
+        ring[y - ty0:y - ty0 + h, x - tx0:x - tx0 + w] = False
+        # (not what other patches take out, around it)
+        for cx, cy, cw, ch in self.covered:
+            if (cx, cy, cw, ch) != (x, y, w, h):
+                ring[max(0, cy - ty0):max(0, cy + ch - ty0), max(0, cx - tx0):max(0, cx + cw - tx0)] = False
+        rx0, ry0 = max(0, tx0 - radius), max(0, ty0 - radius)
+        rx1, ry1 = min(W, tx1 + radius), min(H, ty1 + radius)
+        reg = self.idx[ry0:ry1, rx0:rx1]
+        score = 0
+        for c in np.unique(t[ring]):
+            k = ((t == c) & ring).astype(np.float32)
+            score = score + signal.fftconvolve((reg == c).astype(np.float32), k[::-1, ::-1], mode="valid")
+        score = np.rint(score)
+        oh, ow = score.shape
+        sy = ry0 + np.arange(oh)[:, None] + (y - ty0)   # the source rectangle's top-left, for each offset
+        sx = rx0 + np.arange(ow)[None, :] + (x - tx0)
+        bad = (np.abs(sx - x) < w + m) & (np.abs(sy - y) < h + m)
+        if rows is not None:
+            bad |= np.abs(sy - y) > rows
+        for cx, cy, cw, ch in self.covered:
+            bad |= (sx < cx + cw) & (cx < sx + w) & (sy < cy + ch) & (cy < sy + h)
+        score[bad] = -1
+        best = score.max()
+        cand = np.argwhere(score == best)
+        d = (sx[0, cand[:, 1]] - x) ** 2 + (sy[cand[:, 0], 0] - y) ** 2
+        oy, ox = cand[int(np.argmin(d))]
+        bx, by = int(sx[0, ox]), int(sy[oy, 0])
+        self.idx[y:y + h, x:x + w] = self.idx[by:by + h, bx:bx + w].copy()
+        miss = int(ring.sum() - best)
+        if miss:
+            print("heal %s %d,%d %dx%d: from %d,%d, %d of %d border pixels differ" % (
+                self.spec["name"], x, y, w, h, bx, by, miss, int(ring.sum())))
 
     def color_index(self, c):
         for i, k in enumerate(self.rgb):
@@ -571,13 +646,17 @@ class TileSet:
 
 def pack_room(area, r, tiles, strings):
     x, y, w, h = r["rect"]
-    px, _, _ = room_pixels(area, r)
+    # what the camera shows: the game's room ("view", when the rectangle is less than it), the map drawn over all of it
+    vx, vy, vw, vh = r.get("view", r["rect"])
+    ux, uy = min(x, vx), min(y, vy)
+    uw, uh = max(x + w, vx + vw) - ux, max(y + h, vy + vh) - uy
+    px, _, _ = room_pixels(area, dict(r, rect=(ux, uy, uw, uh)))
     # the grid: 20-pixel tiles aligned on the map's own 20-pixel grid
-    gx, gy = x // 20 * 20, y // 20 * 20
-    gx1, gy1 = (x + w + 19) // 20 * 20, (y + h + 19) // 20 * 20
+    gx, gy = ux // 20 * 20, uy // 20 * 20
+    gx1, gy1 = (ux + uw + 19) // 20 * 20, (uy + uh + 19) // 20 * 20
     cols, rows = (gx1 - gx) // 20, (gy1 - gy) // 20
     big = np.zeros((rows * 20, cols * 20), np.int32)
-    big[y - gy:y - gy + h, x - gx:x - gx + w] = px
+    big[uy - gy:uy - gy + uh, ux - gx:ux - gx + uw] = px
     # (new tiles numbered square by square: a screen's tiles are close together, in few blocks)
     ids = {}
     for cy in range(0, rows, 8):
@@ -606,7 +685,7 @@ def pack_room(area, r, tiles, strings):
                     rb[i >> 3] |= 1 << (i & 7)
             coll += rb
         flags |= 1
-    return dict(rect=(x, y, w, h), g=(gx, gy, cols, rows), grid=bytes(grid), coll=bytes(coll), cw=cw, ch=ch,
+    return dict(rect=(x, y, w, h), view=(vx, vy, vw, vh), g=(gx, gy, cols, rows), grid=bytes(grid), coll=bytes(coll), cw=cw, ch=ch,
                 area=r["area_id"], flags=flags, name=strings.add(r.get("title", "")))
 
 
@@ -677,6 +756,23 @@ def main():
             imgs = out
         if opts.get("mirror"):
             imgs = [im.transpose(Image.FLIP_LEFT_RIGHT) for im in imgs]
+        if "walk" in opts:
+            # a walk from a picture standing still: stand, a step (one foot up, the body down a pixel), stand, the
+            # other step; the legs are the rows from `top`, split at column `mid`
+            top, mid = opts["walk"]
+            a = np.array(imgs[0].convert("RGBA"))
+
+            def stepped(c0, c1):
+                b = a.copy()
+                leg = a[top:, c0:c1].copy()
+                b[top:, c0:c1] = 0
+                part = b[top - 1:-1, c0:c1]
+                b[top - 1:-1, c0:c1] = np.where(leg[..., 3:4] > 0, leg, part)
+                body = np.zeros_like(b)
+                body[1:top] = b[:top - 1]
+                body[top:] = b[top:]
+                return Image.fromarray(body, "RGBA")
+            imgs = [imgs[0], stepped(0, mid), imgs[0], stepped(mid, a.shape[1])]
         if "tints" in opts:   # the first frame, then it again in each colour (the SOUL's modes)
             a = np.array(imgs[0].convert("RGBA"))
             lum = a[:, :, :3].max(axis=2).astype(np.float32) / 255
@@ -728,6 +824,7 @@ def main():
         while len(coll_blob) % 2:
             coll_blob.append(0)
     sec_rooms = struct.pack("<I", len(packed)) + bytes(room_tab)
+    sec_views = b"".join(struct.pack("<hhhh", *p["view"]) for _, p in packed)
     names = {r["name"]: k for k, (r, _) in enumerate(packed)}
     dirs = {"down": 0, "up": 1, "left": 2, "right": 3}
     door_index, doors = bytearray(), bytearray()
@@ -749,7 +846,7 @@ def main():
     sec_fonts = table(fonts)
 
     sections = [sec_sprites, sec_frames, sec_tiles, sec_rooms, bytes(grid_blob), bytes(coll_blob), sec_fonts,
-                strings.blob(), sec_doors, blocks.section()]
+                strings.blob(), sec_doors, blocks.section(), sec_views]
     head = b"UTD1" + struct.pack("<I", len(sections))
     offs, body = [], bytearray()
     base = len(head) + 4 * len(sections)

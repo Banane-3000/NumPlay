@@ -548,8 +548,7 @@ static int ev_toriel_tree(Ev *c) {
   sv.hp = sv.maxhp;
   SAY(FACE_TORIEL, "`1* I left you alone too long.\n* I am sorry.|`0* Oh, the surprise is\n  spoiled now...|`2* Come along, little one!");
   set_flag(F_TORIEL_HOME, 1);
-  WALK(obj_get(ACTOR_TORIEL), 9006, 3070, 3);
-  obj_get(ACTOR_TORIEL)->kind = OBJ_NONE;
+  LEAVE(obj_find(ACTOR_TORIEL), 3, 9006, 3070);
   EV_END;
 }
 

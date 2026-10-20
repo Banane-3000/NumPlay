@@ -224,10 +224,7 @@ static int ev_throne(Ev *c) {
   a->dir = DIR_DOWN;
   SAY(FACE_ASGORE, "* ...oh.|* I so wish we could have tea,\n  like any other afternoon.|* But... you know how this must\n  be.|* When you are ready, come to\n  the next room.");
   a = obj_get(ACTOR_ITEM);
-  WALK(a, 5968, a->y, 2);
-  a = obj_get(ACTOR_ITEM);
-  WALK(a, 5968, 1110, 2);
-  gone(obj_get(ACTOR_ITEM));
+  LEAVE(a, 2, 5968, a->y, 5968, 1110);
   set_flag(F_NH_THRONE, 1);
   EV_END;
 }

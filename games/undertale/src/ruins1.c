@@ -115,7 +115,7 @@ static const char flowey_hi[] =
   "`7* Ready?^2 Here we go!";
 
 static int ev_flowey_meet(Ev *c) {
-  Obj *f, *t;
+  Obj *f;
   EV_BEGIN;
   if (c->self) c->self->kind = OBJ_NONE;
   SAY(FACE_FLOWEY, flowey_hi);
@@ -128,28 +128,16 @@ static int ev_flowey_meet(Ev *c) {
   set_flag(F_TORIEL_MET, 1);
   WAIT(10);
   SAY(FACE_TORIEL, "`0* This way.");
-  t = obj_find(ACTOR_TORIEL);
-  if (t) WALK_TO(t, 504, 5580, 2);
-  WAIT_UNTIL(!(t = obj_find(ACTOR_TORIEL)) || !t->walking);
-  if ((t = obj_find(ACTOR_TORIEL))) t->kind = OBJ_NONE;
+  LEAVE(obj_find(ACTOR_TORIEL), 2, 504, 5580);
   EV_END;
 }
 
 static int ev_ruins1_toriel(Ev *c) {
-  Obj *t = obj_find(ACTOR_TORIEL);
-  EV_BEGIN;
   if (c->self) c->self->kind = OBJ_NONE;
-  c->v[0] = 0;
   /* she goes up the stairs, then through the door */
-  if (!t) return 1;
-  WALK(t, 580, 5300, 2);
-  WALK(t, 606, 5250, 2);
-  WALK(t, 606, 5160, 2);
-  WALK(t, 504, 5150, 2);
-  WALK(t, 504, 5100, 2);
-  t->kind = OBJ_NONE;
+  LEAVE(obj_find(ACTOR_TORIEL), 2, 580, 5300, 606, 5250, 606, 5160, 504, 5150, 504, 5100);
   set_flag(F_RUINS1_DONE, 1);
-  EV_END;
+  return 1;
 }
 
 static int ev_ruins2_toriel(Ev *c) {
@@ -186,9 +174,7 @@ static int ev_ruins2_toriel(Ev *c) {
   t->dir = DIR_DOWN;
   SAY(FACE_TORIEL, "`0* The RUINS are full of\n  puzzles that open the way.|* Solve each one to reach\n  the next room.");
   set_flag(F_RUINS2_DONE, 1);
-  WALK(t, 484, 4900, 2);
-  WALK(t, 484, 4840, 2);
-  t->kind = OBJ_NONE;
+  LEAVE(t, 2, 484, 4900, 484, 4840);
   EV_END;
 }
 
@@ -198,9 +184,7 @@ static int ev_ruins3_toriel(Ev *c) {
   if (c->self) c->self->kind = OBJ_NONE;
   if (!t) return 1;
   SAY(FACE_TORIEL, "`0* Here you must flip some\n  switches.|* I marked the right ones\n  for you.");
-  WALK(t, 560, 4716, 3);
-  WALK(t, 990, 4716, 3);
-  t->dir = DIR_LEFT;
+  WALK_ON(t, 3, DIR_LEFT, 560, 4716, 990, 4716);
   EV_END;
 }
 
@@ -227,9 +211,7 @@ static int ev_ruins3_switch(Ev *c) {
     WAIT(10);
     if (obj_find(ACTOR_TORIEL)) {
       SAY(FACE_TORIEL, "`2* Splendid!\n* I am proud of you, little\n  one.|`0* Let us move to the next\n  room.");
-      WALK(obj_get(ACTOR_TORIEL), 1040, 4730, 3);
-      WALK(obj_get(ACTOR_TORIEL), 1100, 4730, 3);
-      obj_get(ACTOR_TORIEL)->kind = OBJ_NONE;
+      LEAVE(obj_get(ACTOR_TORIEL), 3, 1040, 4730, 1100, 4730);
     }
   }
   EV_END;
@@ -263,11 +245,7 @@ static int ev_ruins4_dummy(Ev *c) {
     set_flag(F_DUMMY, 1);
     SAY(FACE_TORIEL, "`2* Ah, very good!\n* You are very good.");
   }
-  if (obj_find(ACTOR_TORIEL)) {
-    WALK(obj_get(ACTOR_TORIEL), 1244, 4640, 2);
-    WALK(obj_get(ACTOR_TORIEL), 1244, 4560, 2);
-    obj_get(ACTOR_TORIEL)->kind = OBJ_NONE;
-  }
+  LEAVE(obj_find(ACTOR_TORIEL), 2, 1244, 4640, 1244, 4560);
   EV_END;
 }
 
@@ -306,8 +284,7 @@ static int ev_ruins5_toriel(Ev *c) {
   obj_get(ACTOR_TORIEL)->dir = DIR_LEFT;
   SAY(FACE_TORIEL, "`0* Puzzles seem too dangerous\n  for now.");
   set_flag(F_RUINS5_DONE, 1);
-  WALK(obj_get(ACTOR_TORIEL), 2320, 4440, 3);
-  obj_get(ACTOR_TORIEL)->kind = OBJ_NONE;
+  LEAVE(obj_find(ACTOR_TORIEL), 3, 2320, 4440);
   EV_END;
 }
 
@@ -348,9 +325,7 @@ static int ev_ruins6_reveal(Ev *c) {
   t->dir = DIR_LEFT;
   SAY(FACE_TORIEL, "`0* There you are!|* I was just behind the\n  pillar.|`2* Thank you for trusting\n  me.|`0* That was a test of your\n  independence.|`1* I have errands to run.\n* Please wait here for me.|`2* Take this CELL PHONE.|`0* Call me if you need\n  anything. Be good!");
   set_flag(F_PHONE, 1);
-  WALK(obj_get(ACTOR_TORIEL), 4700, 4470, 3);
-  WALK(obj_get(ACTOR_TORIEL), 4860, 4470, 3);
-  obj_get(ACTOR_TORIEL)->kind = OBJ_NONE;
+  LEAVE(obj_find(ACTOR_TORIEL), 3, 4700, 4470, 4860, 4470);
   set_flag(F_RUINS6_DONE, 1);
   /* (the game saves here when she leaves) */
   sv.room = (int16_t)g_room, sv.x = pl.x, sv.y = pl.y;

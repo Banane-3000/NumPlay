@@ -1,4 +1,5 @@
 /* The overworld: rooms, the camera, Frisk and the room's objects (world.h). */
+#include <stdarg.h>
 #include <string.h>
 #include "event.h"
 #include "game.h"
@@ -115,17 +116,84 @@ Obj *obj_get(int name) {
   memset(&spare, 0, sizeof spare);
   return &spare;
 }
-void obj_clear_all(void) { memset(objs, 0, sizeof objs); }
+/* objects walking off on their own through a few points (a cutscene's last steps: the cutscene is over, Frisk
+ * walks meanwhile, as in the game), gone at the last one if they leave */
+#define MAX_LEAVERS 4
+static struct {
+  uint8_t obj, name, n, i, sp, solid;
+  int8_t end;   /* -1 gone, or the way it faces */
+  int16_t pts[6][2];
+} leavers[MAX_LEAVERS];
+
+void obj_clear_all(void) {
+  memset(objs, 0, sizeof objs);
+  memset(leavers, 0, sizeof leavers);
+}
+
+void obj_walk_off(Obj *o, int sp, int end, int n, ...) {
+  if (!o || o < objs || o >= objs + MAX_OBJS || o->kind == OBJ_NONE || n < 1) return;
+  obj_walk_cancel(o);
+  int k = 0;
+  while (k < MAX_LEAVERS && leavers[k].n) k++;
+  if (k == MAX_LEAVERS) k = 0;
+  va_list ap;
+  va_start(ap, n);
+  if (n > 6) n = 6;
+  for (int i = 0; i < n; i++) {
+    leavers[k].pts[i][0] = (int16_t)va_arg(ap, int);
+    leavers[k].pts[i][1] = (int16_t)va_arg(ap, int);
+  }
+  va_end(ap);
+  leavers[k].obj = (uint8_t)(o - objs), leavers[k].name = o->name, leavers[k].n = (uint8_t)n, leavers[k].i = 0;
+  leavers[k].sp = (uint8_t)sp, leavers[k].end = (int8_t)end;
+  /* (it walks through Frisk: solid again once it stays, and Frisk isn't in its way) */
+  leavers[k].solid = (o->flags & OF_SOLID) != 0;
+  o->flags &= (uint16_t)~OF_SOLID;
+  o->tx = leavers[k].pts[0][0], o->ty = leavers[k].pts[0][1], o->speed = (uint8_t)sp, o->walking = 1;
+}
+
+void obj_walk_cancel(Obj *o) {
+  for (int k = 0; k < MAX_LEAVERS; k++)
+    if (leavers[k].n && &objs[leavers[k].obj] == o) {
+      if (leavers[k].solid) o->flags |= OF_SOLID;
+      leavers[k].n = 0;
+    }
+}
+
+static void leavers_update(void) {
+  for (int k = 0; k < MAX_LEAVERS; k++) {
+    if (!leavers[k].n) continue;
+    Obj *o = &objs[leavers[k].obj];
+    if (o->kind == OBJ_NONE || o->name != leavers[k].name) {
+      leavers[k].n = 0;
+      continue;
+    }
+    if (o->walking) continue;
+    if (leavers[k].i + 1 < leavers[k].n) {
+      leavers[k].i++;
+      o->tx = leavers[k].pts[leavers[k].i][0], o->ty = leavers[k].pts[leavers[k].i][1];
+      o->speed = leavers[k].sp, o->walking = 1;
+    } else if (leavers[k].end < 0) {
+      o->kind = OBJ_NONE, leavers[k].n = 0;
+    } else {
+      o->dir = (uint8_t)leavers[k].end;
+      if (leavers[k].solid && boxes_meet(pl.x + PBX, pl.y + PBY, PBW, PBH, o->x + o->bx, o->y + o->by, o->bw, o->bh)) continue;
+      if (leavers[k].solid) o->flags |= OF_SOLID;
+      leavers[k].n = 0;
+    }
+  }
+}
 
 void world_camera(void) {
   if (cam_locked) return;
+  /* (inside the game's room: a room smaller than the screen in the middle) */
   int cx = pl.x + 10 - SCREEN_W / 2, cy = pl.y + 15 - SCREEN_H / 2;
-  if (room.w <= SCREEN_W) cx = room.x + (room.w - SCREEN_W) / 2;
-  else if (cx < room.x) cx = room.x;
-  else if (cx > room.x + room.w - SCREEN_W) cx = room.x + room.w - SCREEN_W;
-  if (room.h <= SCREEN_H) cy = room.y + (room.h - SCREEN_H) / 2;
-  else if (cy < room.y) cy = room.y;
-  else if (cy > room.y + room.h - SCREEN_H) cy = room.y + room.h - SCREEN_H;
+  if (room.vw <= SCREEN_W) cx = room.vx + (room.vw - SCREEN_W) / 2;
+  else if (cx < room.vx) cx = room.vx;
+  else if (cx > room.vx + room.vw - SCREEN_W) cx = room.vx + room.vw - SCREEN_W;
+  if (room.vh <= SCREEN_H) cy = room.vy + (room.vh - SCREEN_H) / 2;
+  else if (cy < room.vy) cy = room.vy;
+  else if (cy > room.vy + room.vh - SCREEN_H) cy = room.vy + room.vh - SCREEN_H;
   cam_x = cx, cam_y = cy;
 }
 
@@ -287,12 +355,13 @@ static void player_move(uint32_t keys, uint32_t pressed) {
   }
   bool moved = false;
   int sp = room_speed(pl.x + PBX + PBW / 2, pl.y + PBY + PBH / 2);
+  if (g_walk_fast) sp *= 2;   /* (Settings: fast walking) */
   for (int i = 0; i < sp; i++) {
     if (dx) moved |= step(dx, 0, !dy);
     if (dy) moved |= step(0, dy, !dx);
   }
   if (dx || dy) {
-    pl.anim++;
+    pl.anim = (uint8_t)(pl.anim + 1 + g_walk_fast);
     pl.frame = (uint8_t)((1 + pl.anim / 6) % frames_of[pl.dir]);
     if (moved) pl.steps++;
   } else {
@@ -340,6 +409,7 @@ static void touches(void) {
 
 /* ---------------------------------------------------------------- objects walking */
 static void objs_update(void) {
+  leavers_update();
   for (int i = 0; i < MAX_OBJS; i++) {
     Obj *o = &objs[i];
     if (o->kind == OBJ_NONE) continue;

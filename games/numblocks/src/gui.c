@@ -323,11 +323,183 @@ static void chat_lines(void) {
   }
 }
 
+#if NB_DIMS
+/* ---------------------------------------------------------------- the End poem and the credits (GuiWinGame) */
+/* end_text (data_dims.c) a row a line, wrapped to 274 as FontRenderer.listFormattedStringToWidth does, the
+ * colours carried to the lines a row wraps onto; rising half a pixel a tick from below the screen, the
+ * logo first; Back or OK, or their end, and the player is back in the Overworld */
+static void logo(int y);
+static uint32_t cred_ms;   /* when they began */
+static int cred_n;         /* their lines */
+static const uint16_t cred_col[16] = {
+    RGB(0, 0, 0),          RGB(0, 0, 0xAA),       RGB(0, 0xAA, 0),       RGB(0, 0xAA, 0xAA),
+    RGB(0xAA, 0, 0),       RGB(0xAA, 0, 0xAA),    RGB(0xFF, 0xAA, 0),    RGB(0xAA, 0xAA, 0xAA),
+    RGB(0x55, 0x55, 0x55), RGB(0x55, 0x55, 0xFF), RGB(0x55, 0xFF, 0x55), RGB(0x55, 0xFF, 0xFF),
+    RGB(0xFF, 0x55, 0x55), RGB(0xFF, 0x55, 0xFF), RGB(0xFF, 0xFF, 0x55), RGB(0xFF, 0xFF, 0xFF)};
+typedef struct {
+  const char *p;   /* the line's first character */
+  uint8_t col, obf;   /* the colour (an index of cred_col) and the hidden letters (k) it starts with */
+} CredLine;
+static void cred_code(CredLine *l, int c) {
+  int k = c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : -1;
+  if (k >= 0) l->col = (uint8_t)k, l->obf = 0;
+  else if (c == 'k') l->obf = 1;
+  else if (c == 'r') l->col = 15, l->obf = 0;
+}
+/* sizeStringToWidth: where line l ends (its row's end, the space it breaks at, or the letter past 274) */
+static const char *cred_end(const CredLine *l) {
+  int w = 0;
+  const char *q = l->p, *sp = NULL;
+  for (; *q && *q != '\n'; q++) {
+    if (*q == '\033') {
+      if (q[1] && q[1] != '\n') q++;
+      continue;
+    }
+    if (*q == ' ') sp = q;
+    w += char_w((unsigned char)*q);
+    if (w > 274) return sp ? sp : q;
+  }
+  return q;
+}
+/* the next line after l (its colours carried, past the space it broke at); false at the end */
+static bool cred_next(CredLine *l) {
+  const char *e = cred_end(l);
+  for (const char *q = l->p; q < e; q++)
+    if (*q == '\033' && q + 1 < e) cred_code(l, *++q);
+  if (!*e) return false;
+  if (*e == '\n') l->col = 15, l->obf = 0;
+  l->p = *e == '\n' || *e == ' ' ? e + 1 : e;
+  return *l->p != 0;
+}
+void credits_open(void) {
+  CredLine l = {end_text, 15, 0};
+  cred_n = 1;
+  while (cred_next(&l)) cred_n++;
+  cred_ms = plat_millis();
+  gui_menu(GUI_CREDITS);
+}
+static void cred_draw(const CredLine *l, int x, int y, uint32_t seed) {
+  CredLine c = *l;
+  const char *e = cred_end(l), *s = c.p;
+  if (s[0] == '[' && s[1] == 'C' && s[2] == ']') {
+    /* centred: the line's width without its codes */
+    s += 3;
+    int w = 0;
+    for (const char *q = s; q < e; q++)
+      if (*q == '\033') q++;
+      else w += char_w((unsigned char)*q);
+    x += (274 - w) / 2;
+  }
+  char t[64];
+  while (s < e) {
+    if (*s == '\033') {
+      if (s + 1 < e) cred_code(&c, s[1]);
+      s += 2;
+      continue;
+    }
+    int n = 0;
+    while (s + n < e && s[n] != '\033' && n < 63) n++;
+    for (int i = 0; i < n; i++) {
+      int ch = (unsigned char)s[i];
+      if (c.obf && ch != ' ') {
+        /* (fontRandom: a letter as wide, a new one every 4 ticks) */
+        int w = char_w(ch);
+        for (int k = 0; k < 16; k++) {
+          seed = seed * 1103515245u + 12345u;
+          int o = 33 + (int)((seed >> 16) % 94);
+          if (char_w(o) == w) {
+            ch = o;
+            break;
+          }
+        }
+      }
+      t[i] = (char)ch;
+    }
+    t[n] = 0;
+    text(t, x, y, cred_col[c.col], true);
+    x += text_width(t);
+    s += n;
+  }
+}
+static void credits_screen(void) {
+  uint32_t ms = plat_millis() - cred_ms;
+  float tk = ms / 50.0f, off = -tk * 0.5f;
+  int h = SCREEN_H, w = SCREEN_W, total = cred_n * 12;
+  if (tk > (total + h + h + 24) / 0.5f) {
+    gui = GUI_NONE;
+    return;
+  }
+  /* the options background, rising slowly, lit up to 96 / 255 as it begins and ends */
+  float f3 = tk * 0.02f, f5 = ((total + h + h + 24) / 0.5f - 20 - tk) * 0.005f;
+  if (f5 < f3) f3 = f5;
+  if (f3 > 1) f3 = 1;
+  int lum = (int)(f3 * f3 * 96 / 64 * 256);   /* (the tiles' palette has 64 / 255) */
+  const uint8_t *px = spr_px + spr_off[SP_DIRT_BG];
+  const uint16_t *pal = spr_pal[SP_DIRT_BG];
+  int scroll = (int)(tk * 0.25f);
+  for (int y = clip_y0; y < clip_y1; y++) {
+    uint16_t *d = row_at(y);
+    const uint8_t *s = px + ((((h - y) - scroll) >> 2) & 15) * 8;
+    for (int x = 0; x < w; x++) {
+      int u = (x >> 2) & 15;
+      uint16_t c = pal[(u & 1) ? s[u >> 1] >> 4 : s[u >> 1] & 15];
+      int r = ((c >> 11) * lum) >> 8, g = (((c >> 5) & 63) * lum) >> 8, b = ((c & 31) * lum) >> 8;
+      d[x] = (uint16_t)((r > 31 ? 31 : r) << 11 | (g > 63 ? 63 : g) << 5 | (b > 31 ? 31 : b));
+    }
+  }
+  int j = w / 2 - 137, k = h + 50, top = (int)(k + off);
+  logo(top);
+  CredLine l = {end_text, 15, 0};
+  int y = k + 200;
+  for (int i = 0; i < cred_n; i++, y += 12) {
+    float ly = y + off;
+    if (i == cred_n - 1 && ly < h / 2 - 6) ly = h / 2 - 6;   /* (the last line stays in the middle) */
+    if (ly + 20 > clip_y0 && ly < clip_y1 && ly + 20 > 0 && ly < h)
+      cred_draw(&l, j, (int)ly, (uint32_t)i * 4238972211u + (uint32_t)(tk / 4));
+    if (ly > h) break;
+    if (!cred_next(&l)) break;
+  }
+}
+#endif
+
 /* ---------------------------------------------------------------- the HUD (GuiIngame) */
 static int name_timer, last_slot = -1, last_id;
 
+#if NB_DIMS
+/* GuiIngame.renderPortal: the portal's swirl over the picture as the player stands in one */
+static void hud_portal(void) {
+  if (portal_time <= 0) return;
+  float f = portal_time;
+  if (f < 1) f *= f, f *= f, f = f * 0.8f + 0.2f;
+  extern uint32_t game_time;
+  static const uint16_t fr[4] = {TX_PORTAL, TX_PORTAL_4, TX_PORTAL_8, TX_PORTAL_12};
+  int t = fr[(game_time >> 3) & 3], a = (int)(f * 32);
+  for (int y = clip_y0; y < clip_y1; y++) {
+    uint16_t *d = row_at(y);
+    const uint8_t *row = tex_px[t] + (y * 16 / SCREEN_H) * 8;
+    for (int x = 0; x < SCREEN_W; x++) {
+      int u = x * 16 / SCREEN_W, i = (u & 1) ? row[u >> 1] >> 4 : row[u >> 1] & 15;
+      if (i) d[x] = blend(d[x], tex_pal[t][i], a);
+    }
+  }
+}
+/* GuiIngame.renderBossHealth: the dragon's bar and name at the top */
+static void hud_boss(void) {
+  float hp = dragon_bar();
+  if (hp < 0 || clip_y0 >= 20) return;
+  int x = SCREEN_W / 2 - 91, w = (int)(hp * 183);
+  sprite(SP_BOSS_BG, x, 12);
+  if (w > 0) sprite_part(SP_BOSS, x, 12, 0, 0, w > 182 ? 182 : w, 5);
+  static const char name[] = "Ender Dragon";
+  text(name, (SCREEN_W - text_width(name)) / 2, 2, 0xFFFF, true);
+}
+#endif
+
 static void hud(void) {
   int hx = (SCREEN_W - 182) / 2, hy = SCREEN_H - 22;
+#if NB_DIMS
+  if (gui == GUI_NONE || gui == GUI_CHAT) hud_portal();
+#endif
   if (gui == GUI_NONE || gui == GUI_CHAT) {
     /* Minecraft draws its crosshair inverting what is behind it */
     for (int k = -4; k <= 4; k++) {
@@ -341,6 +513,9 @@ static void hud(void) {
       }
     }
   }
+#if NB_DIMS
+  hud_boss();
+#endif
   if (clip_y1 <= SCREEN_H - 60) return;
   sprite(SP_HOTBAR, hx, hy);
   sprite(SP_HOTBAR_SEL, hx - 1 + pl.slot * 20, hy - 1);
@@ -426,27 +601,45 @@ void *tiles_data(uint32_t *len) {
 }
 static Chest *chest;
 static Furnace *furnace;
+#if NB_DIMS
+/* NumBlocks.nwa: a chest's or furnace's used is 1 + its dimension (NumPlay's NumBlocks only gets the
+ * Overworld's: save.c) */
+#define USED(t) ((t).used == 1 + dim)
+#define USE_TAG ((uint8_t)(1 + dim))
+#include "edits.h"
+static void chest_loot(Chest *c, int kind);
+#else
+#define USED(t) ((t).used)
+#define USE_TAG 1
+#endif
 
 static Chest *chest_at(int x, int y, int z, bool make) {
   for (int i = 0; i < N_CHESTS; i++)
-    if (chests[i].used && chests[i].x == x && chests[i].y == y && chests[i].z == z) return &chests[i];
+    if (USED(chests[i]) && chests[i].x == x && chests[i].y == y && chests[i].z == z) return &chests[i];
   if (!make) return NULL;
   for (int i = 0; i < N_CHESTS; i++)
     if (!chests[i].used) {
       memset(&chests[i], 0, sizeof chests[i]);
-      chests[i].used = 1, chests[i].x = (int16_t)x, chests[i].y = (uint8_t)y, chests[i].z = (int16_t)z;
+      chests[i].used = USE_TAG, chests[i].x = (int16_t)x, chests[i].y = (uint8_t)y, chests[i].z = (int16_t)z;
+#if NB_DIMS
+      if (dim == DIM_NETHER && !edits_changed(x, y, z)) chest_loot(&chests[i], 0);
+      else if (dim == DIM_OVERWORLD && !edits_changed(x, y, z)) {
+        int k = gen_stronghold_chest(x, y, z);   /* (a stronghold's: 1-3; none: 0) */
+        if (k) chest_loot(&chests[i], k);
+      }
+#endif
       return &chests[i];
     }
   return NULL;
 }
 static Furnace *furnace_at(int x, int y, int z, bool make) {
   for (int i = 0; i < N_FURNACES; i++)
-    if (furnaces[i].used && furnaces[i].x == x && furnaces[i].y == y && furnaces[i].z == z) return &furnaces[i];
+    if (USED(furnaces[i]) && furnaces[i].x == x && furnaces[i].y == y && furnaces[i].z == z) return &furnaces[i];
   if (!make) return NULL;
   for (int i = 0; i < N_FURNACES; i++)
     if (!furnaces[i].used) {
       memset(&furnaces[i], 0, sizeof furnaces[i]);
-      furnaces[i].used = 1, furnaces[i].x = (int16_t)x, furnaces[i].y = (uint8_t)y, furnaces[i].z = (int16_t)z;
+      furnaces[i].used = USE_TAG, furnaces[i].x = (int16_t)x, furnaces[i].y = (uint8_t)y, furnaces[i].z = (int16_t)z;
       return &furnaces[i];
     }
   return NULL;
@@ -462,6 +655,69 @@ void tiles_removed(int x, int y, int z) {
   for (int i = 0; i < n; i++)
     if (s[i].id) ent_drop(s[i].id, item_count(&s[i]), s[i].aux, x + 0.5f, y + 0.5f, z + 0.5f, false);
 }
+
+#if NB_DIMS
+/* the tiles as NumPlay's NumBlocks gets them (in t, a copy): the Overworld's, without what it does not know */
+static void stack_known(Stack *s, int n) {
+  for (int i = 0; i < n; i++)
+    if (s[i].id >= I_END) s[i].id = 0, s[i].aux = 0;
+}
+void tiles_for_numplay(void *t) {
+  Chest *c = (Chest *)t;
+  Furnace *f = (Furnace *)(c + N_CHESTS);
+  for (int i = 0; i < N_CHESTS; i++)
+    if (c[i].used != 1) memset(&c[i], 0, sizeof c[i]);
+    else stack_known(c[i].s, 27);
+  for (int i = 0; i < N_FURNACES; i++)
+    if (f[i].used != 1) memset(&f[i], 0, sizeof f[i]);
+    else stack_known(f[i].s, 3);
+}
+/* the tiles of the Nether and the End (in t, a copy of all) back into free places of these */
+void tiles_merge(const void *t) {
+  const Chest *c = (const Chest *)t;
+  const Furnace *f = (const Furnace *)(c + N_CHESTS);
+  for (int i = 0, j = 0; i < N_CHESTS; i++) {
+    if (c[i].used <= 1) continue;
+    while (j < N_CHESTS && chests[j].used) j++;
+    if (j < N_CHESTS) chests[j] = c[i];
+  }
+  for (int i = 0, j = 0; i < N_FURNACES; i++) {
+    if (f[i].used <= 1) continue;
+    while (j < N_FURNACES && furnaces[j].used) j++;
+    if (j < N_FURNACES) furnaces[j] = f[i];
+  }
+}
+/* a chest the world made: its loot, when first opened. kind 0 a fortress's (StructureNetherBridgePieces's list),
+ * 1 a stronghold's corridor, 2 its room, 3 its library (StructureStrongholdPieces's); horse armour, saddles,
+ * maps and enchanted books are not in NumBlocks: those draws leave nothing */
+typedef struct { uint16_t id; uint8_t lo, hi, w; } Loot;
+static void chest_loot(Chest *c, int kind) {
+  static const Loot fort[] = {
+      {I_DIAMOND, 1, 3, 5}, {I_IRON_INGOT, 1, 5, 5}, {I_GOLD_INGOT, 1, 3, 15}, {I_GOLDEN_SWORD, 1, 1, 5},
+      {I_GOLDEN_CHESTPLATE, 1, 1, 5}, {I_FLINT_AND_STEEL, 1, 1, 5}, {I_NETHER_WART, 3, 7, 5}, {0, 1, 1, 10},
+      {0, 1, 1, 8}, {0, 1, 1, 5}, {0, 1, 1, 3}, {B_OBSIDIAN, 2, 4, 2}};
+  static const Loot corridor[] = {
+      {I_ENDER_PEARL, 1, 1, 10}, {I_DIAMOND, 1, 3, 3}, {I_IRON_INGOT, 1, 5, 10}, {I_GOLD_INGOT, 1, 3, 5},
+      {I_REDSTONE, 4, 9, 5}, {I_BREAD, 1, 3, 15}, {I_APPLE, 1, 3, 15}, {I_IRON_PICKAXE, 1, 1, 5},
+      {I_IRON_SWORD, 1, 1, 5}, {I_IRON_CHESTPLATE, 1, 1, 5}, {I_IRON_HELMET, 1, 1, 5}, {I_IRON_LEGGINGS, 1, 1, 5},
+      {I_IRON_BOOTS, 1, 1, 5}, {I_GOLDEN_APPLE, 1, 1, 1}, {0, 1, 1, 5}};
+  static const Loot room[] = {
+      {I_IRON_INGOT, 1, 5, 10}, {I_GOLD_INGOT, 1, 3, 5}, {I_REDSTONE, 4, 9, 5}, {I_COAL, 3, 8, 10},
+      {I_BREAD, 1, 3, 15}, {I_APPLE, 1, 3, 15}, {I_IRON_PICKAXE, 1, 1, 1}, {0, 1, 1, 1}};
+  static const Loot library[] = {{I_BOOK, 1, 3, 20}, {I_PAPER, 2, 7, 20}, {0, 1, 1, 1}, {I_COMPASS, 1, 1, 1}, {0, 1, 5, 2}};
+  static const struct { const Loot *l; uint8_t total, n0, n1; } T[4] = {
+      {fort, 75, 2, 4}, {corridor, 99, 2, 2}, {room, 62, 1, 4}, {library, 44, 1, 4}};
+  if (kind < 0 || kind > 3) return;
+  const Loot *L = T[kind].l;
+  int n = T[kind].n0 + rnd(T[kind].n1);
+  for (int k = 0; k < n; k++) {
+    int w = rnd(T[kind].total), i = 0;
+    while (w >= L[i].w) w -= L[i++].w;
+    int count = L[i].lo + rnd(L[i].hi - L[i].lo + 1), slot = rnd(27);
+    if (L[i].id) c->s[slot] = (Stack){L[i].id, (uint16_t)(item_dur(L[i].id) ? 0 : count)};
+  }
+}
+#endif
 
 void tiles_forget(int x, int y, int z) {
   Chest *c = chest_at(x, y, z, false);
@@ -486,7 +742,7 @@ void gui_tick(void) {
       if (chat_age(i) > 1000) chat[i + 1] = (char)((chat_clock - 1000) & 255), chat[i + 2] = (char)((chat_clock - 1000) >> 8);
   for (int i = 0; i < N_FURNACES; i++) {
     Furnace *f = &furnaces[i];
-    if (!f->used) continue;
+    if (!USED(*f)) continue;
     bool was = f->burn > 0;
     if (f->burn > 0) f->burn--;
     if ((f->burn > 0 || f->s[1].id) && f->s[0].id) {
@@ -882,8 +1138,10 @@ static void shift_click(int i) {
   }
   int pmain = nslots - 36, phot = nslots - 9;   /* the player's rows, then the hotbar */
   if (sl->kind == SL_RESULT) {
-    /* craft as many as fit */
-    for (int n = 0; n < 64 && result.id; n++) {
+    /* craft as many as fit, while the grid still makes the same thing (Container.slotClick's shift-click goes on
+       only while the result is the item it took first) */
+    int first_id = result.id, first_aux = result.aux;
+    for (int n = 0; n < 64 && result.id == first_id && result.aux == first_aux; n++) {
       Stack r = result;
       if (!merge(&r, pmain, nslots, true)) {
         if (r.id != result.id || r.aux != result.aux) {
@@ -1872,6 +2130,12 @@ static void menu_screen(void) {
 
 /* ---------------------------------------------------------------- input */
 void gui_input(uint32_t keys, uint32_t pressed) {
+#if NB_DIMS
+  if (gui == GUI_CREDITS) {   /* (GuiWinGame.keyTyped: Escape, here Back, or OK) */
+    if (pressed & (K_BACK | K_OK)) gui = GUI_NONE;
+    return;
+  }
+#endif
   if (gui >= GUI_PAUSE) {
     if (gui == GUI_PAUSE && (pressed & K_PAUSE)) {
       gui = GUI_NONE;
@@ -2115,6 +2379,9 @@ void hud_strip(uint16_t *buf, int y0, int rows) {
       dirt_background();
       menu_screen();
       break;
+#if NB_DIMS
+    case GUI_CREDITS: credits_screen(); break;
+#endif
     case GUI_DEATH: {
       /* GuiGameOver: red gradient 0x60500000 to 0xA0803030 */
       for (int y = y0; y < y0 + rows; y++) {

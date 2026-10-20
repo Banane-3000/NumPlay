@@ -201,6 +201,7 @@ extern SaveData g_save;
 
 void save_load(void);
 bool save_write(void);                 /* false: storage full */
+bool save_write_quick(void);           /* the same, without the copy in celeste_saves.py */
 ModeStats *save_mode(void);            /* the current side's */
 bool save_check_berry(int index);      /* SaveData.CheckStrawberry */
 void save_add_berry(int index, bool golden);

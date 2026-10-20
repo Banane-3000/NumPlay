@@ -306,8 +306,7 @@ static int ev_pap_xoxo(Ev *c) {
     if (CHOICE() == 0) SAY(FACE_PAPYRUS, "`2* WOWIE!!! YOU ATE MY SPAGHETTI!!!|* IT MUST HAVE BEEN DELICIOUS!\n* NYEH HEH HEH!");
     else SAY(FACE_PAPYRUS, "`4* YOU LEFT IT ALONE?|`0* SO THERE'S STILL SOME LEFT FOR ME?\n`2* NYEH HEH HEH!");
     set_flag(F_PAP_XOXO1, 1);
-    WALK(p, 7740, 1252, 6);
-    gone(p);
+    LEAVE(p, 6, 7740, 1252);
     if (c->self) gone(c->self);
     return 1;
   }
@@ -342,8 +341,7 @@ static int ev_tiles(Ev *c) {
   for (int i = 0; i < MAX_OBJS; i++)
     if (objs[i].name == ACTOR_BLOCK) objs[i].kind = OBJ_NONE;
   /* he spins out of the room */
-  WALK(p, 8920, 1252, 8);
-  gone(p);
+  LEAVE(p, 8, 8920, 1252);
   if (c->self) gone(c->self);
   EV_END;
 }
@@ -398,8 +396,7 @@ static int ev_gauntlet(Ev *c) {
   WALK(p, 12000, 1236, 6);
   gone(p);
   SAY(FACE_SANS, "* ...|* i don't know what my brother's going to do.|* if i were you, i would keep going.");
-  WALK(s, 12000, 1200, 2);
-  gone(s);
+  LEAVE(s, 2, 12000, 1200);
   set_flag(F_GAUNTLET, 1);
   if (c->self) gone(c->self);
   EV_END;

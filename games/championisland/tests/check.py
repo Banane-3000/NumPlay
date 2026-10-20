@@ -348,6 +348,30 @@ p = at(out, 10)
 check("the game opens at the door he went in by", p and abs(p[0] - 1045) < 30 and abs(p[1] + 1080) < 30, f"at {p}")
 shutil.rmtree(saves, ignore_errors=True)
 
+# Lucky walks up to a door from its place below and goes in with OK; the house
+# stops him (Mason363/NumPlay#90): the dango shops and the two red pagodas had
+# lost their bounds (the invisible box was baked into the island's layer with
+# the house, so he walked through them), and the gym's body was its crab
+# building's box moved down over the door, so he could never reach it
+for place, room, y_max in (("conveniencestore", "convenienceStore1", 990), ("gazebo1", "gazebo", -10),
+                           ("ghostGazebo", "ghostGazebo", -125), ("gym", "gym", 795)):
+    out, err, _ = run(f"overworld@{place}", 140, "20-80:up,90:ok", env={"CI_TUTORIAL_DONE": "1", "CI_STUCK": "2", "CI_LOG": "1"})
+    p = at(out, 80)
+    stopped = p is not None and p[1] > y_max - 30 and p[1] < y_max
+    check(f"the door at {place} stops Lucky and lets him in", stopped and f" scene interior:{room}" in err,
+          f"at {p} after walking up, scenes {[l.split(' scene ')[1] for l in err.splitlines() if ' scene ' in l]}")
+
+# after the ending (the petals redraw the whole view every third frame), the
+# streets west of the blue team's headquarters decode little: two of a house
+# drawn side by side could not stream as the bands go down, and the frame was
+# decoded band by band, its biggest pictures four times each (250 KB a frame:
+# Mason363/NumPlay#90 saw 2 frames a second there on an N0120)
+_, err, _ = run("overworld@blueteamhq", 120, env={"CI_ENDING": "1", "CI_POS": "-1420,880", "CI_ZFRAME": "1"})
+kb = {int(m[1]): float(m[2]) for m in re.finditer(r"^f(\d+) decoded ([\d.]+) KB", err, re.M)}
+still = [kb.get(f, 0) for f in range(60, 120)]
+check("the streets by the blue team's headquarters decode little after the ending", sum(still) / 60 < 40 and max(still) < 120,
+      f"{sum(still) / 60:.0f} KB a frame, at most {max(still):.0f} KB")
+
 if failures:
     print("\n".join(failures))
     sys.exit(1)

@@ -54,6 +54,16 @@ static const uint8_t notch_full_rgb[3] = CH_NOTCH_FULL_RGB, notch_over_rgb[3] = 
 #define EQ_Y (-3.86f)
 #define EQ_SCALE 1.15f
 #define DETAIL_SCALE 1.5f
+/* (a description's bottom, from the panes' top: over the border; over the Equip key at a bench; under the cost) */
+#define DESC_BOTTOM (-13.7f)
+#define DESC_BOTTOM_BENCH (-12.35f)
+#define CH_DESC_GAP 0.3f
+/* (how much lower what comes under a name (its top at top, the next's at next) must be for the name's bigger text) */
+static float name_below(float top, float next) {
+  const uint8_t *st = font_style(STYLE_DIALOGUE);
+  float d = (font_asc(st) + font_desc(st)) / HUD_PX - (top - next);
+  return d > 0 ? d : 0;
+}
 
 /* the Inventory pane: its fixed items (Mask Shards, Soul Vessel, the nail, Vengeful Spirit, Focus, Geo), the
  * equipment after them (Build Equipment List: four to a row), the relics below */
@@ -618,13 +628,13 @@ void ui_number_at(int v, int style, float x, float top, int align, float a) {
 
 /* an action's key (ActionButtonIcon: the calculator's key, by name, in a box as wide as it) at (x, y) -> its half width */
 float ui_key(int name, float x, float y, uint8_t white, float a) {
-  const uint8_t *st = font_style(STYLE_MSG), *s = text_get(name);
+  const uint8_t *st = font_style(STYLE_MSG_S), *s = text_get(name);
   int n = (int)strlen((const char *)s);
-  float w = text_width(STYLE_MSG, s, n), bw = w / HUD_PX + 0.3f;
+  float w = text_width(STYLE_MSG_S, s, n), bw = w / HUD_PX + 0.3f;
   Inst in;
   sprite_inst(SPRITE_MSG_KEY, x, y, 0, bw / 0.95f, 0.75f, white, &in);
   gfx_overlay(&in);
-  gfx_text(STYLE_MSG, VIEW_W / 2 + x * HUD_PX - w / 2, VIEW_H / 2 - y * HUD_PX + (font_asc(st) - font_desc(st)) / 2, s, n,
+  gfx_text(STYLE_MSG_S, VIEW_W / 2 + x * HUD_PX - w / 2, VIEW_H / 2 - y * HUD_PX + (font_asc(st) - font_desc(st)) / 2, s, n,
            (uint32_t)(a * 255 + 0.5f) << 24 | 0xFFFFFF, 0);
   return bw / 2;
 }
@@ -703,22 +713,36 @@ static void charms_draw(float ox, float oy, float a, uint8_t white) {
   int name, desc, cost, detail;
   charm_select_text(&name, &desc, &cost, &detail);
   ui_text_at(name, STYLE_DIALOGUE, &ch_name, ox, oy, 1, a);
-  if (detail) {
-    ui_text_at(TXT_CHARM_TXT_COST, STYLE_MSG, &ch_cost_text, ox, oy, 2, a);
-    for (int i = 0; i < cost; i++) ui_piece(&ch_cost_pip, ox + CH_COST_X + i * CH_COST_DX, oy + CH_COST_Y, 1, white);
-    ui_sprite_at(ch_icons[detail], ox + CH_DETAIL_X, oy + CH_DETAIL_Y, DETAIL_SCALE / CHARM_ICON_K, white);
-  }
-  text_box(desc, STYLE_MSG, ox + ch_desc.x, oy + ch_desc.top, ch_desc.w, 0, a);
-  if (detail && pd_flag(PDF_AT_BENCH)) {
-    ui_text_at(charm_equipped(detail) ? TXT_CTRL_UNEQUIP : TXT_CTRL_EQUIP, STYLE_MSG, &ch_confirm, ox, oy, 2, a);
-    /* (the key: the calculator's, by name; its box widened to the right to fit the name) */
+  /* (its picture under its cost where its description still fits under that, in the message's size or the smaller;
+   * else the description up in the picture's place) */
+  float down = name_below(ch_name.top, ch_cost_text.top);   /* (all under the name lower by as much as it is bigger) */
+  float bottom = detail && pd_flag(PDF_AT_BENCH) ? DESC_BOTTOM_BENCH : DESC_BOTTOM, top = ch_desc.top - down;
+  int style = text_box(desc, STYLE_MSG, 0, 0, ch_desc.w, 0, 0) <= top - bottom ? STYLE_MSG : STYLE_MSG_S;
+  bool picture = !detail || text_box(desc, style, 0, 0, ch_desc.w, 0, 0) <= top - bottom;
+  if (!picture) {
     const uint8_t *st = font_style(STYLE_MSG);
-    float w = text_width(STYLE_MSG, text_get(TXT_KEY_OK), 2), bw = w / HUD_PX + 0.3f;
+    top = ch_cost_text.top - down - (font_asc(st) + font_desc(st)) / HUD_PX - CH_DESC_GAP;
+    style = text_fit(desc, ch_desc.w, top - bottom);
+  }
+  if (!detail) style = text_fit(desc, ch_desc.w, top - bottom);
+  if (detail) {
+    ui_text_at(TXT_CHARM_TXT_COST, STYLE_MSG, &ch_cost_text, ox, oy - down, 2, a);
+    for (int i = 0; i < cost; i++) ui_piece(&ch_cost_pip, ox + CH_COST_X + i * CH_COST_DX, oy - down + CH_COST_Y, 1, white);
+    if (picture)
+      ui_sprite_at(ch_icons[detail], ox + CH_DETAIL_X, oy - down + CH_DETAIL_Y, DETAIL_SCALE / CHARM_ICON_K, white);
+  }
+  text_box(desc, style, ox + ch_desc.x, oy + top, ch_desc.w, 0, a);
+  if (detail && pd_flag(PDF_AT_BENCH)) {
+    /* (as the keys' actions elsewhere, the smaller message's size) */
+    ui_text_at(charm_equipped(detail) ? TXT_CTRL_UNEQUIP : TXT_CTRL_EQUIP, STYLE_MSG_S, &ch_confirm, ox, oy, 2, a);
+    /* (the key: the calculator's, by name; its box widened to the right to fit the name) */
+    const uint8_t *st = font_style(STYLE_MSG_S);
+    float w = text_width(STYLE_MSG_S, text_get(TXT_KEY_OK), 2), bw = w / HUD_PX + 0.3f;
     float kx = bw > CH_CONFIRM_KEY_W ? bw / CH_CONFIRM_KEY_W : 1, cx = ox + ch_key.x + (kx - 1) * CH_CONFIRM_KEY_W / 2;
     Inst in;
     sprite_inst(ch_key.sprite, cx, oy + ch_key.y, 0, kx, 1, white, &in);
     gfx_overlay(&in);
-    gfx_text(STYLE_MSG, VIEW_W / 2 + cx * HUD_PX - w / 2,
+    gfx_text(STYLE_MSG_S, VIEW_W / 2 + cx * HUD_PX - w / 2,
              VIEW_H / 2 - (oy + ch_key.y) * HUD_PX + (font_asc(st) - font_desc(st)) / 2, text_get(TXT_KEY_OK), 2,
              (uint32_t)(a * 255 + 0.5f) << 24 | 0xFFFFFF, 0);
   }
@@ -778,7 +802,8 @@ static void items_draw(float ox, float oy, float a, uint8_t white) {
     } else
       nd = txt_trinkets[k - K_TRINKET0];
     ui_text_at(nd.name, STYLE_DIALOGUE, &inv_name, ox, oy, 1, a);
-    text_box(nd.desc, STYLE_MSG, ox + inv_desc.x, oy + inv_desc.top, inv_desc.w, 0, a);
+    float top = inv_desc.top - name_below(inv_name.top, inv_desc.top);
+    text_box(nd.desc, text_fit(nd.desc, inv_desc.w, top - DESC_BOTTOM), ox + inv_desc.x, oy + top, inv_desc.w, 0, a);
   }
   if (iv.cursor_set) cursor_draw(ox, oy, white);
 }

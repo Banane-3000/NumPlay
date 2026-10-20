@@ -57,6 +57,15 @@ uint8_t *plat_save_open(const char *name, uint32_t len) {
   return open_buf;
 }
 void plat_save_close(const char *name) { plat_save(name, open_buf, open_len); }
+uint8_t *plat_save_grow(const char *name, uint32_t len) {
+  uint32_t n = 0;
+  const uint8_t *d = plat_load(name, &n);
+  free(open_buf);
+  open_buf = calloc(1, len ? len : 1), open_len = len;
+  if (d) memcpy(open_buf, d, n < len ? n : len);
+  return open_buf;
+}
+void plat_save_done(const char *name, uint32_t len) { plat_save(name, open_buf, len < open_len ? len : open_len); }
 bool plat_record(int i, char *name, int max) {
   DIR *d = opendir(save_dir);
   if (!d) return false;

@@ -111,7 +111,7 @@ Entity *ent_new(int type, float x, float y, float z) {
   e->y = e->py = y;
   e->z = e->pz = z;
   e->gx = x, e->gz = z;
-  if (type >= E_ZOMBIE && type <= E_CHICKEN) e->tx = (int16_t)floorf(x), e->tz = (int16_t)floorf(z);   /* (going nowhere yet) */
+  if (IS_MOB(type)) e->tx = (int16_t)floorf(x), e->tz = (int16_t)floorf(z);   /* (going nowhere yet) */
   return e;
 }
 
@@ -279,7 +279,7 @@ static void bobber_tick(Entity *e) {
   if (!e->on_ground)
     for (int i = 0; i < N_ENT; i++) {
       Entity *c = &ents[i];
-      if (c->type < E_ZOMBIE || c->type > E_CHICKEN || c->state == 255) continue;
+      if (NOT_MOB(c->type) || c->state == 255) continue;
       float w = mob_width(c->type) / 2 + 0.125f;
       if (fabsf(c->x - e->x) < w && fabsf(c->z - e->z) < w && e->y + 0.25f > c->y && e->y < c->y + mob_height(c->type)) {
         mob_hooked(c);
@@ -365,6 +365,9 @@ void ents_tick(void) {
     e->px = e->x, e->py = e->y, e->pz = e->z;
     e->age++;
     /* far outside the loaded blocks: gone */
+#if NB_DIMS
+    if (e->type != E_DRAGON)   /* (the dragon flies far) */
+#endif
     if (!world_loaded((int)floorf(e->x), vc_y0, (int)floorf(e->z))) {
       e->type = E_NONE;
       continue;
