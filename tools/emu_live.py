@@ -32,6 +32,7 @@ LCD scanout simulation. Saves and crash logs remain outside build/ and dist/.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import queue
 import re
@@ -91,17 +92,52 @@ LCD_MS_PER_PIXEL = (85.0 / (24 * 320 * 152) + 45.0 / (120 * 320 * 16)) / 2
 # replacement for a firmware-specific glyph rasterizer cycle model.
 FONT_CALL_MS = 0.030
 FONT_CHAR_MS = (44.0 / 120.0 - FONT_CALL_MS) / 18
-# NumWorks' own colours (Epsilon's palette): white and greys, and its yellow for what is going on
-BG = "#f5f5f5"        # around the calculator
-PANEL = "#ffffff"     # the side panel
-PANEL_2 = "#ececec"   # buttons
-HOVER = "#d9d9d9"
-LINE = "#d9d9d9"
-FG = "#414147"        # text
-MUTED = "#8c8c8c"     # secondary text
-ACCENT = "#ffb734"    # NumWorks yellow
-SELECT = "#d4d7e0"    # what is chosen
-ERROR_BG = "#fde3e3"
+# The interface uses Epsilon's yellow and greys; the LCD artwork keeps its own colours.
+SETTINGS_FILE = Path.home() / ".numplay-emulator" / "settings.json"
+THEME_PALETTES = {
+    "light": {
+        "BG": "#f5f5f5", "PANEL": "#ffffff", "PANEL_2": "#ececec",
+        "HOVER": "#d9d9d9", "LINE": "#d9d9d9", "FG": "#414147",
+        "MUTED": "#8c8c8c", "ACCENT": "#ffb734", "SELECT": "#d4d7e0",
+        "ERROR_BG": "#fde3e3",
+    },
+    "dark": {
+        "BG": "#242427", "PANEL": "#2d2d31", "PANEL_2": "#38383b",
+        "HOVER": "#414147", "LINE": "#414147", "FG": "#f2f2f2",
+        "MUTED": "#b4b4b6", "ACCENT": "#ffb734", "SELECT": "#414147",
+        "ERROR_BG": "#4c3232",
+    },
+}
+
+
+def _read_settings():
+    try:
+        data = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _save_setting(key, value):
+    """Atomically update one preference without overwriting the others."""
+    data = _read_settings()
+    data[key] = value
+    SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    temporary = SETTINGS_FILE.with_suffix(".tmp")
+    try:
+        temporary.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        os.replace(temporary, SETTINGS_FILE)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _activate_theme_palette(name):
+    global CURRENT_THEME
+    CURRENT_THEME = name if name in THEME_PALETTES else "light"
+    globals().update(THEME_PALETTES[CURRENT_THEME])
+
+
+_activate_theme_palette(_read_settings().get("theme", "light"))
 UI_FAMILY = ("Helvetica Neue" if sys.platform == "darwin" else "Segoe UI" if os.name == "nt" else "DejaVu Sans")
 MONO_FAMILY = ("Menlo" if sys.platform == "darwin" else "Consolas" if os.name == "nt" else "DejaVu Sans Mono")
 FONT_GROW = 3 if sys.platform == "darwin" else 0   # (Tk's points are smaller on a Mac)
@@ -1459,7 +1495,7 @@ class FlatButton(tk.Label):
 
     def __init__(self, parent, text, command, primary=False):
         self._bg = ACCENT if primary else PANEL_2
-        super().__init__(parent, text=text, bg=self._bg, fg=FG, font=font(10, "bold" if primary else "normal"),
+        super().__init__(parent, text=text, bg=self._bg, fg=("#34343a" if primary else FG), font=font(10, "bold" if primary else "normal"),
                          pady=8, cursor="hand2", disabledforeground="#b5b5b5")
         self._command = command
         self.bind("<Enter>", lambda e: self._enabled() and super(FlatButton, self).configure(
@@ -1478,6 +1514,31 @@ class FlatButton(tk.Label):
     config = configure
 
 
+def _safe_window_geometry(placement, root):
+    """Ignore invalid/off-screen saved placements after a display change."""
+    if not isinstance(placement, dict):
+        return None
+    values = [placement.get(k) for k in ("width", "height", "x", "y")]
+    if any(type(v) is not int or abs(v) > 100000 for v in values):
+        return None
+    width, height, x, y = values
+    if width < 400 or height < 250:
+        return None
+    screen_w, screen_h = root.winfo_screenwidth(), root.winfo_screenheight()
+    if min(screen_w, screen_h) <= 0:
+        return None
+    width = min(width, screen_w)
+    height = min(height, screen_h)
+    # A title bar and at least a strip of the window should remain accessible.
+    if x + width < 160 or x > screen_w - 160 or y + height < 60 or y > screen_h - 60:
+        x = max(0, (screen_w - width) // 2)
+        y = max(0, (screen_h - height) // 2)
+    else:
+        x = max(0, min(x, screen_w - 160))
+        y = max(0, min(y, screen_h - 60))
+    return (width, height, x, y, placement.get("maximized") is True)
+
+
 class CalculatorSkinApp(LiveApp):
     """NumWorks skin with mutually exclusive file and live-development modes.
 
@@ -1489,8 +1550,8 @@ class CalculatorSkinApp(LiveApp):
                  art_path: Path, max_sleep_ms: int = 0,
                  profile_speed: bool = False, start_live: bool = False):
         self.art_path = art_path
-        art = Image.open(art_path).convert("RGBA")   # (its corners and shadow are see-through)
-        self.art = Image.alpha_composite(Image.new("RGBA", art.size, BG), art).convert("RGB")
+        self._art_rgba = Image.open(art_path).convert("RGBA")   # (its corners and shadow are see-through)
+        self.art = self._art_on(BG)
         self.art_px = self.art.size
         self._canvas_image = None
         self._canvas_screen = None
@@ -1537,8 +1598,67 @@ class CalculatorSkinApp(LiveApp):
         self.follow_var.set(False)
         self._builder_poll_id = self.root.after(120, self._poll_builder)
         self._upload_poll_id = self.root.after(160, self._poll_upload)
+        self._apply_interface_theme(initial=True)
+        self._restore_window_placement()
+        self.root.bind("<Configure>", self._remember_window_geometry, add="+")
         if start_live:
             self.root.after(260, self._start_builder)
+
+    def _art_on(self, bg):
+        return Image.alpha_composite(Image.new("RGBA", self._art_rgba.size, bg), self._art_rgba).convert("RGB")
+
+    def _restore_window_placement(self):
+        placement = _safe_window_geometry(_read_settings().get("window"), self.root)
+        self._window_last_normal = None
+        self._window_restoring = bool(placement)
+        if placement is None:
+            return
+        width, height, x, y, maximized = placement
+        self._window_last_normal = (width, height, x, y)
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+        if maximized:
+            self.root.after(110, self._restore_window_maximized)
+        self.root.after(200, self._finish_window_restoring)
+
+    def _restore_window_maximized(self):
+        try:
+            self.root.state("zoomed")
+        except tk.TclError:
+            try:
+                self.root.attributes("-zoomed", True)
+            except tk.TclError:
+                pass
+
+    def _finish_window_restoring(self):
+        self._window_restoring = False
+
+    def _remember_window_geometry(self, event=None):
+        if event is not None and event.widget is not self.root:
+            return
+        if getattr(self, "_window_restoring", False) or self.fullscreen:
+            return
+        try:
+            if self.root.state() == "normal":
+                width, height = self.root.winfo_width(), self.root.winfo_height()
+                if width >= 400 and height >= 250:
+                    self._window_last_normal = (width, height,
+                                                self.root.winfo_x(), self.root.winfo_y())
+        except tk.TclError:
+            pass
+
+    def _save_window_placement(self):
+        try:
+            state = self.root.state()
+            if state == "normal" and not self.fullscreen:
+                self._remember_window_geometry()
+            if self._window_last_normal is None:
+                return
+            width, height, x, y = self._window_last_normal
+            _save_setting("window", {"width": width, "height": height,
+                                     "x": x, "y": y,
+                                     "maximized": state == "zoomed" and not self.fullscreen})
+        except (OSError, ValueError, tk.TclError) as exc:
+            print(f"[NumPlay] Could not save window placement: {exc}", file=sys.stderr)
 
     def _build_ui(self):
         self.root.title("NumPlay emulator")
@@ -1572,6 +1692,10 @@ class CalculatorSkinApp(LiveApp):
                                        activeforeground=FG)
         options_button.pack(side="right")
         self._options_menu = tk.Menu(options_button, tearoff=0)
+        self.dark_mode_var = tk.BooleanVar(master=self.root, value=(CURRENT_THEME == "dark"))
+        self._options_menu.add_checkbutton(label="Dark mode", variable=self.dark_mode_var,
+                                           command=self._toggle_dark_mode)
+        self._options_menu.add_separator()
         options_button.configure(menu=self._options_menu)
         self._options_menu.add_command(label="Screenshot", command=self._focus_after(self.screenshot))
         self._options_menu.add_command(label="Keyboard shortcuts", command=self._focus_after(self.show_keymap))
@@ -1675,6 +1799,100 @@ class CalculatorSkinApp(LiveApp):
         self._update_upload_controls()
         self.root.focus_force()
         self.root.after(150, self.refocus_input)
+
+    def _toggle_dark_mode(self):
+        requested = "dark" if self.dark_mode_var.get() else "light"
+        self._apply_interface_theme(requested)
+        try:
+            _save_setting("theme", requested)
+        except OSError as exc:
+            messagebox.showwarning("NumPlay theme",
+                                   f"Theme changed, but could not save it for next time:\n{exc}",
+                                   parent=self.root)
+        self.set_status("Dark mode" if requested == "dark" else "Light mode")
+        self.root.after(75, self.refocus_input)
+
+    def _apply_interface_theme(self, requested=None, *, initial=False):
+        """Repaint Tk widgets, including log windows, without restarting Unicorn.
+
+        Colours are replaced by their palette values rather than rebuilding
+        the window: doing so would interrupt the active calculator/game and
+        live builder. FlatButton stores its own background for mouse hovering.
+        """
+        previous = THEME_PALETTES[CURRENT_THEME]
+        if requested is not None:
+            _activate_theme_palette(requested)
+        updated = THEME_PALETTES[CURRENT_THEME]
+        mapping = {old.lower(): updated[key]
+                   for key, old in previous.items()}
+        tk_options = (
+            "background", "foreground", "activebackground", "activeforeground",
+            "selectcolor", "disabledforeground", "highlightbackground",
+            "highlightcolor", "insertbackground", "troughcolor",
+        )
+        visited = set()
+
+        def paint(widget):
+            # Tk menus and Toplevels can appear elsewhere in the widget tree.
+            if str(widget) in visited:
+                return
+            visited.add(str(widget))
+            try:
+                options = set(widget.keys())
+                changes = {}
+                for option in tk_options:
+                    if option not in options:
+                        continue
+                    value = str(widget.cget(option)).lower()
+                    if value in mapping and mapping[value] != value:
+                        changes[option] = mapping[value]
+                if changes:
+                    widget.configure(**changes)
+                if isinstance(widget, FlatButton):
+                    # FlatButton remembers the hover/leave base colour.
+                    primary = widget._bg.lower() == previous["ACCENT"].lower()
+                    widget._bg = ACCENT if primary else PANEL_2
+                    widget.configure(bg=widget._bg,
+                                     fg="#34343a" if primary else FG)
+                for child in widget.winfo_children():
+                    paint(child)
+            except tk.TclError:
+                pass
+
+        paint(self.root)
+        self.root.configure(bg=BG)
+        for menu in (self._options_menu, self._clock_submenu, self._manual_clock_menu):
+            try:
+                menu.configure(bg=PANEL, fg=FG,
+                               activebackground=SELECT, activeforeground=FG,
+                               selectcolor=ACCENT)
+            except (tk.TclError, AttributeError):
+                pass  # Native system menus may ignore these colours on macOS.
+
+        # ttk progress bars use the system theme unless styled explicitly.
+        try:
+            style = ttk.Style(self.root)
+            style.configure("NumPlay.Horizontal.TProgressbar",
+                            background=ACCENT, troughcolor=PANEL_2, borderwidth=0)
+            for bar in (self.progress, self.upload_progress):
+                bar.configure(style="NumPlay.Horizontal.TProgressbar")
+        except (tk.TclError, AttributeError):
+            pass
+
+        # Refresh the selected view and mode labels without switching modes.
+        # Re-running the existing variable trace repaints them without calling
+        # the mode-switch commands or restarting the compiler/emulator.
+        for var in (self.view_var, self.mode_var):
+            var.set(var.get())
+        # The calculator's picture on the new background (its edges are see-through), the screen's border too.
+        self.art = self._art_on(BG)
+        self._art_geometry = (0, 0, 0, 0)
+        try:
+            self._resize()
+            self.canvas.itemconfigure("native-border", outline=LINE)
+            self._draw_highlight()
+        except (tk.TclError, AttributeError):
+            pass
 
     def _section(self, parent, title):
         label = tk.Label(parent, text=title, bg=PANEL, fg=MUTED, font=font(9), anchor="w")
@@ -2236,6 +2454,7 @@ class CalculatorSkinApp(LiveApp):
                                    "Do NOT unplug the NumWorks during installation.",
                                    parent=self.root)
             return
+        self._save_window_placement()
         try:
             self.root.after_cancel(self._upload_poll_id)
         except (tk.TclError, AttributeError):
