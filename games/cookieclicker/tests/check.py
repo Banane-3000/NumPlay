@@ -124,7 +124,9 @@ try:
     frames = 9000 if QUICK else 54000
     s = play(robot, "10:ok", frames, "robot", ["--bot"])
     if s:
-        check(s["buildings"] >= (40 if QUICK else 150) and s["cps"] > (20 if QUICK else 1000),
+        # (a computer's maths library rounds pow() its own way, so the robot's choices differ a little from one
+        # to another: on a Mac it gets about 135 buildings, on Linux about 150)
+        check(s["buildings"] >= (40 if QUICK else 120) and s["cps"] > (20 if QUICK else 1000),
               f"the robot's bakery did not grow: {s}")
     shutil.rmtree(robot, ignore_errors=True)
 finally:

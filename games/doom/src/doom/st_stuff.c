@@ -22,6 +22,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "i_system.h"
 #include "i_video.h"
@@ -1029,7 +1030,8 @@ void ST_createWidgets(void)
 		  ST_AMMOX,
 		  ST_AMMOY,
 		  tallnum,
-		  plyr->ammo + weaponinfo[plyr->readyweapon].ammo /* (am_noammo: past the end, as in Doom) */,
+		  weaponinfo[plyr->readyweapon].ammo == am_noammo ? plyr->maxammo + 1 /* (where Doom's ammo[am_noammo] lands, past the end) */
+		      : plyr->ammo + weaponinfo[plyr->readyweapon].ammo,
 		  &st_statusbaron,
 		  ST_AMMOWIDTH );
 

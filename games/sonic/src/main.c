@@ -49,7 +49,14 @@ uint8_t CalcAngle(int16_t x, int16_t y) {
 
 /* ------------------------------------------------------------------ the frame */
 /* (the compiler's own jumps: the C library's would bring its unwinder along) */
+#if defined(HOST) && defined(__APPLE__) /* (a Mac's compiler has no __builtin_setjmp on arm64) */
+#include <setjmp.h>
+static jmp_buf quit_jump;
+#define __builtin_setjmp setjmp
+#define __builtin_longjmp longjmp
+#else
 static void *quit_jump[5];
+#endif
 static uint32_t next_frame;    /* when the next frame is due (ms * 60, to keep fractions) */
 static uint32_t frame_ms60;
 static int skipped;

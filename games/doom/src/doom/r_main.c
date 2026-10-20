@@ -28,6 +28,7 @@
 
 
 #include "doomdef.h"
+#include "i_system.h"
 #include "d_loop.h"
 
 #include "m_bbox.h"

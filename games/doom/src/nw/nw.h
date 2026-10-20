@@ -13,7 +13,14 @@ extern int nw_warp;
 /* i_system.c: Home, On/Off and Quit end the main loop; I_Error and I_Quit jump back to main
  * (__builtin_setjmp and __builtin_longjmp on nw_exit) */
 extern boolean nw_quit;
+#if defined(HOST) && defined(__APPLE__) /* (a Mac's compiler has no __builtin_setjmp on arm64) */
+#include <setjmp.h>
+extern jmp_buf nw_exit;
+#define __builtin_setjmp setjmp
+#define __builtin_longjmp longjmp
+#else
 extern void *nw_exit[5];
+#endif
 
 /* i_video.c: an error message on the screen, until a key is pressed */
 void nw_show_error(const char *msg);
