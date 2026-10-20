@@ -154,7 +154,7 @@ To see your calculator's model and software, open **Settings**, then **About**. 
 
 Install any of them instead of NumPlay.nwa: your progress is the same in each. A few things stay in English in French and Chinese: words drawn into pictures, level names, key names, NumBlocks' commands and Portal Returns' stories. The big games come in English only.
 
-**On Upsilon,** the NumWorks website doesn't install apps (it shows 0 KB free). Install [Node.js](https://nodejs.org), plug in the calculator, and run `npx nwlink install-nwa NumPlay-Upsilon.nwa` in the folder you downloaded it to.
+**On Upsilon,** the NumWorks website doesn't install apps (it shows 0 KB free). Install [Node.js](https://nodejs.org), plug in the calculator, and run `npx nwlink install-nwa NumPlay-Upsilon.nwa` in the folder you downloaded it to. This needs an Upsilon that runs .nwa apps: its builds from June 2026 on. On an older one, like Upsilon 1.0.1, nwlink stops with "invalid length for memory": update Upsilon first from [its website](https://getupsilon.web.app).
 
 </details>
 
