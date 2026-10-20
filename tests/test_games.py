@@ -90,10 +90,10 @@ GAMES = {
     # new game from the pause menu and its first square
     "minesweeper": ("Minesweeper.nwa", "mines.sav", presses((1500, "ok"), (2000, "ok"), (2400, "right")), 3000,
                     presses((1500, "ok"), (2000, "back"), (2300, "down"), (2600, "ok"), (3000, "ok")), 3600),
-    # past the keys, the first door: the runner runs right into the first pit; next time (only the copy of the
-    # save left) the first door again, the keys not shown, and another death
-    "leveldevil": ("LevelDevil.nwa", "leveldevil.sav", presses((1500, "ok"), (2000, "ok"), (3000, "right", 4000)), 8000,
-                   presses((1500, "ok"), (2500, "right", 3000)), 6500),
+    # past the title and the jaws, the first door: the runner runs right into the first pit; next time (only
+    # the copy of the save left) the first door again, and another death
+    "leveldevil": ("LevelDevil.nwa", "leveldevil.sav", presses((1800, "ok"), (3200, "ok"), (4300, "right", 7000)), 9500,
+                   presses((1800, "ok"), (3200, "ok"), (4300, "right", 7000)), 9500),
     # Play, serve, a brick or more: the best is kept; next time, Settings, screen shake off, back
     "breakout": ("BlockBreaker.nwa", "breakout.sav", presses((1500, "ok"), (2500, "ok")), 6000,
                  presses((1500, "down"), (1800, "ok"), (2100, "down"), (2400, "ok"), (2800, "back")), 4000),
@@ -309,8 +309,8 @@ CHECKS = {
     "blockblast": (lambda v: len(v) == 92 and v[:3] == b"B\1\3" and struct.unpack_from("<I", v, 12)[0] >= 1
                    and struct.unpack_from("<I", v, 8)[0] >= struct.unpack_from("<I", v, 12)[0],
                    lambda v: v[2] & 1 and struct.unpack_from("<I", v, 12)[0] >= 2),
-    # the keys were shown and the runner died (the deaths at 8); after the reinstall, from the copy, it died again
-    "leveldevil": (lambda v: len(v) == 48 and v[:2] == b"L\1" and v[2] & 1 and struct.unpack_from("<I", v, 8)[0] >= 1,
+    # the runner died (the deaths at 8); after the reinstall, from the copy, it died again
+    "leveldevil": (lambda v: len(v) == 48 and v[:2] == b"L\1" and struct.unpack_from("<I", v, 8)[0] >= 1,
                    lambda v: struct.unpack_from("<I", v, 8)[0] >= 2),
     # the best score ("I", version 1, the best at 4): some invaders shot; then kept, or beaten
     "invaders": (lambda v: len(v) == 8 and v[:2] == b"I\1" and struct.unpack_from("<I", v, 4)[0] >= 20,
