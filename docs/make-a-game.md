@@ -74,7 +74,7 @@ Plug the calculator in, open [my.numworks.com/apps](https://my.numworks.com/apps
 | **Saves that survive a reinstall**: a copy kept in a Python script, which the NumWorks website keeps | `games/celeste/src/save.c` (`save_copy`) | Celeste, Hollow Knight, Undertale, the big games |
 | **Safety**: Home handled cleanly, the slower models and Upsilon recognised, keys let go before quitting | `games/common/epsilon_app.h` | every game |
 | **Compression**: LZ for pictures, DEFLATE for levels | `games/common/np_lz.h`, `launcher/src/inflate.c` | Chrome Dino, Sokoban, NumDash |
-| **3D**: perspective-correct textured triangles drawn a few rows at a time, with fog and light | [`src/render.c`](https://github.com/Mason363/NumWorks-Super-Mario-64/blob/main/src/render.c) in NumWorks-Super-Mario-64 | Super Mario 64 |
+| **3D**: perspective-correct textured triangles drawn a few columns at a time, each sent in step with the screen's refresh so nothing tears, with fog and light | [`src/render.c`](https://github.com/Mason363/NumWorks-Super-Mario-64/blob/main/src/render.c) in NumWorks-Super-Mario-64 | Super Mario 64 |
 | **3D**: shaded, textured models and scenery | `games/subway/src/r3d.c` | Subway Surfers |
 | **Voxels**: a Minecraft-style world renderer | `games/numblocks/src/render.c` | NumBlocks |
 | **Physics**: rigid bodies, joints, contacts and raycasts | `games/numdrive/src` | NumDrive |
