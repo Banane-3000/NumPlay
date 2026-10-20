@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Windows-friendly live NumWorks emulator — responsive single-file calculator skin.
+"""Live NumWorks emulator for macOS, Linux and Windows: a calculator you can click, around tools/emu.py.
 
 Put this file beside tools/emu.py. Requires Pillow, numpy, unicorn,
-pyelftools, tkinterdnd2 and nwlink. Displays the NumWorks keyboard artwork
-from the locally installed k-kuroguro VS Code extension (CC BY-NC-SA).
+pyelftools and nwlink (tkinterdnd2 for dropping files, if you like). It shows the
+NumWorks keyboard artwork of the k-kuroguro VS Code extension (CC BY-NC-SA) when
+that extension is installed, read in place and never copied; otherwise it draws a
+calculator of its own.
 
 Runs an ARM .nwa through the project's existing emu.Calculator, shows the
 320x240 display, supports 46 clickable keys, keyboard, .nwa drops and reload.
@@ -14,7 +16,8 @@ To run:
 The calculator skin does not depend on emu_live_skin.py; emu.py is still needed.
 
 NumPlay Live Emulator V22 (USB push with live progress, opt-in):
-- Single file / Live development, automatic native Windows builds and reloads;
+- Single file / Live development: it builds again when you save, and reloads
+  (tools/watch.py on macOS and Linux, tools/build_windows.py on Windows);
 - calculator skin / pixel-exact 320x240 screen, keyboard highlights;
 - tear-reduced frame presentation, usable Epsilon firmware text;
 - N0120 display-transfer timings calibrated using physical NumWorks results;
@@ -68,7 +71,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 HOME_NWA = Path.home() / "Downloads" / "nwa"
 SAVE_DIR = Path.home() / ".numplay-emulator" / "saves"
 LIVE_NWA = REPO_ROOT / "dist" / "live" / "NumPlay.nwa"
-BUILD_SCRIPT = REPO_ROOT / "tools" / "build_windows.py"
+BUILD_SCRIPT = REPO_ROOT / "tools" / ("build_windows.py" if os.name == "nt" else "watch.py")
+BUILTIN_SKIN = Path.home() / ".numplay-emulator" / "calculator.png"
 LCD_WIDTH = 320
 LCD_HEIGHT = 240
 FRAME_VIRTUAL_MS = 32
@@ -180,7 +184,11 @@ def find_nwas() -> list[Path]:
 def nwlink_command() -> str | None:
     if os.name == "nt":
         return shutil.which("nwlink.cmd") or shutil.which("nwlink.exe")
-    return shutil.which("nwlink")
+    for p in (shutil.which("nwlink"), Path.home() / ".numplay" / "node_modules" / ".bin" / "nwlink",
+              REPO_ROOT / "games" / "numdash" / "node_modules" / ".bin" / "nwlink"):
+        if p and Path(p).exists():
+            return str(p)
+    return None
 
 
 def fingerprint(path: Path) -> tuple[int, int] | None:
@@ -218,6 +226,9 @@ class FidelityFont:
             Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts" / "segoeui.ttf",
             Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts" / "arial.ttf",
             Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+            Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
+            Path("/Library/Fonts/Arial.ttf"),
+            Path("/System/Library/Fonts/Helvetica.ttc"),
         )
         self.cells = {}
         self.cache = {}
@@ -1467,6 +1478,41 @@ def installed_artwork() -> Path | None:
     return max(files, key=lambda x: x.stat().st_mtime_ns) if files else None
 
 
+def builtin_artwork() -> Path:
+    """A calculator of its own, for when the VS Code extension isn't installed: the same layout (HOTSPOTS,
+    SCREEN) on a 1160 x 2221 picture, drawn once and kept in ~/.numplay-emulator."""
+    if BUILTIN_SKIN.is_file():
+        return BUILTIN_SKIN
+    w, h = 1160, 2221
+    im = Image.new("RGB", (w, h), (232, 234, 238))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle((6, 6, w - 7, h - 7), radius=96, fill=(250, 250, 251), outline=(200, 204, 211), width=6)
+    sx, sy, sw, sh = SCREEN[0] * w, SCREEN[1] * h, SCREEN[2] * w, SCREEN[3] * h
+    d.rounded_rectangle((sx - 36, sy - 36, sx + sw + 36, sy + sh + 36), radius=28, fill=(38, 40, 46))
+    d.rectangle((sx, sy, sx + sw, sy + sh), fill=(0, 0, 0))
+    font = None
+    for name in ("DejaVuSans.ttf", "/System/Library/Fonts/Supplemental/Arial.ttf", "/Library/Fonts/Arial.ttf",
+                 str(Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts" / "arial.ttf")):
+        try:
+            font = ImageFont.truetype(name, 42)
+            break
+        except OSError:
+            pass
+    font = font or ImageFont.load_default()
+    nav = {"left", "right", "up", "down", "home", "onoff", "ok", "back"}
+    for key, (x, y, kw, kh) in HOTSPOTS.items():
+        box = (x * w, y * h, (x + kw) * w, (y + kh) * h)
+        fill = (212, 216, 222) if key in nav else (225, 228, 233) if key in FUNCTIONS else (255, 255, 255)
+        d.rounded_rectangle(box, radius=min(box[2] - box[0], box[3] - box[1]) * 0.22, fill=fill,
+                            outline=(178, 183, 192), width=4)
+        label = "DEL" if key == "backspace" else LABEL.get(key, key)  # (⌫ isn't in most fonts)
+        tw, th = d.textbbox((0, 0), label, font=font)[2:]
+        d.text(((box[0] + box[2] - tw) / 2, (box[1] + box[3] - th) / 2), label, fill=(48, 52, 60), font=font)
+    BUILTIN_SKIN.parent.mkdir(parents=True, exist_ok=True)
+    im.save(BUILTIN_SKIN)
+    return BUILTIN_SKIN
+
+
 class CalculatorSkinApp(LiveApp):
     """NumWorks skin with mutually exclusive file and live-development modes.
 
@@ -1814,9 +1860,8 @@ class CalculatorSkinApp(LiveApp):
         if self.build_process is not None and self.build_process.poll() is None:
             return
         if not BUILD_SCRIPT.is_file():
-            self._set_build_state("Builder not found", "Expected tools/build_windows.py", error=True)
-            messagebox.showerror("Live build", f"Missing build script:\n{BUILD_SCRIPT}\n\n"
-                                 "Put the working Windows build helper V7 in tools/build_windows.py.")
+            self._set_build_state("Builder not found", f"Expected tools/{BUILD_SCRIPT.name}", error=True)
+            messagebox.showerror("Live build", f"Missing build script:\n{BUILD_SCRIPT}")
             return
         # A previous process may still be shutting down. Never run concurrent
         # builds of the same directory.
@@ -1844,7 +1889,7 @@ class CalculatorSkinApp(LiveApp):
             self.build_process = None
             return
         self.live_button.configure(text="Stop live build")
-        self._set_build_state("Starting Windows compiler…", "Checking dependencies", busy=True)
+        self._set_build_state("Starting the compiler…", "Checking dependencies", busy=True)
         thread = threading.Thread(target=self._read_builder_output,
                                   args=(generation, self.build_process), daemon=True)
         thread.start()
@@ -2536,13 +2581,13 @@ class CalculatorSkinApp(LiveApp):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="NumWorks-shaped .nwa emulator: single-file and live-build modes for Windows")
+    ap = argparse.ArgumentParser(description="NumWorks-shaped .nwa emulator: single-file and live-build modes, on macOS, Linux and Windows")
     ap.add_argument("nwa", nargs="?", type=Path, help="optional .nwa path, or drop it after launching")
     ap.add_argument("--nwlink", default=nwlink_command())
     ap.add_argument("--skin-image", type=Path, help="path to extension's resources/webview/background.png")
     ap.add_argument("--model", choices=("n0120", "n0110"), default="n0120")
     ap.add_argument("--system", choices=("epsilon", "upsilon"), default="epsilon")
-    ap.add_argument("--live", action="store_true", help="open Live development mode and start the Windows build watcher inside the GUI")
+    ap.add_argument("--live", action="store_true", help="open Live development mode and start the build watcher inside the GUI")
     ap.add_argument("--follow-newest", action="store_true", help="legacy alias for --live (no ambiguous newest-file scanning)")
     ap.add_argument("--profile-speed", action="store_true",
                     help="print a measured ARM/render/pacing speed report every 5 seconds")
@@ -2560,9 +2605,8 @@ def main():
         ap.error("nwlink not found. Run: npm install -g nwlink@1.0.0")
     art = args.skin_image or installed_artwork()
     if not art or not art.is_file():
-        ap.error("NumWorks skin not found. Install k-kuroguro's Numworks Simulator in VS Code, "
-                 "or pass --skin-image PATH pointing to resources/webview/background.png.\n"
-                 f"Image source: {ART_SOURCE}")
+        # (k-kuroguro's Numworks Simulator for VS Code gives the real calculator's picture: see ART_SOURCE)
+        art = builtin_artwork()
     if os.name == "nt":
         # Avoid Windows silently bitmap-scaling the *whole* Tk window at 125%/
         # 150% display scale, which would defeat the native 1:1 LCD view.
