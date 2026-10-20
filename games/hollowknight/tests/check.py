@@ -1,8 +1,8 @@
 """The host build's checks (make test): check.py build/play src/data.bin
 
 - every room's hazard respawn points: ground under them, in the room
-- every gate: the Knight arrives in the next room, in control, on the ground, and can move; and spikes there send him
-  back to a good place
+- every gate and door (a door taking his control, as its FSM does): the Knight arrives in the next room, in control, on
+  the ground, and can slash and move; and spikes there send him back to a good place
 - every arena won: its fight over and the room's battle gates open, also as the Knight comes back and after a save and
   a load
 - a long walk of made up keys from every room: the Knight never out of the room, without control, wedged, undrawn or

@@ -289,6 +289,13 @@ static int gates_test(const char *which) {
       snprintf(gate_name, sizeof gate_name, "%s", str_at(room_ents(&n)[ways[w].ent].s0));
       shielded = true;
       run_ticks(5, 0);
+      if (ways[w].kind == GATE_DOOR) {
+        /* (a door, as its Door Control goes through it: Enter takes the Knight's control, Change Scene) */
+        hero_relinquish_control();
+        hero_stop_anim_control();
+        run_ticks(25, 0);
+        hero_start_anim_control();
+      }
       game_transition(ways[w].to, ways[w].entry, ways[w].kind, ways[w].delay, false);
       run_ticks(400, 0);   /* (the fade, the room, the Knight walking, dropping or jumping in, landing) */
       total++;
@@ -302,6 +309,13 @@ static int gates_test(const char *which) {
       if (h->cs.dead || h->cs.hazard_death) strcat(why, " dead");
       if (h->body.x < 0 || h->body.x > g_room.h->w || h->body.y < 0 || h->body.y > g_room.h->h) strcat(why, " out of the room");
       if (!h->cs.on_ground) strcat(why, " not on the ground");
+      /* (and he can slash, look up and down: nothing the way in took is kept from him, as a door's control) */
+      if (!why[0]) {
+        if (h->control_relinquished) strcat(why, " control kept");
+        run_ticks(1, K_ATTACK);
+        if (!h->cs.attacking) strcat(why, " can't attack");
+        run_ticks(30, 0);
+      }
       float x0 = h->body.x, y0 = h->body.y;
       int room0 = g_room.id;
       if (getenv("HKGATETRACE")) {
@@ -358,6 +372,7 @@ static int gates_test(const char *which) {
       float yj = h->body.y;
       if (g_room.id == room0 && fabsf(xr - x0) < 0.05f && fabsf(xl - xr) < 0.05f) strcat(why, " can't walk");
       if (g_room.id == room0 && fabsf(yj - y0) < 0.05f && fabsf(xl - x0) < 0.05f) strcat(why, " can't jump");
+
       shielded = false;
       bool bad = why[0] != 0 && !walled;
       fails += bad;
@@ -390,7 +405,7 @@ int main(int argc, char **argv) {
   const char *items_out = NULL, *play = NULL, *shots = NULL;
   float px = 20, py = 20;
   int shot_every = 0, trace = 0;
-  const char *gates = NULL;
+  const char *gates = NULL, *gate_in = NULL;
   float dx = 0.15f;
   for (int i = 2; i < argc; i++) {
     if (!strcmp(argv[i], "--room")) room = argv[++i];
@@ -406,6 +421,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--shots")) shots = argv[++i], shot_every = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--trace")) trace = 1;
     else if (!strcmp(argv[i], "--gates")) gates = argv[++i];
+    else if (!strcmp(argv[i], "--gate")) gate_in = argv[++i];   /* (--play: in through the room's gate so named) */
     else if (!strcmp(argv[i], "--list")) {   /* (the rooms' names) */
       for (int r = 0; r < NUM_ROOMS; r++) printf("%s\n", room_name(r));
       return 0;
@@ -460,7 +476,9 @@ int main(int argc, char **argv) {
         printf("load failed\n");
         return 1;
       }
-    } else
+    } else if (gate_in)
+      game_enter_gate(id, gate_in);
+    else
       game_enter(id, px, py, true);
     int tick = 0;
     for (const char *p = play; *p;) {

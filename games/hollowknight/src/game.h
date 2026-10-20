@@ -408,6 +408,7 @@ bool bench_respawn(const char *name);   /* RESPAWN: the Knight asleep on the ben
 void spell_reset(void);
 void spell_update(void);
 void spell_cancel(void);
+void spell_cancel_regain(void);   /* (HERO DAMAGED, LEAVING SCENE) */
 bool spell_busy(void);
 void spell_cast(bool up, bool down);
 void fireballs_tick(void);
