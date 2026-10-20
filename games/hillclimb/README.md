@@ -22,21 +22,22 @@
 
 ## Highlights
 
-* **Real physics, like the game's:** the chassis and each wheel are bodies of their own, the wheels hang on springs, and the engine turns them against the chassis, so the nose rises when you floor it and you can flip over backwards on a steep hill. In the air, gas tilts you back and brake tilts you forward.
-* **Bill's neck:** land on his head, or let the roof of a cave touch it, and it's *Driver down*. Run out of fuel and you roll to a stop. Fuel cans come at the stage's own spacing, as in the game.
-* **Coins of 5, 25, 100 and 500**, bigger the further you go, in rows and stacks along the road. **Air time** pays from a second in the air on (25, 50, 75, 100, then *Big air time* 200 to 500, then *Insane air time* from 1,000 up to 25,000), every **flip** and **back flip** 1,000, and a **neck flip** (going down in the middle of one) 2,500. Each **level** of the road pays its reward when you reach its end.
+* **The game's own physics:** it runs on Box2D 2.2.1, the physics engine the game itself uses, 60 steps a second, with the game's own numbers read from its Android package: each vehicle's chassis, wheels, springs, engine, turbo, brakes, air control and downforce, each stage's gravity and grip, and the ground in pieces of half a meter. The wheels hang on springs and the engine turns them against the chassis, so the nose rises when you floor it and you can flip over backwards on a steep hill. In the air, gas tilts you back and brake tilts you forward.
+* **Bill's neck:** when his head touches the ground or a cave's roof, it's *Driver down*, and the run ends 4 seconds later. A tank lasts 40 seconds (the Dune Buggy and the Tank burn theirs at their own rate, which their Fuel upgrade lowers), each fuel can fills it up, and the cans come at the stage's own spacing. When it runs dry you roll on for 4 more seconds.
+* **Coins of 5, 25, 100 and 500**, bigger the further you go, in rows along the road. **Air time** pays from 0.75 s in the air, every 0.2 s: 25 for the first four steps, then *Big air time* 100 each, then *Insane air time* 500 each. Every **flip** and **back flip** pays 1,000, and a **neck flip** (going down in the middle of one) 2,500.
+* **Levels, as in the game:** each stage has its own, kept from run to run. Reach the goal (200 m on the Countryside, then 400 m, 600 m...) and its bonus is paid; the next one waits for you, on this run or the next.
 * **Ten stages**, each with its own ground, sky, grip, gravity and spacing of fuel, with the game's prices:
 
   | Stage | Price | |
   | --- | --- | --- |
-  | Countryside | free | Rolling hills that get steep and jagged further on |
-  | Desert | 35,000 | Steep dunes and rope bridges over canyons, sagging under you |
+  | Countryside | free | Rolling hills that get steep and jagged further on, and rope bridges that sag under you |
+  | Desert | 35,000 | Steep dunes, and canyons with rope bridges further apart |
   | Arctic | 75,000 | The Countryside's hills, but on slippery snow |
   | Highway | 125,000 | Flat and fast at first; the fuel cans get further and further apart |
   | Cave | 150,000 | A ceiling over your head: hit it with Bill and it's over. Fuel every 150, 120 and 90 m |
   | Moon | 175,000 | Low gravity: long jumps, big air time and flips, the Earth in the sky |
   | Mars | 250,000 | Lighter than home, with tunnels now and then |
-  | Alien Planet | 750,000 | A slimy, sloped world under a green night |
+  | Alien Planet | 750,000 | A slimy, slippery, sloped world under a green night |
   | Arctic Cave | 800,000 | A cave of ice, slippery, with icicles hanging from its roof |
   | Forest | 850,000 | Bunches of pine trees in the way: ram them or push them over |
 
@@ -47,7 +48,7 @@
   | Hill Climber | free | Engine, Suspension, Tires, 4WD |
   | Motocross Bike | 75,000 | Engine, Suspension, Tires, Air Control |
   | Monster Truck | 100,000 | Engine, Suspension, Tires, 4WD |
-  | Quad Bike | 175,000 | Engine, Suspension, Tires, Air Control (four-wheel drive) |
+  | Quad Bike | 175,000 | Engine, Suspension, Tires, 4WD |
   | Race Car | 250,000 | Engine, Suspension, Tires, Downforce |
   | Rally Car | 750,000 | Engine, Suspension, Tires, Downforce |
   | Dune Buggy | 800,000 | Engine, Suspension, Tires, Fuel |
@@ -81,8 +82,10 @@
 
 ## Credits
 
-**Hill Climb Racing** is [Fingersoft](https://fingersoft.com)'s game (2012), with Newton Bill at the wheel. This version is written in C for NumPlay: its physics, stages and menus are made for the calculator, and its pictures (the vehicles, Bill, the coins, the stages' grounds and skies, the pedals, meters, icons and the logo) are the game's own, as the [Hill Climb Racing Wiki](https://hillclimbracing.fandom.com) keeps them; the prices, upgrades, stages' fuel and levels, and the coins' and bonuses' values are the game's as the wiki records them. Its text is set in **Teko** (SIL Open Font License, [license](../../LICENSES/OFL-1.1-Teko.txt)). It is an unofficial fan game, not affiliated with Fingersoft.
+**Hill Climb Racing** is [Fingersoft](https://fingersoft.com)'s game (2012), with Newton Bill at the wheel. This version is written in C and C++ for NumPlay. How it plays is the game's own: the vehicles, the stages' ground, gravity and grip, the bridges and trees, the coins, fuel, levels, prices and bonuses follow the numbers and rules read from the game's Android package (versions 1.0 to 1.70, mostly 1.10 and 1.16), and were checked against videos of the game. Its pictures (the vehicles, Bill, the coins, the stages' grounds and skies, the pedals, meters, icons and the logo) are the game's own, as the [Hill Climb Racing Wiki](https://hillclimbracing.fandom.com) keeps them. Its text is set in **Teko** (SIL Open Font License, [license](../../LICENSES/OFL-1.1-Teko.txt)). It is an unofficial fan game, not affiliated with Fingersoft.
+
+The physics is **Box2D 2.2.1** by Erin Catto (zlib license, [src/box2d/License.txt](src/box2d/License.txt)), the version the game is built with, cut down to the parts the game uses. The files changed to fit the calculator say so at their top.
 
 `tools/fetch.py` gathers the wiki's pictures and the font, and `tools/pack.py` turns them into `src/data.bin` (committed, so building needs no network).
 
-Build: `make` (needs `arm-none-eabi-gcc` and Node.js for nwlink). `make test` plays it on a computer with the sanitizers (tests/check.py).
+Build: `make` (needs `arm-none-eabi-gcc` and `arm-none-eabi-g++`, and Node.js for nwlink). `make test` plays it on a computer with the sanitizers (tests/check.py).

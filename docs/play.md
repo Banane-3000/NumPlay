@@ -418,7 +418,7 @@ Hill Climb Racing comes as its own app, `HillClimbRacing.nwa`: it is too big to 
 | **Back** | Pause (Resume, Restart, Garage, Quit game) |
 | **Home** | Keep the run's coins and quit |
 
-Drive as far as you can before the fuel runs out or Bill lands on his head. Pick up fuel cans on the way, collect coins, and earn more with air time and flips; each level of the road pays a reward. In the garage, spend coins on new vehicles and their four upgrades, and on new stages: the Desert's rope bridges, the slippery Arctic, the Cave's ceiling, the Moon's low gravity, the Forest's trees to ram through. Your coins, upgrades and best distances are saved, and copied into `hillclimb_saves.py` so installing the app again doesn't erase them.
+Drive as far as you can before the fuel runs out or Bill lands on his head. It drives like the real game: the same physics engine (Box2D) with the game's own numbers for every vehicle and stage. Pick up fuel cans on the way, collect coins, and earn more with air time and flips; each stage's levels pay a bonus when you reach their goal, and the next level waits for you on your next run. In the garage, spend coins on new vehicles and their four upgrades, and on new stages: the Desert's dunes, the slippery Arctic, the Cave's ceiling, the Moon's low gravity, the Forest's trees to ram through, with rope bridges along the way. Your coins, upgrades, levels and best distances are saved, and copied into `hillclimb_saves.py` so installing the app again doesn't erase them.
 
 <br clear="right">
 

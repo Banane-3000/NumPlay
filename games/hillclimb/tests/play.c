@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
     uint32_t k = 0;
     for (int i = 0; i < nholds; i++)
       if (f >= holds[i].a && f <= holds[i].b) k |= holds[i].k;
-    if (autop && g_mode == MODE_RUN) k |= autopilot();
+    if (autop && g_mode == MODE_RUN && !k) k = autopilot();   /* (--keys take over while they are held) */
     host_keys = k;
     game_frame(k);
     host_time += 17;
