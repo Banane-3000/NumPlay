@@ -17,7 +17,7 @@
 Obj *obj_sans(int x, int y, int dir) {
   static const uint16_t s[4] = {SPR_SANS_D};
   Obj *o = obj_npc(ACTOR_SANS, s, x, y, dir, 0);
-  if (o) o->flags &= (uint16_t)~OF_WALKANIM;
+  if (o) o->anim_speed = 7;   /* (his steps, unhurried) */
   return o;
 }
 Obj *obj_papyrus(int x, int y, int dir) {

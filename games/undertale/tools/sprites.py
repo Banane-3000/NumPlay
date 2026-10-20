@@ -416,7 +416,7 @@ SPRITES = [
     ("papyrus_r", PAP_GIF + "19,21,23,25", {"feet": True}),
     ("papyrus_l", PAP_GIF + "19,21,23,25", {"feet": True, "mirror": True}),
     ("papyrus_d", "wiki:Papyrus_overworld.png", {"feet": True}),
-    ("sans_d", "wiki:Sans_overworld.png", {"feet": True}),
+    ("sans_d", "wiki:Sans_overworld.png", {"feet": True, "walk": (25, 12)}),   # (his steps made from it)
     ("doggo_ow", "wiki:Doggo_overworld.png", {"feet": True}),
     ("dogamy_ow", "wiki:Dogamy_overworld.png", {"feet": True}),
     ("dogaressa_ow", "wiki:Dogaressa_overworld.png", {"feet": True}),
