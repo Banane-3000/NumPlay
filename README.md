@@ -87,6 +87,10 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
   </tr>
 </table>
 
+**[Doodle Jump](games/doodlejump/README.md)** is also offered as a separate,
+English-only app by **Bobydeluxe**. Its README includes build and installation
+instructions.
+
 ## How to install
 
 You need your calculator, its USB cable, and a computer with **Google Chrome** or **Microsoft Edge**. It takes about 2 minutes.
@@ -198,6 +202,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 
 - **[Tatone26](https://github.com/Tatone26/Numworks-games)**'s **All the Apps** inspired NumPlay's list of classics. Flappy Bird, Pac-Man, Snake, Connect Four, Solitaire and 2048 are written in C for NumPlay and keep its options, with no code copied from it. Tetris is Tatone26's own, which they released into the public domain, adapted for NumPlay.
 - **[Gabriele Cirulli](https://github.com/gabrielecirulli/2048)** made 2048.
+- **[Bobydeluxe](https://github.com/Bobydeluxe)** made **[Doodle Jump](games/doodlejump/README.md)**, including its English interface, procedural artwork and platform-climbing engine. Inspired by Doodle Jump; no original game assets are bundled.
 - **Block Blast!** by [Hungry Studio](https://www.hungrystudio.com) inspired NumPlay's Block Blast, written in C for NumPlay with no code or art from it. Its blocks, scoring and colours follow measurements of the app by the players behind [blockblast-Self-Improvement-loop](https://github.com/Kucze3205/blockblast-Self-Improvement-loop).
 - Snake, Solitaire and Block Breaker look and play like **Google's games** in Search. They are drawn from scratch; nothing is taken from Google.
 - **Chrome's dinosaur game** by Google inspired Chrome Dino, which ports its rules, numbers and pictures from [Chromium's source](https://chromium.googlesource.com/chromium/src/+/main/components/neterror/resources/dino_game/) (BSD license). **[LilyTheCatgirl](https://github.com/LilyTheCuteCatgirl)** brought it to NumPlay. Not affiliated with Google.
