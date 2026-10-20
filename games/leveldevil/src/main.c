@@ -132,7 +132,9 @@ static color_t bg, fg;
 static struct {
   int32_t x, y;
   int16_t vx, vy;
-} bits[8]; /* the runner in pieces (or coming together: where from, and its place about the middle) */
+} bits[8], spark[3]; /* the runner in pieces (or coming together: where from, and its place about the middle);
+                         the sparks of a coin taken */
+static int spark_t; /* (steps the sparks have left) */
 enum { SC_TITLE, SC_MAP, SC_PLAY, SC_END };
 enum { OV_NONE, OV_PAUSE, OV_QUIT };
 enum { I_LEFT = 1, I_RIGHT = 2, I_UP = 4, I_DOWN = 8 };
@@ -325,14 +327,18 @@ static void enter(void) { /* room rnum of the level */
 /* the runner in eight pieces, thrown up at 300 to 400 pixels a second, anywhere from left to right */
 static const int16_t sine[33] = {0,   25,  50,  74,  98,  121, 142, 162, 181, 198, 213, 226, 237, 245, 251, 255, 256,
                                  255, 251, 245, 237, 226, 213, 198, 181, 162, 142, 121, 98,  74,  50,  25,  0};
+static int sine_of(int d) { /* a 64th of a turn: 256ths */
+  d &= 63;
+  return d <= 32 ? sine[d] : -sine[d - 32];
+}
 static void die(void) {
   if (dead || won) return;
   dead = 1, shake = 5, shake_n = 30;
   sv.deaths++, sv.run++;
   for (int i = 0; i < 8; i++) {
-    int a = (int)(rnd() % 33), v = PS(300 + (int)(rnd() % 101)), c = a <= 16 ? sine[16 - a] : -sine[a - 16];
+    int a = (int)(rnd() % 33), v = PS(300 + (int)(rnd() % 101));
     bits[i].x = hx + hw * 128, bits[i].y = hy + hh * 128;
-    bits[i].vx = (int16_t)(v * c / 256), bits[i].vy = (int16_t)(-v * sine[a] / 256);
+    bits[i].vx = (int16_t)(v * sine_of(a + 16) / 256), bits[i].vy = (int16_t)(-v * sine[a] / 256);
   }
   save();
 }
@@ -363,7 +369,14 @@ static void exec(const step_t *p) {
       o->f &= ~F_OFF;
       if (a != 255) o->x = o->tx = ob[a].x + b * 256, o->y = o->ty = ob[a].y + c * 256;
       break;
-    case O_WARP: hx = (a + 5) * 256, hy = (b + 3) * 256, vx = vy = 0, frozen = 45; break;
+    case O_WARP: /* (the runner in pieces, spreading at 250 pixels a second, then coming together over there) */
+      for (int i = 0; i < 8; i++) {
+        int d = (int)(rnd() % 64);
+        bits[i].x = hx + hw * 128 + ((int)(rnd() % 5) - 2) * 256, bits[i].y = hy + hh * 128 + ((int)(rnd() % 11) - 5) * 256;
+        bits[i].vx = (int16_t)(PS(250) * sine_of(d + 16) / 256), bits[i].vy = (int16_t)(-PS(250) * sine_of(d) / 256);
+      }
+      hx = (a + 5) * 256, hy = (b + 3) * 256, vx = vy = 0, frozen = 45;
+      break;
     case O_HERO:
       if (a == H_RUN) run = PS(b);
       if (a == H_JUMP) jumpv = PS(b);
@@ -492,8 +505,13 @@ static void contacts(void) {
       vy = -maxup, jumping = 1, o->t = 18;
     } else if (kind == K_TRIG && !(o->f & F_USED)) {
       o->f |= F_USED, fire(o->ev);
-    } else if (kind == K_COIN) {
-      o->f |= F_OFF;
+    } else if (kind == K_COIN) { /* (three sparks fly up from it, at 100 pixels a second, for 300 ms) */
+      o->f |= F_OFF, spark_t = 18;
+      for (int i = 0; i < 3; i++) {
+        int d = 34 + (int)(rnd() % 30); /* (190 to 355 degrees) */
+        spark[i].x = o->x, spark[i].y = o->y;
+        spark[i].vx = (int16_t)(PS(100) * sine_of(d + 16) / 256), spark[i].vy = (int16_t)(PS(100) * sine_of(d) / 256);
+      }
     } else if (kind == K_BUTTON) {
       o->f |= F_USED;
     } else if (kind == K_DOOR) { /* (and the screen shakes a little, a quarter of a second) */
@@ -574,9 +592,22 @@ static void step(int in) {
   }
   script();
   objects();
-  if (born) born--;
-  else if (frozen) frozen--;
-  else if (!dead) hero(in);
+  if (born) {
+    born--;
+  } else if (frozen) { /* (warped: its pieces spread 250 ms, then come together in 500) */
+    if (--frozen > 30)
+      for (int i = 0; i < 8; i++) bits[i].x += bits[i].vx, bits[i].y += bits[i].vy;
+    else if (frozen == 30) /* (where about the runner each piece goes) */
+      for (int i = 0; i < 8; i++) bits[i].vx = (int16_t)(rnd() % 7) - 3, bits[i].vy = (int16_t)(rnd() % 11) - 5;
+  } else if (!dead) {
+    hero(in);
+  }
+  if (spark_t) {
+    spark_t--;
+    for (int i = 0; i < 3; i++) spark[i].x += spark[i].vx, spark[i].y += spark[i].vy;
+    if (spark_t == 9) /* (150 ms on, a quarter of the speed) */
+      for (int i = 0; i < 3; i++) spark[i].vx /= 4, spark[i].vy /= 4;
+  }
   if ((in & (I_LEFT | I_RIGHT)) && !cnt[EV_MOVE]) fire(EV_MOVE);
   if (keyev >= 0 && in & I_UP & ~held_in) fire(keyev);
   held_in = in;
@@ -805,6 +836,14 @@ static void play_scene(void *ctx) {
   } else if (!won && !born && !(frozen && frozen < 45)) {
     draw_hero();
   }
+  if (frozen && frozen < 45 && !dead) /* warped: the pieces spreading, then coming together where it went */
+    for (int i = 0; i < 8; i++) {
+      int e = frozen > 30 ? 0 : expo[30 - frozen];
+      int32_t tx = hx + hw * 128 + bits[i].vx * 256, ty = hy + hh * 128 + bits[i].vy * 256;
+      piece(P_PRE0 + (i & 3), bits[i].x + (tx - bits[i].x) / 1024 * e, bits[i].y + (ty - bits[i].y) / 1024 * e);
+    }
+  for (int i = 0; i < 3 && spark_t; i++) /* (the game's 2 x 2 sparks) */
+    gfx_fill(sxp(spark[i].x) - 1, syp(spark[i].y) - 1, 2, 2, HEX(0xFFE752));
   if (born) /* the pieces coming together, faster and faster (300 ms) */
     for (int i = 0; i < 8; i++) {
       int e = expo[(18 - born) * 30 / 18];
