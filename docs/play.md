@@ -740,3 +740,20 @@ Push every crate onto a goal: the keeper pushes one at a time and can't pull, so
 NumVisuals comes on its own, as NumVisuals.nwa (its backgrounds are also on NumPlay's home screen: press ⌫). 11 backgrounds and 5 add-ons: a clock, a stopwatch, a timer, a counter and your own text (press **Alpha** for letters). Everything is kept for next time.
 
 <br clear="right">
+
+## Retro-Go
+
+<img src="../games/retrogo/docs/game.png" width="320" align="right" alt="Retro-Go: Thwaite, an NES homebrew game">
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** | Choose a system, then a game. In a game: the D-pad |
+| **OK** | Open it. In a game: **A** (**2** on Sega's pads) |
+| **Back** | Back to the systems. In a game: **B** (**1**) |
+| **shift** / **EXE** | In a game: **Select** / **Start** (the Master System's **Pause**) |
+| **Backspace** | Retro-Go's menu: save, load, reset, options |
+| **Home** | Save and quit |
+
+Game Boy, Game Boy Color, NES, Master System and Game Gear games you pick on NumPlay's customizer website. Open a game for New game, or Resume game from one of its 4 save slots. In a game, Backspace opens Retro-Go's menu: Save & Continue, Save & Quit, Load game, Reset and Options, where the picture can be 1x, Fit or Full screen. The cartridges' own saves are kept as well.
+
+<br clear="right">

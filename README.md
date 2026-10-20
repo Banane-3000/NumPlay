@@ -107,9 +107,19 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
   </tr>
   <tr>
     <td align="center"><a href="https://github.com/Mason363/NumWorks-Super-Mario-64"><b>Super Mario 64</b></a><br><sub>In a repository of its own: NumWorks-Super-Mario-64</sub></td>
-    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Minecraft 1.18.2, Retro-Go and more: see the roadmap</sub></td>
+    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Minecraft 1.18.2 and more: see the roadmap</sub></td>
   </tr>
 </table>
+
+## Your own Game Boy, NES and Sega games
+
+<table>
+  <tr>
+    <td align="center" width="33%"><a href="games/retrogo/README.md"><img src="docs/media/thumb_retrogo.png" width="200" alt="Retro-Go"><br><b>Retro-Go</b></a><br><sub>Game Boy, Game Boy Color, NES, Master System and Game Gear games, with Retro-Go's menus and save slots</sub></td>
+  </tr>
+</table>
+
+Retro-Go plays the Game Boy, Game Boy Color, NES, Master System and Game Gear games you choose: games you own, or free ones like homebrew games. It isn't in NumPlay.nwa. Drop your games on [NumPlay Studio](https://mason363.github.io/NumPlay/customize/) and you get a NumPlay with Retro-Go and your games inside.
 
 ## How to install
 
@@ -230,9 +240,9 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [x] Ultimate Tic-Tac-Toe
 - [x] Super Mario 64, in a repository of its own: [NumWorks-Super-Mario-64](https://github.com/Mason363/NumWorks-Super-Mario-64)
 - [x] The Nether and the End in NumBlocks: portals, fortresses, strongholds and the Ender Dragon, in NumBlocks.nwa
+- [x] [Retro-Go](https://github.com/ducalex/retro-go) for Game Boy, Game Boy Color, NES, Master System and Game Gear: upload your own ROMs on the website and get a .nwa app that plays them
 - [ ] Full Minecraft 1.18.2 as a standalone app
 - [ ] A customizer website: pick the games you want in your launcher, with Enlarged Extra Apps support to fit several big games, or big and small ones together
-- [ ] [Retro-Go](https://github.com/ducalex/retro-go) for Game Boy, NES and more: upload your own ROMs on the website and get a .nwa app that plays them
 
 ## Credits
 
@@ -276,13 +286,14 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 - **reversal_lava63**, a beta tester who plays NumPlay's apps on a real calculator and reports what's wrong.
 - **[Gabriel](https://github.com/tomcalif9-stack)**, who made the home screen's moving backgrounds, translated NumPlay into French first, and tests it on Upsilon and an N0115.
 - **[LanoCodes17](https://github.com/LanoCodes17)**, whose idea the Konami code is: one of the secret ways into NumPlay from Matrices.
+- **[Retro-Go](https://github.com/ducalex/retro-go)** by ducalex inspired NumPlay's Retro-Go, whose launcher, menus and frame skipping are written again for NumPlay with no code copied from it. Its emulators are **[gnuboy](https://github.com/rofl0r/gnuboy)** by Laguna and Gilgamesh (GNU GPL v2 or later) for the Game Boy and **nofrendo** by Matthew Conte (GNU LGPL v2, used under the GPL) for the NES; the Master System and Game Gear are NumPlay's own, around **[superzazu's z80](https://github.com/superzazu/z80)** by Nicolas Allemand (MIT License). Its tests use Blargg's test ROMs, Matt Currie's dmg-acid2 and cgb-acid2, kevtris's nestest and Frank Cringle's zexdoc and zexall. Not affiliated with them.
 - Everyone who reported a bug: **NEE** ([reversallava63](https://github.com/reversallava63)), **Gabriel**, **[briac134](https://github.com/briac134)**, **[Raphanobie](https://github.com/Raphanobie)**, **[zbigzo](https://github.com/zbigzo)**, **Yacine**, **PelicanMan75**, **[Spykube](https://github.com/Spykube)** and **[axio-m](https://github.com/axio-m)**. Thank you!
 
 ## License
 
 NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyright (c) 2026 Mason Chen. Code and fonts from others keep their own licenses: the `UNLICENSE` files in the games' folders and the [LICENSES](LICENSES) folder. The names, artwork and music of the games NumPlay is inspired by belong to their makers and are not covered by it.
 
-<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Chrome Dino, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Chrome of Google LLC, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog of SEGA and Space Invaders of Taito.</sub>
+<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog, Master System, Game Gear), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Chrome Dino, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper), ducalex (Retro-Go), Nintendo (Game Boy, NES). Tetris is a trademark of The Tetris Company, Chrome of Google LLC, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog, Master System and Game Gear of SEGA, Space Invaders of Taito, and Game Boy, Game Boy Color and NES of Nintendo.</sub>
 
 ## Gallery
 
@@ -355,5 +366,6 @@ NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyri
   <tr>
     <td align="center"><img src="docs/media/gallery/uttt.gif" alt="Ultimate Tic-Tac-Toe: a game against the computer, which wins the middle board"><br><a href="games/uttt/README.md"><b>Ultimate Tic-Tac-Toe</b></a></td>
     <td align="center"><img src="docs/media/gallery/sokoban.gif" alt="Sokoban: Microban's ninth level, pushed through to its goals"><br><a href="games/sokoban/README.md"><b>Sokoban</b></a></td>
+    <td align="center"><img src="docs/media/gallery/retrogo.gif" alt="Retro-Go: from the Game Boy tab to the NES list, then Thwaite, a homebrew game, starts and fireworks stop the missiles"><br><a href="games/retrogo/README.md"><b>Retro-Go</b></a></td>
   </tr>
 </table>

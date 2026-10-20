@@ -450,5 +450,35 @@
     ],
     "app": "Sokoban.nwa",
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/sokoban"
+  },
+  {
+    "id": "retrogo",
+    "title": "Retro-Go",
+    "tagline": "Game Boy, NES and Sega games",
+    "credit": "Based on Retro-Go by ducalex",
+    "top": "0xE84B39",
+    "bottom": "0x1E1430",
+    "accent": "0x3199DC",
+    "records": [
+      "retrogo.cfg",
+      "rg_*"
+    ],
+    "reset": [
+      "rg_*"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "app": "RetroGo.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/retrogo",
+    "default": false,
+    "roms": true,
+    "systems": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
   }
 ]

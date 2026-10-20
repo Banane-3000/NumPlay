@@ -107,11 +107,18 @@ $(foreach g,$(STD_GAMES),$(eval MOD_$(g) = games/$(g)/output/module.o)$(eval SIM
 MODULES = $(foreach g,$(GAMES),$(B)/modules/$(g).o)
 
 # ------------------------------------------------------------------ generated glue
-$(B)/gen/numplay.ld: games/games.json tools/gen_games.py $(foreach g,$(KIT_ALL),$(B)/modules/$(g).o)
+$(B)/gen/numplay.ld: games/games.json tools/gen_games.py $(foreach g,$(GAMES) $(OPTIONAL_GAMES),$(B)/modules/$(g).o)
 	$(PY) tools/gen_games.py games/games.json $(B)/modules $(B)/gen
 
 $(B)/gen/shots_%.c: games/games.json tools/shots.py $$(SHOTS_$$*) | $(B)
 	cd games/$* && $(PY) ../../tools/shots.py --id $* --index $(INDEX_$*) $(COLORS_$*) ../../$@ $(SHOTS_REL_$*)
+
+# Retro-Go's table of games (tools/romtable.py): empty, or ROMS="a.gb b.nes" to try some games
+# in a build of one's own; the customizer website makes its own table. It goes with retrogo's
+# module (numplay.ld puts it in retrogo's block of flash).
+ROMS ?=
+$(B)/arm/roms.o: FORCE | $(B)
+	$(PY) tools/romtable.py -o $@ $(ROMS)
 
 # ------------------------------------------------------------------ the kit
 # NumPlay.nwa is linked from a kit, the same pieces the customizer website links in the browser
@@ -178,6 +185,10 @@ check: nwa apps
 	@for a in $(BIG_APPS); do $(NWLINK) nwa-bin --ram-length $(CUSTOM_RAM) $(B)/apps/$$a.nwa $(B)/apps/$$a.bin >/dev/null || \
 	  { echo "$$a.nwa needs more RAM than custom builds of 25.2 give apps ($(CUSTOM_RAM) bytes)"; exit 1; }; done; \
 	  echo "NumPlay's games and $(BIG_APPS) fit in $(CUSTOM_RAM) bytes of RAM"
+	@for a in $(foreach g,$(OPTIONAL_GAMES),$(if $(NWA_$(g)),$(basename $(NWA_$(g))))); do \
+	  $(NWLINK) nwa-bin --ram-length $(CUSTOM_RAM) $(B)/apps/$$a.nwa $(B)/apps/$$a.bin >/dev/null || \
+	  { echo "$$a.nwa needs more RAM than custom builds of 25.2 give apps ($(CUSTOM_RAM) bytes)"; exit 1; }; \
+	  echo "$$a.nwa (not in NumPlay.nwa: the customizer adds it) fits in $(CUSTOM_RAM) bytes of RAM"; done
 	@x=$$(cat $(B)/gen-upsilon/arena_extra); \
 	  $(NWLINK) nwa-bin --ram-length $$(( $(UPSILON_RAM) - x )) $(B)/NumPlay-Upsilon.nwa $(B)/NumPlay-Upsilon.bin && \
 	  echo "NumPlay-Upsilon.nwa installs as $$(wc -c < $(B)/NumPlay-Upsilon.bin) bytes; its RAM and any game's fit in $(UPSILON_RAM) bytes"

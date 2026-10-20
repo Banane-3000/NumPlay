@@ -503,6 +503,7 @@
       return;
     }
     rg = kit.games.find((g) => g.roms) || null;
+    if (rg) $('#rom-file').accept = Object.keys(EXT).filter((e) => (rg.systems || [1, 2, 3]).includes(EXT[e])).map((e) => '.' + e).join(',');
     const small = $('#small'), big = $('#big');
     for (const g of kit.games) {
       if (g === rg) continue;
