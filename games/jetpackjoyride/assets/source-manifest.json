@@ -1,0 +1,67 @@
+{
+  "source": "https://archive.org/download/jetpack-joyride-assets",
+  "archive": "jetpack joyride images.rar",
+  "creator": "Halfbrick",
+  "files": {
+    "laboratory": {
+      "archive_file": "1a3e77c5-b730-4ae6-9506-35e2644094c2.png",
+      "sha256": "f23ee6f646df07467b108ab446b3fbf881bbf20ce19645bac433c4f55ee7dca4"
+    },
+    "jetpack_word": {
+      "archive_file": "ad9d62ec-8e4e-416e-826e-f577fe609103.png",
+      "sha256": "25cd6dedf1c18fe16b9e4ac0d1e8bf8c91028652863aaae8a39555131e8e269b"
+    },
+    "joyride_word": {
+      "archive_file": "4f8632f9-cd71-4b2f-898a-2f47c0344b7f.png",
+      "sha256": "9bae8136eeb41c10b1a7d9ee83f8e1e21ef1244ae897759d97880effbd5e1921"
+    },
+    "barry_hero": {
+      "archive_file": "ee031bfe-32a8-487d-9f68-f0c66a3acf55.png",
+      "sha256": "bd72558eb01bb53cc22b488d30780e28850209e910bef94720503ccdad0d4c34"
+    },
+    "barry_body": {
+      "archive_file": "21420928-1f48-42b3-af14-a9d19b8d8020.png",
+      "sha256": "162c5f7dfc67a8755367d0b0a37fdf2d5b1b4c8f4511fa1be5dd5f4630d2c844"
+    },
+    "barry_head": {
+      "archive_file": "c26be092-2285-4590-b144-df89a4dbf0c0.png",
+      "sha256": "fcf79f3e8913fc0640ce122c19ed710ea22d58ecd7a19f4bd394260c2f0bc356"
+    },
+    "machinegun": {
+      "archive_file": "00c9a12f-2d9f-4bf9-ba50-e6a8e2858b52.png",
+      "sha256": "4dc03708d7a9465a9adf6fdcee414161e094d76fa41e4488ccae08cba193578e"
+    },
+    "coins": {
+      "archive_file": "5f7ee621-7ab3-41ef-bbd7-db48931e8f42.png",
+      "sha256": "93b62a15ad4bda739aa80cbc48c3ad61f6367b47c7bb8902b5cc7f83e034109a"
+    },
+    "shield": {
+      "archive_file": "26d5bd62-7f80-4226-ba11-432368e112cf.png",
+      "sha256": "01638947eb71019753d609ff5f1d3a28a661d1ad6737b930bf54e1ea70c0d370"
+    },
+    "missiles": {
+      "archive_file": "970298ce-a6e3-411a-9ab3-5f6d62ad9f9e.png",
+      "sha256": "69b569f095dc424e5cee0369b5628f1c12ea3f6d96e5cf5ebc413fadeb1f8bc9"
+    },
+    "zapper_caps": {
+      "archive_file": "4a2e43c1-5af8-4c01-8e71-e9e2e7815986.png",
+      "sha256": "ffe6915a3bdf72eba728c89651361da97b49c2d50c2c8c4f7bf001269882552c"
+    },
+    "electricity": {
+      "archive_file": "6f62ade3-a4ea-457d-8281-4c836e647f7f.png",
+      "sha256": "95062befaf56dd49235dd7a985fcfb27cd9a5414165a259575308556a1009645"
+    },
+    "muzzle_flash": {
+      "archive_file": "0ae2fd6b-7484-4bd8-9184-f3bf9fac5d08.png",
+      "sha256": "baa348db9cfa40e11d996d5a6f274627e64cb43477ab817fd1e1bdc9cdd8d4a2"
+    },
+    "scientists": {
+      "archive_file": "6029b5c9-ee09-4747-90ea-2e14087ab8c7 (1).png",
+      "sha256": "55917d8ca84c8ae397b9be84f6cc602bbf7c5b60766bf4f6e675364eb7cc2b68"
+    },
+    "warnings": {
+      "archive_file": "89bfda72-a412-49ec-b87f-a4b09ff275f7.png",
+      "sha256": "de1eab0412d80479fc96b6fe2103ffad96ee8b5921deccb7dc088f9ffbb14559"
+    }
+  }
+}
