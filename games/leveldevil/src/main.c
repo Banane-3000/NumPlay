@@ -772,7 +772,7 @@ static void play_hud(void) {
   }
   if (frame >= 30 && !ov && (jaw == J_OPEN || jaw == J_OPENING)) { /* the game's back button, the calculator's key */
     blit(P_BACK, 8, 6);
-    text(&font, 4, 22, T("back"), YELLOW);
+    text(&font, 4, 23, T("back"), BTN_EDGE), text(&font, 4, 22, T("back"), YELLOW); /* (shadowed, as its buttons) */
   }
   if (waiting && sv.open <= 3) text_c(&font, 160, 40, T("PRESS ANY KEY"), YELLOW); /* (the first worlds) */
 }
@@ -831,7 +831,7 @@ static int pan_for(int i) { return clampi(portal_at[i][0] + (i == 15 ? 16 : 8) -
 static void title_scene(void *ctx) {
   blit_rows(P_TITLE, -56, 0, 0, 90, 0); /* (its top: LEVEL DEVIL, and the flames) */
   gfx_fill(0, 90, SCREEN_W, SCREEN_H - 90, ORANGE);
-  if (!ov) blit(P_CARD_ON, 122, 120), text_c(&font_small, 160, 206, T("press OK"), YELLOW);
+  if (!ov) blit(P_CARD_ON, 122, 120), text_c(&font, 160, 204, T("press OK"), DARK);
   draw_jaws();
   if (ov) overlay();
 }

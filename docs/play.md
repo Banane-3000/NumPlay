@@ -449,19 +449,22 @@ Click the cookie, buy buildings that bake for you and upgrades that make them ba
 
 ## Level Devil
 
-<img src="media/leveldevil.gif" width="320" align="right" alt="Level Devil: the floor drops away under the runner; a button makes it grow, another shrinks it; spikes come up in its way">
+<img src="media/leveldevil.gif" width="320" align="right" alt="Level Devil: the Devil's eyes on the jaws, the title and the map; in the first room the floor drops under the runner, it dies, tries again and jumps the pit to the door">
 
 Level Devil comes as its own app, `LevelDevil.nwa`: install it on its own.
 
 | Key | What it does |
 | --- | --- |
-| **Left / Right** (or 4 / 6) | Run |
+| **Left / Right** (or 4 / 6) | Run; on the map, the world before or after |
 | **Up**, **OK** or **EXE** (or 8 / 5) | Jump (in Gravity: turn gravity round; in Flappy: flap) |
 | **Down** (or 2) | Jump, in the room that says so |
+| **Up / Down** on the map | The nearest world up or down |
+| **OK** on the title and the map | Play |
 | **Any key**, once dead | Try again |
 | **Back** | Pause: Resume, Restart, Levels, Quit game |
+| **Home** | Save and quit |
 
-Run to the door. These are the game's 80 rooms in its order: sixteen worlds of five (Pits, Spikes, Push, Coins, Controls, Platforms, Springs, Warps, Scale, Doors, Saws, Flappy, Gravity, Movement, Wraparound and the Boss), each with its own traps and timing. Clear a world's five rooms to open the next one on the map. Your deaths are counted, with your best for each world. The game keeps a copy of its save in `leveldevil_saves.py`, so installing apps again doesn't erase your progress.
+Run to the door. These are the game's 80 rooms in its order: sixteen worlds of five (Pits, Spikes, Push, Coins, Controls, Platforms, Springs, Warps, Scale, Doors, Saws, Flappy, Gravity, Movement, Wraparound and the Boss), each with its own traps and timing, drawn with the game's own pictures. Clear a world's five rooms to open the next portal on the game's map. Your deaths are counted, with your best for each world. The game keeps a copy of its save in `leveldevil_saves.py`, so installing apps again doesn't erase your progress.
 
 <br clear="right">
 
