@@ -73,6 +73,10 @@ Obj *obj_new(int kind, int x, int y);
 Obj *obj_find(int name);
 Obj *obj_get(int name);   /* obj_find, or a spare object when there is none (events can't crash on it) */
 void obj_clear_all(void);
+/* the object walks through n points (x, y, ...) at sp pixels a frame, on its own: whoever started it goes on (Frisk
+ * walks); at the last point it's gone (end -1) or faces that way (DIR_*) */
+void obj_walk_off(Obj *o, int sp, int end, int n, ...);
+void obj_walk_cancel(Obj *o);   /* (a cutscene walks it itself) */
 /* the room's things, made by rooms.c */
 Obj *obj_npc(int name, const uint16_t spr[4], int x, int y, int dir, int event);
 Obj *obj_toriel(int x, int y, int dir);

@@ -45,6 +45,7 @@ void room_update(void) {
 
 /* what a room draws on its floor, under everything (world.c) */
 void room_draw_floor(void) {
+  ruins3_draw();
   snow1_draw();
   snow2_draw();
   ht1_draw();

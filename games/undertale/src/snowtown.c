@@ -218,8 +218,7 @@ spared:
   SAY(FACE_PAPYRUS, "`4* NYOO HOO HOO...|* I COULDN'T EVEN CAPTURE\n  YOU.\n* SO MUCH FOR THE GUARD.|`0* WAIT... YOU WANT TO BE FRIENDS???|`2* WOWIE!!! COME HANG OUT AT MY HOUSE LATER!|`0* (THE CAPITAL IS FURTHER ON, PAST THE TOWN.)");
   set_flag(F_PAP_DATE, 1);
   set_flag(F_TOWN_HOUSE, 1);
-  WALK(p, 3240, 1100, 6);
-  gone(p);
+  LEAVE(p, 6, 3240, 1100);
   if (c->self) gone(c->self);
   EV_END;
 }

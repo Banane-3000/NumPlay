@@ -393,10 +393,8 @@ static int ev_guards(Ev *c) {
   }
   set_flag(F_HT_GUARDS, 1);
   NARRATE("* So, uh... we're gonna go get\n  some ice cream now.|* Later, dude!");
-  WALK_TO(b, 3230, b->y, 3);
-  WALK(a, 3230, a->y, 3);
-  gone(obj_get(ACTOR_RG01));
-  gone(obj_get(ACTOR_RG02));
+  LEAVE(b, 3, 3230, b->y);
+  LEAVE(a, 3, 3230, a->y);
   EV_END;
 }
 
@@ -425,8 +423,7 @@ static int ev_news(Ev *c) {
   }
   NARRATE("* ALPHYS HACKED MY BOMB?!|* UGH! THAT'S ALL FOR TONIGHT,\n  FOLKS!");
   m = obj_get(ACTOR_METTATON);
-  WALK(m, m->x, m->y - 200, 6);
-  gone(obj_get(ACTOR_METTATON));
+  LEAVE(m, 6, m->x, m->y - 200);
   fields_down();
   news = NEWS_OVER;
   set_flag(F_HT_NEWS, c->v[0]);
