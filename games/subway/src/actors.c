@@ -134,6 +134,7 @@ static void pose(const Anim *an, Bones *out) {
 /* ---------------------------------------------------------------- drawing a model */
 static M34 bone_w[MAXB];   /* the bones of the model just drawn, in the world */
 static const Model *drawn;
+static float drawn_yaw;   /* (its turn) */
 
 /* where the light comes from (in the world): above, to the right, from the camera's side */
 static const V3 sun = {0.35f, 0.8f, -0.45f};
@@ -206,7 +207,7 @@ void actor_draw(int who, const Anim *an, V3 at, float yaw, float lean, float lig
     root = mul(&root, &down);
   }
   place_bones(an, &root);
-  drawn = m;
+  drawn = m, drawn_yaw = yaw;
   draw_skin(m, bone_w, light);
 }
 
@@ -230,17 +231,21 @@ void board_draw(V3 p, int kind, float yaw, float t, float lt) {
 
 void jetpack_draw(float t, float lt) {
   if (drawn == &model_dog || drawn == &model_inspector) return;
-  /* on the back: the spine bone's frame, a little behind it */
-  M34 off = translate(0, 0.05f, -0.17f);
-  M34 w = mul(&bone_w[RB_SPINE], &off);
+  /* on the back: where the spine bone is, upright with the body (its bones' own axes point anywhere), behind it;
+   * the pick-up's model a size smaller */
+  const float *sp = bone_w[RB_SPINE].m;
+  M34 w = translate(sp[3], sp[7] + 0.1f, sp[11] - 0.2f), ry = rot_y(drawn_yaw), tilt = rot_x(0.35f);
+  w = mul(&w, &ry);
+  w = mul(&w, &tilt);
+  for (int i = 0; i < 3; i++) w.m[i] *= 0.6f, w.m[4 + i] *= 0.6f, w.m[8 + i] *= 0.6f;
   draw_rigid(&model_p_jetpack, &w, lt);
   /* the flames */
   for (int s = -1; s <= 1; s += 2) {
-    V3 n = ap(&w, (V3){0.11f * (float)s, -0.22f, -0.02f});
-    float len = 0.42f + 0.14f * fsin(t * 37 + (float)s);
-    V3 f[3] = {{n.x - 0.07f, n.y, n.z}, {n.x + 0.07f, n.y, n.z}, {n.x, n.y - len, n.z - 0.12f}};
+    V3 n = ap(&w, (V3){0.2f * (float)s, -0.36f, 0});
+    float len = 0.3f + 0.1f * fsin(t * 37 + (float)s);
+    V3 f[3] = {{n.x - 0.05f, n.y, n.z}, {n.x + 0.05f, n.y, n.z}, {n.x, n.y - len, n.z - 0.1f}};
     r_poly(f, 3, 0xFF9A1A, P_ALPHA | P_NOHAZE | P_TWOSIDED, 220);
-    V3 f2[3] = {{n.x - 0.035f, n.y, n.z - 0.01f}, {n.x + 0.035f, n.y, n.z - 0.01f}, {n.x, n.y - len * 0.6f, n.z - 0.1f}};
+    V3 f2[3] = {{n.x - 0.025f, n.y, n.z - 0.01f}, {n.x + 0.025f, n.y, n.z - 0.01f}, {n.x, n.y - len * 0.6f, n.z - 0.08f}};
     r_poly(f2, 3, 0xFFF4B0, P_ALPHA | P_NOHAZE | P_TWOSIDED, 230);
   }
 }
