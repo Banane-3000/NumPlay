@@ -14,7 +14,7 @@ GAME = src/main.c src/world.c src/edits.c src/render.c src/player.c src/phys.c s
 HEADERS = $(wildcard src/*.h) ../common/epsilon_app.h ../common/epsilon_files.h ../common/np_text.h Makefile
 
 CFLAGS = -std=gnu11 $(shell $(NWLINK) eadk-cflags-device)
-CFLAGS += -O2 -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant -ffast-math
+CFLAGS += -Oz -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant -ffast-math
 CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fwhole-program -fvisibility=internal
 CFLAGS += -ffunction-sections -fdata-sections $(EXTRA)
 LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
