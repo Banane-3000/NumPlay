@@ -1594,6 +1594,129 @@ def builtin_artwork() -> Path:
     return BUILTIN_SKIN
 
 
+# NUMPLAY_WINDOW_MEMORY_V1
+WINDOW_SETTINGS_FILE = Path.home() / ".numplay-emulator" / "settings.json"
+
+
+def _window_settings_read():
+    """Use the same JSON as Dark mode; tolerate an absent or damaged file."""
+    try:
+        settings = json.loads(WINDOW_SETTINGS_FILE.read_text(encoding="utf-8"))
+        return settings if isinstance(settings, dict) else {}
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def _window_settings_save(placement):
+    """Preserve unrelated preferences (especially the theme)."""
+    settings = _window_settings_read()
+    settings["window"] = dict(placement)
+    WINDOW_SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = WINDOW_SETTINGS_FILE.with_suffix(".window-tmp")
+    try:
+        tmp.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+        os.replace(tmp, WINDOW_SETTINGS_FILE)
+    finally:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _window_workareas(root):
+    """Visible desktop work areas. Windows includes secondary monitors on the left."""
+    if os.name == "nt":
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            class RECT(ctypes.Structure):
+                _fields_ = [(name, ctypes.c_long) for name in ("left", "top", "right", "bottom")]
+
+            class MONITORINFO(ctypes.Structure):
+                _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", RECT),
+                            ("rcWork", RECT), ("dwFlags", wintypes.DWORD)]
+
+            callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HMONITOR,
+                                                wintypes.HDC, ctypes.POINTER(RECT),
+                                                wintypes.LPARAM)
+            areas = []
+
+            def each_monitor(handle, _hdc, _rect, _data):
+                info = MONITORINFO()
+                info.cbSize = ctypes.sizeof(MONITORINFO)
+                if ctypes.windll.user32.GetMonitorInfoW(handle, ctypes.byref(info)):
+                    rc = info.rcWork
+                    areas.append((int(rc.left), int(rc.top), int(rc.right), int(rc.bottom)))
+                return True
+
+            ctypes.windll.user32.EnumDisplayMonitors(None, None, callback_type(each_monitor), 0)
+            if areas:
+                return areas
+        except (AttributeError, OSError, ValueError):
+            pass
+    return [(0, 0, max(1, root.winfo_screenwidth()),
+             max(1, root.winfo_screenheight()))]
+
+
+def _window_safe_geometry(placement, workareas):
+    """Keep a saved window reachable after a monitor is disconnected."""
+    if not isinstance(placement, dict):
+        return None
+    values = {}
+    for key in ("width", "height", "x", "y"):
+        value = placement.get(key)
+        if type(value) is not int or abs(value) > 100000:
+            return None
+        values[key] = value
+    w, h = values["width"], values["height"]
+    x, y = values["x"], values["y"]
+    if not (400 <= w <= 12000 and 250 <= h <= 12000):
+        return None
+    if not workareas:
+        return None
+
+    def intersection(area):
+        l, t, r, b = area
+        return max(0, min(x+w, r)-max(x, l)) * max(0, min(y+h, b)-max(y, t))
+
+    area = max(workareas, key=intersection)
+    if intersection(area) < 120 * 45:
+        # The saved display is gone; centre the window on the primary display.
+        area = workareas[0]
+        l, t, r, b = area
+        w = min(w, max(770, r-l))
+        h = min(h, max(510, b-t))
+        x = l + max(0, (r-l-w)//2)
+        y = t + max(0, (b-t-h)//2)
+    else:
+        l, t, r, b = area
+        w = min(w, max(770, r-l))
+        h = min(h, max(510, b-t))
+        # Keep the title bar and enough of the window visible to grab/resize.
+        x = max(l- w + 160, min(x, r-160))
+        y = max(t, min(y, b-65))
+    return (w, h, x, y, bool(placement.get("maximized", False)))
+
+
+def _window_move_absolute_on_windows(root, x, y):
+    """Tk's negative geometry offsets mean 'from right/bottom', not screen X/Y.
+
+    Move the outer window frame with Win32 when a second monitor sits at X<0.
+    For normal positive coordinates Tk's own geometry is sufficient.
+    """
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        handle = int(root.wm_frame(), 0)
+        SWP_NOSIZE, SWP_NOZORDER, SWP_NOACTIVATE = 0x0001, 0x0004, 0x0010
+        ctypes.windll.user32.SetWindowPos(ctypes.c_void_p(handle), None,
+                                           int(x), int(y), 0, 0,
+                                           SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)
+    except (AttributeError, OSError, ValueError, TypeError):
+        pass  # Tk still restores the chosen width and height.
+
 class CalculatorSkinApp(LiveApp):
     """NumWorks skin with mutually exclusive file and live-development modes.
 
@@ -1654,8 +1777,77 @@ class CalculatorSkinApp(LiveApp):
         self._builder_poll_id = self.root.after(120, self._poll_builder)
         self._upload_poll_id = self.root.after(160, self._poll_upload)
         self._apply_interface_theme(initial=True)
+        self._restore_window_placement()
+        self.root.bind("<Configure>", self._remember_window_geometry, add="+")
         if start_live:
             self.root.after(260, self._start_builder)
+
+    # NUMPLAY_WINDOW_MEMORY_V1: restore on launch, save only on an actual close.
+    def _restore_window_placement(self):
+        saved = _window_settings_read().get("window")
+        placement = _window_safe_geometry(saved, _window_workareas(self.root))
+        self._window_last_normal = None
+        self._window_restoring = False
+        if placement is None:
+            return
+        w, h, x, y, maximized = placement
+        self._window_last_normal = (w, h, x, y)
+        self._window_restoring = True
+        # On Windows negative X means a display left of the primary one.
+        # Always position the actual Win32 frame, rather than interpreting
+        # negative X as a distance measured from the right screen edge.
+        if os.name == "nt":
+            self.root.geometry(f"{w}x{h}+{max(0, x)}+{max(0, y)}")
+            self.root.after(45, lambda: _window_move_absolute_on_windows(self.root, x, y))
+        else:
+            self.root.geometry(f"{w}x{h}{x:+d}{y:+d}")
+        if maximized:
+            self.root.after(110, self._restore_window_maximized)
+        self.root.after(200, self._finish_window_restoring)
+
+    def _restore_window_maximized(self):
+        try:
+            self.root.state("zoomed")
+        except tk.TclError:
+            try:
+                self.root.attributes("-zoomed", True)
+            except tk.TclError:
+                pass
+
+    def _finish_window_restoring(self):
+        self._window_restoring = False
+
+    def _remember_window_geometry(self, event=None):
+        if event is not None and event.widget is not self.root:
+            return
+        if getattr(self, "_window_restoring", False) or self.fullscreen:
+            return
+        try:
+            if self.root.state() != "normal":
+                return
+            w, h = self.root.winfo_width(), self.root.winfo_height()
+            x, y = self.root.winfo_x(), self.root.winfo_y()
+            if w >= 400 and h >= 250:
+                self._window_last_normal = (w, h, x, y)
+        except tk.TclError:
+            pass
+
+    def _save_window_placement(self):
+        try:
+            state = self.root.state()
+            maximized = state == "zoomed"
+            if self.fullscreen:
+                maximized = False  # Fullscreen is intentionally not persistent.
+            if state == "normal" and not self.fullscreen:
+                self._remember_window_geometry()
+            geom = self._window_last_normal
+            if geom is None:
+                return
+            w, h, x, y = geom
+            _window_settings_save({"width": w, "height": h, "x": x, "y": y,
+                                   "maximized": maximized})
+        except (OSError, ValueError, tk.TclError) as exc:
+            print(f"[NumPlay] Could not save window placement: {exc}", file=sys.stderr)
 
     def _build_ui(self):
         self.root.title("NumPlay emulator")
@@ -2458,6 +2650,7 @@ class CalculatorSkinApp(LiveApp):
                                    "Do NOT unplug the NumWorks during installation.",
                                    parent=self.root)
             return
+        self._save_window_placement()
         try:
             self.root.after_cancel(self._upload_poll_id)
         except (tk.TclError, AttributeError):
