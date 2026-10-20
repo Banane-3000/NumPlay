@@ -191,8 +191,8 @@ static void news_text(const char *s, int alpha, int dy) {
   uint16_t c = RGB(255, 255, 255);
   if (n == 1) gfx_text_outline_center(F_SMALL, NEWS_X + w / 2 + 2, 13 + dy, lines[0], c, alpha);
   else if (n == 2) {
-    gfx_text_outline_center(F_SMALL, NEWS_X + w / 2 + 2, 9 + dy, lines[0], c, alpha);
-    gfx_text_outline_center(F_SMALL, NEWS_X + w / 2 + 2, 18 + dy, lines[1], c, alpha);
+    gfx_text_outline_center(F_SMALL, NEWS_X + w / 2 + 2, 8 + dy, lines[0], c, alpha);   /* (both lines above the */
+    gfx_text_outline_center(F_SMALL, NEWS_X + w / 2 + 2, 16 + dy, lines[1], c, alpha);  /* bar's edge) */
   } else {   /* too long: it goes by */
     U.news_long = true;
     int tw = gfx_text_width(F_SMALL, s);
