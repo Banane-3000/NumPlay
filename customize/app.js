@@ -170,7 +170,7 @@
     const from = shownUsed, t0 = performance.now(), cancel = ++tween;
     const step = (now) => {
       if (cancel !== tween) return;
-      const k = Math.min(1, (now - t0) / 220), e = 1 - Math.pow(1 - k, 3);
+      const k = Math.min(1, Math.max(0, (now - t0) / 220)), e = 1 - Math.pow(1 - k, 3);  // (a frame's time can be before t0)
       shownUsed = from + (used - from) * e;
       $('#used').textContent = (shownUsed / MiB).toFixed(2);
       $('#status-line').textContent = (shownUsed / MiB).toFixed(2) + ' OF ' + +(cap / MiB).toFixed(2) + ' MB';
