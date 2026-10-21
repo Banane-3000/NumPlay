@@ -75,6 +75,14 @@ void game_level_exit(int mode) {
   else menu_open_overworld(mode == LEXIT_COMPLETED && !g_level.in_credits, mode == LEXIT_COMPLETED && g_should_advance);
 }
 
+/* a new room: the run is saved as Home would keep it, so a calculator that ends the app before it can save (or runs
+ * out of battery) loses at most a room */
+void game_autosave(void) {
+  if (!g_in_level) return;
+  g_save.has_session = g_session.in_area;
+  save_write_quick();
+}
+
 /* Home: the run is kept (Save & Quit) */
 void game_save(void) {
   if (g_in_level) g_save.has_session = g_session.in_area;   /* (from the menus, the run Save & Quit kept stays) */
@@ -89,6 +97,7 @@ void game_frame(void) {
     return;
   }
   if (g_menu) menu_update();
+  if (g_in_level && g_frame % (60 * 20) == 0 && g_frame) game_autosave();   /* and every 20 seconds */
   if (g_in_level) level_update(), hud_update();
   else wipe_update();
   g_frame++;

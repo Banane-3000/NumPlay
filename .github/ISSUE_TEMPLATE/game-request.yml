@@ -2,7 +2,6 @@ name: Game request
 description: A game you'd like in NumPlay (one game per issue)
 title: "Add "
 labels: ["game request"]
-assignees: ["Mason363"]
 body:
   - type: markdown
     attributes:

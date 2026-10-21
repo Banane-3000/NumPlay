@@ -234,6 +234,10 @@ static bool near_water(int x, int y, int z) {
 static bool can_stay(int b, int x, int y, int z) {
   int below = world_get(x, y - 1, z);
   int m = blk_model[b];
+#if NB_DIMS
+  int d = dims_can_stay(b, x, y, z);
+  if (d >= 0) return d;
+#endif
   if (b >= B_WHEAT_0 && b <= B_WHEAT_7) return below == B_FARMLAND || below == B_FARMLAND_WET;
   if ((b >= B_CARROTS_0 && b <= B_CARROTS_3) || (b >= B_POTATOES_0 && b <= B_POTATOES_3))
     return below == B_FARMLAND || below == B_FARMLAND_WET;
@@ -559,7 +563,7 @@ static void sleep_in(int x, int y, int z) {
   }
   for (int i = 0; i < N_ENT; i++) {
     const Entity *e = &ents[i];
-    if (e->type >= E_ZOMBIE && e->type <= E_SPIDER && fabsf(e->x - x) < 8 && fabsf(e->y - y) < 5 &&
+    if (IS_MONSTER(e->type) && fabsf(e->x - x) < 8 && fabsf(e->y - y) < 5 &&
         fabsf(e->z - z) < 8) {
       gui_message(T("You may not rest now, there are monsters nearby"));
       return;
@@ -570,6 +574,10 @@ static void sleep_in(int x, int y, int z) {
   pl.vx = pl.vy = pl.vz = 0;
   pl.sleep_timer = 1;
 }
+
+#if NB_DIMS
+#include "player_dims.h"
+#endif
 
 /* OK pressed: use the block looked at, else the held item */
 static void use(uint32_t pressed) {
@@ -607,6 +615,9 @@ static void use(uint32_t pressed) {
       return;
     }
   }
+#if NB_DIMS
+  if (dims_use(k, on_block, x, y, z, b)) return;
+#endif
   switch (k) {
     case IK_BLOCK:
       if (on_block && place(h->id)) use_up(), player_swing();
@@ -758,6 +769,9 @@ void player_spawn(void) {
 }
 
 void player_respawn(void) {
+#if NB_DIMS
+  dims_respawn();
+#endif
   pl.x = pl.spawn_x + 0.5f, pl.y = (float)pl.spawn_y, pl.z = pl.spawn_z + 0.5f;
   pl.vx = pl.vy = pl.vz = 0;
   pl.health = 20, pl.food = 20, pl.sat = 5, pl.exhaustion = 0, pl.air = 300, pl.fall = 0, pl.fire = 0;
@@ -915,6 +929,12 @@ void player_tick(uint32_t keys, uint32_t pressed) {
       if (at == B_COBWEB) pl.vx *= 0.25f, pl.vy *= 0.05f, pl.vz *= 0.25f;
       float bvx = pl.vx, bvz = pl.vz;
       move(pl.vx, pl.vy, pl.vz);
+#if NB_DIMS
+      /* BlockSoulSand.onEntityCollidedWithBlock: in it, slow */
+      for (int sx = ifloor(pl.x - 0.299f); sx <= ifloor(pl.x + 0.299f); sx++)
+        for (int sz = ifloor(pl.z - 0.299f); sz <= ifloor(pl.z + 0.299f); sz++)
+          if (world_get(sx, ifloor(pl.y + 0.001f), sz) == B_SOUL_SAND) pl.vx *= 0.4f, pl.vz *= 0.4f, sx = sz = 1 << 20;
+#endif
       if (ladder && (bvx != pl.vx || bvz != pl.vz)) pl.vy = 0.2f;
       pl.vy -= 0.08f;
       pl.vy *= 0.98f;
@@ -930,10 +950,17 @@ void player_tick(uint32_t keys, uint32_t pressed) {
   pl.bob += (want - pl.bob) * 0.4f;
   if (pl.mode == 0) exhaust(moved * (pl.in_water ? 0.015f : pl.sprinting ? 0.1f : 0.0f));
   hazards(y0);
+#if NB_DIMS
+  dims_player_tick();
+  buttons_tick();
+#endif
   effects_tick();
   if (pl.mode == 0) food_tick();
   if (pl.dead) return;
   pick();
+#if NB_DIMS
+  if ((pressed & K_ATTACK) && dims_punch()) player_swing(), pressed &= ~K_ATTACK, keys &= ~K_ATTACK;
+#endif
   /* a mob under the crosshair, nearer than the block: attacking hits it, using uses on it */
   Entity *target = entity_looked_at(pl.mode ? 5.0f : 3.0f, pl.hit_face >= 0 ? hit_t : 1e9f);
   if (target) {
@@ -957,6 +984,13 @@ void player_tick(uint32_t keys, uint32_t pressed) {
   /* PlayerControllerMP.onPlayerDamageBlock: looking at another block starts over */
   static int bx_ = -1, by_, bz_;
   if (pl.hit_x != bx_ || pl.hit_y != by_ || pl.hit_z != bz_) pl.breaking = 0, bx_ = pl.hit_x, by_ = pl.hit_y, bz_ = pl.hit_z;
+#if NB_DIMS
+  /* BlockDragonEgg.onBlockClicked: it goes elsewhere */
+  if ((pressed & K_ATTACK) && pl.hit_face >= 0 && pl.mode == 0 && world_get(pl.hit_x, pl.hit_y, pl.hit_z) == B_DRAGON_EGG) {
+    egg_teleport(pl.hit_x, pl.hit_y, pl.hit_z);
+    keys &= ~K_ATTACK;
+  }
+#endif
   if ((keys & K_ATTACK) && pl.hit_face >= 0 && !break_cooldown) {
     player_swing();
     int b = world_get(pl.hit_x, pl.hit_y, pl.hit_z);
@@ -1045,3 +1079,10 @@ void player_tick(uint32_t keys, uint32_t pressed) {
     if (pressed & (K_SLOT1 << n)) pl.slot = n;
   prev_keys = keys;
 }
+#if NB_DIMS
+/* (tests) the held item used on the block at (x, y, z), its face f, as OK would */
+void player_use_on(int x, int y, int z, int f) {
+  pl.hit_x = x, pl.hit_y = y, pl.hit_z = z, pl.hit_face = f;
+  use(K_USE);
+}
+#endif

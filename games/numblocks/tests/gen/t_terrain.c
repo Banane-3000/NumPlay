@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
     }
     double el = (double)(clock() - t0) / CLOCKS_PER_SEC;
     printf("%d chunks in %.3f s (%.3f ms/chunk)\n", 4 * R * R, el, el * 1000 / (4 * R * R));
-    FILE *f = fopen("/tmp/claude-0/-home-user-NumPlay/3af2eb1c-20d9-554a-acfb-eb19ce4fa977/scratchpad/gen/terrain.ppm", "wb");
+    FILE *f = fopen("terrain.ppm", "wb");
     fprintf(f, "P6 %d %d 255\n", W, W);
     fwrite(img, 1, (size_t)W * W * 3, f);
     fclose(f);

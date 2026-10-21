@@ -408,6 +408,7 @@ bool bench_respawn(const char *name);   /* RESPAWN: the Knight asleep on the ben
 void spell_reset(void);
 void spell_update(void);
 void spell_cancel(void);
+void spell_cancel_regain(void);   /* (HERO DAMAGED, LEAVING SCENE) */
 bool spell_busy(void);
 void spell_cast(bool up, bool down);
 void fireballs_tick(void);
@@ -481,6 +482,7 @@ bool map_pane_holds(void);    /* (Do Not Close: zoomed into) */
 float map_pane_nav(void);     /* (the pane's arrows' and the side panes' names' alpha: away as it is zoomed into) */
 void map_pane_close(void);
 float text_box(int text, int style, float x, float y, float w, int align, float a);
+int text_fit(int text, float w, float room);   /* (a description's style: the first of MSG, MSG_S, MSG_XS that fits) */
 int charm_cost(int id);         /* (charmCost_N) */
 bool charm_equipped(int id);
 bool menu_quit(void);

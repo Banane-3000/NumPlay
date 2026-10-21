@@ -1606,8 +1606,60 @@ typedef struct {
 static TextRun runs[MAX_RUNS];
 static int nruns;
 
+#ifdef HOST
+/* (tests: the text of each frame drawn, checked: in the screen, no line over another, none left out) */
+bool g_text_audit;
+char g_text_audit_log[2048];
+static uint32_t runs_dropped;
+static void text_box_px(const TextRun *r, int *x0, int *y0, int *x1, int *y1) {
+  float pen = r->x;
+  *x0 = *y0 = 1 << 30, *x1 = *y1 = -(1 << 30);
+  for (int i = 0; i < r->n; i++) {
+    const Glyph *g = font_glyph(r->style, r->s[i], 0);
+    if (!g) continue;
+    int gx = (int)floorf(pen) + g->left, gy = r->y - g->top;
+    pen += g->adv * (1.0f / 64);
+    if (!g->w) continue;
+    if (gx < *x0) *x0 = gx;
+    if (gx + g->w > *x1) *x1 = gx + g->w;
+    if (gy < *y0) *y0 = gy;
+    if (gy + g->h > *y1) *y1 = gy + g->h;
+  }
+}
+static void text_audit(void) {
+  char *o = g_text_audit_log;
+  size_t left = sizeof g_text_audit_log;
+  o[0] = 0;
+#define LOG(...) do { int k_ = snprintf(o, left, __VA_ARGS__); if (k_ > 0 && (size_t)k_ < left) o += k_, left -= (size_t)k_; } while (0)
+  if (runs_dropped) LOG("%u lines left out; ", runs_dropped);
+  runs_dropped = 0;
+  for (int i = 0; i < nruns; i++) {
+    const TextRun *a = &runs[i];
+    if ((a->rgb >> 24) < 128) continue;
+    int ax0, ay0, ax1, ay1;
+    text_box_px(a, &ax0, &ay0, &ax1, &ay1);
+    if (ax1 < ax0 || ax1 <= 0 || ay1 <= 0 || ax0 >= VIEW_W || ay0 >= VIEW_H) continue;   /* (not shown at all) */
+    if (ax0 < 0 || ay0 < 0 || ax1 > VIEW_W || ay1 > VIEW_H)
+      LOG("\"%.*s\" off the screen (%d,%d-%d,%d); ", a->n, (const char *)a->s, ax0, ay0, ax1, ay1);
+    for (int j = i + 1; j < nruns; j++) {
+      const TextRun *b = &runs[j];
+      if ((b->rgb >> 24) < 128) continue;
+      int bx0, by0, bx1, by1;
+      text_box_px(b, &bx0, &by0, &bx1, &by1);
+      int ox = (ax1 < bx1 ? ax1 : bx1) - (ax0 > bx0 ? ax0 : bx0), oy = (ay1 < by1 ? ay1 : by1) - (ay0 > by0 ? ay0 : by0);
+      if (ox > 1 && oy > 1)
+        LOG("\"%.*s\" over \"%.*s\"; ", a->n, (const char *)a->s, b->n, (const char *)b->s);
+    }
+  }
+#undef LOG
+}
+#endif
+
 bool gfx_text(int style, float x, float y, const uint8_t *s, int n, uint32_t argb, int layer) {
   uint32_t a = argb >> 24;
+#ifdef HOST
+  if (nruns >= MAX_RUNS && n > 0 && a) runs_dropped++;
+#endif
   if (nruns >= MAX_RUNS || n <= 0 || !a) return false;
   const uint8_t *st = font_style(style);
   TextRun *r = &runs[nruns++];
@@ -1836,6 +1888,9 @@ void gfx_frame(void) {
     finish_strip(sy0, STRIP_H);
   }
   vsf = 1;
+#ifdef HOST
+  if (g_text_audit) text_audit();
+#endif
   nruns = 0;
 #ifdef HOST
   {

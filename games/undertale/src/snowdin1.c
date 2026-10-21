@@ -17,7 +17,7 @@
 Obj *obj_sans(int x, int y, int dir) {
   static const uint16_t s[4] = {SPR_SANS_D};
   Obj *o = obj_npc(ACTOR_SANS, s, x, y, dir, 0);
-  if (o) o->flags &= (uint16_t)~OF_WALKANIM;
+  if (o) o->anim_speed = 7;   /* (his steps, unhurried) */
   return o;
 }
 Obj *obj_papyrus(int x, int y, int dir) {
@@ -314,8 +314,7 @@ static int ev_sans_intro(Ev *c) {
   set_flag(F_SANS_MET, 1);
   set_flag(F_SANS_FAVOR, 1);
   /* (the wrong way) */
-  WALK(s, 2556, 432, 2);
-  gone(s);
+  LEAVE(s, 2, 2556, 432);
   if (c->self) gone(c->self);
   EV_END;
 }
@@ -380,8 +379,7 @@ static int ev_pap_sentry(Ev *c) {
   WALK(p, 4140, 414, 6);
   gone(p);
   SAY(FACE_SANS, "* well, that went well.\n* don't sweat it, kid.|* i'll keep an eye out for ya.");
-  WALK(s, 4140, 414, 2);
-  gone(s);
+  LEAVE(s, 2, 4140, 414);
   set_flag(F_PAP_SENTRY, 1);
   if (c->self) gone(c->self);
   EV_END;
@@ -472,8 +470,7 @@ static int ev_elecmaze(Ev *c) {
   return 1;
 crossed:
   SAY(FACE_PAPYRUS, "`2* YOU SOLVED IT! FAR TOO EASILY...|`0* THE NEXT ONE WON'T BE SO KIND!!!\n`2* NYEH HEH HEH!!!");
-  WALK(p, 5520, 446, 5);
-  gone(p);
+  LEAVE(p, 5, 5520, 446);
   set_flag(F_ELECMAZE, 2);
   for (int i = 0; i < MAX_OBJS; i++)
     if (objs[i].event == EV_MAZE_ZAP || objs[i].event == EV_ELECMAZE) objs[i].kind = OBJ_NONE;
@@ -573,8 +570,7 @@ static int ev_wordsearch(Ev *c) {
   if (CHOICE() == 0) SAY(FACE_PAPYRUS, "`3* HUMANS... YOU'RE ALL THE SAME!!!");
   else SAY(FACE_PAPYRUS, "`2* HA! THE HUMAN AGREES WITH ME!!!");
   SAY(FACE_PAPYRUS, "`2* NYEH HEH HEH HEH!!!");
-  WALK(p, 6640, 652, 6);
-  gone(p);
+  LEAVE(p, 6, 6640, 652);
   if (c->self) gone(c->self);
   EV_END;
 }

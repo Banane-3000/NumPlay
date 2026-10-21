@@ -1,0 +1,21 @@
+# Sudoku in French: the English text as in the source, a tab, the translation (see tools/lang.py).
+Paused	Pause
+Resume	Reprendre
+New game	Nouvelle partie
+How to play	Comment jouer
+Quit game	Quitter la partie
+OK again to quit	OK encore pour quitter
+Easy	Facile
+Medium	Moyen
+Hard	Difficile
+Expert	Expert
+Play	Jouer
+Solved!	Résolu !
+Every row, column and box holds 1 to 9 once.	Chaque ligne, colonne et carré contient une fois les chiffres de 1 à 9.
+New best!	Record !
+Mistakes: 	Erreurs :
+OK  notes	OK  notes
+0  erase	0  effacer
+DEL  undo	DEL  annuler
+shift  hint	shift  indice
+Back  menu	Back  menu

@@ -488,9 +488,9 @@ static void cmd_setblock(char **a, int n) {
   if (y < 0 || y >= WORLD_H || !world_loaded(x, y, z)) return error(T("Cannot place block outside of the world"), NULL, 0, 0);
   /* the state: the block's with that data, else its first */
   int b = -1;
-  for (int i = 0; i < B_COUNT && b < 0; i++)
+  for (int i = 0; i < B_N && b < 0; i++)
     if (blk_id[i] == id && blk_meta[i] == data) b = i;
-  for (int i = 0; i < B_COUNT && b < 0; i++)
+  for (int i = 0; i < B_N && b < 0; i++)
     if (blk_id[i] == id) b = i;
   if (b < 0) return error(T("There is no such block with ID/name %s"), a[3], 0, 0);
   int was = world_get(x, y, z);

@@ -1,12 +1,16 @@
 """The host build's checks (make test): check.py build/play src/data.bin
 
 - every room's hazard respawn points: ground under them, in the room
-- every gate: the Knight arrives in the next room, in control, on the ground, and can move; and spikes there send him
-  back to a good place
+- every gate and door (a door taking his control, as its FSM does): the Knight arrives in the next room, in control, on
+  the ground, and can slash and move; and spikes there send him back to a good place
+- the ground's seams, as the calculator rounds: landed a few float steps low, the Knight walks off both ways; jumping
+  at a wall, he falls back down
+- the text of the shops, the inventory (its items, charms and map), the menus, the messages and the stag's menu: in the
+  screen, in its box, no line over another
 - every arena won: its fight over and the room's battle gates open, also as the Knight comes back and after a save and
   a load
 - a long walk of made up keys from every room: the Knight never out of the room, without control, wedged, undrawn or
-  out of the view
+  out of the view, and the view never jumping
 - a bench: sat on, the inventory opened, a charm equipped, then up again (atBench off)
 - every room played with its enemies hit, in a new game and after the bosses, drawn whole and fast (as a slow
   calculator draws it): the sanitizers stop on any fault
@@ -50,6 +54,11 @@ def main():
     results.append(report("hazard respawn points", rc, out, ("BAD",)))
     rc, out = play("--gates", "all")
     results.append(report("gates", rc, out, ("FAIL",)))
+    rc, out = play("--gates", "seams")
+    results.append(report("seams", rc, out, ("FAIL",)))
+    with tempfile.TemporaryDirectory() as saves:
+        rc, out = play("--gates", "texts", env={"HKSAVES": saves})
+    results.append(report("texts", rc, out, ("FAIL",)))
     with tempfile.TemporaryDirectory() as saves:
         rc, out = play("--gates", "arenas", env={"HKSAVES": saves})
     results.append(report("arenas", rc, out, ("FAIL",)))

@@ -72,6 +72,8 @@ Keep moving, or the eagle gets you. Coins add up across every run and stay saved
 
 The left thumb looks with the arrows (shift and alpha are just under them), the right one walks. The first time you open NumBlocks it shows these keys. You can change them in Options, then Controls, which also shows the key sheet again. In NumBlocks, Back places blocks, so **ans** pauses. In the inventory, the arrows move between slots, **OK** picks up or puts down a stack, **EXE** one item, and **shift** with **OK** sends a stack to the other side. To spread a stack, hold **OK** and move over the slots: it splits evenly when you let go (hold **EXE** instead to drop one in each). In Creative, the Search Items tab finds blocks as you type, and **shift** with up or down jumps to the top or bottom of a tab. Commands like /gamemode and /give work in worlds with Allow Cheats on (or after Open to LAN in the pause menu); **toolbox** finishes a word as you type it. Your world saves as you play and when you quit, and on its own NumBlocks keeps a copy in `numblocks_saves.py` (inside NumPlay, `numplay_saves.py` holds it), so installing again doesn't erase your worlds.
 
+On its own, `NumBlocks.nwa` also has the Nether and the End: portals, fortresses, strongholds and the Ender Dragon, as Minecraft 1.8.8 makes them (NumPlay's NumBlocks stays in the Overworld).
+
 <br clear="right">
 
 ## Hollow Knight
@@ -168,8 +170,8 @@ Choose a scenario or a free play map. Build woodcutters and stone mines for mate
 
 | Key | What it does |
 | --- | --- |
-| **Right** | Drive forward |
-| **Left** | Brake and reverse |
+| **Right** or **6** | Drive forward |
+| **Left** or **4** | Brake and reverse |
 | **OK** or **Back** | Pause. **Back** again resumes |
 | **Levels** on the pause card | Pick any level |
 
@@ -269,6 +271,200 @@ Undertale comes as its own app, `Undertale.nwa`: it is too big to share the calc
 | **Home** | Keep the moment and quit |
 
 Name the fallen human, then walk and talk your way through the Ruins, Snowdin, Waterfall, Hotland, the MTT Resort, the CORE and New Home. In a battle, FIGHT attacks (press **OK** when the bar crosses the middle), ACT checks a monster or does something to it, ITEM eats, and MERCY spares a monster that no longer wants to fight, or flees. Then move your SOUL to dodge; when it turns blue, it falls, and **Up** jumps; when it turns green, it stays put, and the arrows turn its shield to block. On ice you slide until something stops you. In Snowdin Town, walk into the shop to buy, and into the inn to rest. In Waterfall, walk into a bridge seed to push it into the water, where it blooms into a flower you can walk on; the bell calls the seeds back. A green bullet heals you. Walk up to a star and press **OK** to SAVE. Home keeps the moment you were at, and the next start is back there. Your save is also copied into `undertale_saves.py`, so installing the app again doesn't erase it. The Tem Shop in Temmie Village also buys what you carry. In Hotland, steam vents throw you over the lava, orange lasers hit you if you stand still and blue ones if you move, and in a shooting puzzle the arrows push the dark blocks and Z shoots. On the second floor, press the switches as the top conveyor belt carries you past them, and in Mettaton's news report, touch each bomb and defuse it while it's in the DEFUSE ZONE. When Muffet turns your SOUL purple, it keeps to three strings: **Up** and **Down** hop between them. In the tile puzzle, red tiles are walls, yellow ones shock you back, orange makes you smell of oranges (and blue water's piranhas bite then), and purple soap slides you on and smells of lemons. When your SOUL turns yellow, **OK** shoots. At the MTT Resort, the desk rents you a room and the hotel's doors want room service. On the CORE's laser bridge, walk while the power is off and freeze when it comes back on. Mettaton EX's show is won on its ratings: Boast, Pose, a Heel Turn and his brand's food raise them. In New Home, find both keys to unchain the stairs. Asgore breaks MERCY, so you'll have to fight him. Against Omega Flowey, dodge, and reach the ACT button that comes down among a SOUL's attack; once all six SOULs are on your side, reach FIGHT. The game ends at the neutral ending.
+
+<br clear="right">
+
+## Doom
+
+<img src="media/doom.gif" width="320" align="right" alt="Doom: imps down a corridor of Phobos Lab, then zombiemen around the yellow key">
+
+Doom comes as its own app, `Doom.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **Up** / **Down** | Walk forward / back |
+| **Left** / **Right** | Turn |
+| **OK** | Fire |
+| **Back** | Use: open doors, press switches |
+| **EXE** or **⌫** | Menu and pause |
+| **shift** (held) | Strafe with left and right |
+| **x,n,t** / **var** | Strafe left / right |
+| **alpha** (held) | Run |
+| **1** to **7** | Choose a weapon |
+| **toolbox** | Automap: the map, the map over the game, the game |
+| **+** / **−** | Screen size; on the automap, zoom |
+| **×** / **÷** / **0** | Automap: follow, grid, the whole map |
+| **8** / **9** | Automap: mark, clear the marks |
+| **√** | Brightness |
+| **ln** / **log** | Quick Save / Quick Load |
+| **π** | Pause |
+| **ans** | Type a cheat code |
+| **Home** | Keep the moment and quit |
+
+Press a key on the title screen for the menu, then choose New Game, Knee-Deep in the Dead and a skill. In menus, **OK** or **EXE** confirms and **Back** goes back; when the game asks a question, **OK** says yes and **Back** says no. Read This! shows the keys as they are: Options, Keys gives any key any action, and Options, Cheats has every cheat code. Home keeps the moment you were at, and the next start puts you back there. Save Game has six slots; your saves are also copied into `doom_saves.py`, so installing the app again doesn't erase them. You can also build `Doom.nwa` from your own WAD (Doom, Doom II, Freedoom...): see the [game's page](../games/doom/README.md#doom-from-your-own-wad).
+
+<br clear="right">
+
+## The Binding of Isaac
+
+<img src="media/isaac.gif" width="320" align="right" alt="The Binding of Isaac: Isaac clears a room of the Basement, then fights Monstro">
+
+The Binding of Isaac comes as its own app, `BindingOfIsaac.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** | Walk |
+| **8 4 6 2** (or 5) | Cry up, left, right, down |
+| **9**, **shift** or **×** | Drop a bomb |
+| **7**, **alpha** or **OK** | Use the active item |
+| **1**, **3** or **−** | Take the pill or use the card |
+| **toolbox**, **var** or **x,n,t** | Hold to see the whole map |
+| **Back** | Pause |
+| **Home** | Keep the run and quit |
+
+On the menu, **Controls** swaps them: the number keys walk and the arrows cry. Every run is a new set of floors, from the Basement down to Mom, her heart and beyond: clear a room to open its doors, find the treasure room, the shop and the boss, and bomb the walls for secret rooms. Keys open the golden doors and chests, coins buy in the shop, and the Devil's and the angel's rooms come after a boss. Win a run to unlock ???, Eve, Samson and Azazel. Home keeps the run, and it is copied into `isaac_saves.py`, so installing the app again doesn't erase it.
+
+<br clear="right">
+
+## Plants vs. Zombies
+
+<img src="media/pvz.gif" width="320" align="right" alt="Plants vs. Zombies: the front lawn, the night, the pool, the fog, the roof and Dr. Zomboss">
+
+Plants vs. Zombies comes as its own app, `PlantsVsZombies.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** | Move over the lawn, choose in the menus |
+| **1** to **9**, **0** | Pick a seed packet (from the conveyor belt too) |
+| **OK** or **EXE** | Plant, whack a zombie, break a vase, confirm |
+| **⌫** | The shovel: then **OK** digs up a plant |
+| **Back** | Put the seed back, or pause |
+| **toolbox** | The Almanac, in the menu |
+| **Home** | Keep the level and quit |
+
+Plant your lawn to stop the zombies before they reach your house. Sunflowers make sun, and seeds cost sun: move the cursor over falling sun and coins to pick them up. Each seed recharges after you plant it. At night no sun falls and mushrooms are awake; in the day they sleep unless you plant a Coffee Bean on them. The pool's lanes need Lily Pads, the fog hides the zombies until a Plantern lights it or a Blover blows it away, and on the roof every plant goes in a Flower Pot and only lobbed shots get over the slope. A lawn mower saves each lane once. Before most levels you choose your seeds; on the conveyor-belt levels they come to you. Crazy Dave opens his shop once you find his car key, and the coins zombies drop buy more seed slots, pool and roof cleaners, a rake and Wall-nut First Aid. At the end of the roof, Dr. Zomboss waits in his Zombot: hit his head when he lowers it, put out his fire balls with an Ice-shroom and melt his ice balls with a Jalapeno. Home keeps the level you are playing, and Continue brings it back. Your saves are also copied into `pvz_saves.py`, so installing the app again doesn't erase them.
+
+<br clear="right">
+
+## Five Nights at Freddy's
+
+<img src="media/fnaf.gif" width="320" align="right" alt="Five Nights at Freddy's: Bonnie at the left door, the door comes down, then the cameras">
+
+Five Nights at Freddy's comes as its own app, `FiveNightsAtFreddys.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **← →** (or 4 / 6) | Look left and right |
+| **7** / **1** | The left door / the left light |
+| **9** / **3** | The right door / the right light |
+| **OK**, **EXE** or **8** | The monitor up and down |
+| **1** to **7** | On the monitor: that camera (1, 2 and 4 again for 1B, 1C, 2B, 4B) |
+| **Arrows** | On the monitor: the camera next to it on the map |
+| **0** or **⌫** | Mute the phone call |
+| **Back** | Pause |
+| **Home** | Keep the night and quit: the next start is back in it |
+
+Last from 12 AM to 6 AM, five nights in a row. Light the doorways to see who is there and close the door on them, check the cameras (Foxy comes out of Pirate Cove when they stay down), and watch the power: when it runs out, the doors won't close. The Phone Guy's calls are subtitles, and what you would hear is written at the bottom left. Your nights and stars are also copied into `fnaf_saves.py`, so installing the app again doesn't erase them.
+
+<br clear="right">
+
+## Sonic the Hedgehog
+
+<img src="media/sonic.gif" width="320" align="right" alt="Sonic the Hedgehog: the title, Green Hill, Marble, Spring Yard and a Special Stage">
+
+Sonic the Hedgehog comes as its own app, `SonicTheHedgehog.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** (or 4, 6, 8, 2) | Run, look up, duck; **Down** while running rolls |
+| **OK**, **EXE**, 5, 0 or **shift** | Jump |
+| **Back** or **⌫** | Pause: Resume or Quit game |
+| **Home** or **On/Off** | Save and quit: Continue on the title goes back there |
+
+Run right to the signpost at the end of each act; each zone's third act ends with Dr. Robotnik and the capsule of animals. When something hits you, you drop your rings; with none you lose a life, and 100 give an extra life. Finish an act with 50 rings and jump into the giant ring for a Special Stage: steer through the turning maze to the Chaos Emerald, away from the GOAL blocks. All six emeralds change the ending. Each act is saved as it starts, and the save is copied into `sonic_saves.py`, so installing the app again doesn't erase it.
+
+<br clear="right">
+
+## Subway Surfers
+
+<img src="media/subway.gif" width="320" align="right" alt="Subway Surfers: running between trains, jumping barriers, then flying with the jetpack">
+
+Subway Surfers comes as its own app, `SubwaySurfers.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **Left / Right** (or 4 / 6) | Change tracks |
+| **Up** (or 8) | Jump |
+| **Down** (or 2) | Roll; in the air, dive down and roll |
+| **OK**, **EXE** or 5 | Ride a hoverboard: one crash is forgiven |
+| **1** / **3** | At the start of a run: a headstart / a score booster |
+| **Back** | Pause (Resume, Quit game), or go back in menus |
+| **Home** or **On/Off** | Save and quit |
+
+Hit the side of a train or a barrier's edge and you stumble: the Inspector and his dog are right behind you, and a second stumble gets you caught. The yard is the classic one: the orange viaduct and its trees, steel bridges over the water, tunnels, and the orange and lime trains. Run into anything head-on and the run is over, unless you spend keys to be saved. Ramps lead up onto the trains' roofs; Super Sneakers jump high enough to land on them. Missions raise your score multiplier, and coins buy upgrades, items, characters and boards in the shop. Your progress is also copied into `subway_saves.py`, so installing the app again doesn't erase it.
+
+<br clear="right">
+
+## Hill Climb Racing
+
+<img src="media/hillclimb.gif" width="320" align="right" alt="Hill Climb Racing: the Hill Climber up the Countryside's hills, then the Motocross Bike's back flip on the Moon">
+
+Hill Climb Racing comes as its own app, `HillClimbRacing.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **Right**, **OK** or **EXE** (or 6) | Gas; in the air, tilt back |
+| **Left** (or 4) | Brake, then reverse; in the air, tilt forward |
+| **Back** | Pause (Resume, Restart, Garage, Quit game) |
+| **Home** | Keep the run's coins and quit |
+
+Drive as far as you can before the fuel runs out or Bill lands on his head. It drives like the real game: the same physics engine (Box2D) with the game's own numbers for every vehicle and stage. Pick up fuel cans on the way, collect coins, and earn more with air time and flips; each stage's levels pay a bonus when you reach their goal, and the next level waits for you on your next run. In the garage, spend coins on new vehicles and their four upgrades, and on new stages: the Desert's dunes, the slippery Arctic, the Cave's ceiling, the Moon's low gravity, the Forest's trees to ram through, with rope bridges along the way. Your coins, upgrades, levels and best distances are saved, and copied into `hillclimb_saves.py` so installing the app again doesn't erase them.
+
+<br clear="right">
+
+## Cookie Clicker
+
+<img src="media/cookieclicker.gif" width="320" align="right" alt="Cookie Clicker: a golden cookie caught for a Frenzy, upgrades bought, the Grimoire, then an ascension">
+
+Cookie Clicker comes as its own app, `CookieClicker.nwa`: it is too big to share the calculator with NumPlay.
+
+| Key | What it does |
+| --- | --- |
+| **OK** | Click the big cookie |
+| **Arrows** | Choose in the store (up from its top: the news ticker) |
+| **EXE** | Buy or sell what is chosen; press the ticker |
+| **÷** / **×** | Buy or sell / 1, 10, 100 (all, to sell) |
+| **shift** | Click a golden cookie or a reindeer |
+| **var** | Pop a wrinkler |
+| **x,n,t** | Harvest the sugar lump |
+| **alpha** | The buildings' rows: EXE levels one up or opens its minigame |
+| **toolbox** | Statistics |
+| **⌫** | Close a note |
+| **Back** | Menu: Options, Statistics, Info, Legacy, Santa, Krumblor, Keys, Save |
+| **Home** | Save and quit |
+
+Click the cookie, buy buildings that bake for you and upgrades that make them bake more. Golden cookies give Frenzies, Lucky!, Click frenzies and more; when the elders awaken, wrath cookies and wrinklers come. Level your buildings up with sugar lumps to unlock the Grimoire's spells and the Pantheon's spirits. When you have baked enough, ascend from the Legacy menu: your cookies become heavenly chips to spend on the heavenly upgrades, then you start again stronger. The calculator has no clock, so the bakery only bakes while the game is open, and sugar lumps grow 24 times faster to make up for it. Your bakery is also copied into `cookieclicker_saves.py`, so installing the app again doesn't erase it.
+
+<br clear="right">
+
+## Level Devil
+
+<img src="media/leveldevil.gif" width="320" align="right" alt="Level Devil: the Devil's eyes on the jaws, the title and the map; in the first room the floor drops under the runner, it dies, tries again and jumps the pit to the door">
+
+Level Devil comes as its own app, `LevelDevil.nwa`: install it on its own.
+
+| Key | What it does |
+| --- | --- |
+| **Left / Right** (or 4 / 6) | Run; on the map, the world before or after |
+| **Up**, **OK** or **EXE** (or 8 / 5) | Jump (in Gravity: turn gravity round; in Flappy: flap) |
+| **Down** (or 2) | Jump, in the room that says so |
+| **Up / Down** on the map | The nearest world up or down |
+| **OK** on the title and the map | Play |
+| **Any key**, once dead | Try again |
+| **Back** | Pause: Resume, Restart, Levels, Quit game |
+| **Home** | Save and quit |
+
+Run to the door. These are the game's 80 rooms in its order: sixteen worlds of five (Pits, Spikes, Push, Coins, Controls, Platforms, Springs, Warps, Scale, Doors, Saws, Flappy, Gravity, Movement, Wraparound and the Boss), each with its own traps and timing, drawn with the game's own pictures. Clear a world's five rooms to open the next portal on the game's map. Your deaths are counted, with your best for each world. The game keeps a copy of its save in `leveldevil_saves.py`, so installing apps again doesn't erase your progress.
 
 <br clear="right">
 
@@ -452,6 +648,82 @@ Google's brick breaker: seven bricks across in blue, red, yellow and green, wall
 
 <br clear="right">
 
+## 2 Players
+
+<img src="../games/twoplayer/docs/games.png" width="320" align="right" alt="2 Players: Pong, Air Hockey, Tanks and Light Cycles">
+
+| Key | Player 1 | Player 2 |
+| --- | --- | --- |
+| **Move** (in Pong, up and down) | Arrows | **×** up, **Ans** down, **3** left, **−** right |
+| **Fire** (Tanks) | **shift** | **EXE** |
+
+On the menu, **Up / Down** pick a game and **Left / Right** who player 2 is: a friend, or the computer (easy, normal, hard). Against the computer, **OK** and **EXE** fire too. **Back** pauses (Resume, Restart, Other games, Quit game).
+
+Pong (first to 11), Air Hockey (first to 7), Tanks in a new maze every round and Light Cycles (first to 5 rounds). Before each game, a map of the keyboard lights up each player's keys. The matches each side wins are kept for every game.
+
+<br clear="right">
+
+## Space Invaders
+
+<img src="media/invaders.gif" width="320" align="right" alt="Space Invaders: the score advance table, then the rack marching over the bunkers">
+
+| Key | What it does |
+| --- | --- |
+| **Left / Right** (or 4 / 6) | Move the cannon |
+| **OK**, **EXE** or **Up** (or 8) | Fire: a new press each shot, as in the arcade |
+| **Back** | Pause (Resume, Quit game) |
+
+The arcade's game, pixel for pixel, under the Midway cabinet's red and green film. Squids are worth 30, crabs 20 and octopuses 10; the mystery saucer 50 to 300, from how many shots you have fired (the 23rd, then every 15th, gets 300). The rack speeds up as it thins out, drops at each edge and starts lower every wave; shots and invaders wear the bunkers away. A new cannon at 1500 points; the game ends when the invaders land. Your best score is kept.
+
+<br clear="right">
+
+## Sudoku
+
+<img src="media/sudoku.gif" width="320" align="right" alt="Sudoku: a Medium game, notes in two cells, a mistake undone, then hints">
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** | Pick a cell |
+| **1** to **9** | Write that digit (a note in notes mode) |
+| **OK** or **EXE** | Notes on and off |
+| **0** | Erase the cell |
+| **⌫** | Undo |
+| **shift** | Hint |
+| **Back** | Pause (Resume, New game, How to play, Quit game) |
+
+Fill the grid so every row, column and 3×3 box holds 1 to 9 once. The row, column and box of the cell you pick light up, and so does every cell with its digit; wrong digits turn red and count as mistakes. Notes are small pencil digits, and a digit you write takes its note off the cells it sees. Easy and Medium need only singles, Hard needs pointing, Expert more; every puzzle is made on the calculator, and each level keeps its best time.
+
+<br clear="right">
+
+## Ultimate Tic-Tac-Toe
+
+<img src="media/uttt.gif" width="320" align="right" alt="Ultimate Tic-Tac-Toe: a game against the computer">
+
+| Key | What it does |
+| --- | --- |
+| **1** to **9** | Take that cell of the small board you must play in (the number pad is a small board, 7 at the top left). On a free move, the first number picks the board |
+| **Arrows**, then **OK** or **EXE** | Move over the cells, then take one |
+| **Back** | Menu: Resume, New game (**Left / Right** choose a friend or the computer: easy, normal, hard), Quit game |
+
+Nine small boards make a big one. The cell you take sends the other player to the small board in the same place; a small board won or full is closed, and a player sent there plays anywhere. Win three small boards in a row. The boards you may play in light up in your colour, and the games won and drawn are kept for every opponent.
+
+<br clear="right">
+
+## Sokoban
+
+<img src="media/sokoban.gif" width="320" align="right" alt="Sokoban: Microban's second and fourth levels solved, the crates turning dark on their goals">
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** (or 8 4 6 2) | Walk, and push a crate; hold to keep going |
+| **⌫** | Undo a step (hold to undo more) |
+| **OK** or **EXE** | Choose |
+| **Back** | Pause: Resume, Restart, Levels, How to play, Quit game |
+
+Push every crate onto a goal: the keeper pushes one at a time and can't pull, so a crate in a corner stays there. Microban's 155 levels by David W. Skinner, the first 35 inside NumPlay and all of them in Sokoban.nwa; solved levels turn dark on the level list, and the fewest moves for each are kept.
+
+<br clear="right">
+
 ## NumVisuals
 
 <img src="media/numvisuals.gif" width="320" align="right" alt="NumVisuals: picking a background, then a clock">
@@ -465,6 +737,6 @@ Google's brick breaker: seven bricks across in blue, red, yellow and green, wall
 | **OK / ⌫** (stopwatch, timer) | Start or stop / reset |
 | **OK, Up, +** / **Down, -** (counter) | Count up / down. **⌫** goes back to 0 |
 
-11 backgrounds and 5 add-ons: a clock, a stopwatch, a timer, a counter and your own text (press **Alpha** for letters). Everything is kept for next time.
+NumVisuals comes on its own, as NumVisuals.nwa (its backgrounds are also on NumPlay's home screen: press ⌫). 11 backgrounds and 5 add-ons: a clock, a stopwatch, a timer, a counter and your own text (press **Alpha** for letters). Everything is kept for next time.
 
 <br clear="right">

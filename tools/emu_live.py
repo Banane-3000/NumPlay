@@ -2,10 +2,9 @@
 """Live NumWorks emulator for macOS, Linux and Windows: a calculator you can click, around tools/emu.py.
 
 Put this file beside tools/emu.py. Requires Pillow, numpy, unicorn,
-pyelftools and nwlink (tkinterdnd2 for dropping files, if you like). It shows the
-NumWorks keyboard artwork of the k-kuroguro VS Code extension (CC BY-NC-SA) when
-that extension is installed, read in place and never copied; otherwise it draws a
-calculator of its own.
+pyelftools and nwlink (tkinterdnd2 for dropping files, if you like). It shows a
+picture of the NumWorks N0120 (emu_live_calculator.webp, beside this file), with the
+screen and every key where they are on it.
 
 Runs an ARM .nwa through the project's existing emu.Calculator, shows the
 320x240 display, supports 46 clickable keys, keyboard, .nwa drops and reload.
@@ -33,6 +32,7 @@ LCD scanout simulation. Saves and crash logs remain outside build/ and dist/.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import queue
 import re
@@ -50,9 +50,10 @@ import webbrowser
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+import tkinter.font as tkfont
 
 import numpy as np
-from PIL import Image, ImageTk, ImageDraw, ImageFont
+from PIL import Image, ImageTk, ImageDraw, ImageFont, ImageFilter
 
 try:
     from tkinterdnd2 import DND_FILES, TkinterDnD
@@ -72,7 +73,6 @@ HOME_NWA = Path.home() / "Downloads" / "nwa"
 SAVE_DIR = Path.home() / ".numplay-emulator" / "saves"
 LIVE_NWA = REPO_ROOT / "dist" / "live" / "NumPlay.nwa"
 BUILD_SCRIPT = REPO_ROOT / "tools" / ("build_windows.py" if os.name == "nt" else "watch.py")
-BUILTIN_SKIN = Path.home() / ".numplay-emulator" / "calculator.png"
 LCD_WIDTH = 320
 LCD_HEIGHT = 240
 FRAME_VIRTUAL_MS = 32
@@ -93,17 +93,51 @@ LCD_MS_PER_PIXEL = (85.0 / (24 * 320 * 152) + 45.0 / (120 * 320 * 16)) / 2
 # replacement for a firmware-specific glyph rasterizer cycle model.
 FONT_CALL_MS = 0.030
 FONT_CHAR_MS = (44.0 / 120.0 - FONT_CALL_MS) / 18
-# NumWorks' own colours (Epsilon's palette): white and greys, and its yellow for what is going on
-BG = "#f5f5f5"        # around the calculator
-PANEL = "#ffffff"     # the side panel
-PANEL_2 = "#ececec"   # buttons
-HOVER = "#d9d9d9"
-LINE = "#d9d9d9"
-FG = "#414147"        # text
-MUTED = "#8c8c8c"     # secondary text
-ACCENT = "#ffb734"    # NumWorks yellow
-SELECT = "#d4d7e0"    # what is chosen
-ERROR_BG = "#fde3e3"
+# The interface takes macOS's own colours (window background, labels, separators, accent), light and dark;
+# the calculator's picture keeps its own.
+SETTINGS_FILE = Path.home() / ".numplay-emulator" / "settings.json"
+THEME_PALETTES = {
+    "light": {
+        "BG": "#ececec", "PANEL": "#ececec", "PANEL_2": "#e0e0e3", "HOVER": "#d8d8dc", "LINE": "#d0d0d4",
+        "FG": "#1d1d1f", "MUTED": "#6e6e73", "ACCENT": "#007aff", "SELECT": "#cfe0fc", "ERROR_BG": "#fbe3e1",
+        "GREEN": "#28cd41", "ORANGE": "#ff9500", "RED": "#ff3b30", "CHIP": "#ffffff",
+    },
+    "dark": {
+        "BG": "#323232", "PANEL": "#323232", "PANEL_2": "#3d3d3f", "HOVER": "#48484a", "LINE": "#4a4a4c",
+        "FG": "#ececec", "MUTED": "#9a9a9f", "ACCENT": "#0a84ff", "SELECT": "#25416b", "ERROR_BG": "#4a2b2a",
+        "GREEN": "#30d158", "ORANGE": "#ff9f0a", "RED": "#ff453a", "CHIP": "#48484c",
+    },
+}
+
+
+def _read_settings():
+    try:
+        data = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _save_setting(key, value):
+    """Atomically update one preference without overwriting the others."""
+    data = _read_settings()
+    data[key] = value
+    SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    temporary = SETTINGS_FILE.with_suffix(".tmp")
+    try:
+        temporary.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        os.replace(temporary, SETTINGS_FILE)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _activate_theme_palette(name):
+    global CURRENT_THEME
+    CURRENT_THEME = name if name in THEME_PALETTES else "light"
+    globals().update(THEME_PALETTES[CURRENT_THEME])
+
+
+_activate_theme_palette(_read_settings().get("theme", "light"))   # ("system" is settled once Tk runs)
 UI_FAMILY = ("Helvetica Neue" if sys.platform == "darwin" else "Segoe UI" if os.name == "nt" else "DejaVu Sans")
 MONO_FAMILY = ("Menlo" if sys.platform == "darwin" else "Consolas" if os.name == "nt" else "DejaVu Sans Mono")
 FONT_GROW = 3 if sys.platform == "darwin" else 0   # (Tk's points are smaller on a Mac)
@@ -913,7 +947,7 @@ class EmulatorWorker(threading.Thread):
                 # The caller must blank the screen; the final framebuffer is
                 # NOT a valid representation of a powered-off calculator.
                 self.end_reason = "exited"
-                self.emit("ended", "Application exited — press Power or Reload to restart")
+                self.emit("ended", "The app quit. Press On/Off or Restart to start it again")
         except Exception:
             self.set_phase("error")
             error_report = traceback.format_exc()
@@ -978,7 +1012,7 @@ class LiveApp:
         self.watch_candidate: tuple[tuple[str, tuple[int, int]], int] | None = None
         self.watch_var = tk.BooleanVar(value=True)
         self.follow_var = tk.BooleanVar(value=auto_follow)
-        self.status = tk.StringVar(value="Ready — drop or open a .nwa")
+        self.status = tk.StringVar(value="Drop a .nwa on the calculator, or choose Open")
         self.file_label = tk.StringVar(value="No application loaded")
         self.time_label = tk.StringVar(value="0 ms")
         self._screen_rgb: Image.Image | None = None
@@ -1172,7 +1206,7 @@ class LiveApp:
             self.pause_event.clear()
             self.pause_button.configure(text="Pause")
             self.clear_keys()
-            self.black_screen("Powered off — press Power or Reload to restart")
+            self.black_screen("Turned off. Press On/Off or Restart to start again")
 
     def toggle_pause(self):
         if self.pause_event.is_set():
@@ -1213,6 +1247,8 @@ class LiveApp:
     def on_pc_down(self, event):
         # Don't send keyboard shortcuts from another Toplevel (e.g. Keymap).
         if event.widget.winfo_toplevel() is not self.root:
+            return None
+        if sys.platform == "darwin" and event.state & 0x8:   # (Command: a menu's shortcut)
             return None
         sym = event.keysym.lower()
         key = PC_KEYSYM.get(sym)
@@ -1357,9 +1393,9 @@ class LiveApp:
         elif (self.worker is not None and self.worker.end_reason == "exited"
               and not self.powered_off):
             # Also handle a full message queue dropping an end notification.
-            self.black_screen("Application exited — press Reload to restart")
+            self.black_screen("The app quit. Press Restart to start it again")
         if error and not self.powered_off:
-            self.set_status("Emulator error — see dialog")
+            self.set_status("The emulator stopped with an error")
             messagebox.showerror("NumPlay emulator", error)
         if self.pending is not None and (self.worker is None or not self.worker.is_alive()):
             self.start_pending()
@@ -1416,24 +1452,16 @@ class LiveApp:
             self.root.after(100, self._finish_close)
 
 
-# ---------- Calculator artwork + interface (merged from V4 skin) ----------
-ART_SOURCE = "https://github.com/k-kuroguro/vscode-numworks/blob/master/resources/webview/background.png"
-ART_LICENSE = "https://github.com/k-kuroguro/vscode-numworks/blob/master/resources/LICENSE"
-
-# Matches resources/webview/index.css and index.ejs in the extension.
-# Coordinates are normalized against the background.png image.
-SCREEN = (0.1625, 0.085, 0.675, 0.263)
-NAV = {
-    "left": (0.020, 0.370, 0.150, 0.280),
-    "right": (0.170, 0.370, 0.150, 0.280),
-    "up": (0.120, 0.090, 0.100, 0.400),
-    "down": (0.120, 0.530, 0.100, 0.400),
-    "home": (0.410, 0.150, 0.165, 0.310),
-    "onoff": (0.410, 0.554, 0.165, 0.310),
-    "ok": (0.670, 0.310, 0.135, 0.380),
-    "back": (0.833, 0.310, 0.135, 0.380),
+# ---------- The calculator: a picture of a NumWorks N0120, its screen and keys measured on it ----------
+CALCULATOR = Path(__file__).resolve().parent / "emu_live_calculator.webp"
+CALCULATOR_SIZE = (1018, 2000)
+# (x, y, width, height) in the picture's pixels; the arrows' middle does nothing, as on the calculator
+SCREEN_PX = (148, 154, 722, 542)
+KEYS_PX = {
+    "up": (191, 799, 74, 88), "down": (191, 960, 74, 88), "left": (105, 887, 86, 73), "right": (265, 887, 88, 73),
+    "home": (439, 816, 139, 90), "onoff": (439, 941, 139, 90), "ok": (664, 866, 109, 112),
+    "back": (803, 866, 109, 112),
 }
-# Extension's HTML ordering, grouped by the extension's CSS rows.
 FUNCTIONS = (
     "shift", "alpha", "xnt", "var", "toolbox", "backspace",
     "exp", "ln", "log", "i", "comma", "power",
@@ -1445,53 +1473,22 @@ DIGITS = (
     "1", "2", "3", "plus", "minus",
     "0", "dot", "ee", "ans", "exe",
 )
+for _row, (_y0, _y1) in enumerate(((1094, 1168), (1204, 1280), (1316, 1392))):
+    for _col, (_x0, _x1) in enumerate(((105, 214), (244, 354), (384, 493), (524, 633), (664, 773), (803, 912))):
+        KEYS_PX[FUNCTIONS[_row * 6 + _col]] = (_x0, _y0, _x1 - _x0, _y1 - _y0)
+for _row, (_y0, _y1) in enumerate(((1431, 1517), (1556, 1641), (1678, 1766), (1805, 1890))):
+    for _col, (_x0, _x1) in enumerate(((105, 239), (273, 407), (442, 576), (610, 744), (779, 912))):
+        KEYS_PX[DIGITS[_row * 5 + _col]] = (_x0, _y0, _x1 - _x0, _y1 - _y0)
 
 
-def skin_hotspots() -> dict[str, tuple[float, float, float, float]]:
-    """Recover key rectangles from the extension's CSS, in image fractions."""
-    kx, ky, kw, kh = 0.10, 0.385, 0.81, 0.565
-    boxes = {}
-    for key, (x, y, w, h) in NAV.items():
-        # .nav itself is only 27% of the keyboard height.
-        boxes[key] = (kx + x * kw, ky + y * kh * .27, w * kw, h * kh * .27)
-
-    # CSS percentage top/bottom margins use the containing block WIDTH.
-    for keys, top, left, width, per_row, cell_w, cell_h, mx, my in (
-        (FUNCTIONS, .2675, .005, .98, 6, .1465, .10, .01, .017),
-        (DIGITS, .565, .005, .98, 5, .16, .113, .02, .018),
-    ):
-        cw = kw * width       # child group width as a fraction of image width
-        for index, key in enumerate(keys):
-            row, col = divmod(index, per_row)
-            x = kx + kw * left + cw * (col * (cell_w + 2 * mx) + mx)
-            # Vertical CSS %-margins/paddings are percentages of group width
-            # (pixel width), so convert image-width units into image-height units.
-            # Exact source dimensions: background.png is 1160x2221.
-            y = ky + kh * top + (cw * 1160 / 2221) * (row * (cell_h + 2 * my) + my)
-            w = cw * cell_w
-            h = (cw * 1160 / 2221) * cell_h
-            boxes[key] = (x, y, w, h)
-    return boxes
+def _fraction(box):
+    x, y, w, h = box
+    return (x / CALCULATOR_SIZE[0], y / CALCULATOR_SIZE[1], w / CALCULATOR_SIZE[0], h / CALCULATOR_SIZE[1])
 
 
-HOTSPOTS = skin_hotspots()
+SCREEN = _fraction(SCREEN_PX)
+HOTSPOTS = {key: _fraction(box) for key, box in KEYS_PX.items()}
 assert set(HOTSPOTS) == set(emu.KEYS), (set(emu.KEYS) - set(HOTSPOTS))
-assert all(0 <= x < 1 and 0 <= y < 1 and x + w <= 1.01 and y + h <= 1.01
-           for x, y, w, h in HOTSPOTS.values())
-
-
-def installed_artwork() -> Path | None:
-    """Use the user's own VS Code extension installation, without copying art."""
-    locations = (
-        Path.home() / ".vscode" / "extensions",
-        Path.home() / ".vscode-insiders" / "extensions",
-        Path.home() / ".vscode-oss" / "extensions",
-    )
-    files = []
-    for root in locations:
-        files.extend(root.glob("k-kuroguro.numworks-simulator-*/resources/webview/background.png"))
-    files = [p for p in files if p.is_file()]
-    return max(files, key=lambda x: x.stat().st_mtime_ns) if files else None
 
 
 class FlatButton(tk.Label):
@@ -1500,7 +1497,7 @@ class FlatButton(tk.Label):
 
     def __init__(self, parent, text, command, primary=False):
         self._bg = ACCENT if primary else PANEL_2
-        super().__init__(parent, text=text, bg=self._bg, fg=FG, font=font(10, "bold" if primary else "normal"),
+        super().__init__(parent, text=text, bg=self._bg, fg=("#34343a" if primary else FG), font=font(10, "bold" if primary else "normal"),
                          pady=8, cursor="hand2", disabledforeground="#b5b5b5")
         self._command = command
         self.bind("<Enter>", lambda e: self._enabled() and super(FlatButton, self).configure(
@@ -1519,39 +1516,106 @@ class FlatButton(tk.Label):
     config = configure
 
 
-def builtin_artwork() -> Path:
-    """A calculator of its own, for when the VS Code extension isn't installed: the same layout (HOTSPOTS,
-    SCREEN) on a 1160 x 2221 picture, drawn once and kept in ~/.numplay-emulator."""
-    if BUILTIN_SKIN.is_file():
-        return BUILTIN_SKIN
-    w, h = 1160, 2221
-    im = Image.new("RGB", (w, h), (232, 234, 238))
-    d = ImageDraw.Draw(im)
-    d.rounded_rectangle((6, 6, w - 7, h - 7), radius=96, fill=(250, 250, 251), outline=(200, 204, 211), width=6)
-    sx, sy, sw, sh = SCREEN[0] * w, SCREEN[1] * h, SCREEN[2] * w, SCREEN[3] * h
-    d.rounded_rectangle((sx - 36, sy - 36, sx + sw + 36, sy + sh + 36), radius=28, fill=(38, 40, 46))
-    d.rectangle((sx, sy, sx + sw, sy + sh), fill=(0, 0, 0))
-    font = None
-    for name in ("DejaVuSans.ttf", "/System/Library/Fonts/Supplemental/Arial.ttf", "/Library/Fonts/Arial.ttf",
-                 str(Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts" / "arial.ttf")):
-        try:
-            font = ImageFont.truetype(name, 42)
-            break
-        except OSError:
-            pass
-    font = font or ImageFont.load_default()
-    nav = {"left", "right", "up", "down", "home", "onoff", "ok", "back"}
-    for key, (x, y, kw, kh) in HOTSPOTS.items():
-        box = (x * w, y * h, (x + kw) * w, (y + kh) * h)
-        fill = (212, 216, 222) if key in nav else (225, 228, 233) if key in FUNCTIONS else (255, 255, 255)
-        d.rounded_rectangle(box, radius=min(box[2] - box[0], box[3] - box[1]) * 0.22, fill=fill,
-                            outline=(178, 183, 192), width=4)
-        label = "DEL" if key == "backspace" else LABEL.get(key, key)  # (⌫ isn't in most fonts)
-        tw, th = d.textbbox((0, 0), label, font=font)[2:]
-        d.text(((box[0] + box[2] - tw) / 2, (box[1] + box[3] - th) / 2), label, fill=(48, 52, 60), font=font)
-    BUILTIN_SKIN.parent.mkdir(parents=True, exist_ok=True)
-    im.save(BUILTIN_SKIN)
-    return BUILTIN_SKIN
+def _safe_window_geometry(placement, root):
+    """Ignore invalid/off-screen saved placements after a display change."""
+    if not isinstance(placement, dict):
+        return None
+    values = [placement.get(k) for k in ("width", "height", "x", "y")]
+    if any(type(v) is not int or abs(v) > 100000 for v in values):
+        return None
+    width, height, x, y = values
+    if width < 400 or height < 250:
+        return None
+    screen_w, screen_h = root.winfo_screenwidth(), root.winfo_screenheight()
+    if min(screen_w, screen_h) <= 0:
+        return None
+    width = min(width, screen_w)
+    height = min(height, screen_h)
+    # A title bar and at least a strip of the window should remain accessible.
+    if x + width < 160 or x > screen_w - 160 or y + height < 60 or y > screen_h - 60:
+        x = max(0, (screen_w - width) // 2)
+        y = max(0, (screen_h - height) // 2)
+    else:
+        x = max(0, min(x, screen_w - 160))
+        y = max(0, min(y, screen_h - 60))
+    return (width, height, x, y, placement.get("maximized") is True)
+
+
+# ---------- Keys pressed: each sinks in, in its own shape ----------
+def _key_radius(key, w, h):
+    """The corner radius of a key's face, in the same units as w and h (None: it's round)."""
+    if key in ("ok", "back"):
+        return None
+    if key in ("up", "down", "left", "right"):
+        return min(w, h) * 0.3
+    return h * (0.42 if key in DIGITS else 0.5)
+
+
+def key_sprite(key, w, h, state):
+    """A see-through picture laid over a key: "pressed" darkens its face and shades its top edge inside, as a
+    key pushed in; "hover" shades it a little."""
+    k = 4   # (drawn 4 times bigger, then made smaller: smooth edges)
+    mask = Image.new("L", (w * k, h * k), 0)
+    d = ImageDraw.Draw(mask)
+    r = _key_radius(key, w * k, h * k)
+    if r is None:
+        d.ellipse((0, 0, w * k - 1, h * k - 1), fill=255)
+    else:
+        d.rounded_rectangle((0, 0, w * k - 1, h * k - 1), radius=r, fill=255)
+    mask = mask.resize((w, h), Image.Resampling.LANCZOS)
+    m = np.asarray(mask, dtype=np.float32) / 255
+    if state == "hover":
+        alpha = m * 0.06
+        out = np.zeros((h, w, 4), np.float32)
+        out[..., 3] = alpha
+        return Image.fromarray((out * 255).astype(np.uint8), "RGBA")
+    # the shadow under the top edge: the face less itself moved down, blurred, kept inside the face
+    drop = max(1, round(h * 0.08))
+    moved = np.zeros_like(m)
+    moved[drop:] = m[:-drop]
+    edge = Image.fromarray((np.clip(m - moved, 0, 1) * 255).astype(np.uint8), "L")
+    edge = edge.filter(ImageFilter.GaussianBlur(max(1.0, h * 0.07)))
+    shade = np.asarray(edge, dtype=np.float32) / 255 * m
+    dark = np.clip(m * 0.15 + shade * 0.6, 0, 0.8)
+    # a thin light line along the bottom edge, inside
+    up = np.zeros_like(m)
+    up[:-1] = m[1:]
+    light = np.clip(m - up, 0, 1) * 0.35
+    layer = lambda rgb, a: Image.merge("RGBA", [Image.new("L", (w, h), c) for c in rgb] +
+                                       [Image.fromarray((a * 255).astype(np.uint8), "L")])
+    return Image.alpha_composite(layer((16, 18, 24), dark), layer((255, 255, 255), light))
+
+
+# what a computer key is called on its key cap, for the badge over the calculator key it presses
+PC_GLYPH = {"return": "⏎", "kp_enter": "⌅", "escape": "esc", "left": "←", "right": "→", "up": "↑",
+            "down": "↓", "shift_l": "⇧", "shift_r": "⇧", "alt_l": "⌥", "alt_r": "⌥", "space": "space",
+            "delete": "⌫", "backspace": "⌫", "home": "home", "plus": "+", "kp_add": "+", "minus": "−",
+            "kp_subtract": "−", "asterisk": "*", "kp_multiply": "*", "slash": "/", "kp_divide": "/",
+            "period": ".", "kp_decimal": ".", "comma": ",", "parenleft": "(", "parenright": ")",
+            "asciicircum": "^"}
+
+
+# the calculator keys by name, where their label is a symbol
+KEY_NAMES = {"left": "Left", "right": "Right", "up": "Up", "down": "Down", "ok": "OK", "back": "Back",
+             "home": "Home", "onoff": "On/Off", "shift": "Shift", "alpha": "Alpha", "backspace": "Delete",
+             "exe": "EXE", "toolbox": "Toolbox"}
+
+
+def pc_glyph(sym):
+    if sym in PC_GLYPH:
+        return PC_GLYPH[sym]
+    if sym.startswith("kp_"):
+        return sym[3:]
+    if len(sym) == 1:
+        return sym.upper()
+    return sym.upper() if re.fullmatch(r"f\d+", sym) else sym
+
+
+def round_rect(canvas, x0, y0, x1, y1, r, **kw):
+    """A rounded rectangle on a Tk canvas (a smoothed polygon)."""
+    pts = [x0 + r, y0, x1 - r, y0, x1, y0, x1, y0 + r, x1, y1 - r, x1, y1, x1 - r, y1, x0 + r, y1, x0, y1,
+           x0, y1 - r, x0, y0 + r, x0, y0]
+    return canvas.create_polygon(pts, smooth=True, **kw)
 
 
 class CalculatorSkinApp(LiveApp):
@@ -1565,7 +1629,8 @@ class CalculatorSkinApp(LiveApp):
                  art_path: Path, max_sleep_ms: int = 0,
                  profile_speed: bool = False, start_live: bool = False):
         self.art_path = art_path
-        self.art = Image.open(art_path).convert("RGB")
+        self._art_rgba = Image.open(art_path).convert("RGBA")   # (its corners and shadow are see-through)
+        self.art = self._art_on(BG)
         self.art_px = self.art.size
         self._canvas_image = None
         self._canvas_screen = None
@@ -1602,9 +1667,18 @@ class CalculatorSkinApp(LiveApp):
         self._upload_progress_is_reported = False
         self._upload_log_window = None
         self._upload_log_text = None
-        self.upload_status = tk.StringVar(master=root, value="USB upload: idle")
+        self.upload_status = tk.StringVar(master=root, value="Installs the open app on a calculator plugged in "
+                                                                  "with USB")
         self.upload_activity = tk.StringVar(master=root, value="")
         self.upload_elapsed = tk.StringVar(master=root, value="")
+        self.appearance = _read_settings().get("theme", "system")
+        if self.appearance not in ("system", "light", "dark"):
+            self.appearance = "system"
+        self._sprites = {}
+        self._sprite_photos = []
+        self._speed_hist = deque(maxlen=60)
+        self._snap_id = None
+        self._look_checked = 0.0
         super().__init__(root, initial, nwlink, model, system, False,
                          max_sleep_ms=max_sleep_ms, profile_speed=profile_speed)
         # Avoid the original fallback's ambiguous 'newest local file' behavior.
@@ -1612,123 +1686,190 @@ class CalculatorSkinApp(LiveApp):
         self.follow_var.set(False)
         self._builder_poll_id = self.root.after(120, self._poll_builder)
         self._upload_poll_id = self.root.after(160, self._poll_upload)
+        self._set_appearance(self.appearance, initial=True)
+        self._apply_interface_theme()
+        self._restore_window_placement()
+        self.root.bind("<Configure>", self._remember_window_geometry, add="+")
         if start_live:
             self.root.after(260, self._start_builder)
 
+    def _art_on(self, bg):
+        return Image.alpha_composite(Image.new("RGBA", self._art_rgba.size, bg), self._art_rgba).convert("RGB")
+
+    def _restore_window_placement(self):
+        placement = _safe_window_geometry(_read_settings().get("window"), self.root)
+        self._window_last_normal = None
+        self._window_restoring = bool(placement)
+        if placement is None:
+            return
+        width, height, x, y, maximized = placement
+        self._window_last_normal = (width, height, x, y)
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+        if maximized:
+            self.root.after(110, self._restore_window_maximized)
+        self.root.after(200, self._finish_window_restoring)
+
+    def _restore_window_maximized(self):
+        try:
+            self.root.state("zoomed")
+        except tk.TclError:
+            try:
+                self.root.attributes("-zoomed", True)
+            except tk.TclError:
+                pass
+
+    def _finish_window_restoring(self):
+        self._window_restoring = False
+
+    def _remember_window_geometry(self, event=None):
+        if event is not None and event.widget is not self.root:
+            return
+        if getattr(self, "_window_restoring", False) or self.fullscreen:
+            return
+        try:
+            if self.root.state() == "normal":
+                width, height = self.root.winfo_width(), self.root.winfo_height()
+                if width >= 400 and height >= 250:
+                    self._window_last_normal = (width, height,
+                                                self.root.winfo_x(), self.root.winfo_y())
+        except tk.TclError:
+            pass
+
+    def _save_window_placement(self):
+        try:
+            state = self.root.state()
+            if state == "normal" and not self.fullscreen:
+                self._remember_window_geometry()
+            if self._window_last_normal is None:
+                return
+            width, height, x, y = self._window_last_normal
+            _save_setting("window", {"width": width, "height": height,
+                                     "x": x, "y": y,
+                                     "maximized": state == "zoomed" and not self.fullscreen})
+        except (OSError, ValueError, tk.TclError) as exc:
+            print(f"[NumPlay] Could not save window placement: {exc}", file=sys.stderr)
+
+    INSPECTOR_W = 280
+    MODELS = (("N0120", "n0120"), ("N0110 or N0115", "n0110"))
+    SYSTEMS = (("Epsilon", "epsilon"), ("Upsilon", "upsilon"))
+    SPEEDS = ("Like the calculator", "Like this computer (less exact)", "108 MHz", "54 MHz", "27 MHz")
+
     def _build_ui(self):
-        self.root.title("NumPlay emulator")
-        self.root.geometry("1050x800")
-        self.root.minsize(770, 510)
+        aqua = self.root.tk.call("tk", "windowingsystem") == "aqua"
+        self._aqua = aqua
+        if aqua:   # (the system font, San Francisco)
+            global UI_FAMILY
+            UI_FAMILY = tkfont.nametofont("TkDefaultFont").actual("family")
+        self._cmd = "Command" if aqua else "Control"
+        self.root.title("NumPlay Simulator")
+        # the window holds the calculator and the inspector, no more: the calculator as tall as fits
+        dev_h = max(560, min(860, self.root.winfo_screenheight() - 150))
+        dev_w = round(dev_h * self.art_px[0] / self.art_px[1])
+        self.root.geometry(f"{dev_w + 1 + self.INSPECTOR_W}x{dev_h + 47}")
+        self.root.minsize(520, 560)
+        self.live_var = tk.BooleanVar(master=self.root, value=self.mode_var.get() == "live")
+        self.model_var = tk.StringVar(master=self.root, value=dict((v, k) for k, v in self.MODELS)[self.model])
+        self.system_var = tk.StringVar(master=self.root, value=dict((v, k) for k, v in self.SYSTEMS)[self.system])
+        self.speed_var = tk.StringVar(master=self.root, value=self.SPEEDS[0])
+        self.appearance_var = tk.StringVar(master=self.root, value=self.appearance)
+        self.speed_value = tk.StringVar(master=self.root, value="")
+        self.speed_detail = tk.StringVar(master=self.root, value="Not running")
+        self._app_name = None
+        self._update_subtitle()
+        self._build_menus()
+
+        toolbar = tk.Frame(self.root, bg=PANEL)
+        toolbar.pack(fill="x", side="top")
+        bar = tk.Frame(toolbar, bg=PANEL)
+        bar.pack(fill="x", padx=10, pady=7)
+        self.shot_button = ttk.Button(bar, text="Screenshot", command=self._focus_after(self.screenshot))
+        self.shot_button.pack(side="right", padx=(6, 0))
+        self.reload_button = ttk.Button(bar, text="Restart", command=self._focus_after(self.reset))
+        self.reload_button.pack(side="right", padx=(6, 0))
+        self.pause_button = ttk.Button(bar, text="Pause", command=self._focus_after(self.toggle_pause))
+        self.pause_button.pack(side="right", padx=(6, 0))
+        self.pick_button = ttk.Button(bar, text="Open…", command=self._focus_after(self.open_file))
+        self.pick_button.pack(side="left")
+        tk.Frame(self.root, bg=LINE, height=1).pack(fill="x", side="top")
 
         body = tk.Frame(self.root, bg=BG)
-        body.pack(fill="both", expand=True, padx=8, pady=8)
-        sidebar = tk.Frame(body, bg=PANEL, width=310)
-        sidebar.pack(side="right", fill="y", padx=(8, 0))
+        body.pack(fill="both", expand=True)
+        sidebar = tk.Frame(body, bg=PANEL, width=self.INSPECTOR_W)
+        sidebar.pack(side="right", fill="y")
         sidebar.pack_propagate(False)
-        left = tk.Frame(body, bg=BG)
-        left.pack(side="left", fill="both", expand=True)
-        self.canvas = tk.Canvas(left, bg=BG, bd=0, highlightthickness=0, takefocus=1)
-        self.canvas.pack(fill="both", expand=True)
+        tk.Frame(body, bg=LINE, width=1).pack(side="right", fill="y")
+        self.canvas = tk.Canvas(body, bg=BG, bd=0, highlightthickness=0, takefocus=1)
+        self.canvas.pack(side="left", fill="both", expand=True)
         self.screen_label = self.canvas
         self.canvas.bind("<Configure>", self._resize)
         self.canvas.bind("<ButtonPress-1>", self._mouse_press)
         self.canvas.bind("<Motion>", self._mouse_move)
         self.canvas.bind("<Leave>", self._mouse_leave)
+        self.root.bind("<Configure>", self._schedule_snap, add="+")
 
-        tk.Frame(body, bg=LINE, width=1).pack(side="right", fill="y")   # (the panel's edge)
         inner = tk.Frame(sidebar, bg=PANEL)
-        inner.pack(fill="both", expand=True, padx=18, pady=(16, 10))
-        titlebar = tk.Frame(inner, bg=PANEL)
-        titlebar.pack(fill="x")
-        tk.Label(titlebar, text="NumPlay emulator", bg=PANEL, fg=FG, font=font(13, "bold"),
+        inner.pack(fill="both", expand=True, padx=16, pady=(12, 12))
+        wrap = self.INSPECTOR_W - 34
+
+        # Device
+        self._section(inner, "Device", first=True)
+        grid = tk.Frame(inner, bg=PANEL)
+        grid.pack(fill="x")
+        grid.grid_columnconfigure(1, weight=1)
+        for row, (label, var, values, command) in enumerate((
+                ("Model", self.model_var, [k for k, _ in self.MODELS], self._change_model),
+                ("Software", self.system_var, [k for k, _ in self.SYSTEMS], self._change_system),
+                ("Speed", self.speed_var, list(self.SPEEDS), self._change_speed))):
+            tk.Label(grid, text=label, bg=PANEL, fg=FG, font=font(10), anchor="w").grid(
+                row=row, column=0, sticky="w", pady=3)
+            menu = ttk.OptionMenu(grid, var, var.get(), *values, command=lambda _v, c=command: c())
+            menu.grid(row=row, column=1, sticky="e", pady=3)
+
+        # Live Build
+        self._section(inner, "Live Build")
+        ttk.Checkbutton(inner, text="Rebuild and reload when I save", variable=self.live_var,
+                        command=self._live_checked).pack(anchor="w")
+        state = tk.Frame(inner, bg=PANEL)
+        state.pack(fill="x", pady=(6, 0))
+        self.build_dot = tk.Canvas(state, width=8, height=8, bg=PANEL, bd=0, highlightthickness=0)
+        self.build_dot.pack(side="left", padx=(1, 7))
+        self.build_dot_item = self.build_dot.create_oval(0, 0, 7, 7, fill=MUTED, outline="")
+        self.build_status_label = tk.Label(state, textvariable=self.build_status, bg=PANEL, fg=FG, font=font(10),
+                                           anchor="w", justify="left", wraplength=wrap - 16)
+        self.build_status_label.pack(side="left", fill="x")
+        self.build_info = tk.Label(inner, textvariable=self.build_detail, bg=PANEL, fg=MUTED, font=font(8),
+                                   anchor="w", justify="left", wraplength=wrap)
+        self.build_info.pack(fill="x", pady=(2, 0))
+        self.progress = ttk.Progressbar(inner, mode="indeterminate")
+        self.progress_after = self.build_info
+        log_row = tk.Frame(inner, bg=PANEL)
+        log_row.pack(fill="x", pady=(6, 0))
+        self.build_log_button = ttk.Button(log_row, text="Build Log", command=self._show_build_log)
+        self.build_log_button.pack(side="left")
+
+        # Speed
+        self._section(inner, "Speed")
+        speed = tk.Frame(inner, bg=PANEL)
+        speed.pack(fill="x")
+        tk.Label(speed, textvariable=self.speed_value, bg=PANEL, fg=FG, font=font(18, "bold"),
                  anchor="w").pack(side="left")
-        options_button = tk.Menubutton(titlebar, text="Options", bg=PANEL, fg=FG, relief="flat", bd=0,
-                                       font=font(10), cursor="hand2", activebackground=PANEL_2,
-                                       activeforeground=FG)
-        options_button.pack(side="right")
-        self._options_menu = tk.Menu(options_button, tearoff=0)
-        options_button.configure(menu=self._options_menu)
-        self._options_menu.add_command(label="Screenshot", command=self._focus_after(self.screenshot))
-        self._options_menu.add_command(label="Keyboard shortcuts", command=self._focus_after(self.show_keymap))
-        self._options_menu.add_command(label="Full screen (F11)", command=self._focus_after(self.toggle_fullscreen))
-        self._options_menu.add_separator()
-        self._options_menu.add_command(label="Build log", command=self._show_build_log)
-        self._options_menu.add_command(label="USB log", command=self._show_upload_log)
-        self._options_menu.add_command(label="Open the built files", command=self._open_dist)
-        self._options_menu.add_command(label="NumWorks web installer",
-                                       command=lambda: webbrowser.open("https://my.numworks.com/apps"))
-        self._options_menu.add_separator()
-        self.auto_clock_var = tk.BooleanVar(master=self.root, value=self.auto_clock[0])
-        self.clock_option = tk.StringVar(master=self.root, value=(
-            "550 MHz  (N0120 calibrated)" if self.model == "n0120"
-            else "216 MHz  (N0110 / N0115)"))
-        clock_submenu = tk.Menu(self._options_menu, tearoff=0)
-        clock_submenu.add_checkbutton(label="Follow this computer's speed (less exact)",
-                                      variable=self.auto_clock_var, command=self.toggle_auto_clock)
-        clock_submenu.add_separator()
-        self._manual_clock_menu = tk.Menu(clock_submenu, tearoff=0)
-        for clock in ("550 MHz  (N0120 calibrated)", "216 MHz  (N0110 / N0115)",
-                      "108 MHz", "54 MHz", "27 MHz"):
-            self._manual_clock_menu.add_radiobutton(label=clock, variable=self.clock_option,
-                                                    value=clock, command=lambda value=clock: self.change_clock(value))
-        clock_submenu.add_cascade(label="Clock", menu=self._manual_clock_menu, state="normal")
-        self._clock_submenu = clock_submenu
-        self._options_menu.add_cascade(label="Processor", menu=clock_submenu)
-        if self.art_path != BUILTIN_SKIN:
-            self._options_menu.add_command(label="Calculator picture license",
-                                           command=lambda: webbrowser.open(ART_LICENSE))
+        self.spark = tk.Canvas(speed, width=110, height=28, bg=PANEL, bd=0, highlightthickness=0)
+        self.spark.pack(side="right")
+        tk.Label(inner, textvariable=self.speed_detail, bg=PANEL, fg=MUTED, font=font(8), anchor="w",
+                 justify="left", wraplength=wrap).pack(fill="x", pady=(2, 0))
 
-        self._section(inner, "View")
-        self._segmented(inner, self.view_var, (("Calculator", "calculator"), ("Screen only", "screen")),
-                        self._switch_view)
-        self.view_detail = tk.Label(inner, text="", bg=PANEL, fg=MUTED, font=font(9), anchor="w")
-        self.view_detail.pack(fill="x", pady=(4, 0))
+        # Keys Held
+        self._section(inner, "Keys Held")
+        self.chips = tk.Canvas(inner, height=24, bg=PANEL, bd=0, highlightthickness=0)
+        self.chips.pack(fill="x")
 
-        self._section(inner, "Run")
-        self._segmented(inner, self.mode_var, (("One file", "file"), ("Live", "live")), self._switch_mode)
+        tk.Frame(inner, bg=PANEL).pack(fill="both", expand=True)
 
-        # the two modes' panels, one at a time
-        self.file_panel = tk.Frame(inner, bg=PANEL)
-        self.file_panel.pack(fill="x", pady=(10, 0))
-        self.pick_button = self._button(self.file_panel, "Open a .nwa", self.open_file, primary=True)
-        self.pick_button.pack(fill="x")
-        tk.Label(self.file_panel, text="Runs that file. Open it again after building.", bg=PANEL, fg=MUTED,
-                 font=font(9), wraplength=270, anchor="w", justify="left").pack(fill="x", pady=(6, 0))
-
-        self.live_panel = tk.Frame(inner, bg=PANEL)
-        self.live_button = self._button(self.live_panel, "Start live build", self._toggle_builder, primary=True)
-        self.live_button.pack(fill="x", pady=(10, 0))
-        tk.Label(self.live_panel, text="Builds when you save a file, then reloads.", bg=PANEL, fg=MUTED,
-                 font=font(9), wraplength=270, anchor="w", justify="left").pack(fill="x", pady=(6, 0))
-
-        self.build_info = tk.Frame(inner, bg=PANEL_2, padx=10, pady=8)
-        self.build_info.pack(fill="x", pady=(10, 0))
-        tk.Label(self.build_info, textvariable=self.build_status, bg=PANEL_2, fg=FG, font=font(10, "bold"),
-                 anchor="w", justify="left", wraplength=260).pack(fill="x")
-        tk.Label(self.build_info, textvariable=self.build_detail, bg=PANEL_2, fg=MUTED, font=font(9),
-                 anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(2, 0))
-        self.progress = ttk.Progressbar(self.build_info, mode="indeterminate")
-
-        self.running_header = self._section(inner, "App")
-        self.file_title = tk.Label(inner, text="No file open", bg=PANEL, fg=FG, font=font(11, "bold"),
-                                   anchor="w", wraplength=270, justify="left")
-        self.file_title.pack(fill="x")
-        tk.Label(inner, textvariable=self.file_label, bg=PANEL, fg=MUTED, font=font(8), anchor="w",
-                 wraplength=270, justify="left").pack(fill="x", pady=(2, 8))
-        action_panel = tk.Frame(inner, bg=PANEL)
-        action_panel.pack(fill="x")
-        for col in (0, 1):
-            action_panel.grid_columnconfigure(col, weight=1, uniform="actions")
-        self.reload_button = self._button(action_panel, "Restart", self.reset)
-        self.reload_button.grid(row=0, column=0, sticky="ew", padx=(0, 4))
-        self.pause_button = self._button(action_panel, "Pause", self.toggle_pause)
-        self.pause_button.grid(row=0, column=1, sticky="ew", padx=(4, 0))
-        # sending to a real calculator: only when asked, never part of the live builds
-        self.upload_button = self._button(inner, "Send to the calculator", self._push_current_build)
-        self.upload_button.pack(fill="x", pady=(8, 0))
+        # Calculator: sending the app to a real one, only when asked
+        self._section(inner, "Calculator")
         self.upload_status_label = tk.Label(inner, textvariable=self.upload_status, bg=PANEL, fg=MUTED,
-                                            font=font(9), wraplength=270, justify="left", anchor="w")
-        self.upload_status_label.pack(fill="x", pady=(4, 0))
+                                            font=font(8), wraplength=wrap, justify="left", anchor="w")
+        self.upload_status_label.pack(fill="x")
         # (nwlink's own percentage when it gives one, else a bar that only says it is still running)
         self.upload_progress_panel = tk.Frame(inner, bg=PANEL)
         self.upload_progress = ttk.Progressbar(self.upload_progress_panel, mode="indeterminate", maximum=100)
@@ -1736,58 +1877,250 @@ class CalculatorSkinApp(LiveApp):
         tk.Label(self.upload_progress_panel, textvariable=self.upload_elapsed, bg=PANEL, fg=MUTED,
                  font=font(8), anchor="w").pack(fill="x")
         tk.Label(self.upload_progress_panel, textvariable=self.upload_activity, bg=PANEL, fg=MUTED,
-                 font=font(8), anchor="w", justify="left", wraplength=265).pack(fill="x", pady=(2, 0))
+                 font=font(8), anchor="w", justify="left", wraplength=wrap).pack(fill="x", pady=(2, 0))
+        self.upload_button = ttk.Button(inner, text="Install on Calculator…", command=self._push_current_build)
+        self.upload_button.pack(anchor="w", pady=(6, 0))
 
-        self._section(inner, "Emulator")
-        for var in (self.rate_label, self.input_status, self.time_label):
-            tk.Label(inner, textvariable=var, bg=PANEL, fg=MUTED, font=font(9), anchor="w").pack(fill="x")
-
-        tk.Frame(inner, bg=PANEL).pack(fill="both", expand=True)
-        self.drop_line = tk.Label(inner, text="Drop a .nwa on the calculator to open it", bg=PANEL, fg=MUTED,
-                                  font=font(8), wraplength=270, justify="left", anchor="w")
+        tk.Frame(inner, bg=LINE, height=1).pack(fill="x", pady=(12, 8))
+        self.drop_line = tk.Label(inner, textvariable=self.status, bg=PANEL, fg=MUTED, font=font(8),
+                                  anchor="w", justify="left", wraplength=wrap)
         self.drop_line.pack(fill="x")
-        tk.Frame(sidebar, bg=LINE, height=1).pack(fill="x", side="bottom")
-        tk.Label(sidebar, textvariable=self.status, bg=PANEL, fg=MUTED, anchor="w", justify="left",
-                 wraplength=282, padx=18, pady=8, font=font(9)).pack(fill="x", side="bottom")
+        self.status.set("Drop a .nwa on the calculator, or choose Open")
         self._configure_mode_panel()
         self._update_upload_controls()
+        self._draw_chips()
         self.root.focus_force()
         self.root.after(150, self.refocus_input)
 
-    def _section(self, parent, title):
-        label = tk.Label(parent, text=title, bg=PANEL, fg=MUTED, font=font(9), anchor="w")
-        label.pack(fill="x", pady=(16, 6))
+    def _build_menus(self):
+        """The menu bar: what the app can do, where a Mac app keeps it."""
+        cmd, mac = self._cmd, self._aqua
+        acc = (lambda keys: keys) if mac else (lambda keys: keys.replace("Command-", "Ctrl+"))
+        bar = tk.Menu(self.root)
+        if mac:
+            app = tk.Menu(bar, name="apple", tearoff=0)
+            app.add_command(label="About NumPlay Simulator",
+                            command=lambda: webbrowser.open("https://github.com/Mason363/NumPlay"))
+            bar.add_cascade(menu=app)
+        def bind(seq, action):
+            self.root.bind_all(f"<{cmd}-{seq}>", lambda e: (action(), "break")[1])
+
+        m = tk.Menu(bar, tearoff=0)
+        m.add_command(label="Open App…", accelerator=acc("Command-O"), command=self._focus_after(self.open_file))
+        m.add_command(label="Take Screenshot", accelerator=acc("Command-S"), command=self._focus_after(self.screenshot))
+        m.add_separator()
+        m.add_command(label="Install on Calculator…", accelerator=acc("Command-I"), command=self._push_current_build)
+        m.add_command(label="Show Built Apps", command=self._open_dist)
+        bar.add_cascade(label="File", menu=m)
+        bind("o", self.open_file)
+        bind("s", self.screenshot)
+        bind("i", self._push_current_build)
+
+        m = tk.Menu(bar, tearoff=0)
+        m.add_radiobutton(label="Calculator", variable=self.view_var, value="calculator",
+                          accelerator=acc("Command-1"), command=self._switch_view)
+        m.add_radiobutton(label="Screen Only, Actual Size", variable=self.view_var, value="screen",
+                          accelerator=acc("Command-2"), command=self._switch_view)
+        m.add_separator()
+        look = tk.Menu(m, tearoff=0)
+        for label, value in (("Like the System", "system"), ("Light", "light"), ("Dark", "dark")):
+            look.add_radiobutton(label=label, variable=self.appearance_var, value=value,
+                                 command=lambda: self._set_appearance(self.appearance_var.get()))
+        m.add_cascade(label="Appearance", menu=look)
+        m.add_separator()
+        m.add_command(label="Enter Full Screen", accelerator=acc("Command-F"), command=self.toggle_fullscreen)
+        bar.add_cascade(label="View", menu=m)
+        bind("1", lambda: (self.view_var.set("calculator"), self._switch_view()))
+        bind("2", lambda: (self.view_var.set("screen"), self._switch_view()))
+        bind("f", self.toggle_fullscreen)
+
+        m = tk.Menu(bar, tearoff=0)
+        m.add_command(label="Home", accelerator=acc("Shift-Command-H"), command=lambda: self._tap("home"))
+        m.add_command(label="Restart App", accelerator=acc("Command-R"), command=self._focus_after(self.reset))
+        m.add_command(label="Pause or Resume", accelerator=acc("Command-P"), command=self.toggle_pause)
+        m.add_command(label="Turn Off or On", command=self.power_button)
+        m.add_separator()
+        sub = tk.Menu(m, tearoff=0)
+        for label, _ in self.MODELS:
+            sub.add_radiobutton(label=label, variable=self.model_var, value=label, command=self._change_model)
+        m.add_cascade(label="Model", menu=sub)
+        sub = tk.Menu(m, tearoff=0)
+        for label, _ in self.SYSTEMS:
+            sub.add_radiobutton(label=label, variable=self.system_var, value=label, command=self._change_system)
+        m.add_cascade(label="Software", menu=sub)
+        sub = tk.Menu(m, tearoff=0)
+        for label in self.SPEEDS:
+            sub.add_radiobutton(label=label, variable=self.speed_var, value=label, command=self._change_speed)
+        m.add_cascade(label="Speed", menu=sub)
+        bar.add_cascade(label="Device", menu=m)
+        self.root.bind_all(f"<Shift-{cmd}-H>", lambda e: (self._tap("home"), "break")[1])
+        self.root.bind_all(f"<Shift-{cmd}-h>", lambda e: (self._tap("home"), "break")[1])
+        bind("r", self.reset)
+        bind("p", self.toggle_pause)
+
+        m = tk.Menu(bar, tearoff=0)
+        m.add_checkbutton(label="Rebuild and Reload When I Save", variable=self.live_var,
+                          accelerator=acc("Command-B"), command=self._live_checked)
+        m.add_command(label="Show Build Log", accelerator=acc("Command-L"), command=self._show_build_log)
+        m.add_command(label="Show USB Log", command=self._show_upload_log)
+        bar.add_cascade(label="Build", menu=m)
+        bind("b", lambda: (self.live_var.set(not self.live_var.get()), self._live_checked()))
+        bind("l", self._show_build_log)
+
+        if mac:
+            bar.add_cascade(menu=tk.Menu(bar, name="window", tearoff=0), label="Window")
+        m = tk.Menu(bar, name="help" if mac else None, tearoff=0)
+        m.add_command(label="Keyboard Shortcuts", command=self.show_keymap)
+        m.add_command(label="Make Your Own Game",
+                      command=lambda: webbrowser.open("https://github.com/Mason363/NumPlay/blob/main/docs/make-a-game.md"))
+        m.add_command(label="NumWorks Web Installer", command=lambda: webbrowser.open("https://my.numworks.com/apps"))
+        bar.add_cascade(label="Help", menu=m)
+        self.root.configure(menu=bar)
+        self._menubar = bar
+
+    def _tap(self, key):
+        """A calculator key pressed for a moment (the menus' Home)."""
+        self.on_mouse_down(key)
+        self.root.after(120, self.on_mouse_up)
+
+    def _update_subtitle(self):
+        """The window's title: the app, then the calculator it runs on (as Simulator names its device)."""
+        model = dict((v, k) for k, v in self.MODELS)[self.model]
+        system = dict((v, k) for k, v in self.SYSTEMS)[self.system]
+        device = f"NumWorks {model} · {system}"
+        self.root.title(f"{self._app_name} · {device}" if self._app_name else device)
+
+    def _change_model(self):
+        self.model = dict(self.MODELS)[self.model_var.get()]
+        self._update_subtitle()
+        self._change_speed(quiet=True)
+        self._restart_for_device(f"Now an {self.model_var.get()}")
+
+    def _change_system(self):
+        self.system = dict(self.SYSTEMS)[self.system_var.get()]
+        self._update_subtitle()
+        self._restart_for_device(f"Now running {self.system_var.get()}")
+
+    def _restart_for_device(self, message):
+        if self.current is not None:
+            self.load(self.current)
+        self.set_status(message)
+
+    def _change_speed(self, quiet=False):
+        choice = self.speed_var.get()
+        self.auto_clock[0] = choice == self.SPEEDS[1]
+        if self.auto_clock[0]:
+            # (the adaptive clock was tuned around 216 MHz: it starts there, not with a jump from 550)
+            self.clock_mhz[0] = 216
+        elif choice == self.SPEEDS[0]:
+            self.clock_mhz[0] = 550 if self.model == "n0120" else 216
+        else:
+            self.clock_mhz[0] = int(choice.split()[0])
+        if not quiet:
+            self.set_status("Speed follows this computer, so timing may differ from a calculator"
+                            if self.auto_clock[0] else f"The processor runs at {self.clock_mhz[0]} MHz")
+
+    def _live_checked(self):
+        self.mode_var.set("live" if self.live_var.get() else "file")
+        self._switch_mode()
+
+    def _set_appearance(self, choice, *, initial=False):
+        """Light, dark, or the system's: the window, its controls (aqua) and the colours drawn here."""
+        self.appearance = choice
+        if self._aqua:
+            try:
+                self.root.tk.call("::tk::unsupported::MacWindowStyle", "appearance", self.root._w,
+                                  {"light": "aqua", "dark": "darkaqua"}.get(choice, "auto"))
+            except tk.TclError:
+                pass
+        if not initial:
+            try:
+                _save_setting("theme", choice)
+            except OSError as exc:
+                self.set_status(f"Could not keep the appearance for next time: {exc}")
+        self._follow_appearance()
+
+    def _is_dark(self):
+        if self.appearance in ("light", "dark"):
+            return self.appearance == "dark"
+        if self._aqua:
+            try:
+                return bool(int(self.root.tk.call("::tk::unsupported::MacWindowStyle", "isdark", self.root._w)))
+            except (tk.TclError, ValueError):
+                return False
+        return False
+
+    def _follow_appearance(self):
+        want = "dark" if self._is_dark() else "light"
+        if want != CURRENT_THEME:
+            self._apply_interface_theme(want)
+
+    def _apply_interface_theme(self, requested=None, *, initial=False):
+        """Repaint the Tk widgets in the other palette, without restarting the emulator or the builder."""
+        previous = THEME_PALETTES[CURRENT_THEME]
+        if requested is not None:
+            _activate_theme_palette(requested)
+        updated = THEME_PALETTES[CURRENT_THEME]
+        mapping = {old.lower(): updated[key] for key, old in previous.items()}
+        tk_options = ("background", "foreground", "activebackground", "activeforeground", "selectcolor",
+                      "disabledforeground", "highlightbackground", "highlightcolor", "insertbackground",
+                      "troughcolor")
+        visited = set()
+
+        def paint(widget):
+            if str(widget) in visited:
+                return
+            visited.add(str(widget))
+            try:
+                options = set(widget.keys())
+                changes = {}
+                for option in tk_options:
+                    if option in options:
+                        value = str(widget.cget(option)).lower()
+                        if value in mapping and mapping[value] != value:
+                            changes[option] = mapping[value]
+                if changes:
+                    widget.configure(**changes)
+                for child in widget.winfo_children():
+                    paint(child)
+            except tk.TclError:
+                pass
+
+        paint(self.root)
+        self.root.configure(bg=BG)
+        if not getattr(self, "_aqua", False):
+            try:
+                style = ttk.Style(self.root)
+                style.theme_use("clam")
+                style.configure(".", background=PANEL, foreground=FG)
+                style.configure("TButton", background=PANEL_2)
+                style.configure("TCheckbutton", background=PANEL, foreground=FG)
+                style.configure("TMenubutton", background=PANEL_2, foreground=FG)
+                style.configure("Horizontal.TProgressbar", background=ACCENT, troughcolor=PANEL_2)
+            except tk.TclError:
+                pass
+        # the calculator's picture on the new background (its edges are see-through), the rest drawn again
+        self.art = self._art_on(BG)
+        self._art_geometry = (0, 0, 0, 0)
+        try:
+            self.build_dot.itemconfigure(self.build_dot_item, fill=self._dot_colour())
+            self._draw_spark()
+            self._draw_chips()
+            self._resize()
+            self.canvas.itemconfigure("native-border", outline=LINE)
+            self._draw_highlight()
+        except (tk.TclError, AttributeError):
+            pass
+
+    def _section(self, parent, title, first=False):
+        if not first:
+            tk.Frame(parent, bg=LINE, height=1).pack(fill="x", pady=(14, 10))
+        label = tk.Label(parent, text=title, bg=PANEL, fg=FG, font=font(10, "bold"), anchor="w")
+        label.pack(fill="x", pady=(0, 6))
         return label
 
-    def _segmented(self, parent, var, choices, command):
-        """Two or three choices side by side, the chosen one shaded (radio buttons can't be coloured on a Mac)."""
-        row = tk.Frame(parent, bg=LINE)
-        row.pack(fill="x")
-        cells = []
-
-        def paint(*_):
-            for cell, value in cells:
-                on = var.get() == value
-                cell.configure(bg=SELECT if on else PANEL, font=font(10, "bold" if on else "normal"))
-
-        for i, (text, value) in enumerate(choices):
-            row.grid_columnconfigure(i, weight=1, uniform="seg")
-            cell = tk.Label(row, text=text, fg=FG, pady=7, cursor="hand2")
-            cell.grid(row=0, column=i, sticky="ew", padx=(1 if i == 0 else 0, 1), pady=1)
-
-            def choose(_e, value=value):
-                var.set(value)
-                command()
-                self.root.after(75, self.refocus_input)
-
-            cell.bind("<ButtonRelease-1>", choose)
-            cells.append((cell, value))
-        var.trace_add("write", paint)
-        paint()
-        return row
-
     def _button(self, parent, label, callback, primary=False):
-        return FlatButton(parent, label, self._focus_after(callback), primary=primary)
+        return ttk.Button(parent, text=label, command=self._focus_after(callback))
 
     def _focus_after(self, action):
         def call():
@@ -1798,16 +2131,11 @@ class CalculatorSkinApp(LiveApp):
         return call
 
     def _configure_mode_panel(self):
-        if self.mode_var.get() == "live":
-            self.file_panel.pack_forget()
-            self.live_panel.pack(before=self.running_header, fill="x")
-            self.build_info.pack(before=self.running_header, fill="x", pady=(10, 0))
-            self.drop_line.configure(text="Save a file to build again. Dropping a .nwa opens it on its own.")
-        else:
-            self.live_panel.pack_forget()
-            self.build_info.pack_forget()
-            self.file_panel.pack(before=self.running_header, fill="x", pady=(10, 0))
-            self.drop_line.configure(text="Drop a .nwa on the calculator to open it")
+        live = self.mode_var.get() == "live"
+        self.live_var.set(live)
+        if not live:
+            self._set_build_state("Off", "Opens one .nwa. Turn this on to build NumPlay again each time you save "
+                                  "a file, and reload it.")
 
     def _switch_mode(self):
         self._configure_mode_panel()
@@ -1819,7 +2147,7 @@ class CalculatorSkinApp(LiveApp):
         else:
             self.watch_var.set(False)
             self._stop_builder()
-            self._set_build_state("Single file mode", "No background compile or auto-reload")
+            self._configure_mode_panel()
         self._update_upload_controls()
         self.root.after(75, self.refocus_input)
 
@@ -1852,29 +2180,35 @@ class CalculatorSkinApp(LiveApp):
     def _set_build_state(self, status, detail="", *, busy=False, error=False):
         self.build_status.set(status)
         self.build_detail.set(detail)
-        if error:
-            self.build_info.configure(bg=ERROR_BG)
-            for child in self.build_info.winfo_children():
-                if isinstance(child, tk.Label):
-                    child.configure(bg=ERROR_BG)
-        else:
-            self.build_info.configure(bg=PANEL_2)
-            for child in self.build_info.winfo_children():
-                if isinstance(child, tk.Label):
-                    child.configure(bg=PANEL_2)
+        self._build_error = error
+        try:
+            self.build_dot.itemconfigure(self.build_dot_item, fill=self._dot_colour(busy))
+            self.build_status_label.configure(fg=RED if error else FG)
+        except (tk.TclError, AttributeError):
+            pass
         if busy != self._builder_busy:
             self._builder_busy = busy
             if busy:
-                self.progress.pack(fill="x", pady=(9, 1))
+                self.progress.pack(fill="x", pady=(6, 0), after=self.progress_after)
                 self.progress.start(11)
             else:
                 self.progress.stop()
                 self.progress.pack_forget()
 
+    def _dot_colour(self, busy=None):
+        busy = self._builder_busy if busy is None else busy
+        if getattr(self, "_build_error", False):
+            return RED
+        if busy:
+            return ORANGE
+        if self.mode_var.get() == "live" and self.build_process is not None:
+            return GREEN
+        return MUTED
+
     def _toggle_builder(self):
         if self.build_process and self.build_process.poll() is None:
             self._stop_builder()
-            self._set_build_state("Watcher stopped", "Click Start live build to resume")
+            self._set_build_state("Watcher stopped", "Turn Rebuild and reload back on to start again")
         else:
             self._start_builder()
 
@@ -1912,7 +2246,6 @@ class CalculatorSkinApp(LiveApp):
             self._set_build_state("Cannot start compiler", str(exc), error=True)
             self.build_process = None
             return
-        self.live_button.configure(text="Stop live build")
         self._set_build_state("Starting the compiler", "Checking dependencies", busy=True)
         thread = threading.Thread(target=self._read_builder_output,
                                   args=(generation, self.build_process), daemon=True)
@@ -1937,10 +2270,8 @@ class CalculatorSkinApp(LiveApp):
         self.watch_var.set(False)
         self.watch_candidate = None
         self.build_process = None
-        if hasattr(self, "live_button"):
-            self.live_button.configure(text="Start live build")
-        self._set_build_state("Watcher stopped" if self.mode_var.get() == "live" else "Single file mode",
-                              "No background compilation", busy=False)
+        self._set_build_state("Stopped" if self.mode_var.get() == "live" else "Off",
+                              "Not building" if self.mode_var.get() == "live" else self.build_detail.get(), busy=False)
         if process is None or process.poll() is not None:
             return
         self._builder_stopping = True
@@ -1988,12 +2319,11 @@ class CalculatorSkinApp(LiveApp):
             if generation != self._builder_generation:
                 continue
             if kind == "ended":
-                self.live_button.configure(text="Start live build")
                 self.build_process = None
                 self.watch_var.set(False)
                 if value != 0:
                     self._set_build_state("Compiler stopped unexpectedly",
-                                          f"Exit code {value}. See Options, Build log", error=True)
+                                          f"Exit code {value}. See the Build Log", error=True)
                 else:
                     self._set_build_state("Watcher stopped", "No longer monitoring edits")
                 continue
@@ -2020,7 +2350,7 @@ class CalculatorSkinApp(LiveApp):
             elif ("Build failed;" in line or "Initial build failed" in line or
                   "Windows build failed:" in line):
                 self._builder_has_error = True
-                self._set_build_state("Build failed", "The last good app stays. See Options, Build log",
+                self._set_build_state("Build failed", "The last good app stays. See the Build Log",
                                       busy=False, error=True)
             elif "Watching for the next edit" in line or "Watching NumPlay source files" in line:
                 if self._builder_has_error:
@@ -2082,6 +2412,8 @@ class CalculatorSkinApp(LiveApp):
         path.mkdir(parents=True, exist_ok=True)
         if os.name == "nt":
             os.startfile(str(path))
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", str(path)])
         else:
             self.set_status(f"Compiled files: {path}")
 
@@ -2100,9 +2432,7 @@ class CalculatorSkinApp(LiveApp):
         available = (not self._upload_running and source is not None
                      and source.is_file() and source.suffix.lower() == ".nwa")
         self.upload_button.configure(state="normal" if available else "disabled",
-                                     text=("Sending to the calculator" if self._upload_running else
-                                           "Send this build to the calculator" if self.mode_var.get() == "live" else
-                                           "Send this .nwa to the calculator"))
+                                     text="Installing…" if self._upload_running else "Install on Calculator…")
 
     def _show_upload_log(self):
         """A small live log for USB details that nwlink prints to stdout."""
@@ -2203,7 +2533,7 @@ class CalculatorSkinApp(LiveApp):
         self.upload_progress.configure(mode="indeterminate")
         self.upload_progress_panel.pack(fill="x", pady=(2, 7), after=self.upload_status_label)
         self.upload_progress.start(12)
-        self.set_status("Installing on physical NumWorks — do not unplug")
+        self.set_status("Installing on the calculator. Keep it plugged in")
         self._update_upload_controls()
         threading.Thread(target=self._upload_worker,
                          args=(snapshot, snapshot_dir), daemon=True).start()
@@ -2299,7 +2629,7 @@ class CalculatorSkinApp(LiveApp):
         self._upload_poll_id = self.root.after(160, self._poll_upload)
 
     def _upload_failure(self, detail):
-        self.set_status("USB upload failed — current .nwa is safe on disk")
+        self.set_status("The install didn't finish. The .nwa is still safe on this computer")
         msg = ("The USB installer reported a problem:\n\n" + detail[-1700:] +
                "\n\nCheck the cable and calculator connection. "
                "The NumWorks website is an alternative.\n\n"
@@ -2314,6 +2644,7 @@ class CalculatorSkinApp(LiveApp):
                                    "Do NOT unplug the NumWorks during installation.",
                                    parent=self.root)
             return
+        self._save_window_placement()
         try:
             self.root.after_cancel(self._upload_poll_id)
         except (tk.TclError, AttributeError):
@@ -2345,18 +2676,6 @@ class CalculatorSkinApp(LiveApp):
             return "break"
         return super().on_pc_up(event)
 
-    def toggle_auto_clock(self):
-        self.auto_clock[0] = bool(self.auto_clock_var.get())
-        self._clock_submenu.entryconfigure("Manual clock", state="disabled" if self.auto_clock[0] else "normal")
-        if self.auto_clock[0]:
-            # The adaptive heuristic was tuned around 216MHz. Start it there
-            # to avoid a disruptive 550-to-216 jump on its first adjustment.
-            self.clock_mhz[0] = 216
-            self.set_status("Adaptive clock enabled; game timing may differ from hardware.")
-        else:
-            self.clock_mhz[0] = int(self.clock_option.get().split()[0])
-            self.set_status(f"Manual CPU clock: {self.clock_mhz[0]} MHz")
-
     def change_clock(self, selected):
         if self.auto_clock[0]:
             return
@@ -2366,9 +2685,6 @@ class CalculatorSkinApp(LiveApp):
 
     def _switch_view(self):
         """Switch the viewport only; the running game/keyboard/build are untouched."""
-        screen_only = self.view_var.get() == "screen"
-        self.view_detail.configure(text=("The screen alone, 320 x 240, pixel for pixel" if screen_only else
-                                         "Click the keys, or use your keyboard"))
         self._hover = None
         # A held mouse key was pressed on a key that disappears in screen view.
         # Release it to avoid a stuck calculator button.
@@ -2407,9 +2723,9 @@ class CalculatorSkinApp(LiveApp):
                                              tags="native-border")
                 self._display_screen()
             return
-        # Calculator POV: preserve the existing artwork proportions.
+        # the calculator as big as its side of the window holds, edge to edge
         ratio = self.art_px[0] / self.art_px[1]
-        art_w = max(1, int(min(ww - 8, (hh - 8) * ratio)))
+        art_w = max(1, int(min(ww, hh * ratio)))
         art_h = max(1, int(art_w / ratio))
         x0 = (ww - art_w) // 2
         y0 = (hh - art_h) // 2
@@ -2421,6 +2737,12 @@ class CalculatorSkinApp(LiveApp):
         self.canvas.delete("all")
         self._canvas_image = self.canvas.create_image(x0, y0, image=self._bg_photo, anchor="nw", tags="art")
         self._canvas_screen = None
+        self._sprites.clear()
+        if self._screen_rgb is None:
+            sx, sy, sw, sh = self._rect(SCREEN)
+            self.canvas.create_text(sx + sw // 2, sy + sh // 2, tags="hint", fill="#8e8e93", font=font(10),
+                                    width=sw - 40, justify="center",
+                                    text="Drop a .nwa here, or choose Open")
         self._display_screen()
         self._draw_highlight()
 
@@ -2446,6 +2768,7 @@ class CalculatorSkinApp(LiveApp):
             x, y, w, h = self._rect(SCREEN)
             photo = ImageTk.PhotoImage(self._screen_rgb.resize((w, h), Image.Resampling.NEAREST))
         self._photo = photo
+        self.canvas.delete("hint")
         if self._canvas_screen is None or not self.canvas.find_withtag("screen"):
             self._canvas_screen = self.canvas.create_image(x, y, image=photo, anchor="nw", tags="screen")
         else:
@@ -2465,28 +2788,102 @@ class CalculatorSkinApp(LiveApp):
                 matched.append((center_distance, key))
         return min(matched)[1] if matched else None
 
+    def _sprite(self, key, state, w, h):
+        cache = (key, state, w, h)
+        if cache not in self._sprites:
+            self._sprites[cache] = ImageTk.PhotoImage(key_sprite(key, w, h, state))
+        return self._sprites[cache]
+
     def _draw_highlight(self):
         self.canvas.delete("key-light")
         if self.view_var.get() == "screen" or not self._art_geometry[2]:
             return
-        # V12 only drew the hovered/mouse-clicked key, so PC arrow presses
-        # were invisible unless the mouse happened to hover over that button.
-        # Paint *all* held keyboard/mouse buttons; combinations are supported.
         held = set(self.pressed_pc.values())
         if self.mouse_pressed:
             held.add(self.mouse_pressed)
         for key in sorted(held):
+            if key in HOTSPOTS:
+                x, y, w, h = self._rect(HOTSPOTS[key])
+                self.canvas.create_image(x, y, image=self._sprite(key, "pressed", w, h), anchor="nw",
+                                         tags="key-light")
+        if self._hover and self._hover in HOTSPOTS and self._hover not in held:
+            x, y, w, h = self._rect(HOTSPOTS[self._hover])
+            self.canvas.create_image(x, y, image=self._sprite(self._hover, "hover", w, h), anchor="nw",
+                                     tags="key-light")
+        badge = font(8, "bold")
+        measure = tkfont.Font(root=self.root, font=badge)
+        for sym, key in sorted(self.pressed_pc.items()):
             if key not in HOTSPOTS:
                 continue
             x, y, w, h = self._rect(HOTSPOTS[key])
-            self.canvas.create_oval(x + 2, y + 2, x + w - 2, y + h - 2,
-                                    outline=ACCENT, width=3, tags="key-light")
-        # Hover is a subtle white outline only when the key is not held.
-        if self._hover and self._hover in HOTSPOTS and self._hover not in held:
-            x, y, w, h = self._rect(HOTSPOTS[self._hover])
-            self.canvas.create_oval(x + 2, y + 2, x + w - 2, y + h - 2,
-                                    outline="#ffffff", width=2, tags="key-light")
+            text = pc_glyph(sym)
+            tw = measure.measure(text) + 12
+            th = measure.metrics("linespace") + 4
+            cx, top = x + w / 2, y - th - 3
+            round_rect(self.canvas, cx - tw / 2, top, cx + tw / 2, top + th, th / 2, fill="#1d1d1f", outline="",
+                       tags="key-light")
+            self.canvas.create_text(cx, top + th / 2, text=text, fill="#ffffff", font=badge, tags="key-light")
         self.canvas.tag_raise("key-light")
+
+    def _draw_chips(self):
+        """Keys Held: each key down, and the computer key it comes from."""
+        c = self.chips
+        c.delete("all")
+        held = []
+        name = lambda key: KEY_NAMES.get(key, LABEL.get(key, key))
+        for sym, key in sorted(self.pressed_pc.items()):
+            held.append(f"{name(key)}  {pc_glyph(sym)}")
+        if self.mouse_pressed and self.mouse_pressed not in self.pressed_pc.values():
+            held.append(name(self.mouse_pressed))
+        if not held:
+            c.create_text(0, 12, text="None", anchor="w", fill=MUTED, font=font(8))
+            return
+        chip = font(8)
+        measure = tkfont.Font(root=self.root, font=chip)
+        x = 1
+        for text in held:
+            w = measure.measure(text) + 16
+            round_rect(c, x, 2, x + w, 22, 6, fill=CHIP, outline=LINE)
+            c.create_text(x + w / 2, 12, text=text, fill=FG, font=chip)
+            x += w + 6
+
+    def _draw_spark(self):
+        c = self.spark
+        c.delete("all")
+        values = list(self._speed_hist)
+        if len(values) < 2:
+            return
+        w, h = int(c.cget("width")), int(c.cget("height"))
+        top = max(1.2, max(values))
+        c.create_line(0, h - 2 - (h - 4) / top, w, h - 2 - (h - 4) / top, fill=LINE, dash=(2, 3))
+        pts = []
+        for i, v in enumerate(values):
+            pts += [w * i / (len(values) - 1), h - 2 - (h - 4) * min(v, top) / top]
+        c.create_line(*pts, fill=ACCENT, width=1.6, smooth=True)
+
+    def _schedule_snap(self, event=None):
+        if event is not None and event.widget is not self.root:
+            return
+        if self._snap_id is not None:
+            self.root.after_cancel(self._snap_id)
+        self._snap_id = self.root.after(300, self._snap_to_device)
+
+    def _snap_to_device(self):
+        """After the window is resized, its width follows the calculator again: no empty space beside it."""
+        self._snap_id = None
+        if self.fullscreen or self.view_var.get() != "calculator":
+            return
+        try:
+            if self.root.state() != "normal":
+                return
+            ch, cw = self.canvas.winfo_height(), self.canvas.winfo_width()
+        except tk.TclError:
+            return
+        if ch < 100:
+            return
+        want = int(ch * self.art_px[0] / self.art_px[1])
+        if abs(cw - want) > 2:
+            self.root.geometry(f"{self.root.winfo_width() - cw + want}x{self.root.winfo_height()}")
 
     def _mouse_press(self, event):
         # Crucial on Windows: clicking the calculator after using a sidebar
@@ -2516,6 +2913,7 @@ class CalculatorSkinApp(LiveApp):
             self.pressed.update(names)
         if hasattr(self, "canvas"):
             self._draw_highlight()
+            self._draw_chips()
 
     def poll(self):
         if self._closing:
@@ -2546,8 +2944,17 @@ class CalculatorSkinApp(LiveApp):
             _, factor, mhz, auto = latest_pace
             self.rate_label.set(f"Speed {factor:.2f}x, CPU: {mhz} MHz" +
                                 (" (auto)" if auto else " (manual)"))
-        if self.current:
-            self.file_title.configure(text=self.current.name)
+            self._speed_hist.append(factor)
+            self.speed_value.set(f"{factor:.2f}×")
+            self.speed_detail.set(f"of the calculator's own speed, with the processor at {mhz} MHz" +
+                                  (" (following this computer)" if auto else ""))
+            self._draw_spark()
+        if self.current and self._app_name != self.current.stem:
+            self._app_name = self.current.stem
+            self._update_subtitle()
+        if self.appearance == "system" and time.monotonic() - self._look_checked > 1.5:
+            self._look_checked = time.monotonic()
+            self._follow_appearance()
         if (self.worker is not None and self.worker.is_alive() and
             not self.powered_off and not self.pause_event.is_set() and
             time.monotonic() - self._last_frame_wall > 3.0):
@@ -2594,9 +3001,9 @@ class CalculatorSkinApp(LiveApp):
             self.black_screen(ended)
         elif (self.worker is not None and self.worker.end_reason == "exited"
               and not self.powered_off):
-            self.black_screen("Application exited — press Power or Reload to restart")
+            self.black_screen("The app quit. Press On/Off or Restart to start it again")
         if error and not self.powered_off:
-            self.set_status("Emulator error — see dialog")
+            self.set_status("The emulator stopped with an error")
             messagebox.showerror("NumPlay emulator", error)
         if self.pending is not None and (self.worker is None or not self.worker.is_alive()):
             self.start_pending()
@@ -2607,7 +3014,6 @@ def main():
     ap = argparse.ArgumentParser(description="NumWorks-shaped .nwa emulator: single-file and live-build modes, on macOS, Linux and Windows")
     ap.add_argument("nwa", nargs="?", type=Path, help="optional .nwa path, or drop it after launching")
     ap.add_argument("--nwlink", default=nwlink_command())
-    ap.add_argument("--skin-image", type=Path, help="path to extension's resources/webview/background.png")
     ap.add_argument("--model", choices=("n0120", "n0110"), default="n0120")
     ap.add_argument("--system", choices=("epsilon", "upsilon"), default="epsilon")
     ap.add_argument("--live", action="store_true", help="open Live development mode and start the build watcher inside the GUI")
@@ -2626,10 +3032,7 @@ def main():
               "Game timing may differ from the calculator.", file=sys.stderr)
     if not args.nwlink:
         ap.error("nwlink not found. Run: npm install -g nwlink@1.0.0")
-    art = args.skin_image or installed_artwork()
-    if not art or not art.is_file():
-        # (k-kuroguro's Numworks Simulator for VS Code gives the real calculator's picture: see ART_SOURCE)
-        art = builtin_artwork()
+    art = CALCULATOR
     if os.name == "nt":
         # Avoid Windows silently bitmap-scaling the *whole* Tk window at 125%/
         # 150% display scale, which would defeat the native 1:1 LCD view.

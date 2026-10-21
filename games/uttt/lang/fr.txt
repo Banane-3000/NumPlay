@@ -1,0 +1,26 @@
+# Ultimate Tic-Tac-Toe in French: the English text as in the source, a tab, the translation (see tools/lang.py).
+vs a friend	contre un ami
+vs easy	contre l'IA facile
+vs normal	contre l'IA normale
+vs hard	contre l'IA difficile
+How to play	Comment jouer
+Win three small boards in a row. Your cell sends the other player to the small board in the same place; if it is won or full, they play anywhere. 1 to 9 take a cell, 7 at the top left (on a free move, pick the board first). The arrows and OK work too.	Gagne trois petites grilles alignées. Ta case envoie l'autre joueur dans la petite grille au même endroit ; si elle est gagnée ou pleine, il joue où il veut. 1 à 9 prennent une case, 7 en haut à gauche (coup libre : choisis d'abord la grille). Les flèches et OK marchent aussi.
+Play	Jouer
+Paused	Pause
+Resume	Reprendre
+New game	Nouvelle partie
+Quit game?	Quitter le jeu ?
+Quit game	Quitter le jeu
+Draw	Égalité
+You win!	Gagné !
+You lose	Perdu
+Thinking...	Réflexion...
+Your turn	À toi
+wins!	gagne !
+to play	joue
+Draws	Nulles
+You	Toi
+Computer	IA
+OK  new game	OK  rejouer
+1-9, OK  play	1-9, OK  jouer
+Back  menu	Retour  menu
