@@ -140,6 +140,7 @@ def main():
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     games = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "games", "games.json")))
+    games = [g for g in games if g.get("default", True)]  # (NumPlay.nwa's)
     rnd = random.Random(7)
     script = ("pi.py", b"\x01print(3.14159)\n\x00")
     # a save for every file the games write (binary, zeros included), and NumPlay's settings

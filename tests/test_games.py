@@ -390,7 +390,7 @@ def main():
     ap.add_argument("--numplay", help="play the games inside this NumPlay.nwa instead")
     a = ap.parse_args()
     order = [g["id"] for g in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "games",
-                                                          "games.json")))]
+                                                          "games.json"))) if g.get("default", True)]
     os.makedirs(a.out, exist_ok=True)
     failed = False
     for name, (nwa, save, keys1, home1, keys2, home2) in GAMES.items():

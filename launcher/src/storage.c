@@ -158,13 +158,23 @@ static bool lz_scratch(uint32_t largest) {
   return lz_table && lz_buf;
 }
 
+/* a game that keeps a copy of its saves in a script of its own (one of its records), as the big
+ * games do: the installer keeps scripts, so its saves come back without NumPlay's copy */
+static bool own_copy(int g) {
+  for (const char *const *r = np_games[g].records; r && *r; r++) {
+    size_t n = strlen(*r);
+    if (n > 3 && !strcmp(*r + n - 3, ".py")) return true;
+  }
+  return false;
+}
+
 /* Every save file NumPlay knows, each name once (a name ending with '*': every record there is that
  * starts with the rest, like NumBlocks' regions); false when i is past the end */
 static bool save_name(int i, char out[64]) {
   if (i-- == 0) return strcpy(out, CONFIG_NAME), true;
   if (i-- == 0) return strcpy(out, BG_NAME), true; /* the home screen's background */
   for (int g = 0; g < np_game_count; g++)
-    for (const char *const *r = np_games[g].records; r && *r; r++) {
+    for (const char *const *r = own_copy(g) ? NULL : np_games[g].records; r && *r; r++) {
       bool seen = false;
       for (int h = 0; h <= g && !seen; h++)
         for (const char *const *q = np_games[h].records; q && *q && q != r && !seen; q++) seen = !strcmp(*q, *r);

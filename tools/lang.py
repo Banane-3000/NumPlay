@@ -34,7 +34,8 @@ SKIP = re.compile(r"\.(gif|mp4|mov)$")
 def parts():
     out = {"launcher": [os.path.join(ROOT, "launcher")]}
     for g in json.load(open(os.path.join(ROOT, "games", "games.json"))):
-        out[g["id"]] = [os.path.join(ROOT, "games", g["id"])]
+        if g.get("default", True):  # (the kit's games are not in the language builds)
+            out[g["id"]] = [os.path.join(ROOT, "games", g["id"])]
     return out
 
 
@@ -63,6 +64,8 @@ def strings(part):
                 found.append(s)
     if part == "launcher":
         for g in json.load(open(os.path.join(ROOT, "games", "games.json"))):
+            if not g.get("default", True):
+                continue
             for k in ("title", "tagline", "credit"):
                 if not g.get(k):
                     continue

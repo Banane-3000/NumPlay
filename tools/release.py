@@ -91,7 +91,7 @@ def main():
     ap.add_argument("--notes", required=True)
     ap.add_argument("--build", default="build")
     a = ap.parse_args()
-    games = json.load(open(os.path.join(ROOT, "games", "games.json")))
+    games = [g for g in json.load(open(os.path.join(ROOT, "games", "games.json"))) if g.get("default", True)]
     apps = standalone_names()
     count = sum(1 for g in games if g["id"] not in EXTRAS)
     extras = " and ".join(g["title"] for g in games if g["id"] in EXTRAS)
