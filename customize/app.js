@@ -205,12 +205,12 @@
 
     // the icons, in the order they go in the launcher
     for (const [id, b] of buttons) {
-      const g = byId[id], on = st.picked.has(id), fits = used + flash(id) <= cap;
+      const g = byId[id], on = st.picked.has(id), english = !g.xl || st.lang === 'en', fits = english && used + flash(id) <= cap;
       b.classList.toggle('on', on);
       b.classList.toggle('off', !on && fits);
       b.classList.toggle('nofit', !on && !fits);
       b.setAttribute('aria-pressed', on);
-      b.dataset.tip = g.title + '|' + size(flash(id)) + ' · drag to move';
+      b.dataset.tip = g.title + '|' + (english ? size(flash(id)) + ' · drag to move' : 'in English NumPlays only');
     }
     for (const box of [$('#small'), $('#big')]) {
       const want2 = st.order.map((id) => buttons.get(id)).filter((b) => b && b.parentNode === box);
@@ -285,6 +285,7 @@
     const b = buttons.get(id);
     if (st.picked.has(id)) st.picked.delete(id);
     else {
+      if (byId[id].xl && st.lang !== 'en') { bump(b, 'shake'); toast('The big games are in English: pick English to add them'); return; }
       const over = usedBytes() + flash(id) - capacity();
       if (over > 0) { bump(b, 'shake'); if (!quiet) overflow(over); return; }
       st.picked.add(id);
@@ -441,6 +442,7 @@
     st.app.open = open[0] === 'matrices' ? 'matrices' : 'numplay';
     st.app.secret = Math.min(SECRETS.length - 1, Math.max(0, parseInt(open[1], 10) || 0));
     st.app.hint = !open.includes('nohint');
+    if (st.lang !== 'en') for (const id of [...st.picked]) if (byId[id].xl) st.picked.delete(id);  // (English only)
     // a pick that no longer fits the calculator (the kit grew): drop the biggest games until it does
     const big = ordered().sort((a, b) => flash(a) - flash(b));
     while (usedBytes() > capacity() && big.length) st.picked.delete(big.pop());
@@ -743,6 +745,7 @@
       const b = el('button', '', { type: 'button', role: 'radio', 'aria-checked': st.lang === l });
       b.textContent = LANGS[l][1];
       b.addEventListener('click', async () => {
+        if (l !== 'en' && ordered().some((id) => byId[id].xl)) { toast('The big games are in English: take them out first'); return; }
         try { await loadKit(l); } catch (e) { toast("That language didn't load, try again"); return; }
         st.lang = l;
         closePops(); renderApp(); render();
