@@ -96,11 +96,14 @@ main {
   -webkit-tap-highlight-color: transparent;
   transition: transform var(--t) var(--spring), opacity var(--t) var(--ease), translate 220ms var(--ease);
 }
-.app.placeholder { opacity: 0.18 !important; }
+.app.placeholder { opacity: 0.25 !important; filter: grayscale(1); }
+.app.placeholder .badge { transform: scale(0) !important; }
+.drag-ghost { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; will-change: transform; border-radius: 18%; box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28); }
+.drag-ghost img { display: block; width: 100%; aspect-ratio: 55 / 56; border-radius: 18%; }
+/* while dragging, the other icons only slide aside: no hover, no other transition */
+body.dragging-icon .app { pointer-events: none; transition: translate 200ms cubic-bezier(0.2, 0.9, 0.25, 1) !important; }
 .app.held { outline: 2.5px solid var(--blue); outline-offset: 4px; border-radius: 18%; animation: wiggle 500ms ease-in-out infinite; }
 @keyframes wiggle { 0%, 100% { rotate: -2deg; } 50% { rotate: 2deg; } }
-.app.ghost img { box-shadow: 0 16px 30px rgba(0, 0, 0, 0.28); filter: none; }
-.app.ghost .badge { transform: scale(1); }
 body.dragging-icon, body.dragging-icon * { cursor: grabbing !important; user-select: none; }
 .app img {
   display: block; width: 100%; aspect-ratio: 55 / 56; border-radius: 18%;

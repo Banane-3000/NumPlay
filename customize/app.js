@@ -348,6 +348,8 @@
     st.order = small.concat(big, st.order.filter((id) => !small.includes(id) && !big.includes(id)));
     render();
   }
+  // The slot under the pointer comes from where the slots were when the drag began (they don't
+  // move: only which icon sits in them), so an icon sliding away can never send it back.
   function sortable(box) {
     box.addEventListener('pointerdown', (e) => {
       const b = e.target.closest('.app');
@@ -366,31 +368,38 @@
         addEventListener('pointerup', stop); addEventListener('pointercancel', stop);
         return;
       }
-      dragging = { b, box, x: e.clientX, y: e.clientY, on: false, ghost: null };
+      dragging = { b, box, x: e.clientX, y: e.clientY, on: false };
     });
+    let frame = 0;
     addEventListener('pointermove', (e) => {
       const d = dragging;
       if (!d || d.box !== box) return;
       if (!d.on) {
-        if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 7) return;
+        if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 6) return;
         d.on = true;
         hidePreview();
+        $('#tip').classList.remove('show');
+        d.slots = [...box.children].map((k) => { const r = k.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
         const r = d.b.getBoundingClientRect();
         d.dx = d.x - r.left; d.dy = d.y - r.top;
-        d.ghost = d.b.cloneNode(true);
-        d.ghost.className = 'app on ghost';
-        Object.assign(d.ghost.style, { position: 'fixed', left: '0', top: '0', width: r.width + 'px', zIndex: 60, pointerEvents: 'none', margin: 0 });
+        d.ghost = el('div', 'drag-ghost');
+        d.ghost.appendChild(el('img', '', { src: d.b.querySelector('img').src, alt: '' }));
+        d.ghost.style.width = r.width + 'px';
         document.body.appendChild(d.ghost);
         d.b.classList.add('placeholder');
         document.body.classList.add('dragging-icon');
       }
-      d.ghost.style.transform = 'translate(' + (e.clientX - d.dx) + 'px,' + (e.clientY - d.dy) + 'px) scale(1.08) rotate(-3deg)';
-      const over = document.elementFromPoint(e.clientX, e.clientY);
-      const t = over && over.closest('.app');
-      if (t && t !== d.b && t.parentNode === box) {
-        const kids = [...box.children], i = kids.indexOf(d.b), j = kids.indexOf(t);
-        flip(box, () => box.insertBefore(d.b, i < j ? t.nextSibling : t));
-      }
+      d.px = e.clientX; d.py = e.clientY;
+      if (frame) return;
+      frame = requestAnimationFrame(() => {  // (once a frame: the pointer can move faster than the screen)
+        frame = 0;
+        if (!dragging || !d.on) return;
+        d.ghost.style.transform = 'translate(' + (d.px - d.dx) + 'px,' + (d.py - d.dy) + 'px) scale(1.1) rotate(-4deg)';
+        let best = 0, bd = Infinity;
+        d.slots.forEach(([x, y], i) => { const dd = (x - d.px) ** 2 + (y - d.py) ** 2; if (dd < bd) { bd = dd; best = i; } });
+        const kids = [...box.children], now = kids.indexOf(d.b);
+        if (best !== now) flip(box, () => box.insertBefore(d.b, best > now ? kids[best].nextSibling : kids[best]));
+      });
     });
     const end = () => {
       const d = dragging;
@@ -399,9 +408,11 @@
       if (!d.on) return;
       justDragged = true;
       setTimeout(() => { justDragged = false; }, 0);
-      d.b.classList.remove('placeholder');
+      const r = d.b.getBoundingClientRect(), g = d.ghost;
+      g.style.transition = 'transform 160ms cubic-bezier(0.2, 0.9, 0.25, 1)';  // (into its place)
+      g.style.transform = 'translate(' + r.left + 'px,' + r.top + 'px) scale(1) rotate(0deg)';
+      setTimeout(() => { g.remove(); d.b.classList.remove('placeholder'); }, 170);
       document.body.classList.remove('dragging-icon');
-      d.ghost.remove();
       commitOrder();
     };
     addEventListener('pointerup', end);

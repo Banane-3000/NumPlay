@@ -28,12 +28,12 @@ def every(t0, t1, step, key, hold=90):
 DEMOS = {
     "numdash": ("NumDash.nwa", presses((2500, "ok"), (3700, "ok", 8000)), (3900, 10900), 25),
     "crossyroad": ("CrossyRoad.nwa", every(1500, 10000, 420, "up") + "," + presses((4300, "left")), (1700, 5400), 20),
-    "numdrive": ("NumDrive.nwa", presses((1500, "right", 7000)), (2200, 6400), 20),
+    "numdrive": ("NumDrive.nwa", presses((1500, "right", 7000)), (2200, 5500), 20),
     "balatro": ("Balatro.nwa", presses((1500, "ok"), (2500, "ok"), (3500, "ok"), (5000, "ok"), (5400, "right"),
                                         (5800, "ok"), (6200, "right"), (6600, "ok"), (7100, "exe")), (4600, 11600), 15),
     # past the door and the dealer, a name typed on the waiver and signed (EXE), then the game
     "buckshot": ("BuckshotRoulette.nwa", every(1500, 15000, 900, "ok") + "," + presses((15300, "exe")) + "," +
-                 every(17000, 27000, 1300, "ok"), (16500, 25500), 15),
+                 every(17000, 27000, 1300, "ok"), (18500, 26500), 15),
     "tetris": ("Tetris.nwa", presses((1200, "ok")) + "," + every(2200, 9000, 700, "up") + "," +
                every(2500, 9000, 1400, "left") + "," + every(3100, 9000, 1400, "right") + "," +
                every(3400, 9000, 700, "down", 300), (2400, 8400), 20),
