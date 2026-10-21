@@ -24,7 +24,7 @@ RAM_LIMIT = 148928
 # custom builds of Epsilon 25.2's source give apps less: 133652 bytes; every game fits there too, in NumPlay and on
 # its own (their big buffers are on the stack, 32 KB apart from that RAM, or in the RAM the software has left)
 CUSTOM_RAM = 133652
-BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride
+BIG_APPS = DonkeyKong Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride
 # the calculator's space for installed apps (0x90200000 to 0x903F0000 in its flash)
 APP_SPACE = 2031616
 # Upsilon, the N0110 and N0115's custom software, gives .nwa apps less RAM: NumPlay-Upsilon.nwa has
@@ -223,7 +223,11 @@ APP_cookieclicker = games/cookieclicker/output/cookieclicker.nwa:CookieClicker.n
 APP_leveldevil = games/leveldevil/output/leveldevil.nwa:LevelDevil.nwa
 APP_jetpackjoyride = games/jetpackjoyride/output/jetpackjoyride.nwa:JetpackJoyride.nwa
 
+APP_donkeykong = games/donkeykong/output/donkeykong.nwa:DonkeyKong.nwa
+
 apps: | $(B)
+	$(MAKE) -C games/donkeykong build NWLINK="$(NWLINK)"
+	cp $(word 1,$(subst :, ,$(APP_donkeykong))) $(B)/apps/$(word 2,$(subst :, ,$(APP_donkeykong)))
 	$(MAKE) -C games/numdash build NWLINK="node node_modules/nwlink/bin/nwlink"
 	$(MAKE) -C games/crossyroad NWLINK="$(NWLINK)"
 	$(MAKE) -C games/numdrive NWLINK="$(NWLINK)"
@@ -339,6 +343,7 @@ clean:
 	-$(MAKE) -C games/sonic clean
 	-$(MAKE) -C games/cookieclicker clean
 	-$(MAKE) -C games/leveldevil clean
+	-$(MAKE) -C games/donkeykong clean
 	-$(MAKE) -C games/jetpackjoyride clean
 	-cd games/tetris/tetris && $(CARGO) clean
 	-$(foreach g,$(STD_GAMES),$(MAKE) -C games/$(g) clean;)

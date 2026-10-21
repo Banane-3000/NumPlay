@@ -80,6 +80,8 @@ Want just one game? Each one also comes as its own file on the [downloads page](
 
 **NumVisuals**, moving backgrounds with a clock, a stopwatch, a timer or a counter on top, comes on its own: [download NumVisuals.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumVisuals.nwa). Its backgrounds are also in NumPlay: press ⌫ on the home screen.
 
+**[Donkey Kong](games/donkeykong/README.md)** also comes as its own app: the four arcade boards, with an English interface, by **Bobydeluxe**. [Download DonkeyKong.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/DonkeyKong.nwa) once it is included in a release.
+
 ## Big games, installed on their own
 
 These are too big to fit next to NumPlay, so each one is its own app. Install it without NumPlay.
@@ -251,6 +253,8 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Super Smash Bros
 
 ## Credits
+
+- **[Bobydeluxe](https://github.com/Bobydeluxe)** made the **[Donkey Kong](games/donkeykong/README.md)** NumWorks adaptation, with its English interface, native game engine and newly drawn pixel art. **Nintendo** created the original arcade game and characters (1981). Not affiliated with Nintendo.
 
 NumPlay is a fan project, made out of love for these games and for the NumWorks calculator. If you enjoy a game here, go play the original and support the people who made it. NumWorks also has a great community of people making games by hand: try [Numcraft](https://github.com/yannis300307/NumcraftRust), [Celeste Classic](https://github.com/BenchatonDev/Celeste-Numworks), [Tatone26's All the Apps](https://github.com/Tatone26/Numworks-games), the apps on [Nwagyu](https://nwagyu.org/guide/) and [yannis300307's list](https://gist.github.com/yannis300307/9123136f90877107ec0d49ba96b303e5).
 
