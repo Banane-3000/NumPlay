@@ -1,58 +1,253 @@
-#include <eadk.h>
-#include "render.h"
-#include "assets.h"
-#include "../../common/epsilon_app.h"
-#include "../../common/epsilon_files.h"
-#ifdef __ELF__
-const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name")))="Dune";
-const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level")))=0;
+/* Dune! (Team Lava) on the NumWorks calculator, from its web version (Inlogic Software's Dune Rider).
+ *
+ * Hold to roll faster down the dunes and to dive in the air, let go to fly off the top of the next one. Land on
+ * a slope going down to keep your speed; a hard landing on one going up ends the run. Flying over the line
+ * scores 1 to 3, a long fast slide 1 or 3; coins buy balls and landscapes in the shop. The ride steps 60 times
+ * a second with the game's numbers and its physics engine's (game.c); the screens are its scenes (draw.c).
+ *
+ * Keys: OK, EXE or Shift held speed up and dive; Back pauses; Home saves and quits. */
+#include <string.h>
+#include "draw.h"
+#include "game.h"
+#include "plat.h"
+#include "save.h"
+#include "art.h"
+
+static dn_run run;
+static dn_profile prof;
+static dn_view view;
+static uint32_t rng;
+/* frames drawn, the slowest (ms) and those over 33 ms: read by tools/emu.py */
+#ifndef HOST
+__attribute__((used, externally_visible))
 #endif
-#define KEY(k) (UINT64_C(1)<<(k))
-static Game game;
-static Stats stats;
-static uint8_t save_data[SAVE_BYTES];
-static bool saved,save_failed;
-static uint32_t last_hash;
-uint32_t perf_frames,perf_max,perf_slow,current_view;
-static void push(int x,int y,int w,int h,const uint16_t*p){eadk_display_push_rect((eadk_rect_t){x,y,w,h},p);}
-static void bank(void){game_finish(&stats,&game);game.earned=0;}
-static bool save(void){bank();save_encode(&stats,save_data);uint32_t h=0;for(unsigned i=SAVE_BYTES-4;i<SAVE_BYTES;i++)h=(h<<8)|save_data[i];if(saved&&h==last_hash&&!save_failed)return true;save_failed=!ef_write("dune.sav",save_data,SAVE_BYTES);if(!save_failed)saved=true,last_hash=h;return !save_failed;}
-static void fresh(void){if(stats.runs<UINT32_MAX)++stats.runs;uint32_t seed=stats.seed^(stats.runs*2654435761u);game_new(&game,seed);}
-int main(void){
- np_app_begin();stats=(Stats){.unlocked=1,.scenes=1,.seed=0x44554e45};uint32_t n=0;const uint8_t*p=ef_read("dune.sav",&n);if(!save_decode(&stats,p,n))stats.seed^=(uint32_t)eadk_random();if(!stats.seed)stats.seed=1;game_new(&game,stats.seed);
- unsigned view=TITLE,selected=0,error_return=TITLE,error_selection=0;bool ongoing=false;
- uint64_t previous=0,keys=eadk_keyboard_scan(),stale=keys;uint32_t now=(uint32_t)eadk_timing_millis(),last=now,draw_at=now,accum=0;
- render_invalidate();
- for(;;){
-  now=(uint32_t)eadk_timing_millis();uint32_t elapsed=now-last;last=now;keys=eadk_keyboard_scan();stale&=keys;uint64_t active=keys&~stale,hit=active&~previous;previous=active;
-  bool ok=(hit&(KEY(eadk_key_ok)|KEY(eadk_key_exe)))!=0,back=(hit&KEY(eadk_key_back))!=0,right=(hit&KEY(eadk_key_right))!=0,left=(hit&KEY(eadk_key_left))!=0,down=(hit&KEY(eadk_key_down))!=0,up=(hit&KEY(eadk_key_up))!=0;
-  if(view!=SAVE_ERROR&&(keys&(KEY(eadk_key_home)|KEY(eadk_key_on_off)))){if(save())break;error_return=view==PLAY?PAUSE:view;error_selection=selected;view=SAVE_ERROR;ok=back=right=left=up=down=false;stale=keys;}
-  if(view==PLAY){
-   if(back){view=PAUSE;selected=0;save();}
-   else{if(elapsed>100)elapsed=100;accum+=elapsed*60;bool held=(active&(KEY(eadk_key_ok)|KEY(eadk_key_exe)|KEY(eadk_key_shift)))!=0;
-    while(accum>=1000){unsigned phase=game.phase;game_step(&game,held);accum-=1000;if(phase==RUNNING&&game.phase==CRASHED)save();}
-    if(game.ready)view=RESULT,selected=0,ongoing=false;
-   }
-  }else{
-   accum=0;
-   if(view==TITLE){if(right||down||left||up)selected^=1;if(back){if(save())break;error_return=TITLE;error_selection=selected;view=SAVE_ERROR;}
-    else if(hit&KEY(eadk_key_zero))view=HELP;
-    else if(ok){if(selected==0){if(!ongoing)fresh();ongoing=true;view=PLAY;stale|=keys;}else view=SHOP,selected=stats.ball;}}
-   else if(view==PAUSE){if(down||right)selected=(selected+1)%3;if(up||left)selected=(selected+2)%3;if(back||(ok&&selected==0))view=PLAY,stale|=keys;else if(ok&&selected==1)save(),fresh(),view=PLAY,stale|=keys;else if(ok&&selected==2)view=TITLE,selected=0;}
-   else if(view==RESULT){if(up||down||left||right)selected^=1;if(back||(ok&&selected==1))view=TITLE,selected=0;else if(ok){fresh();ongoing=true;view=PLAY;stale|=keys;}}
-   else if(view==SHOP){
-    if(right)selected=(selected+1)%BALL_COUNT;
-    if(left)selected=(selected+BALL_COUNT-1)%BALL_COUNT;
-    if(down||up)selected=selected>=4?selected-4:selected+4<BALL_COUNT?selected+4:BALL_COUNT-1;
-    if(back)view=TITLE,selected=1;
-    else if(ok){if(shop_owned(&stats,false,selected))shop_buy(&stats,false,selected),save();else if(stats.coins>=ball_styles[selected].price)view=BUY;}
-   }else if(view==BUY){if(back)view=SHOP;else if(ok)shop_buy(&stats,false,selected),save(),view=SHOP;}
-   else if(view==HELP){if(back||ok)view=TITLE,selected=0;}
-   else if(view==SAVE_ERROR){if(back)break;if(ok&&save())break;if(hit&KEY(eadk_key_one))view=error_return,selected=error_selection;}
+uint32_t perf_frames, perf_max, perf_slow;
+
+/* a new world behind the title: the nine dunes made again (as a page load), the ball dropped at the start */
+static void fresh_world(void) {
+  dn_new(&run, dn_rand(&rng), prof.ball, prof.land);
+  for (int i = 0; i < 90; i++) dn_step(&run, false, false);
+}
+
+static void to_title(void) { view.screen = V_TITLE, view.sel = TITLE_PLAY; }
+
+static void play(void) {
+  dn_start(&run);
+  if (prof.runs < 0xFFFFFFFFu) prof.runs++;
+  view.screen = V_PLAY;
+}
+
+static bool in_run(void) {
+  return run.alive && (view.screen == V_PLAY || view.screen == V_PAUSE || view.screen == V_QUIT ||
+                       ((view.screen == V_SHOP || view.screen == V_BUY || view.screen == V_HELP) && view.under == V_PAUSE));
+}
+
+static void save(void) { save_write(&prof, in_run() ? &run : 0); }
+
+static bool ball_owned(int i) { return prof.balls >> i & 1; }
+static bool land_owned(int i) { return prof.lands >> i & 1; }
+
+static void open_shop(uint8_t under) {
+  view.under = under, view.screen = V_SHOP;
+  view.shop_cat = SHOP_BALLS, view.shop_side = 0, view.shop_sel = prof.ball;
+}
+
+static void sync_view(uint32_t now) {
+  view.ball = prof.ball, view.land = prof.land;
+  view.owned_balls = prof.balls, view.owned_lands = prof.lands;
+  view.best = prof.best, view.coins = prof.coins;
+  view.clock = now, view.run = &run;
+}
+
+/* the shop's keys: the side bar (categories) or the cards */
+static void shop_keys(uint32_t hit) {
+  if (view.shop_side) {
+    if (hit & (K_UP | K_DOWN)) {
+      view.shop_cat ^= 1;
+      view.shop_sel = view.shop_cat == SHOP_BALLS ? prof.ball : prof.land;
+    }
+    if (hit & (K_RIGHT | K_OK)) view.shop_side = 0;
+    return;
   }
-  current_view=view;
-  if(now-draw_at>=33||hit||!perf_frames){uint32_t start=(uint32_t)eadk_timing_millis();render(&game,&stats,view,selected,false,save_failed,now,push);uint32_t spent=(uint32_t)eadk_timing_millis()-start;if(spent>perf_max)perf_max=spent;if(spent>33)++perf_slow;++perf_frames;draw_at=now;}
-  eadk_timing_msleep(2);
- }
- uint32_t released=(uint32_t)eadk_timing_millis();while(eadk_keyboard_scan()&&(uint32_t)eadk_timing_millis()-released<2000)eadk_timing_msleep(10);return np_app_end();
+  int s = view.shop_sel;
+  if (view.shop_cat == SHOP_BALLS) {
+    int c = s % 13, r = s / 13;
+    if (hit & K_LEFT) {
+      if (c == 0) view.shop_side = 1;
+      else s--;
+    }
+    if ((hit & K_RIGHT) && c < 12) s++;
+    if (hit & (K_UP | K_DOWN)) s = (r ^ 1) * 13 + c;
+  } else {
+    if (hit & K_LEFT) {
+      if (s == 0) view.shop_side = 1;
+      else s--;
+    }
+    if ((hit & K_RIGHT) && s < DN_LANDS - 1) s++;
+    if (hit & (K_UP | K_DOWN)) view.shop_side = 1;
+  }
+  view.shop_sel = (uint8_t)s;
+  if (!(hit & K_OK) || view.shop_side) return;
+  /* a card: in use already, put to use, or offered for its price (OnBallClicked, OnLandscapeClicked) */
+  bool balls = view.shop_cat == SHOP_BALLS;
+  if (balls ? ball_owned(s) : land_owned(s)) {
+    if (balls) prof.ball = (uint8_t)s;
+    else prof.land = (uint8_t)s;
+    dn_style(&run, prof.ball, prof.land);
+    save();
+  } else if (prof.coins >= (balls ? art_ball_info_[s].price : art_land_info_[s].price)) {
+    view.screen = V_BUY, view.buy_yes = 1;
+  }
+}
+
+static void buy(void) {
+  int s = view.shop_sel;
+  if (view.shop_cat == SHOP_BALLS) {
+    prof.coins -= art_ball_info_[s].price, prof.balls |= 1u << s, prof.ball = (uint8_t)s;
+  } else {
+    prof.coins -= art_land_info_[s].price, prof.lands |= (uint8_t)(1u << s), prof.land = (uint8_t)s;
+  }
+  dn_style(&run, prof.ball, prof.land);
+  save();
+}
+
+int main(void) {
+  plat_begin();
+  bool resumed = save_load(&prof, &run);
+  rng = plat_random() ^ prof.runs * 0x9E3779B9u;
+  if (!rng) rng = 1;
+  if (resumed) {
+    view.screen = V_PAUSE, view.sel = PAUSE_RESUME;   /* the run left with Home, paused */
+  } else {
+    fresh_world();
+    to_title();
+  }
+  dn_redraw();
+  uint32_t stale = plat_keys(), prev = stale, last = plat_millis(), acc = 0, drawn = 0, saved_at = last;
+  uint8_t shown = 0xFF;
+  for (;;) {
+    uint32_t now = plat_millis(), keys = plat_keys();
+    stale &= keys;                      /* keys still down from the screen before don't count */
+    uint32_t live = keys & ~stale, hit = live & ~prev;
+    prev = live;
+    if (keys & K_HOME) break;           /* Home: saved below, then out */
+    uint32_t dt = now - last;
+    last = now;
+    if (dt > 100) dt = 100;
+    acc += dt * 60;                     /* 60ths of a second gone by: that many steps, 4 at most */
+    int ticks = 0;
+    while (acc >= 1000 && ticks < 4) acc -= 1000, ticks++;
+    if (acc >= 1000) acc = 0;           /* too slow: the game slows down rather than skip */
+    bool quit = false, frozen = view.screen == V_PAUSE || view.screen == V_QUIT || view.under == V_PAUSE;
+    if (view.screen == V_TITLE || view.screen == V_PLAY || view.screen == V_RESULT) frozen = false;
+    /* the world goes on behind the menus (the game's physics runs there too), not while paused */
+    int steps = 0;
+    if (!frozen)
+      for (; steps < ticks; steps++) {
+        bool play_ = view.screen == V_PLAY;
+        dn_step(&run, play_ && (live & (K_OK | K_SHIFT)), play_ && steps == 0 && (hit & (K_OK | K_SHIFT)));
+      }
+    if (run.picked) prof.coins += run.picked, run.picked = 0;   /* coins count at once */
+    if (run.score > prof.best) prof.best = run.score;
+    switch (view.screen) {
+      case V_TITLE:
+        if (hit & K_LEFT) view.sel = view.sel == TITLE_PLAY ? TITLE_SHOP : TITLE_HELP;
+        if (hit & K_RIGHT) view.sel = view.sel == TITLE_HELP ? TITLE_SHOP : TITLE_PLAY;
+        if (hit & K_UP) view.sel = TITLE_HELP;
+        if ((hit & K_DOWN) && view.sel == TITLE_HELP) view.sel = TITLE_SHOP;
+        if (hit & K_BACK) quit = true;
+        else if (hit & K_OK) {
+          if (view.sel == TITLE_PLAY) play();
+          else if (view.sel == TITLE_SHOP) open_shop(V_TITLE);
+          else view.under = V_TITLE, view.screen = V_HELP;
+        }
+        break;
+      case V_PLAY:
+        if (!run.alive) {   /* the crash: "You Crashed!" at once */
+          view.screen = V_RESULT;
+          save();
+        } else if (hit & K_BACK) {
+          view.screen = V_PAUSE, view.sel = PAUSE_RESUME;
+          save(), saved_at = now;
+        } else if (now - saved_at > 10000) {
+          save(), saved_at = now;
+        }
+        break;
+      case V_PAUSE:
+        if (hit & K_UP) view.sel = (uint8_t)((view.sel + PAUSE_ITEMS - 1) % PAUSE_ITEMS);
+        if (hit & K_DOWN) view.sel = (uint8_t)((view.sel + 1) % PAUSE_ITEMS);
+        if (hit & K_BACK) view.screen = V_PLAY, acc = 0;
+        else if (hit & K_OK) switch (view.sel) {
+          case PAUSE_RESUME: view.screen = V_PLAY, acc = 0; break;
+          case PAUSE_RESTART: dn_menu(&run), play(); break;
+          case PAUSE_SHOP: open_shop(V_PAUSE); break;
+          case PAUSE_HELP: view.under = V_PAUSE, view.screen = V_HELP; break;
+          default: view.screen = V_QUIT, view.sel = 0; break;
+        }
+        break;
+      case V_QUIT:
+        if (hit & (K_LEFT | K_RIGHT | K_UP | K_DOWN)) view.sel ^= 1;
+        if (hit & K_BACK) view.screen = V_PAUSE, view.sel = PAUSE_QUIT;
+        else if (hit & K_OK) {
+          if (view.sel) {   /* the run ends here; coins and best are kept */
+            run.alive = 0;
+            quit = true;
+          } else {
+            view.screen = V_PAUSE, view.sel = PAUSE_QUIT;
+          }
+        }
+        break;
+      case V_RESULT:
+        if (hit & K_OK) dn_reset(&run), play();
+        else if (hit & K_BACK) dn_menu(&run), to_title();
+        break;
+      case V_SHOP:
+        if (hit & K_BACK) {
+          view.screen = view.under;
+          view.sel = view.under == V_PAUSE ? PAUSE_SHOP : TITLE_SHOP;
+          view.under = 0;
+        } else {
+          shop_keys(hit);
+        }
+        break;
+      case V_BUY:
+        if (hit & (K_LEFT | K_RIGHT | K_UP | K_DOWN)) view.buy_yes ^= 1;
+        if (hit & K_BACK) view.screen = V_SHOP;
+        else if (hit & K_OK) {
+          if (view.buy_yes) buy();
+          view.screen = V_SHOP;
+        }
+        break;
+      case V_HELP:
+        if (hit & (K_OK | K_BACK)) {
+          view.screen = view.under;
+          view.sel = view.under == V_PAUSE ? PAUSE_HELP : TITLE_HELP;
+          view.under = 0;
+        }
+        break;
+    }
+    if (quit) break;
+    if (view.screen != shown) {
+      stale = keys, prev = 0;           /* a new screen starts with all keys up */
+      shown = view.screen;
+      drawn = now - 1000;
+    }
+    bool moving = steps > 0 || view.screen == V_TITLE;
+    if ((moving && now - drawn >= (view.screen == V_PLAY ? 0u : 33u)) || hit || now - drawn >= 1000) {
+      sync_view(now);
+      uint32_t t0 = plat_millis();
+      dn_draw(&view, plat_push);
+      uint32_t spent = plat_millis() - t0;
+      drawn = now;
+      if (view.screen == V_PLAY) {
+        perf_frames++;
+        if (spent > perf_max) perf_max = spent;
+        if (spent > 33) perf_slow++;
+      }
+    } else {
+      plat_sleep(2);
+    }
+  }
+  save();
+  return plat_end();
 }
