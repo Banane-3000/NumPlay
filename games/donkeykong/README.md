@@ -1,85 +1,86 @@
-# Donkey Kong
+> **Donkey Kong is a [NumPlay](../../README.md) game that comes on its own.** It doesn't fit next to NumPlay on the calculator. Get `DonkeyKong.nwa` from the [latest release](https://github.com/Mason363/NumPlay/releases/latest).
 
-**By Bobydeluxe.** A native arcade adaptation for NumWorks, with English menus,
-original redrawn pixel art and the four arcade boards. No ROM or emulator is
-required. It builds and installs as its own app, separately from the combined
-NumPlay launcher. Not affiliated with Nintendo.
+<p align="center">
+  <img src="src/icon.png" width="84" alt="Donkey Kong icon">
+</p>
 
-![Gameplay](docs/barrels.png)
+<h1 align="center">Donkey Kong</h1>
 
-## Play
+<p align="center">
+  <b>Mario climbs a building site after Pauline, on the NumWorks calculator.</b><br>
+  The 1981 arcade game: barrels, pies, elevators and rivets, up to Kong's fall.
+</p>
 
-Download **DonkeyKong.nwa** from the [NumPlay releases](https://github.com/Mason363/NumPlay/releases/latest)
-once a release includes this game, or build `build/apps/DonkeyKong.nwa` locally.
-Install it with [my.numworks.com/apps](https://my.numworks.com/apps), then open
-Donkey Kong from the calculator's Home menu.
+<p align="center">
+  <a href="https://github.com/Mason363/NumPlay/releases/latest/download/DonkeyKong.nwa"><b>Download DonkeyKong.nwa</b></a>
+  &nbsp;·&nbsp; <a href="#controls">Controls</a>
+</p>
 
-| Key | Action |
+<p align="center">
+  <img src="../../docs/media/donkeykong.gif" width="640" alt="Donkey Kong: Mario climbs the 25m girders over Kong's barrels and reaches Pauline">
+</p>
+
+## Highlights
+
+* **The arcade's own game:** its program is ported routine by routine and runs 60 times a second, as the arcade did. Mario walks, jumps, climbs and falls exactly as far and as fast, and every barrel, fire, pie, spring and elevator moves as it does in the arcade.
+* **All four boards:** 25m with its girders and barrels, 50m with its conveyor belts and pies, 75m with its elevators and springs, and 100m with its rivets, in the arcade's order: two boards on the first level, up to six from the fifth.
+* **Kong's barrels:** they roll down the girders, sometimes take a ladder down toward you (more often when you push toward them), and the blue ones light the oil drum, which lets out the fires.
+* **Points as in the arcade:** jumping over barrels and fires, smashing them with a hammer, Pauline's hat, purse and umbrella, the rivets, and the bonus left when you reach her. One extra life at 7,000.
+* **Harder as you go:** the bonus, the barrels and the fires speed up with each level and the longer you stay on a board, up to level 22, the arcade's kill screen.
+* **The scenes:** Kong climbing up with Pauline, How high can you get?, the heart, Kong taking her higher, and Kong's fall when the last rivet goes.
+* **Drawn for the calculator:** new pictures, with the arcade's sizes, poses and colours, and the playfield at its full 224 pixels.
+* **Saved as you go:** Home saves the game and quits, and the next start picks it up paused. Your game and best score are also copied into `donkeykong_saves.py`, so installing the app again doesn't erase it.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/shot.png" width="390" alt="Mario on the 25m girders, barrels rolling down"><br><sub>25m: the girders and Kong's barrels</sub></td>
+    <td align="center"><img src="docs/conveyors.png" width="390" alt="The 50m conveyor belts with pies and fires"><br><sub>50m: the conveyor belts and their pies</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/elevators.png" width="390" alt="The 75m elevators and a spring"><br><sub>75m: the elevators and the springs</sub></td>
+    <td align="center"><img src="docs/rivets.png" width="390" alt="The 100m rivets, Mario taking one for 100 points"><br><sub>100m: the rivets</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/intro.png" width="390" alt="Kong climbing up with Pauline"><br><sub>Kong climbs up with Pauline</sub></td>
+    <td align="center"><img src="docs/rescue.png" width="390" alt="Kong fallen, Mario with Pauline"><br><sub>The last rivet: Kong falls</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/pause.png" width="390" alt="The pause menu"><br><sub>Back pauses</sub></td>
+    <td align="center"><img src="docs/title.png" width="390" alt="The title screen"><br><sub>The title screen</sub></td>
+  </tr>
+</table>
+
+## How to play
+
+Press **OK** on the title to start. Climb to Pauline at the top: walk with the arrows, climb a ladder with up and down when you stand in front of it, and jump with **OK**. Jump over the barrels and the fires, or grab a hammer by jumping up into it: for a while Mario smashes whatever he touches, but he can't jump or climb. On 100m, walk or jump over all eight rivets to bring Kong down, and mind the holes they leave.
+
+A fall from any real height costs a life, and so does the bonus running out. Each board's bonus is yours when you reach Pauline.
+
+## Controls
+
+| Key | What it does |
 | --- | --- |
-| Left / Right, or 4 / 6 | Move |
-| Up / Down, or 8 / 2 | Climb a ladder |
-| OK / EXE / Shift | Jump |
-| Back | Pause / go back |
-| Home / On-Off | Save records and exit |
+| Arrows (or 4, 6, 8, 2) | Walk, climb ladders, move the focus in menus |
+| OK or EXE | Jump, choose |
+| Back | Pause: Resume, New game, How to play, Quit game (it asks first) |
+| Home | Save and quit |
 
-Reach Pauline on **25m** (barrels), **50m** (conveyors) and **75m** (elevators).
-On **100m**, remove all eight blue rivets. Jump over the holes left behind.
-The four boards repeat in order, with gradually faster obstacles; difficulty
-is capped to keep later rounds playable.
+## Good to know
 
-Three lives, a single extra life at 7,000 points, temporary hammers, collectible
-lost items and a countdown bonus are included. Long falls and running out of
-bonus cost a life. Hammers prevent jumping and climbing until they expire;
-the yellow bar under the lives shows the remaining time.
+* **On its own:** Donkey Kong doesn't fit next to NumPlay. Installing it from the NumWorks website swaps out NumPlay and the other apps, and installing NumPlay again swaps it back out.
+* **The arcade's factory settings:** three lives and one extra life at 7,000 points. The high score starts at the arcade's 7,650 and becomes your best once you beat it.
+* **One player:** the second player, coins, the demo and the name entry are left out, and there's no music or sound (the calculator has no speaker).
+* **The arcade's quirks are kept:** a 500 point jump shows 800, and on level 22, the kill screen, the bonus runs out before Mario can reach the top.
 
-Pause offers **Resume**, **Restart** (with confirmation) and **Title**. An
-unfinished run can be resumed from the title while the app remains open.
-`donkeykong.sav` stores records only, not a suspended run: best score, runs,
-rescues and highest round, in 32 bytes plus filesystem metadata. A full
-filesystem offers retry, continued play, or exit without saving.
+## Credits
 
-## Build
+Inspired by [Donkey Kong](https://en.wikipedia.org/wiki/Donkey_Kong_(arcade_game)) by Nintendo (1981), not affiliated with them. Go play the original: it's on the Nintendo Switch in Arcade Archives.
 
-Requirements: Python 3.9+, Node.js, `nwlink` 1.0.0, and the ARM GNU toolchain
-with newlib nano. Art and the PNG icon are generated with Python's standard
-library; there is no asset download or external asset pack.
+* Brought to NumPlay by **[Bobydeluxe](https://github.com/Bobydeluxe)**, who adapted it for the calculator and drew its pictures and its 5x7 lettering.
+* The rules and numbers follow the arcade's program, studied in furrykef's [dkdasm](https://github.com/furrykef/dkdasm) disassembly and tcdev's annotated listing. The program's data tables (the boards, Kong's poses, the levels) are read from the listing by [tools/rom.py](tools/rom.py) into [src/rom.h](src/rom.h). No graphics are taken from the arcade.
 
-```sh
-python build.py --arm-bin /path/to/arm/bin --nwlink /path/to/nwlink/bin/nwlink
-```
+Made by Mason Chen as part of NumPlay.
 
-With the tools on `PATH`, `python build.py` or `make build check` is enough.
-`ARM_BIN` and `NWLINK` environment variables are also accepted. The build
-checks that the compact release and debug app install to identical bytes
-and that both fit the 107,674-byte RAM profile. From the repository root,
-`make apps` builds and copies `DonkeyKong.nwa` alongside the other apps;
-`make check` checks its RAM and release generation lists its download.
+## License
 
-Host tests and screenshots:
-
-```sh
-make test HOST_CC=cc PYTHON=python
-```
-
-Actual ARM app tests, after building and running host tests:
-
-```sh
-python tests/test_arm.py --nwlink /path/to/nwlink/bin/nwlink
-```
-
-These use the repository's Unicorn emulator and require Unicorn, pyelftools
-and Pillow. See [validation](VALIDATION.md) for measured sizes and test scope.
-
-## Credits and scope
-
-- Adaptation: **Bobydeluxe**.
-- Original arcade game, characters and design: **Nintendo, 1981**.
-- Reference: [Donkey Kong — Super Mario Wiki](https://www.mariowiki.com/Donkey_Kong_(game)).
-- Packed pixel art is newly drawn in `tools/assets.py`. No extracted Nintendo
-  sprites or ROM data are bundled.
-- Uses the repository's shared Epsilon file/exit helpers and 5×7 lettering.
-  Source code follows the repository's GPL-3.0-only license.
-
-This is a calculator adaptation with layouts and timing adjusted for its
-224×224 playfield, rather than a cycle-accurate arcade reproduction. It uses
-all four boards per round and avoids the original late-game timer overflow.
+The game's code is licensed under the GNU General Public License v3.0: see the `LICENSE` file at the root of the repository. Donkey Kong, its characters and the arcade program's data are Nintendo's and keep their own terms (see Credits).

@@ -668,14 +668,19 @@ static void shots(const char *dir) {
   shots_dir = dir, shot_marks = 0, last_board = -1;
   bot_game(&s, 4242, 9, shot_each);
   play_on(&s, 9, 1, 1); /* a barrel, and Mario's death */
-  for (int f = 0; f < 3000 && dk_mode(&s) != DK_MODE_DEAD; f++) dk_tick(&s, 0);
+  for (int f = 0; f < 3000 && dk_mode(&s) != DK_MODE_DEAD; f++) {
+    dk_tick(&s, 0);
+    if (f == 60 && dk_mode(&s) == DK_MODE_PLAY) {
+      view.screen = DK_SCREEN_PAUSE, view.sel = 0;
+      picture(&s, dir, "pause");
+      view.screen = DK_SCREEN_PLAY;
+    }
+  }
   for (int f = 0; f < 0x40 + 8 * 5; f++) dk_tick(&s, 0);
   picture(&s, dir, "death");
   for (int f = 0; f < 20000 && !s.over; f++) dk_tick(&s, 0); /* the other lives, and GAME OVER */
   view.screen = DK_SCREEN_OVER, view.sel = 0, view.new_best = 0;
   picture(&s, dir, "over");
-  view.screen = DK_SCREEN_PAUSE, view.sel = 0;
-  picture(&s, dir, "pause");
 }
 
 static const char *film_dir;
