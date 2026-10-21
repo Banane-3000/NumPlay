@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>27 free games for your NumWorks calculator, in one app.</b><br>
-  Plus 15 big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
+  Plus 16 big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
 </p>
 
 <p align="center">
@@ -113,7 +113,10 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
     <td align="center"><a href="games/leveldevil/README.md"><img src="docs/media/thumb_leveldevil.png" width="200" alt="Level Devil"><br><b>Level Devil</b></a><br><sub>Unept's troll platformer: the game's 80 rooms, with their own traps</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/LevelDevil.nwa">Download</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="games/jetpackjoyride/README.md"><img src="docs/media/thumb_jetpackjoyride.png" width="200" alt="Jetpack Joyride"><br><b>Jetpack Joyride</b></a><br><sub>Barry's run through the lab, with the vehicles and the Final Spin</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/JetpackJoyride.nwa">Download</a></td>
     <td align="center"><a href="https://github.com/Mason363/NumWorks-Super-Mario-64"><b>Super Mario 64</b></a><br><sub>In a repository of its own: NumWorks-Super-Mario-64</sub></td>
+  </tr>
+  <tr>
     <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Minecraft 1.18.2, Retro-Go and more: see the roadmap</sub></td>
   </tr>
 </table>
@@ -279,6 +282,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 - **Sonic the Hedgehog** by Sonic Team inspired NumPlay's Sonic the Hedgehog, which reads the game's art, levels and demos from the [Sonic Retro disassembly](https://github.com/sonicretro/s1disasm) and follows the [Sonic Physics Guide](https://info.sonicretro.org/Sonic_Physics_Guide). Not affiliated with SEGA.
 - **Subway Surfers** by SYBO and Kiloo inspired NumPlay's Subway Surfers: its people are fitted to the game's own 3D models and wear their textures, and its logo and item icons are the game's, as the [Subway Surfers Wiki](https://subwaysurf.fandom.com) shows them; the yard and the trains are drawn after the game. It is lettered in the **Lilita One** font by Juan Montoreano (SIL Open Font License, [license](LICENSES/OFL-1.1-LilitaOne.txt)). Not affiliated with them.
 - **Hill Climb Racing** by Fingersoft inspired NumPlay's Hill Climb Racing, which uses the game's own pictures from the [Hill Climb Racing Wiki](https://hillclimbracing.fandom.com), the **Teko** font (SIL Open Font License, [license](LICENSES/OFL-1.1-Teko.txt)) and **Box2D 2.2.1** by Erin Catto (zlib license, [license](games/hillclimb/src/box2d/License.txt)), the physics engine the game is built on. Not affiliated with Fingersoft.
+- **Jetpack Joyride** by Halfbrick inspired NumPlay's Jetpack Joyride, written in C for NumPlay with the game's own pictures (from Halfbrick's Facebook asset archive and the Android game) and its numbers, read from the game's files. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. Not affiliated with Halfbrick.
 - **[Level Devil](https://store.steampowered.com/app/3242750/)** by Unept: NumPlay's Level Devil is written in C with no code from the game, but its 80 rooms (their tiles, traps and timing) are the game's own, taken from its web build by games/leveldevil/tools/fetch.py, and its runner is drawn from the game's sprites.
 
 - **Pong** by Atari (1972) inspired NumPlay's 2 Players, with air hockey, tanks in a maze in the spirit of Tank Trouble and the light cycles of Tron. All four are written in C for NumPlay and drawn from shapes, with no code or art from them.
@@ -305,7 +309,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 
 NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyright (c) 2026 Mason Chen. Code and fonts from others keep their own licenses: the `UNLICENSE` files in the games' folders and the [LICENSES](LICENSES) folder. The names, artwork and music of the games NumPlay is inspired by belong to their makers and are not covered by it.
 
-<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Voodoo (Flappy Dunk), Lima Sky (Doodle Jump), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Chrome Dino, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Chrome of Google LLC, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog of SEGA and Space Invaders of Taito.</sub>
+<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Voodoo (Flappy Dunk), Lima Sky (Doodle Jump), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Halfbrick (Jetpack Joyride), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Chrome Dino, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Chrome of Google LLC, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog of SEGA and Space Invaders of Taito.</sub>
 
 ## Gallery
 
@@ -383,5 +387,6 @@ NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyri
   <tr>
     <td align="center"><img src="docs/media/gallery/towerblock.gif" alt="Tower Blocks: blocks dropped on the tower, the overhangs falling away"><br><a href="games/towerblock/README.md"><b>Tower Blocks</b></a></td>
     <td align="center"><img src="docs/media/gallery/doodlejump.gif" alt="Doodle Jump: the doodler climbs past blue platforms and a monster"><br><a href="games/doodlejump/README.md"><b>Doodle Jump</b></a></td>
+    <td align="center"><img src="docs/media/jetpackjoyride.gif" alt="Jetpack Joyride: lasers, a missile, then the Lil' Stomper"><br><a href="games/jetpackjoyride/README.md"><b>Jetpack Joyride</b></a></td>
   </tr>
 </table>
