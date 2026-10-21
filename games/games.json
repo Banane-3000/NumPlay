@@ -228,6 +228,24 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/dinorun"
   },
   {
+    "id": "doodlejump",
+    "title": "Doodle Jump",
+    "tagline": "Bounce as high as you can",
+    "credit": "Based on Doodle Jump by Lima Sky",
+    "top": "0xC8D84A",
+    "bottom": "0x4A7A22",
+    "accent": "0xF7F7F4",
+    "colors": 16,
+    "records": [
+      "doodlejump.sav"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "app": "DoodleJump.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/doodlejump"
+  },
+  {
     "id": "chess",
     "title": "Chess",
     "tagline": "Bots, puzzles, 2 players",
