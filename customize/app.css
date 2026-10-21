@@ -1,18 +1,22 @@
 :root {
-  --bg: #e6e8ec;
+  --bg: #f2f1ef;
   --ink: #1d1d1f;
   --mute: #6e737a;
-  --track: #d3d6db;
+  --track: #e3e1dd;
   --card: #ffffff;
   --btn: #1d1d1f;
   --btn-ink: #ffffff;
-  --line: #a3a8af;
+  --line: #b9b6b0;
   --blue: #0a84ff;
   --shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
   --ease: cubic-bezier(0.2, 0.9, 0.25, 1);
   --spring: cubic-bezier(0.3, 1.5, 0.5, 1);
   --t: 210ms;
-  --cw: clamp(240px, min(27vw, calc((100vh - 170px) * 0.509)), 380px);
+  /* the calculator, up close: wide enough that its screen and OK key fill the height of the window */
+  --cw: clamp(420px, min(calc((100vh - 24px) * 0.925), calc(60vw - 80px)), 880px);
+  --plate-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1018 2000' preserveAspectRatio='none'%3E%3Cpath fill-rule='evenodd' d='M0 0H1018V2000H0Z M140 107H879A36 36 0 0 1 915 143V707A36 36 0 0 1 879 743H140A36 36 0 0 1 104 707V143A36 36 0 0 1 140 107Z'/%3E%3C/svg%3E");
+  --star-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M41.68,12.87 L57.12,36.01 L84.64,32.00 L67.40,53.83 L79.73,78.77 L53.64,69.12 L33.73,88.54 L34.84,60.75 L10.22,47.82 L36.99,40.29Z' fill='black' stroke='black' stroke-width='14' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --star-foil: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M41.68,12.87 L57.12,36.01 L84.64,32.00 L67.40,53.83 L79.73,78.77 L53.64,69.12 L33.73,88.54 L34.84,60.75 L10.22,47.82 L36.99,40.29Z' fill='black' stroke='black' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 * { box-sizing: border-box; }
@@ -31,64 +35,31 @@ a { color: inherit; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 [hidden] { display: none !important; }
 
-/* ---- the top: NumPlay on calculator keys, and GitHub */
-.top { position: absolute; left: 0; right: 0; top: 0; z-index: 3; display: flex; justify-content: space-between; align-items: center; padding: 24px 32px 0; pointer-events: none; }
-.top > * { pointer-events: auto; }
-.logo { display: flex; align-items: center; gap: 12px; border: 0; background: none; padding: 0; cursor: pointer; }
-.logo-icon { width: 40px; height: 40px; border-radius: 18%; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.16); transition: transform 300ms var(--spring); }
-.logo:hover .logo-icon { transform: rotate(-8deg) scale(1.06); }
-.keys { display: flex; gap: 3px; }
-.keys i {
-  font-style: normal; font-weight: 700; font-size: 17px; line-height: 1;
-  width: 25px; height: 29px; display: flex; align-items: center; justify-content: center;
-  border-radius: 8px; color: #2a2a2c;
-  background: linear-gradient(#ffffff, #ececee);
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.1), 0 1px 0 #c5c7cb, 0 2px 4px rgba(0, 0, 0, 0.12);
-  transition: transform 90ms var(--ease), box-shadow 90ms var(--ease);
-}
-.keys i.y { background: linear-gradient(#ffd25f, #f5b83a); color: #ffffff; text-shadow: 0 1px 1px rgba(150, 90, 0, 0.35); box-shadow: inset 0 -2px 0 rgba(150, 90, 0, 0.18), 0 1px 0 #d39a24, 0 2px 4px rgba(0, 0, 0, 0.14); }
-.keys i.down { transform: translateY(2px); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18), 0 0 0 #c5c7cb; }
-/* the GitHub corner: a calculator key with a star on it, and a little screen with the count */
-.star { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--ink); padding: 4px; }
-.star-text { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
-.star-text b { font-size: 16px; font-weight: 750; letter-spacing: -0.2px; }
-.star-text small { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--mute); }
-.star-lcd {
-  position: relative; height: 46px; min-width: 66px; padding: 12px 12px 6px; border-radius: 9px; overflow: hidden;
-  background: #0c0d10; color: #ffffff; display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 0 4px #ffffff, 0 0 0 5px #d6d8dc, 0 6px 14px rgba(0, 0, 0, 0.16);
-}
-.star-lcd i { position: absolute; left: 0; right: 0; top: 0; height: 7px; background: #ffb734; }
-.star-lcd b { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.5px; }
-.star-key {
-  position: relative; width: 50px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(#ffd25f, #f5b83a);
-  box-shadow: inset 0 -3px 0 rgba(150, 90, 0, 0.2), 0 2px 0 #d39a24, 0 6px 12px rgba(0, 0, 0, 0.16);
-  transition: transform 90ms var(--ease), box-shadow 90ms var(--ease);
-}
-.star-key svg { filter: drop-shadow(0 1px 1px rgba(150, 90, 0, 0.45)); transition: transform 300ms var(--spring); }
-.star-key::after {
-  content: "★"; position: absolute; left: 50%; top: 4px; color: #f5b70a; font-size: 16px; opacity: 0; pointer-events: none;
-  transform: translate(-50%, 0) scale(0.6);
-}
-.star:hover .star-key { transform: translateY(2px); box-shadow: inset 0 1px 2px rgba(150, 90, 0, 0.25), 0 0 0 #d39a24, 0 3px 6px rgba(0, 0, 0, 0.14); }
-.star:hover .star-key svg { transform: rotate(72deg) scale(1.05); }
-.star:hover .star-key::after { animation: rise-star 900ms var(--ease) forwards; }
-@keyframes rise-star { 0% { opacity: 0; transform: translate(-50%, 0) scale(0.6); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -34px) scale(1.1) rotate(25deg); } }
-
+/* ---- the page: NumPlay, yours, and its games on the left; the calculator, up close, on the right */
 main {
-  position: relative;
-  display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
-  gap: 32px 64px;
+  display: grid; grid-template-columns: minmax(0, 1fr) calc(var(--cw) + 96px);
+  grid-template-rows: auto 1fr; grid-template-areas: "head device" "games device";
   min-height: 100vh;
-  padding: 92px 40px 50px;
 }
+.head { grid-area: head; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 16px; padding: 40px 32px 0 56px; }
+.games { grid-area: games; display: flex; flex-direction: column; gap: 14px; padding: 30px 32px 28px 56px; max-width: 560px; }
+.title { border: 0; background: none; padding: 0; cursor: pointer; text-align: left; display: flex; flex-direction: column; line-height: 0.95; }
+.title .word { font-size: clamp(52px, 5.4vw, 80px); font-weight: 800; letter-spacing: -0.045em; }
+.title .word { display: flex; }
+.title .word i { font-style: normal; display: inline-block; transition: transform 260ms var(--spring); }
+.title .word i.lift { transform: translateY(-0.12em); }
+.title:focus-visible { border-radius: 16px; }
+.chips { display: flex; gap: 8px; margin: 0 0 6px auto; }
+.lede { flex-basis: 100%; margin: 4px 0 0; min-height: 1.4em; font-size: 16px; font-weight: 550; color: #858279; transition: opacity 200ms var(--ease); }
+.lede.swap { opacity: 0; }
+.row-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; font-size: 13px; font-weight: 650; color: #858279; }
+.row-head .sub { font-weight: 500; }
+.retro .row-head { justify-content: flex-start; }
 
 /* ---- the game grids */
-.grid { display: grid; gap: 14px; }
-.grid.small { flex: 1 1 260px; max-width: 300px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.side { flex: 1 1 260px; max-width: 300px; display: flex; flex-direction: column; gap: 26px; }
-.grid.big { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.grid { display: grid; gap: 12px; }
+.grid.small { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px 12px; }
+.grid.big { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 10px; }
 .grid.big:empty { display: none; }
 
 .app {
@@ -142,39 +113,88 @@ body.dragging-icon, body.dragging-icon * { cursor: grabbing !important; user-sel
   75% { transform: translateX(-2px) scale(0.86); }
 }
 
-/* ---- the calculator, its space bar and the buttons */
-.device { display: flex; align-items: flex-start; gap: 24px; }
-.side-by { display: flex; flex-direction: column; align-items: center; gap: 22px; }
-.meter { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: calc(var(--cw) * 0.16); }
-.used { font-size: 22px; font-weight: 750; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; line-height: 1; }
-.bar {
-  width: 14px; height: calc(var(--cw) * 1.58); border-radius: 7px;
-  background: var(--track); overflow: hidden;
-  display: flex; flex-direction: column-reverse;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
-  transition: box-shadow var(--t) var(--ease);
+/* ---- the calculator, up close: its screen is the space, its OK key installs, a star sticker on it */
+.device { grid-area: device; position: sticky; top: 0; height: 100vh; overflow: hidden; align-self: start; perspective: 2400px; perspective-origin: 92% 30%; }
+/* a real calculator, built in 3D from its photo (--u is one of the photo's pixels): the front, with a hole
+   where the screen is, the screen down in its recess, the recess's walls, rounded edges and sides, and the
+   top (made by app.js, build3d). It turns a little toward the pointer (--rx, --ry) */
+.calc {
+  position: absolute; left: 40px; top: 30px; width: var(--cw); aspect-ratio: 1018 / 2000; --u: calc(var(--cw) / 1018);
+  transform-style: preserve-3d; transform-origin: 50% 24%; transform: rotateX(var(--rx, 2deg)) rotateY(var(--ry, -12deg));
 }
-.bar.over { box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12), 0 0 0 3px rgba(255, 69, 58, 0.45); }
-.seg { display: block; width: 14px; flex-shrink: 0; height: 0; box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.25); transition: height var(--t) var(--ease); }
-.cap { display: flex; flex-direction: column; gap: 4px; }
+.plate, .well, .body3d { position: absolute; inset: 0; }
+.plate { container-type: inline-size; pointer-events: none; }
+.plate > button, #screen { pointer-events: auto; }
+.calc, .well, .body3d { pointer-events: none; }  /* (so a click on the sticker, lying on them, is the sticker's) */
+.sticker { pointer-events: auto; }
+.calc-img, .well-img { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; pointer-events: none; }
+.calc-img {
+  clip-path: inset(0 2.947% 0 2.947%);
+  -webkit-mask: var(--plate-mask) 0 0 / 100% 100% no-repeat; mask: var(--plate-mask) 0 0 / 100% 100% no-repeat;
+}
+.well { transform: translateZ(calc(var(--u) * -14.6)); }  /* (a hair under the sticker, which lies on it at 14) */
+.well-img { clip-path: inset(5.35% 10.118% 62.85% 10.216% round calc(var(--u) * 36)); }
+.body3d, .fold, .sticker { transform-style: preserve-3d; }
+.fold { position: absolute; top: 0; height: 100%; width: 0; transform-origin: 0 0; }
+.facet { position: absolute; top: 0; height: 100%; display: block; }
+.body3d .top { position: absolute; left: 0; top: 0; width: 100%; transform-origin: 0 0; transform: rotateX(-90deg); display: block; }
+.body3d .rim { position: absolute; transform-origin: 0 0; display: block; }
+.cap { display: flex; gap: 2px; background: var(--track); border-radius: 999px; padding: 2px; }
 .cap button {
-  border: 0; background: transparent; padding: 3px 7px; border-radius: 999px; cursor: pointer;
-  font-size: 12px; font-weight: 650; color: var(--mute); white-space: nowrap;
+  border: 0; background: transparent; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+  font-size: 12px; font-weight: 650; color: #858279; white-space: nowrap;
   transition: background var(--t) var(--ease), color var(--t) var(--ease);
 }
-.cap button[aria-checked="true"] { background: var(--btn); color: var(--btn-ink); }
-
-.calc { position: relative; width: var(--cw); aspect-ratio: 1018 / 2000; }
-.calc-img { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.1)) drop-shadow(0 18px 26px rgba(0, 0, 0, 0.12)); }
-/* the shadow on the table: a soft wide one, and a darker one where it touches */
-.calc .shadow { position: absolute; left: 6%; right: 6%; bottom: -2.2%; height: 6%; pointer-events: none; }
-.calc .shadow::before, .calc .shadow::after { content: ""; position: absolute; border-radius: 50%; }
-.calc .shadow::before { inset: -40% -12%; background: radial-gradient(closest-side, rgba(30, 34, 44, 0.22), rgba(30, 34, 44, 0)); filter: blur(10px); }
-.calc .shadow::after { left: 8%; right: 8%; top: 28%; height: 34%; background: radial-gradient(closest-side, rgba(20, 22, 30, 0.38), rgba(20, 22, 30, 0)); filter: blur(4px); }
+.cap button[aria-checked="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); }
+/* OK, on the keypad (its key, 718,922 r 56 in the picture's pixels), with a tag under it */
+.ok-key {
+  position: absolute; left: 65.03%; top: 43.3%; width: 11%; aspect-ratio: 1; border: 0; padding: 0; border-radius: 50%;
+  background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background 120ms var(--ease), box-shadow 120ms var(--ease);
+}
+.ok-key::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; animation: okpulse 2.4s ease-out infinite; }
+.ok-key:hover { background: rgba(0, 0, 0, 0.04); }
+.ok-key:hover::after { animation: none; }
+.ok-key:active { background: rgba(0, 0, 0, 0.08); box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.18); }
+.ok-key:focus-visible { outline-offset: 4px; border-radius: 50%; }
+@keyframes okpulse { 0% { box-shadow: 0 0 0 0 rgba(255, 183, 52, 0.7); } 70% { box-shadow: 0 0 0 1.8cqw rgba(255, 183, 52, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 183, 52, 0); } }
+.ok-tag {
+  position: absolute; left: 50%; top: calc(100% + 1.3cqw); transform: translateX(-50%); white-space: nowrap;
+  background: var(--btn); color: var(--btn-ink); font-size: max(13px, 1.75cqw); font-weight: 700; padding: 0.75cqw 1.5cqw; border-radius: 1cqw;
+  transition: transform var(--t) var(--spring);
+}
+.ok-key:hover .ok-tag { transform: translateX(-50%) translateY(-1px) scale(1.04); }
+.ok-key.busy::after { animation: spin 700ms linear infinite; border: 0.35cqw solid #ffb734; border-right-color: transparent; inset: -0.6cqw; }
+.ok-key.busy .ok-tag { opacity: 0.6; }
+/* the .nwa itself: a small tag under Back, beside Install */
+.dl {
+  position: absolute; left: 84.28%; top: calc(48.9% + 1.3cqw); transform: translateX(-50%); white-space: nowrap; cursor: pointer;
+  display: flex; align-items: center; gap: 0.6cqw; border: 1px solid #d6d4cf; background: #ffffff; color: var(--ink);
+  font-size: max(12px, 1.5cqw); font-weight: 650; padding: 0.7cqw 1.2cqw; border-radius: 1cqw;
+  transition: transform var(--t) var(--spring), border-color var(--t) var(--ease);
+}
+.dl::before { content: ""; width: 1.1em; height: 1.1em; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v11'/%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3Cpath d='M5 20h14'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v11'/%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3Cpath d='M5 20h14'/%3E%3C/svg%3E") center / contain no-repeat; }
+.dl:hover { transform: translateX(-50%) translateY(-1px); border-color: #b9b6b0; }
+.dl.busy { opacity: 0.5; }
+/* GitHub: a die-cut star sticker of gold foil, stuck on the calculator by its screen: flat on the frame,
+   down the step into the screen's recess, and round the edge onto the side (app.js folds it, build3d).
+   Each piece shows its own part of one picture (.art, drawn by app.js's stickerRenderer), and the part
+   round the edge peels up under the pointer (--b0 --b1 --b2, app.js) */
+.sticker { position: absolute; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.sticker:focus-visible { outline-offset: 2px; border-radius: 8px; }
+.leaf { position: absolute; top: 0; height: 100%; overflow: hidden; display: block; transform: translateZ(calc(var(--u) * 0.5)); }  /* (a hair off the plastic, as a sticker is) */
+.art, .shade { position: absolute; top: 0; width: var(--star); height: var(--star); display: block; }
+/* each piece's light, darker as it turns away (app.js, shadeStar): over the sticker's own shape only */
+.shade { -webkit-mask: var(--star-paper) center / 100% 100% no-repeat; mask: var(--star-paper) center / 100% 100% no-repeat; background-repeat: no-repeat; }
 .screen {
   position: absolute; left: 14.538%; top: 7.7%; width: 70.923%; height: 27.1%;
   background: #0c0d10; overflow: hidden; container-type: size;
 }
+/* the glass over the screen: a soft reflection that moves as the calculator turns */
+.glass { position: absolute; inset: 0; z-index: 6; pointer-events: none;
+  background: linear-gradient(112deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.02) 50%, rgba(255, 255, 255, 0) 58%) var(--lx, 60%) 0 / 260% 100% no-repeat; }
 .status {
   position: absolute; left: 0; top: 0; right: 0; height: 7.5%;
   background: #ffb734; color: #ffffff;
@@ -207,7 +227,6 @@ body.dragging-icon, body.dragging-icon * { cursor: grabbing !important; user-sel
 }
 body.dragging .drop-hint { opacity: 1; }
 
-.actions { display: flex; align-items: center; gap: 10px; }
 .chip {
   height: 46px; padding: 0 10px 0 9px; border: 0; border-radius: 23px; background: var(--card); cursor: pointer;
   display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -232,17 +251,6 @@ body.dragging .drop-hint { opacity: 1; }
   border: 2.4px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 600ms linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-.round {
-  width: 46px; height: 46px; border-radius: 23px; border: 0; cursor: pointer;
-  background: var(--card); color: var(--ink); display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transition: transform var(--t) var(--spring);
-}
-.round:hover { transform: translateY(-2px); }
-.round:active { transform: scale(0.92); transition-duration: 80ms; }
-.round.busy svg { animation: drop 700ms var(--ease) infinite; }
-@keyframes drop { 0% { transform: translateY(-3px); opacity: 0.4; } 60% { transform: translateY(2px); opacity: 1; } 100% { transform: translateY(2px); opacity: 0.4; } }
-
 /* ---- the app's own settings: two small panels over the chips */
 .pop {
   position: fixed; z-index: 25; width: 330px; background: var(--card); border-radius: 18px; padding: 16px;
@@ -277,36 +285,19 @@ body.dragging .drop-hint { opacity: 1; }
 .xl-guide { font-size: 13px; font-weight: 650; color: var(--blue); text-decoration: none; }
 .xl-ok { padding: 10px 20px; font-size: 14px; }
 
-/* ---- Retro-Go: drop your games, they come in as cartridges */
-.retro { display: flex; flex-direction: column; gap: 12px; }
-.retro-head { display: flex; align-items: center; gap: 10px; }
-.retro-head img { width: 34px; height: 34px; border-radius: 18%; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15); }
-.retro-head b { display: block; font-size: 15px; }
-.retro-head .systems { display: block; font-size: 12px; color: var(--mute); font-weight: 600; }
-.drop {
-  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;
-  border: 2px dashed var(--line); border-radius: 16px; padding: 18px 12px 14px; text-align: center;
-  transition: border-color var(--t) var(--ease), background var(--t) var(--ease), transform var(--t) var(--spring);
-}
-.drop:hover, body.dragging .drop { border-color: var(--blue); background: rgba(10, 132, 255, 0.06); }
-.drop:active { transform: scale(0.98); }
-.drop-art { position: relative; width: 74px; height: 46px; margin-bottom: 4px; }
-.drop-art i { position: absolute; bottom: 0; width: 30px; height: 36px; border-radius: 3px 8px 3px 3px; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.12); transition: transform 260ms var(--spring); }
-.drop-art i::after { content: ""; position: absolute; left: 4px; right: 4px; bottom: 7px; height: 14px; border-radius: 2px; }
-.drop-art .c1 { left: 0; background: #c9c9cf; transform: rotate(-12deg); }
-.drop-art .c1::after { background: #6d8a0c; }
-.drop-art .c2 { left: 22px; background: #d9d9de; z-index: 1; }
-.drop-art .c2::after { background: #c43a2f; }
-.drop-art .c3 { right: 0; background: #cfd6e4; transform: rotate(12deg); }
-.drop-art .c3::after { background: #2f62c4; }
-.drop:hover .c1, body.dragging .c1 { transform: rotate(-18deg) translateY(-4px); }
-.drop:hover .c2, body.dragging .c2 { transform: translateY(-8px); }
-.drop:hover .c3, body.dragging .c3 { transform: rotate(18deg) translateY(-4px); }
-.drop-text { font-size: 15px; font-weight: 700; }
-.drop-sub { font-size: 12px; color: var(--mute); font-weight: 600; letter-spacing: 0.02em; }
+/* ---- Retro-Go: your games come in as cartridges, after a + cartridge */
+.retro { display: flex; flex-direction: column; gap: 10px; }
+.carts-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .retro input[type=file] { position: absolute; left: -9999px; }
-.carts { display: flex; flex-wrap: wrap; gap: 10px; }
-.carts:empty { display: none; }
+.add-cart {
+  width: 52px; height: 62px; border-radius: 5px 13px 5px 5px; border: 2px dashed var(--line); color: #858279; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color var(--t) var(--ease), background var(--t) var(--ease), transform var(--t) var(--spring), color var(--t) var(--ease);
+}
+.add-cart:hover, body.dragging .add-cart { border-color: var(--ink); color: var(--ink); transform: translateY(-3px); }
+.add-cart:active { transform: scale(0.94); }
+.add-cart.shake { animation: shake 300ms var(--ease); }
+.carts { display: contents; }
 .cart {
   position: relative; width: 52px; height: 62px; border: 0; padding: 0; cursor: pointer;
   border-radius: 5px 13px 5px 5px; display: flex; flex-direction: column; justify-content: flex-end;
@@ -326,12 +317,6 @@ body.dragging .drop-hint { opacity: 1; }
 @keyframes slot { 0% { transform: translateY(-18px) scale(0.8); opacity: 0; } 100% { transform: none; opacity: 1; } }
 
 /* ---- the intro: a few words, the calculator filling up, then the studio */
-.caption {
-  position: fixed; left: 50%; top: 22px; z-index: 30; transform: translate(-50%, 8px); pointer-events: none;
-  font-size: clamp(24px, 3vw, 40px); font-weight: 800; letter-spacing: -1px; text-align: center; white-space: nowrap;
-  opacity: 0; transition: opacity 320ms var(--ease), transform 420ms var(--ease);
-}
-.caption.show { opacity: 1; transform: translate(-50%, 0); }
 .intro-skip {
   position: fixed; left: 50%; bottom: 28px; z-index: 30; transform: translateX(-50%); border: 0; cursor: pointer;
   background: rgba(29, 29, 31, 0.08); color: var(--mute); font-size: 13px; font-weight: 650; padding: 8px 16px; border-radius: 999px;
@@ -345,10 +330,10 @@ body.intro .calc { z-index: 2; }
 .boot .splash img { width: 24cqw; border-radius: 18%; box-shadow: 0 0 0 0.8cqw rgba(255, 255, 255, 0.08), 0 2cqh 5cqh rgba(0, 0, 0, 0.6); }
 .boot .splash b { color: #ffffff; font-size: 11cqh; font-weight: 800; letter-spacing: -0.03em; }
 .boot .splash span { color: #ffb734; font-size: 5cqh; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
-.keyflash { position: absolute; width: 15%; aspect-ratio: 1; border-radius: 50%; pointer-events: none; z-index: 3;
-  background: radial-gradient(closest-side, rgba(255, 220, 120, 0.95), rgba(255, 183, 52, 0.45) 55%, rgba(255, 183, 52, 0)); }
+.drop-cart { position: fixed; z-index: 35; width: 52px; height: 62px; border-radius: 5px 13px 5px 5px; pointer-events: none; box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.12); }
+.drop-cart::after { content: ""; position: absolute; left: 6px; right: 6px; bottom: 10px; height: 26px; border-radius: 3px; background: var(--c); }
 .ghost-icon { position: fixed; z-index: 35; border-radius: 18%; pointer-events: none; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25); }
-.press-ring { position: absolute; inset: 0; border-radius: inherit; border: 2px solid var(--btn); pointer-events: none; }
+.press-ring { position: absolute; inset: 0; border-radius: 50%; border: 0.4cqw solid #ffb734; pointer-events: none; }
 
 /* ---- tooltip, toast and the install sheet */
 .tip {
@@ -386,34 +371,32 @@ body.intro .calc { z-index: 2; }
 @keyframes fade { from { opacity: 0; } }
 @keyframes rise { from { transform: translateY(14px) scale(0.97); opacity: 0; } }
 
-.foot { position: absolute; right: 32px; bottom: 18px; font-size: 12px; color: var(--mute); display: flex; gap: 8px; }
+.foot { margin-top: auto; padding-top: 22px; font-size: 12px; color: var(--mute); display: flex; gap: 8px; }
 .foot a { color: var(--mute); text-decoration: none; }
 .foot a:hover { color: var(--ink); }
 .noscript { text-align: center; padding: 0 16px; }
 
-/* ---- narrow screens: the calculator first, the games below */
-@media (max-width: 980px) {
-  :root { --cw: min(300px, 62vw); }
-  .top { padding: 16px 16px 0; }
-  .star-text { display: none; }
-  main { padding: 84px 16px 32px; gap: 28px; }
-  .device { order: -1; gap: 16px; }
-  .grid.small, .side { flex-basis: 100%; max-width: 560px; }
-  .grid.small { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
-  .grid.big { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
-  .foot { position: static; justify-content: center; padding: 0 16px 24px; }
-  .caption { top: 18px; white-space: normal; width: calc(100vw - 32px); }
+/* ---- narrow screens: NumPlay, yours, then the calculator, then the games */
+@media (max-width: 900px) {
+  :root { --cw: min(560px, calc(100vw - 32px)); }
+  main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; grid-template-areas: "head" "device" "games"; }
+  .head { padding: 24px 16px 0; }
+  .games { padding: 8px 16px 24px; max-width: none; }
+  .device { position: relative; height: calc(var(--cw) * 1.1 + 30px); margin: 8px auto 0; width: calc(var(--cw) + 40px); perspective-origin: 50% 20%; }
+  .calc { left: 20px; --ry: -8deg; }
+  .foot { justify-content: center; }
+}
+@media (max-width: 600px) {
+  .dl { font-size: 0; gap: 0; padding: 7px 8px; }  /* (just the arrow, beside Install) */
+  .dl::before { width: 14px; height: 14px; }
 }
 @media (max-width: 420px) {
-  .keys i { width: 21px; height: 26px; font-size: 15px; }
-  .logo-icon { width: 34px; height: 34px; }
   .grid.small { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .grid.big { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .actions { gap: 8px; }
+  .grid.big { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .chip { padding: 0 8px 0 7px; }
   .pop { width: calc(100vw - 32px); }
 }
 @media (prefers-reduced-motion: reduce) {
   :root { --t: 1ms; }
-  .app.bounce, .app.shake, .cart.enter, .sheet, .sheet-card, .pop { animation: none; }
+  .app.bounce, .app.shake, .cart.enter, .sheet, .sheet-card, .pop, .ok-key::after { animation: none; }
 }
