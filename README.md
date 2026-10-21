@@ -260,6 +260,8 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Rocket League
 - [ ] Temple Run
 - [ ] Deltarune: Chapter 1, and each later chapter as an app of its own
+- [ ] Hollow Knight: more of Hallownest after Greenpath
+- [ ] Hill Climb Racing: the rest of the stages and vehicles
 
 ## Credits
 
