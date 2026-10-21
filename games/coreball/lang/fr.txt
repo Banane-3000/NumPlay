@@ -1,0 +1,15 @@
+# Core Ball in French: the English text as in the source, a tab, the translation (see tools/lang.py).
+Back  menu	Retour  menu
+OK  shoot	OK  tirer
+OK  play	OK  jouer
+Levels	Niveaux
+Resume	Reprendre
+Restart	Recommencer
+How to play	Comment jouer
+Quit	Quitter
+No	Non
+Yes	Oui
+Play	Jouer
+Menu	Menu
+Quit Core Ball?	Quitter Core Ball ?
+Press OK to shoot a ball at the spinning core. Don't hit the balls already on it. Shoot them all to clear the level.	Appuie sur OK pour lancer une boule sur le noyau qui tourne. Ne touche pas les boules déjà plantées. Lance-les toutes pour finir le niveau.

@@ -40,6 +40,8 @@ ALONE = {
     "numvisuals": ("NumVisuals", "moving backgrounds with a clock, a stopwatch, a timer, a counter or your own words"),
     "cookieclicker": ("Cookie Clicker", "the whole game, to the grandmapocalypse, ascension and the dragon"),
     "jetpackjoyride": ("Jetpack Joyride", "Barry's run through the lab, with five vehicles and the Final Spin"),
+    "stickmanhook": ("Stickman Hook", "swing from hook to hook: 39 levels made by hand, then endless ones"),
+    "donkeykong": ("Donkey Kong", "the 1981 arcade game: barrels, pies, elevators and rivets, up to Pauline"),
     "dune": ("Dune", "Mountains and seven cosmetic balls with an English interface, adapted by Bobydeluxe; installed separately"),
 }
 VARIANTS = [
@@ -51,7 +53,7 @@ LANGUAGES = [
     ("NumPlay-French.nwa", "NumPlay en français : tous les jeux, en français"),
     ("NumPlay-Chinese.nwa", "NumPlay 中文版：所有游戏，简体中文"),
 ]
-UPSILON = ("NumPlay-Upsilon.nwa", "For calculators running Upsilon (N0110, N0115): the 23 games that fit in the memory "
+UPSILON = ("NumPlay-Upsilon.nwa", "For calculators running Upsilon (N0110, N0115): the 24 games that fit in the memory "
            "Upsilon gives apps. Install it with nwlink, see the README")
 
 
