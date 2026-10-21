@@ -45,6 +45,7 @@ void room_update(void) {
 
 /* what a room draws on its floor, under everything (world.c) */
 void room_draw_floor(void) {
+  ruins3_draw();
   snow1_draw();
   snow2_draw();
   ht1_draw();
@@ -105,7 +106,8 @@ void encounter_step(void) {
   int snow = e ? -1 : snow_encounter(g_room);
   if (!e && snow < 0) snow = wf_encounter(g_room);
   if (!e && snow < 0) return;
-  if (--steps_left > 0) return;
+  steps_left -= 1 + g_walk_fast;   /* (walking fast: as many steps for the way) */
+  if (steps_left > 0) return;
   steps_left = 100 + rnd_n(200);
   event_start(EV_ENCOUNTER, NULL);
   event_cur_arg(e ? e->forms[rnd_n(e->n)] : snow);

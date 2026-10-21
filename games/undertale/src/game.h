@@ -37,6 +37,7 @@ extern Save sv;                /* the game now */
 extern int g_mode;
 extern uint32_t g_frame;
 extern bool g_running;
+extern uint8_t g_walk_fast;    /* Settings: Frisk walks twice as fast (the game has no such thing: off at first) */
 
 static inline int flag(int f) { return sv.flags[f]; }
 static inline void set_flag(int f, int v) { sv.flags[f] = (uint8_t)v; }

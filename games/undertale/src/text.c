@@ -86,14 +86,15 @@ static void layout(Writer *w) {
       continue;
     }
     if (s[i] == ' ') last_space = i;
-    int adv = s[i] == '$' ? 8 * (int)strlen(g_name) : 8;
+    /* (the font's own widths: its letters aren't all 8 pixels) */
+    int adv = s[i] == '$' ? gfx_text_width(w->font, g_name, (int)strlen(g_name)) : gfx_text_width(w->font, s + i, 1);
     x += adv;
     if (x > wrap_width && last_space > start && nbreaks < MAX_LINES) {
       breaks[nbreaks++] = (uint16_t)(w->page + last_space);
       /* the line after: indented under the first's words when the page starts with "* " */
-      x = (s[0] == '*' ? 16 : 0);
+      x = (s[0] == '*' ? gfx_text_width(w->font, "* ", 2) : 0);
       for (int k = last_space + 1; k <= i; k++)
-        if (!code_len(s + k)) x += 8;
+        if (!code_len(s + k)) x += s[k] == '$' ? gfx_text_width(w->font, g_name, (int)strlen(g_name)) : gfx_text_width(w->font, s + k, 1);
       start = last_space + 1;
       last_space = -1;
     }

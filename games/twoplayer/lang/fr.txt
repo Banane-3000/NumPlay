@@ -1,0 +1,33 @@
+# 2 Players in French: the English text as in the source, a tab, the translation (see tools/lang.py).
+Pong	Pong
+Air Hockey	Air hockey
+Tanks	Tanks
+Light Cycles	Motos de lumière
+Return the ball with your paddle: its middle sends the ball back straight, its ends at a steep angle. The longer a rally lasts, the faster the ball.	Renvoie la balle avec ta raquette : son milieu la renvoie tout droit, ses bouts en biais. Plus l'échange dure, plus la balle va vite.
+Knock the puck into the other goal. Your mallet stays in your half; hit the puck on the move to send it flying.	Envoie le palet dans l'autre but. Ton maillet reste dans ta moitié ; frappe le palet en bougeant pour qu'il file.
+Drive through the maze and hit the other tank. Shells bounce off the walls: watch out for your own!	Roule dans le labyrinthe et touche l'autre tank. Les obus rebondissent sur les murs : gare aux tiens !
+Steer your light cycle and make the other one crash into a wall or a trail. It never stops and never turns back.	Pilote ta moto de lumière et fais percuter l'autre contre un mur ou une traînée. Elle ne s'arrête et ne recule jamais.
+Computer	IA
+Player 2	Joueur 2
+You	Toi
+Player 1	Joueur 1
+Computer: easy	IA : facile
+Computer: normal	IA : normale
+Computer: hard	IA : difficile
+2 Players	2 joueurs
+First to 	Premier à 
+Play	Jouer
+Draw!	Égalité !
+Resume	Reprendre
+Restart	Recommencer
+Other games	Autres jeux
+Quit game	Quitter
+Paused	Pause
+Player 1 wins!	Joueur 1 gagne !
+Player 2 wins!	Joueur 2 gagne !
+You win!	Gagné !
+The computer wins	L'IA gagne
+Rematch	Revanche
+No	Non
+Yes	Oui
+Quit game?	Quitter ?

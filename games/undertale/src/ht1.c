@@ -334,8 +334,7 @@ static int ev_lab(Ev *c) {
   set_flag(F_HT_LAB, 2);
   SAY(FACE_ALPHYS, "* There! It has a few new...\n  features.|* I'll, um, call you if I can help.|* Now I have to go to the...\n  bathroom. Good luck!");
   a = obj_get(ACTOR_ALPHYS);
-  WALK(a, 2342, 6225, 3);
-  gone(obj_get(ACTOR_ALPHYS));
+  LEAVE(a, 3, 2342, 6225);
   EV_END;
 }
 

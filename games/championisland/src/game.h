@@ -47,8 +47,10 @@ typedef struct {
 } Game;
 extern Game game;
 
-/* all the RAM the app has left (tests can ask for another size): the island
- * needs its 328 x 244 layer and a cache of 12 KB or more */
+/* the host's arena, as the calculators with the least RAM have it (on the
+ * calculator, all the RAM the app has left: see game.c; tests can ask for
+ * another size): the island needs its 328 x 244 layer and a cache of 12 KB
+ * or more */
 #ifndef ARENA_BYTES
 #define ARENA_BYTES 100000
 #endif

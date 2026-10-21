@@ -66,6 +66,9 @@ GAMES = {
                            (3300, "ok"), (3700, "up"), (4000, "up")), 5000,
                    presses((1500, "up")), 2500),
     # settings: Speed to Fast, back, then a Custom game; next time Speed goes on to Insane
+    # past how to play, two flaps; next time the run goes on after a flap
+    "flappydunk": ("FlappyDunk.nwa", "flappydunk.sav", presses((1500, "ok"), (2200, "ok"), (2550, "ok")), 3500,
+                   presses((1500, "ok")), 2500),
     "flappybird": ("FlappyBird.nwa", "flappy.sav",
                    presses((1500, "down"), (1800, "ok"), (2100, "right"), (2400, "back"), (2700, "up"),
                            (2900, "right"), (3100, "ok"), (3900, "ok")) + every(4300, 7500, 450, "ok"), 9000,
@@ -90,9 +93,17 @@ GAMES = {
     # new game from the pause menu and its first square
     "minesweeper": ("Minesweeper.nwa", "mines.sav", presses((1500, "ok"), (2000, "ok"), (2400, "right")), 3000,
                     presses((1500, "ok"), (2000, "back"), (2300, "down"), (2600, "ok"), (3000, "ok")), 3600),
+    # past the title and the jaws, the first door: the runner runs right into the first pit; next time (only
+    # the copy of the save left) the first door again, and another death
+    "leveldevil": ("LevelDevil.nwa", "leveldevil.sav", presses((1800, "ok"), (3200, "ok"), (4300, "right", 7000)), 9500,
+                   presses((1800, "ok"), (3200, "ok"), (4300, "right", 7000)), 9500),
     # Play, serve, a brick or more: the best is kept; next time, Settings, screen shake off, back
     "breakout": ("BlockBreaker.nwa", "breakout.sav", presses((1500, "ok"), (2500, "ok")), 6000,
                  presses((1500, "down"), (1800, "ok"), (2100, "down"), (2400, "ok"), (2800, "back")), 4000),
+    # Air Hockey against the easy computer, a little play; next time the normal computer, and Tanks
+    "twoplayer": ("TwoPlayers.nwa", "twoplayer.sav",
+                  presses((1500, "down"), (1800, "right"), (2100, "ok"), (2600, "ok"), (3000, "up", 800)), 5000,
+                  presses((1500, "right"), (1800, "down")), 3000),
     # play, new run, the small blind, pick two cards and play them; then continue the run
     "balatro": ("Balatro.nwa", "balatro.sav",
                 presses((1500, "ok"), (2500, "ok"), (3500, "ok"), (5000, "ok"), (5400, "right"), (5800, "ok"),
@@ -105,6 +116,22 @@ GAMES = {
     "blockblast": ("BlockBlast.nwa", "blockblast.sav", presses((1500, "ok"), (2000, "ok")), 3000,
                    presses(*[(1500 + 250 * i, "up") for i in range(4)], *[(2500 + 250 * i, "left") for i in range(4)],
                            (3600, "ok")), 4500),
+    # a game: right to the gap between the first bunkers, and four shots up the third column; Home keeps the
+    # best. Next time another game, five shots, quit with On/Off: the best is read back, kept or beaten
+    "invaders": ("SpaceInvaders.nwa", "invaders.sav",
+                 presses((1500, "ok"), (2600, "right", 700), (3500, "ok"), (4100, "ok"), (4700, "ok"), (5300, "ok")), 6000,
+                 presses((1500, "ok"), (2600, "right", 700), (3500, "ok"), (4100, "ok"), (4700, "ok"), (5300, "ok"),
+                         (5900, "ok")), 6500),
+    # past how to play, an Easy puzzle made, two hints; next time the game goes on: one more
+    "sudoku": ("Sudoku.nwa", "sudoku.sav", presses((1500, "ok"), (2000, "ok"), (3500, "shift"), (4000, "shift")), 5500,
+               presses((1500, "shift")), 3000),
+    # past how to play, X in the middle of the middle board (5, 5), O sent there takes its top left (7);
+    # next time the game goes on: X, sent to the top left board, takes its top right (9)
+    "uttt": ("UltimateTicTacToe.nwa", "uttt.sav", presses((1500, "ok"), (2000, "5"), (2300, "5"), (2700, "7")), 4000,
+             presses((1500, "9")), 3000),
+    # past how to play, the first level and a few steps; next time the second level, picked in the list
+    "sokoban": ("Sokoban.nwa", "sokoban.sav", presses((1500, "ok"), (2000, "ok"), (2600, "right"), (2900, "right")), 4000,
+                presses((1500, "right"), (1900, "ok"), (2500, "up")), 4000),
     # the intro film is skipped (seen), Lucky walks up the dock and talks to the
     # guardians; next time the game starts where it was left
     "championisland": ("ChampionIsland.nwa", "champion.sav",
@@ -133,12 +160,50 @@ GAMES = {
                           *[(5000 + 200 * i, "down") for i in range(8)], (6800, "right"), (7000, "right"),
                           (7300, "ok"), (8300, "right"), (8600, "ok"), (10500, "right", 1500)), 13000,
                   presses((1500, "left", 1000)), 4000),
+    # how to play, the title, a run up the middle track through the first coins; Home banks them. Next time
+    # straight from the title into another run, quit with On/Off
+    "subway": ("SubwaySurfers.nwa", "subway.sav", presses((1500, "ok"), (2500, "ok")), 8000,
+               presses((1500, "ok")), 6000),
+    # Continue: the first night's card, then the office; Home keeps the night, and the next start is back in it,
+    # paused: Back, and the night goes on
+    "fnaf": ("FiveNightsAtFreddys.nwa", "fnafres.sav", presses((1500, "down"), (1800, "ok")), 9000,
+             presses((1500, "back")), 5000),
+    # the title, the garage, the stage, how to drive, then the Hill Climber up the Countryside: Home keeps the run's
+    # coins and best; next time straight from the stage to a second run
+    "hillclimb": ("HillClimbRacing.nwa", "hillclimb.sav",
+                  presses((1500, "ok"), (2500, "ok"), (3500, "ok"), (4500, "ok"), (5000, "right", 6000)), 12000,
+                  presses((1500, "ok"), (2500, "ok"), (3500, "ok"), (4000, "right", 2500)), 7500),
     # the intro, then OK draws for a while (the autosave on Home); next time it comes back and more is drawn
     "numpowder": ("NumPowder.nwa", "numpowder.sav", presses((2000, "ok"), (3000, "ok", 1500)), 6000,
                   presses((2000, "ok"), (2500, "right", 600), (3200, "ok", 800)), 5000),
+    # the title, the menu, New Game, Knee-Deep in the Dead, Hurt Me Plenty: the hangar, walking; Home keeps the
+    # moment, and the next start is back in it
+    "doom": ("Doom.nwa", "doomres.sav",
+             presses((2500, "ok"), (3200, "ok"), (3900, "ok"), (4600, "ok"), (6500, "up", 1500)), 9500,
+             presses((4000, "up", 1000)), 7000),
     # Press OK to Play: the first scenario, its first goal closed, the city runs; then Continue
     "finalearth2": ("FinalEarth2.nwa", "finalearth2.sav", presses((2000, "ok"), (3000, "ok")), 9000,
                     presses((2000, "ok")), 6000),
+    # past the title, a new run as Isaac: the floor's name, then he walks and cries; Home keeps the run. Next time,
+    # Continue, and the run goes on (quitting with On/Off)
+    "isaac": ("BindingOfIsaac.nwa", "isaacrun.sav",
+              presses((1500, "ok"), (2200, "ok"), (2800, "ok"), (3400, "ok"), (3900, "left", 1200), (4200, "6", 900),
+                      (5400, "up", 600)), 7000,
+              presses((1500, "ok"), (2200, "ok"), (2800, "right", 900), (3000, "8", 600)), 4500),
+    # past the keys, Adventure: the street, Ready Set Plant, a peashooter on the sod; Home keeps the level. Next
+    # time Continue, Back to Game, and the level goes on
+    "pvz": ("PlantsVsZombies.nwa", "pvzlevel.sav", presses((1500, "ok"), (2500, "ok"), (3500, "ok"), (12500, "1"),
+                                                           (13000, "ok")), 16000,
+            presses((1500, "ok"), (2500, "ok"), (3500, "ok")), 9000),
+    # past the keys, the SEGA screen and the title: Green Hill Zone, running; Home keeps the act, and next time
+    # Continue goes back to it
+    "sonic": ("SonicTheHedgehog.nwa", "sonic.sav",
+              presses((1500, "ok"), (5500, "ok"), (7000, "ok"), (9000, "right", 6000)), 16000,
+              presses((5500, "ok"), (7000, "ok"), (9500, "right", 2000)), 13000),
+    # past the keys, the big cookie clicked three times; Home saves the bakery. Next time, from the copy, two more
+    "cookieclicker": ("CookieClicker.nwa", "cookieclicker.sav",
+                      presses((2500, "ok"), (3500, "ok"), (4000, "ok"), (4500, "ok")), 6500,
+                      presses((3000, "ok"), (3600, "ok")), 5500),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -167,7 +232,10 @@ SEEDS = {
 # the app again, only the scripts are left, and the save must come back
 COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.py", "celeste": "celeste_saves.py",
           "hollowknight": "hollowknight_saves.py", "finalearth2": "finalearth2_saves.py",
-          "numpowder": "numpowder_saves.py", "undertale": "undertale_saves.py"}
+          "numpowder": "numpowder_saves.py", "undertale": "undertale_saves.py", "subway": "subway_saves.py",
+          "fnaf": "fnaf_saves.py", "doom": "doom_saves.py", "isaac": "isaac_saves.py",
+          "hillclimb": "hillclimb_saves.py", "pvz": "pvz_saves.py", "sonic": "sonic_saves.py",
+          "cookieclicker": "cookieclicker_saves.py", "leveldevil": "leveldevil_saves.py"}
 CHECKS = {
     # the island remembers where Lucky was; after the reinstall, from the copy
     "championisland": (lambda v: v[:3] == b"CI1" and b"PLAYER_LOC" in v,) * 2,
@@ -181,13 +249,40 @@ CHECKS = {
     # the moment kept ("UT01", the frames played at 52); after the reinstall, from the copy, it goes on
     "undertale": (lambda v: v[:4] == b"UT01" and struct.unpack_from("<I", v, 52)[0] > 0,
                   lambda v: v[:4] == b"UT01" and struct.unpack_from("<I", v, 52)[0] > 60),
+    # the progress ("SUB1"): a run played, its coins banked (offset 8), runs at 20; then a second run
+    "subway": (lambda v: v[:4] == b"SUB1" and struct.unpack_from("<I", v, 8)[0] > 0 and struct.unpack_from("<I", v, 20)[0] == 1,
+               lambda v: v[:4] == b"SUB1" and struct.unpack_from("<I", v, 20)[0] == 2),
+    # the night kept ("FNAF", its seconds at 40); after the reinstall, from the copy, it goes on
+    "fnaf": (lambda v: v[:4] == b"FNAF" and struct.unpack_from("<f", v, 40)[0] > 2,
+             lambda v: v[:4] == b"FNAF" and struct.unpack_from("<f", v, 40)[0] > 6.5),
+    # the moment kept (a save named "the moment"); after the reinstall, from the copy, loaded and kept again
+    "doom": (lambda v: v[:10] == b"the moment",) * 2,
+    # the run kept ("ISR1", the frames played at 16); after the reinstall, from the copy, it goes on
+    "isaac": (lambda v: v[:4] == b"ISR1" and struct.unpack_from("<I", v, 16)[0] > 30,
+              lambda v: v[:4] == b"ISR1" and struct.unpack_from("<I", v, 16)[0] > 80),
+    # the level kept ("PVZL", level 1-1 at 8, its ticks at 16, a plant on it); after the reinstall, from the copy, it
+    # goes on
+    "pvz": (lambda v: v[:4] == b"PVZL" and v[8] == 1 and struct.unpack_from("<I", v, 16)[0] > 0,
+            lambda v: v[:4] == b"PVZL" and v[8] == 1 and struct.unpack_from("<I", v, 16)[0] > 500),
+    # a game kept ("S1SV": has_game at 6, Green Hill at 7, the frames played at 28); after the reinstall, from the
+    # copy, it goes on
+    "sonic": (lambda v: v[:4] == b"S1SV" and v[6] == 1 and v[7] == 0 and struct.unpack_from("<I", v, 28)[0] > 0,
+              lambda v: v[:4] == b"S1SV" and v[6] == 1 and struct.unpack_from("<I", v, 28)[0] > 600),
     # a simulation saved ("NPWD"); after the reinstall, from the copy, it goes on and is saved again
     "numpowder": (lambda v: v[:4] == b"NPWD",) * 2,
+    # a run banked ("HCR1", runs at 212) with a best on the Countryside (at 48); after the reinstall, from the copy,
+    # a second one
+    "hillclimb": (lambda v: v[:4] == b"HCR1" and struct.unpack_from("<I", v, 212)[0] == 1
+                  and struct.unpack_from("<H", v, 48)[0] > 0,
+                  lambda v: v[:4] == b"HCR1" and struct.unpack_from("<I", v, 212)[0] == 2),
     # a game saved ("HKSV", then the play time at 152); after the reinstall, from the copy, it goes on
     "hollowknight": (lambda v: v[:4] == b"HKSV" and struct.unpack_from("<f", v, 152)[0] > 0,
                      lambda v: v[:4] == b"HKSV" and struct.unpack_from("<f", v, 152)[0] > 10),
     "numvisuals": (lambda v: v[:2] == b"V\1" and v[3] == 4 and struct.unpack_from("<i", v, 8)[0] == 2,
                    lambda v: struct.unpack_from("<i", v, 8)[0] == 3),  # the add-on and its count
+    # a run kept (guide read), the ball on its way; then further along the same run
+    "flappydunk": (lambda v: len(v) == 200 and v[:2] == b"F\1" and v[2] & 3 == 3 and struct.unpack_from("<f", v, 24)[0] > 1,
+                   lambda v: v[2] & 1 and struct.unpack_from("<f", v, 24)[0] > 6),
     "flappybird": (lambda v: len(v) == 26 and v[:3] == b"F\1\1" and v[8] == 3,  # Custom, Speed Fast
                    lambda v: v[2] == 1 and v[8] == 4),  # read back, Speed Insane
     # the game went on (more points, fewer dots), then Fast was chosen and the game kept
@@ -220,8 +315,29 @@ CHECKS = {
     "blockblast": (lambda v: len(v) == 92 and v[:3] == b"B\1\3" and struct.unpack_from("<I", v, 12)[0] >= 1
                    and struct.unpack_from("<I", v, 8)[0] >= struct.unpack_from("<I", v, 12)[0],
                    lambda v: v[2] & 1 and struct.unpack_from("<I", v, 12)[0] >= 2),
+    # the runner died (the deaths at 8); after the reinstall, from the copy, it died again
+    "leveldevil": (lambda v: len(v) == 48 and v[:2] == b"L\1" and struct.unpack_from("<I", v, 8)[0] >= 1,
+                   lambda v: struct.unpack_from("<I", v, 8)[0] >= 2),
+    # the best score ("I", version 1, the best at 4): some invaders shot; then kept, or beaten
+    "invaders": (lambda v: len(v) == 8 and v[:2] == b"I\1" and struct.unpack_from("<I", v, 4)[0] >= 20,
+                 lambda v: len(v) == 8 and v[:2] == b"I\1" and struct.unpack_from("<I", v, 4)[0] >= 20),
+    # how to play read, the game's moves (at 32) kept: 40 then 36; then 2 more
+    "uttt": (lambda v: len(v) == 114 and v[:2] == b"U\1" and v[4] & 1 and v[5] == 2 and v[32:34] == bytes([40, 36]),
+             lambda v: v[5] == 3 and v[34] == 2),
+    # how to play seen and the first level played last; then the second
+    "sokoban": (lambda v: len(v) == 314 and v[:4] == b"S\1\1\0", lambda v: len(v) == 314 and v[:4] == b"S\1\1\1"),
+    # the bakery kept ("CCK1", the cookies at 8, the clicks at 48): 3 clicks; after the reinstall, from the copy, 5
+    "cookieclicker": (lambda v: v[:4] == b"CCK1" and struct.unpack_from("<d", v, 48)[0] == 3
+                      and struct.unpack_from("<d", v, 8)[0] >= 3,
+                      lambda v: v[:4] == b"CCK1" and struct.unpack_from("<d", v, 48)[0] == 5),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
+    # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies kept
+    "twoplayer": (lambda v: len(v) == 36 and v[:4] == b"P\1\1\1",
+                  lambda v: len(v) == 36 and v[:4] == b"P\1\2\2"),
+    # a game kept (Easy, the guide read) with the two digits the hints wrote (the digits at 109); then three
+    "sudoku": (lambda v: len(v) == 352 and v[:4] == b"S\1\3\0" and sum(1 <= b <= 9 for b in v[109:190]) == 2,
+               lambda v: v[2] & 1 and sum(1 <= b <= 9 for b in v[109:190]) == 3),
 }
 
 

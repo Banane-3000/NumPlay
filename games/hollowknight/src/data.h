@@ -690,6 +690,7 @@
 #define STYLE_MENU_SMALL 12
 #define STYLE_YN 13
 #define STYLE_MSG_S 14
+#define STYLE_MSG_XS 15
 #define TEXT_K 1.333333f
 #define FONT_PHASES 4
 #define EK_CRAWLER 1

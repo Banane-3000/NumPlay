@@ -1,0 +1,19 @@
+# Sokoban in Chinese: the English text as in the source, a tab, the translation (see tools/lang.py).
+Resume	继续
+Restart	重来
+Levels	关卡
+How to play	玩法
+Quit game	退出游戏
+Quit game?	退出游戏？
+No	否
+Yes	是
+Paused	暂停
+Solved!	过关！
+Push every box onto a goal: they can't be pulled.\nArrows: walk   Backspace: undo\nBack: pause	把每个箱子推到目标上：箱子不能拉。\n方向键：走路   退格：撤销\n返回：暂停
+Play	开始
+Next level	下一关
+Level 	关卡 
+Moves 	步数 
+Pushes 	推动 
+Your best: 	最佳：
+OK play   Back quit	OK 开始   Back 退出

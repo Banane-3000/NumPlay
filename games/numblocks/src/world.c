@@ -8,6 +8,9 @@
 #include "edits.h"
 
 uint8_t vc[VCY * VCZ * VCX];
+#if NB_DIMS
+uint8_t vhi[(VCY * VCZ * VCX + 7) / 8];
+#endif
 uint8_t vl[VCY * VCZ * VCX];
 uint8_t vbiome[VCZ * VCX];
 uint8_t vtop[VCZ * VCX];
@@ -50,7 +53,7 @@ static void light_box(int x0, int y0, int z0, int x1, int y1, int z1) {
       int top = vtop[z * VCX + x] - vc_y0;   /* local y of the first sky-lit cell */
       int lvl = 15;
       for (int y = VCY - 1; y >= y0; y--) {
-        int i = VC_I(x, y, z), b = vc[i];
+        int i = VC_I(x, y, z), b = VB(i);
         if (y < top) lvl = 0;
         else if (b != B_AIR) {
           lvl -= opacity(b);
@@ -81,7 +84,7 @@ static void light_box(int x0, int y0, int z0, int x1, int y1, int z1) {
           for (int x = xs; x != xe; x += xi) {
             int i = VC_I(x, y, z), cur = vl[i];
             if ((cur & 15) == 15 && !blk) continue;
-            int op = opacity(vc[i]);
+            int op = opacity(VB(i));
             if (op >= 15) continue;
             /* the brightest neighbours (sky and block light apart), less what this cell takes */
             int ms = 0, mb = 0;
@@ -143,7 +146,11 @@ static void mac_box(int x0, int y0, int z0, int x1, int y1, int z1) {
           for (int z = mz * 4; z < mz * 4 + 4; z++) {
             const uint8_t *r = &vc[VC_I(mx * 4, y, z)];
             any |= (uint8_t)(r[0] | r[1] | r[2] | r[3]);
+#if NB_DIMS
+            for (int k = 0; k < 4; k++) water = water && (r[k] == B_AIR || is_water(VB(VC_I(mx * 4 + k, y, z))));
+#else
             for (int k = 0; k < 4; k++) water = water && (r[k] == B_AIR || is_water(r[k]));
+#endif
           }
         vmac[(my * MCZ + mz) * MCX + mx] = !any ? 0 : water ? 2 : 1;
       }
@@ -158,9 +165,31 @@ static void mac_box(int x0, int y0, int z0, int x1, int y1, int z1) {
 #define BIT(set, i) ((set)[(i) >> 3] >> ((i) & 7) & 1)
 static void fill_chunk(int cx, int cz, const uint8_t *keep, int oy, int ylo, int yhi, bool air) {
   int h = yhi - ylo;
+#if NB_DIMS
+  /* the slab's ninth bits, a bit a cell (on the stack: this is never under a frame's drawing) */
+  uint8_t hb[16 * 16 * VCY / 8];
+  memset(hb, 0, sizeof hb);
+  if (air) memset(slab, B_AIR, (size_t)h * 256);
+  else {
+    gen_hi = hb;   /* (a stronghold's blocks past 255 come with their ninth bit) */
+    dims_slab(cx, cz, vc_y0 + ylo, h, slab);
+    gen_hi = NULL;
+    for (int c = 0; c < h * 256; c++) {
+      unsigned k = (unsigned)(slab[c] - GEN_CODE(0));
+      if (k >= GC_N || (hb[c >> 3] >> (c & 7) & 1)) continue;
+      int b = gen_code_block[k];
+      slab[c] = (uint8_t)b;
+      hb[c >> 3] |= (uint8_t)((b >> 8) << (c & 7));
+    }
+  }
+  edits_apply9(cx, cz, vc_y0 + ylo, h, slab, hb);
+#define SLAB_AT(c) (slab[c] | (hb[(c) >> 3] >> ((c) & 7) & 1) << 8)
+#else
   if (air) memset(slab, B_AIR, (size_t)h * 256);   /* (rows above all it generates: only the edits) */
   else gen_slab(cx, cz, vc_y0 + ylo, h, slab);
   edits_apply(cx, cz, vc_y0 + ylo, h, slab);
+#define SLAB_AT(c) (slab[c])
+#endif
   for (int z = 0; z < 16; z++) {
     int lz = cz * 16 + z - vc_z0;
     if (lz < 0 || lz >= VCZ) continue;
@@ -172,17 +201,25 @@ static void fill_chunk(int cx, int cz, const uint8_t *keep, int oy, int ylo, int
       for (int y = ylo; y < yhi; y++) {
         /* cells the old cache had are kept (their content is the same) */
         if (old_col && y + vc_y0 - oy >= 0 && y + vc_y0 - oy < VCY) continue;
-        vc[VC_I(lx, y, lz)] = slab[((y - ylo) * 16 + z) * 16 + x];
+        VSET(VC_I(lx, y, lz), SLAB_AT(((y - ylo) * 16 + z) * 16 + x));
       }
       if (!old_col) {
+#if NB_DIMS
+        vbiome[col] = (uint8_t)dims_biome(cx * 16 + x, cz * 16 + z);
+        int gt = dims_top(cx * 16 + x, cz * 16 + z), lt = gt;
+#else
         vbiome[col] = (uint8_t)gen_biome(cx * 16 + x, cz * 16 + z);
         int gt = gen_top(cx * 16 + x, cz * 16 + z), lt = gt;
+#endif
         vgtop[col] = (uint8_t)gt;
         /* the sky light's top is the highest block that stops light: snow layers, flowers, tall
          * grass on top let it all through (else they and what they stand on were lit too dark) */
-        for (int ly = gt - vc_y0; ly >= 0 && ly < VCY && opacity(vc[VC_I(lx, ly, lz)]) == 0; ly--) lt--;
+        for (int ly = gt - vc_y0; ly >= 0 && ly < VCY && opacity(VB(VC_I(lx, ly, lz))) == 0; ly--) lt--;
         int t = edits_top(cx * 16 + x, cz * 16 + z, lt + 1);
         vtop[col] = (uint8_t)(t < 0 ? 0 : t > 255 ? 255 : t);
+#if NB_DIMS
+        if (dim != DIM_OVERWORLD) vtop[col] = 255;   /* (no sky: no sky light) */
+#endif
       }
     }
   }
@@ -193,7 +230,17 @@ static uint8_t kept[VCZ * VCX / 8];   /* columns the old cache covered (moved, n
 /* Chunks still to generate after a move: the one under the player is made
  * at once, the others one a frame (world_follow), nearest first. Until then
  * their columns are air to look at and solid to everything that moves. */
+#if NB_DIMS
+static uint8_t vpend_bits[(VCZ * VCX + 7) / 8];   /* (a bit a column in NumBlocks.nwa: room for vhi) */
+#define PEND(c) (vpend_bits[(c) >> 3] >> ((c) & 7) & 1)
+#define PEND_SET(c, v) (vpend_bits[(c) >> 3] = (uint8_t)((vpend_bits[(c) >> 3] & ~(1 << ((c) & 7))) | (v) << ((c) & 7)))
+#define PEND_CLEAR() memset(vpend_bits, 0, sizeof vpend_bits)
+#else
 static uint8_t vpend[VCZ * VCX];
+#define PEND(c) (vpend[c])
+#define PEND_SET(c, v) (vpend[c] = (v))
+#define PEND_CLEAR() memset(vpend, 0, sizeof vpend)
+#endif
 typedef struct { int16_t cx, cz; int8_t ylo, yhi; } PendChunk;
 static PendChunk pend[16];
 static int npend, pend_oy;
@@ -205,7 +252,7 @@ static void fill_pending(int k) {
   fill_chunk(p.cx, p.cz, pend_any ? kept : NULL, pend_oy, p.ylo, p.yhi, false);
   int x0 = p.cx * 16 - vc_x0, z0 = p.cz * 16 - vc_z0;
   for (int z = z0 < 0 ? 0 : z0; z < z0 + 16 && z < VCZ; z++)
-    for (int x = x0 < 0 ? 0 : x0; x < x0 + 16 && x < VCX; x++) vpend[z * VCX + x] = 0;
+    for (int x = x0 < 0 ? 0 : x0; x < x0 + 16 && x < VCX; x++) PEND_SET(z * VCX + x, 0);
 }
 
 /* The chunks waiting to be made, meanwhile: the blocks about them carried on, not holes the sky shows
@@ -216,33 +263,33 @@ static void fill_pending(int k) {
 static void stand_in(bool any, int oy, int px, int pz) {
   int lo = any ? oy - vc_y0 : VCY, hi = any ? lo + VCY : VCY;   /* (the rows the old cache had) */
   for (int col = 0; col < VCX * VCZ; col++) {
-    if (!vpend[col] || !any || !BIT(kept, col)) continue;
+    if (!PEND(col) || !any || !BIT(kept, col)) continue;
     int lx = col % VCX, lz = col / VCX;
     if (lo > 0 && lo < VCY) {
-      int b = vc[VC_I(lx, lo, lz)];
+      int b = VB(VC_I(lx, lo, lz));
       if (!(blk_flags[b] & BF_SOLID)) b = B_STONE;
-      for (int y = 0; y < lo; y++) vc[VC_I(lx, y, lz)] = (uint8_t)b;
+      for (int y = 0; y < lo; y++) VSET(VC_I(lx, y, lz), b);
     }
     if (hi > 0 && hi < VCY) {
-      int b = vc[VC_I(lx, hi - 1, lz)];
+      int b = VB(VC_I(lx, hi - 1, lz));
       if (!(blk_flags[b] & BF_OPAQUE)) b = B_AIR;
-      for (int y = hi; y < VCY; y++) vc[VC_I(lx, y, lz)] = (uint8_t)(y + vc_y0 <= vgtop[col] ? b : B_AIR);
+      for (int y = hi; y < VCY; y++) VSET(VC_I(lx, y, lz), y + vc_y0 <= vgtop[col] ? b : B_AIR);
     }
   }
   int mx = px - vc_x0, mz = pz - vc_z0;   /* (the player's column: always made at once) */
   for (int col = 0; col < VCX * VCZ; col++) {
-    if (!vpend[col] || (any && BIT(kept, col))) continue;
+    if (!PEND(col) || (any && BIT(kept, col))) continue;
     /* towards the player until a column that is there */
     int lx = col % VCX, lz = col / VCX, sx = lx, sz = lz;
     for (int k = 0; k < VCX + VCZ; k++) {
       int s = sz * VCX + sx;
-      if (!vpend[s] || (any && BIT(kept, s))) break;
+      if (!PEND(s) || (any && BIT(kept, s))) break;
       if (sx != mx && abs(sx - mx) >= abs(sz - mz)) sx += sx < mx ? 1 : -1;
       else if (sz != mz) sz += sz < mz ? 1 : -1;
       else break;
     }
     int s = sz * VCX + sx;
-    for (int y = 0; y < VCY; y++) vc[VC_I(lx, y, lz)] = vc[VC_I(sx, y, sz)];
+    for (int y = 0; y < VCY; y++) VSET(VC_I(lx, y, lz), VB(VC_I(sx, y, sz)));
     vtop[col] = vtop[s], vbiome[col] = vbiome[s], vgtop[col] = vgtop[s];
   }
 }
@@ -263,7 +310,7 @@ static void recenter(int nx0, int ny0, int nz0, int px, int pz) {
         for (int x = xs; x != xe; x += xi) {
           int sx = x + dx, sy = y + dy, sz = z + dz;
           if (sx < 0 || sx >= VCX || sy < 0 || sy >= VCY || sz < 0 || sz >= VCZ) continue;
-          vc[VC_I(x, y, z)] = vc[VC_I(sx, sy, sz)];
+          VSET(VC_I(x, y, z), VB(VC_I(sx, sy, sz)));
         }
     for (int z = zs; z != ze; z += zi)
       for (int x = xs; x != xe; x += xi) {
@@ -323,7 +370,7 @@ static void recenter(int nx0, int ny0, int nz0, int px, int pz) {
         for (int x = 0; x < 16; x++) {
           int lx = cx * 16 + x - vc_x0, lz = cz * 16 + z - vc_z0;
           if (lx < 0 || lx >= VCX || lz < 0 || lz >= VCZ) continue;
-          vpend[lz * VCX + lx] = 1;
+          PEND_SET(lz * VCX + lx, 1);
         }
     }
   stand_in(any, oy, px, pz);
@@ -340,8 +387,43 @@ void world_new(int64_t seed, const char *name) {
   edits_clear();
   vc_valid = false;
   npend = 0;
-  memset(vpend, 0, sizeof vpend);
+  PEND_CLEAR();
+#if NB_DIMS
+  gen_dim(dim);
+  edits_dim(dim);
+#endif
 }
+
+#if NB_DIMS
+/* the player into another dimension: its generator and records; the cache is made again where the
+ * player is next followed (all of it at once). false: the changes made here did not fit in storage */
+bool world_dim(int d) {
+  if (!edits_flush()) return false;
+  dim = d;
+  gen_init(world_seed);
+  gen_dim(d);
+  edits_dim(d);
+  edits_clear();
+  tick_forget();
+  vc_valid = false;
+  npend = 0;
+  PEND_CLEAR();
+  return true;
+}
+
+/* the cache around (x, y, z), every chunk of it made now (a dimension's first frame, or blocks to set
+ * there) */
+void world_finish(float x, float y, float z) {
+  world_follow(x, y, z);
+  while (npend) {
+    int x0 = pend[0].cx * 16 - vc_x0, z0 = pend[0].cz * 16 - vc_z0;
+    fill_pending(0);
+    light_mark(x0 - 4, 0, z0 - 4, x0 + 20, VCY, z0 + 20);
+    mac_box(x0 < 0 ? 0 : x0, 0, z0 < 0 ? 0 : z0, x0 + 16 > VCX ? VCX : x0 + 16, VCY, z0 + 16 > VCZ ? VCZ : z0 + 16);
+  }
+  world_light_flush();
+}
+#endif
 
 /* Near a side of the cache the next move is coming: the chunks it will make there (one row of
  * them, 8 blocks in) need the terrain of the chunks around them, which takes most of making a
@@ -408,22 +490,26 @@ bool world_loaded(int x, int y, int z) {
 int world_get(int x, int y, int z) {
   if (y < 0) return B_BEDROCK;
   if (!world_loaded(x, y, z)) return B_AIR;
-  if (vpend[(z - vc_z0) * VCX + x - vc_x0]) return B_STONE;   /* not made yet: nothing goes in */
-  return vc[VC_I(x - vc_x0, y - vc_y0, z - vc_z0)];
+  if (PEND((z - vc_z0) * VCX + x - vc_x0)) return B_STONE;   /* not made yet: nothing goes in */
+  return VB(VC_I(x - vc_x0, y - vc_y0, z - vc_z0));
 }
 
 void world_set(int x, int y, int z, int b) {
   if (!world_loaded(x, y, z) || y < 0 || y >= WORLD_H) return;
-  if (vpend[(z - vc_z0) * VCX + x - vc_x0]) return;
+  if (PEND((z - vc_z0) * VCX + x - vc_x0)) return;
   int lx = x - vc_x0, ly = y - vc_y0, lz = z - vc_z0;
-  vc[VC_I(lx, ly, lz)] = (uint8_t)b;
+  VSET(VC_I(lx, ly, lz), b);
   edits_put(x, y, z, b);
   /* the column's sky top, then the light around */
   int col = lz * VCX + lx, t = vtop[col];
+#if NB_DIMS
+  if (dim != DIM_OVERWORLD) t = -1;   /* (no sky) */
+  else
+#endif
   if (opacity(b) >= 15 && y + 1 > t) vtop[col] = (uint8_t)(y + 1);
   else if (y + 1 == t && opacity(b) < 15) {
     int ny = y;
-    while (ny > vc_y0 && opacity(vc[VC_I(lx, ny - vc_y0 - 1, lz)]) < 15) ny--;
+    while (ny > vc_y0 && opacity(VB(VC_I(lx, ny - vc_y0 - 1, lz))) < 15) ny--;
     vtop[col] = (uint8_t)(ny > vc_y0 ? ny : 0);
   }
   light_mark(lx - 15, ly - 15, lz - 15, lx + 16, VCY, lz + 16);
@@ -443,10 +529,10 @@ int world_rain_top(int x, int z) {
   int lx = x - vc_x0, lz = z - vc_z0;
   if ((unsigned)lx >= VCX || (unsigned)lz >= VCZ) return 255;
   int col = lz * VCX + lx, t = vtop[col];
-  if (vpend[col]) return 255;
+  if (PEND(col)) return 255;
   if (t > vc_y0 + VCY) return t;
   for (int y = VCY - 1; y >= 0 && y + vc_y0 >= t; y--)
-    if (stops_rain(vc[VC_I(lx, y, lz)])) return y + vc_y0 + 1;
+    if (stops_rain(VB(VC_I(lx, y, lz)))) return y + vc_y0 + 1;
   return t;
 }
 

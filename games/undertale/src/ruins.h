@@ -9,4 +9,5 @@ int ruins2_event(Ev *c);
 void ruins2_update(void);
 void ruins3_setup(int room, int from);
 int ruins3_event(Ev *c);
+void ruins3_draw(void);   /* the mirror */
 #endif

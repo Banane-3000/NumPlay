@@ -1,0 +1,26 @@
+# Ultimate Tic-Tac-Toe in Chinese: the English text as in the source, a tab, the translation (see tools/lang.py).
+vs a friend	对战朋友
+vs easy	对战电脑：简单
+vs normal	对战电脑：普通
+vs hard	对战电脑：困难
+How to play	玩法
+Win three small boards in a row. Your cell sends the other player to the small board in the same place; if it is won or full, they play anywhere. 1 to 9 take a cell, 7 at the top left (on a free move, pick the board first). The arrows and OK work too.	在大棋盘上赢下连成一线的三个小棋盘就获胜。你下在哪一格，对手就要去下同一位置的小棋盘；如果那个小棋盘已被赢下或已下满，对手可以下在任何地方。数字 1 到 9 选格子，7 是左上角（自由落子时先选小棋盘）。方向键和 OK 也可以。
+Play	开始
+Paused	暂停
+Resume	继续
+New game	新游戏
+Quit game?	退出游戏？
+Quit game	退出游戏
+Draw	平局
+You win!	你赢了！
+You lose	你输了
+Thinking...	思考中…
+Your turn	轮到你
+wins!	获胜！
+to play	落子
+Draws	平局
+You	你
+Computer	电脑
+OK  new game	OK  再来一局
+1-9, OK  play	1-9, OK  落子
+Back  menu	返回  菜单

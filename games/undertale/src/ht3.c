@@ -296,8 +296,7 @@ static int ev_muffet(Ev *c) {
   set_flag(F_HT_MUFFET, 1);
   NARRATE("* Ahuhu... no hard feelings,\n  deary~|* Do come back to our bake sale!");
   m = obj_get(ACTOR_MUFFET);
-  WALK(m, m->x + 200, m->y, 3);
-  gone(obj_get(ACTOR_MUFFET));
+  LEAVE(m, 3, m->x + 200, m->y);
   EV_END;
 }
 
@@ -365,8 +364,7 @@ static int ev_tiles_end(Ev *c) {
   set_flag(F_HT_TILES3, c->v[0]);
   NARRATE("* OHHH... I'M ALL OUT OF POWER.|* UNTIL NEXT TIME, DARLING!\n* STAY TUNED!");
   m = obj_get(ACTOR_METTATON);
-  WALK(m, m->x, m->y - 220, 6);
-  gone(obj_get(ACTOR_METTATON));
+  LEAVE(m, 6, m->x, m->y - 220);
   EV_END;
 }
 
