@@ -1,6 +1,6 @@
-/* Original physics excerpts from the supplied Stickman Hook bundle.
- * Git blob 65da83d4a8d305683fda19aab8ad0b8433cf6c3c.
- * Test oracle only, not included in the calculator. Original rights retained. */
+/* Stickman Hook's physics as they are in its web build's bundle.js (git blob 65da83d4): the vector, the bumpers,
+ * the walls, and the stickman's step, hookTo, unhook and onHit. Only the glue lines (`var ta`, `function h`, `const
+ * wall`, `function install`, `module.exports`) are not Madbox's. For tests/oracle.cjs; not in the calculator app. */
 function $o(t, e) {
         this.x = t || 0, this.y = e || 0
     }

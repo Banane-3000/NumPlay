@@ -1,41 +1,103 @@
-// Compare independent single-frame results with the actual supplied JavaScript physics.
-const fs=require('fs'),path=require('path');
-const {Vec,install,bumper,wall}=require('./original.js');
-const root=path.join(__dirname,'..'),levels=JSON.parse(fs.readFileSync(path.join(root,'assets/levels.json')));
-const rawShapes=JSON.parse(fs.readFileSync(path.join(root,'assets/geometry.json')));
-const allParts=['165','175','207','251'].flatMap(k=>levels.maps[k]);
-const parts=JSON.parse(fs.readFileSync(path.join(root,'src/levels_index.json'))).map(name=>allParts.find(p=>p.file===name));
-const cases=JSON.parse(fs.readFileSync(process.argv[2]));
-const keys=['x','y','vx','vy','theta','omega','r','pull','rotation','spin'];let maxError=0;const maxByField=Object.fromEntries(keys.map(k=>[k,0]));
-function player(s){
- const n={position:new Vec(s.x,s.y),speed:new Vec(s.vx,s.vy),acceleration:new Vec(),radius:.017,r:s.r,theta:s.theta,vtheta:s.omega,
-   hookPullRemaining:s.pull,rotation:s.rotation,angularVelocity:s.spin,applyGravity:true,hook:s.hooked?{position:new Vec(s.hook_x,s.hook_y)}:null,
-   rope:{position:new Vec(),scale:{}},scale:{x:1,y:1},shadow:{x:0},parent:{addChildAt(){},removeChild(){}},gotoFrame(){}};
- install(n,{instance:{gravity:new Vec(0,1)},AIR_FRICTION:0});return n;
+// The physics against the web game's own code (tests/original.js, its functions as they are in the bundle):
+// every step of the bot's replays (written by `play test` to cases.json) is played again from the same state
+// by the original stickman, bumpers and walls, and must land where the port did.
+//   node tests/oracle.cjs build/cases.json
+const fs = require('fs'), path = require('path');
+const {Vec, install, bumper, wall} = require('./original.js');
+const outlines = JSON.parse(fs.readFileSync(path.join(__dirname, 'walls.json')));
+const names = Object.keys(outlines);
+const {parts, cases} = JSON.parse(fs.readFileSync(process.argv[2]));
+const SCALE = 5e-4, keys = ['x', 'y', 'vx', 'vy', 'theta', 'omega', 'r', 'rotation', 'spin'];
+
+function stickman(s) {
+  const n = {position: new Vec(s.x, s.y), speed: new Vec(s.vx, s.vy), acceleration: new Vec(), radius: .017, r: s.r,
+    theta: s.theta, vtheta: s.omega, hookPullRemaining: s.pull, rotation: s.rotation, angularVelocity: s.spin,
+    applyGravity: !s.completed, hook: s.hooked ? {position: new Vec(s.hx, s.hy)} : null,
+    rope: {position: new Vec(), scale: {}}, scale: {x: 1, y: 1}, shadow: {x: 0},
+    parent: {addChildAt() {}, removeChild() {}}, gotoFrame() {}};
+  install(n, {instance: {gravity: new Vec(0, 1)}, AIR_FRICTION: 0});
+  return n;
 }
-let wallCases=0,bumperCases=0;
-for(const c of cases){
- const s=c.before,n=player(s);let hooks=[],bumpers=[],walls=[];
- for(const section of s.sections){const p=parts[section.part],offset=section.x;
-  hooks.push(...p.hooks.map(h=>({position:new Vec(h.x+offset,h.y)})));
-  bumpers.push(...p.bumpers.map(b=>({position:new Vec(b.x+offset,b.y),rotation:b.rotation||0,w:b.w||.15,h:b.h||.04,
-    radius:Math.abs(b.w||.15),bounciness:b.bounce?.bounce||1.2,maxSpeed:3,minSpeed:.1,bounceForce:b.bounce?.force,bounceAngle:b.bounce?.angle})));
-  walls.push(...(p.obstacles||[]).map(o=>{const sn=Math.sin(o.rotation||0),cs=Math.cos(o.rotation||0);let radius=0;
-   const shapes=rawShapes[o.name].map(poly=>{let v=[];for(let j=0;j<poly.shape.length;j+=2){let x=(poly.shape[j]-256)*.0005,y=(poly.shape[j+1]-256)*.0005;radius=Math.max(radius,Math.hypot(x,y));v.push({x:o.x+offset+x*cs-y*sn,y:o.y+x*sn+y*cs});}return v;});
-   return{position:new Vec(o.x+offset,o.y),radius,shapes};}));
- }
- if(c.held&&!s.held){hooks.sort((a,b)=>n.position.distanceToSquared(a.position)-n.position.distanceToSquared(b.position));n.hookTo(hooks[0]);}
- if(!c.held&&s.held)n.unhook();
- n.ignoreNextCollision=false;
- for(let i=0;i<4;i++){n.step(1/240);bumpers.forEach(b=>bumper(n,b));walls.forEach(o=>wall(n,o));}
- if(n.position.x>s.finish)n.unhook();
- const actual={x:n.position.x,y:n.position.y,vx:n.speed.x,vy:n.speed.y,theta:n.theta,omega:n.vtheta,r:n.r,pull:n.hookPullRemaining,rotation:n.rotation,spin:n.angularVelocity};
- // Completion sets a victory pose, without changing the trajectory.
- if(n.position.x>s.finish)actual.spin=0,actual.rotation=Math.atan2(n.speed.y,n.speed.x)+Math.PI/2;
- for(const key of keys){let error=Math.abs(actual[key]-c.after[key]);maxError=Math.max(maxError,error);maxByField[key]=Math.max(maxByField[key],error);
-  if(error>(['vx','vy','omega','spin'].includes(key)?2e-3:2e-4)+Math.abs(actual[key])*2e-5){console.error({level:s.level+1,key,error,native:c.after[key],original:actual[key],before:s,held:c.held});process.exit(1);}}
- if(c.after.wall_hits>s.wall_hits)wallCases++;
- if(c.after.bumper_hits>s.bumper_hits)bumperCases++;
+
+// the course's objects, as the game's level scene makes them (`sc`, `ys`, `Ds.invalidateShapes`)
+function course(s) {
+  const hooks = [], bumpers = [], walls = [];
+  for (const [part, offset] of s.sections) {
+    const p = parts[part];
+    for (const [x, y] of p.hooks) hooks.push({position: new Vec(x + offset, y)});
+    for (const [x, y, rotation, bounce, force, angle, aimed] of p.bumpers)
+      bumpers.push({position: new Vec(x + offset, y), rotation, w: .15, h: .04, radius: Math.sqrt(.15 * .15),
+        bounciness: bounce, maxSpeed: 3, minSpeed: .1, bounceForce: force || undefined,
+        bounceAngle: aimed ? angle : undefined});
+    for (const [shape, x, y, rotation] of p.walls) {
+      let radius = 0;
+      const shapes = outlines[names[shape]].map(poly => {
+        const pts = [];
+        for (let i = 0; i < poly.length; i += 2) {
+          const v = new Vec(poly[i] - 256, poly[i + 1] - 256).rotateAround({x: 0, y: 0}, rotation || 0);
+          v.x *= SCALE, v.y *= SCALE;
+          radius = Math.max(radius, Math.sqrt(v.x * v.x + v.y * v.y));
+          pts.push({x: v.x + x + offset, y: v.y + y});
+        }
+        return pts;
+      });
+      walls.push({position: new Vec(x + offset, y), radius, shapes});
+    }
+  }
+  return {hooks, bumpers, walls};
 }
-const report={frames:cases.length,wall_collision_frames:wallCases,bumper_collision_frames:bumperCases,max_absolute_error:maxError,max_error_by_field:maxByField,result:'PASS'};
-fs.writeFileSync(path.join(root,'output/fidelity-report.json'),JSON.stringify(report,null,2)+'\n');console.log(report);
+
+let worst = Object.fromEntries(keys.map(k => [k, 0])), walled = 0, bumped = 0, hooked = 0, finished = 0;
+for (const c of cases) {
+  const s = c.before, n = stickman(s), {hooks, bumpers, walls} = course(s);
+  // input: a press hooks the closest hook (`findClosestHook`), a release lets go
+  if (c.held && !s.held && !s.hooked && !s.completed) {
+    let best = null, d = Infinity;
+    for (const h of hooks) {
+      const e = n.position.distanceToSquared(h.position);
+      if (e < d) d = e, best = h;
+    }
+    n.hookTo(best);
+    hooked++;
+  }
+  if (!c.held && s.held && !s.completed) n.unhook();
+  n.ignoreNextCollision = !1;
+  const t = (s.completed ? 1 / 60 * .2 : 1 / 60) / 4;
+  let hitWall = false, hitBumper = false;
+  n.onHit = (on => function(o) { (o.shapes ? (hitWall = true) : (hitBumper = true)); on(o); })(n.onHit);
+  for (let i = 0; i < 4; i++) {
+    n.step(t);
+    bumpers.forEach(b => bumper(n, b));
+    walls.forEach(o => wall(n, o));
+  }
+  walled += hitWall, bumped += hitBumper;
+  // the finish (`onComplete`): let go, no gravity, no spin, turned along its way
+  if (!s.completed && n.position.x > s.finish) {
+    n.hook && n.unhook();
+    n.applyGravity = !1, n.angularVelocity = 0, n.rotation = n.speed.angle() + Math.PI / 2;
+    finished++;
+  }
+  const got = {x: n.position.x, y: n.position.y, vx: n.speed.x, vy: n.speed.y, theta: n.theta, omega: n.vtheta, r: n.r,
+    rotation: n.rotation, spin: n.angularVelocity};
+  const a = c.after;
+  // the angle after the finish: the same direction, whatever the turn
+  if (!s.completed && a.completed) got.rotation -= Math.round((got.rotation - a.rotation) / (2 * Math.PI)) * 2 * Math.PI;
+  for (const k of keys) {
+    const e = Math.abs(got[k] - a[k]);
+    worst[k] = Math.max(worst[k], e);
+    const allowed = ['vx', 'vy', 'omega', 'spin'].includes(k) ? 2e-3 + Math.abs(got[k]) * 1e-3 : 2e-4 + Math.abs(got[k]) * 1e-4;
+    if (!(e <= allowed)) {
+      console.error('FAIL', {key: k, port: a[k], original: got[k], before: s, held: c.held});
+      process.exit(1);
+    }
+  }
+  // the pull: running, over (0), or just under 0 as in the game (still "pulling" for the walls)
+  const sign = v => v > 0 ? 1 : v < 0 ? -1 : 0;
+  if (sign(n.hookPullRemaining) !== sign(a.pull) && Math.abs(n.hookPullRemaining - a.pull) > 2e-4) {
+    console.error('FAIL', {key: 'pull', port: a.pull, original: n.hookPullRemaining, before: s, held: c.held});
+    process.exit(1);
+  }
+}
+console.log(`oracle: ${cases.length} steps as the web game's code plays them (${hooked} hooks, ${bumped} with a bumper, ` +
+  `${walled} with a wall, ${finished} finishes); largest gaps: ` +
+  keys.map(k => `${k} ${worst[k].toPrecision(2)}`).join(', '));

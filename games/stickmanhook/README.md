@@ -1,68 +1,83 @@
-# Stickman Hook
+> **Stickman Hook is a [NumPlay](../../README.md) game that comes on its own.** It is too big to fit next to NumPlay on the calculator. Get `StickmanHook.nwa` from the [latest release](https://github.com/Mason363/NumPlay/releases/latest).
 
-Native NumWorks adaptation by **Bobydeluxe**, based on the [reference game supplied for this port](https://github.com/Gr4ys0n/Gr4ys0n.github.io/tree/29006b0f11904704c390b457f7055c9fa1e53484/public/assets/games/stickman-hook).
+<p align="center">
+  <img src="src/icon.png" width="84" alt="Stickman Hook icon">
+</p>
 
-The game runs as a standalone external app on N0110, N0115 and N0120. Its interface is entirely in English. This directory is independent of the launcher and the other locally developed games.
+<h1 align="center">Stickman Hook</h1>
 
-## Playing
+<p align="center">
+  <b>Swing from hook to hook to the checkered line, on the NumWorks calculator.</b><br>
+  The 39 levels of Madbox's game, then levels without end, and its 23 characters.
+</p>
 
-| Key | Action |
+<p align="center">
+  <a href="https://github.com/Mason363/NumPlay/releases/latest/download/StickmanHook.nwa"><b>Download StickmanHook.nwa</b></a>
+  &nbsp;·&nbsp; <a href="#controls">Controls</a>
+</p>
+
+<p align="center">
+  <img src="../../docs/media/stickmanhook.gif" width="640" alt="Stickman Hook: the stickman swings through a level, crosses the checkered line in slow motion and dances on the victory screen">
+</p>
+
+## Highlights
+
+* **The swing:** hold to grab the nearest hook, let go to fly, with the game's own gravity, rope, momentum and bounces. Every step was checked against the web game's own code.
+* **39 levels made by hand:** the 9 first levels and the 30 that come after, in the game's order.
+* **Then no end:** as in the original, every level after 39 joins a start, a middle and an end drawn at random from the game's 105 sections.
+* **Bumpers and walls:** the springy bumpers, the ones that throw you a set way, and the walls you bump off.
+* **The finish:** slow motion, the zoom on the stickman, confetti, then the victory dance.
+* **23 characters:** 14 from the start, and 9 that open on reaching levels 5 to 150, each with its own poses and dance.
+* **The game's look:** Madbox's own pictures, backgrounds, logo and lettering.
+* **Saved as you go:** Home saves and quits, and the level you were on comes back with the same course. Your progress is also copied into `stickmanhook_saves.py`, so installing the app again doesn't erase it.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/shot.png" width="390" alt="The stickman swinging on a rope past rows of bumpers"><br><sub>Level 9, the last of the first levels</sub></td>
+    <td align="center"><img src="docs/endless.png" width="390" alt="The stickman swinging over a slope of bumpers"><br><sub>Level 47, drawn at random</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/finish.png" width="390" alt="The stickman flying past the line in slow motion, with confetti"><br><sub>Past the line</sub></td>
+    <td align="center"><img src="docs/victory.png" width="390" alt="The stickman dancing on the finish platform"><br><sub>The victory dance</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/skins.png" width="390" alt="The skins, a locked one chosen"><br><sub>The skins</sub></td>
+    <td align="center"><img src="docs/title.png" width="390" alt="The title screen, the stickman hanging from the logo"><br><sub>The title screen</sub></td>
+  </tr>
+</table>
+
+## How to play
+
+Press **OK** on the title to play. Hold **OK** to grab the nearest hook, the one with the dotted ring, and swing. Let go to fly on with your speed, then grab the next hook. Bumpers bounce you, walls stop you. Cross the checkered line to clear the level. If you fall off the bottom, you start the level again.
+
+The bar at the top shows how far you've got. The button with a character on the title and the victory screen opens the skins: pick one with the arrows and **OK**.
+
+## Controls
+
+| Key | What it does |
 | --- | --- |
-| Hold OK, EXE or Shift | Attach to the nearest hook |
-| Release | Let go and keep the swing's momentum |
-| Back | Pause / resume |
-| 0 during play | Retry the current level |
-| Arrows + OK | Navigate menus, choose a level or equip a skin |
-| 0 in the title menu | Controls |
-| Home or Power | Save and exit |
+| OK or EXE | Hold to hook, let go to fly; choose in menus |
+| Arrows | Move the focus in menus |
+| Back | Pause: Resume, Restart, Levels, How to play, Quit game (it asks first) |
+| Home | Save and quit |
 
-Swing between hooks, use the spring bumpers, and cross the chequered finish line. Falling below the course automatically retries it. Holding the button keeps the same rope attached; release and press again to pick another hook.
+## Good to know
 
-The campaign has exactly **50 fixed levels**: the reference version's nine introductory levels and thirty specified combinations, followed by eleven fixed courses composed from its original sections. Level 50 ends the campaign; there is no level 51. Previously reached levels remain available from the level selector. The compact build includes only the 84 course parts used by this campaign, while the complete original section data remains available in the source assets.
+* **On its own:** Stickman Hook is too big to fit next to NumPlay. Installing it from the NumWorks website swaps out NumPlay and the other apps, and installing NumPlay again swaps it back out.
+* **Without end:** after level 39, a level's course is drawn when you start it, so playing it again from Levels gives a new one. Levels lets you play any level you've reached.
+* **No videos:** the 14 skins on the original's "Watch Videos" page are free from the start, as in its web version.
+* **Left out:** leaderboards, sharing, ads, and music and sound (the calculator has no speaker).
 
-All 23 original characters are included, with their original hook, free-flight and victory poses and dance frames. All characters can be unlocked within the campaign. Original level unlocks are adapted to milestones up to level 50. Characters originally tied to browser adverts unlock through progress, every three completed levels. Progress and the equipped skin are stored in the checked 40-byte `stickmanhook.sav` file. Saves from the earlier endless version migrate without resetting progress; progress beyond the new campaign is retained as a completed 50-level campaign. There are no ads or network dependencies.
+## Credits
 
-## Fidelity and calculator adaptations
+Inspired by [Stickman Hook](https://apps.apple.com/app/stickman-hook/id1435807944) by Madbox, not affiliated with them. Go play the original: it's free on iOS, Android and [the web](https://poki.com/en/g/stickman-hook).
 
-The port uses the supplied game's actual course coordinates, wall polygons, character frames, title artwork, bumpers, hooks, backgrounds, victory platform and JUNEGULL lettering. Physics retains gravity 1, player radius 0.017, four substeps per 1/60-second tick, 1.075 attachment momentum, 1.2 release momentum, the 0.2-second rope pull and the original collision response. The reference JavaScript physics functions are retained separately as a test oracle; they are not shipped in the app.
+* The levels, the skins and their pictures come from the game's web version, read by [tools/data.py](tools/data.py) into [src/levels.c](src/levels.c) and [src/art.c](src/art.c). Its physics are checked step by step against the game's own code ([tests/original.js](tests/original.js), [tests/oracle.cjs](tests/oracle.cjs)).
+* The pictures (the stickmen and their dances, the hooks, bumpers, walls, finish platform, backgrounds and logo) and the JUNEGULL font are Madbox's, from the game.
+* Adapted for the calculator by **[Bobydeluxe](https://github.com/Bobydeluxe)**.
 
-This is a native adaptation for a 320 × 240 RGB565 screen, rather than the browser runtime. Menus are arranged for physical keys. Artwork is resized and palette-packed; the trail and celebration use bounded drawing work. The small-screen camera keeps the original world scale and horizontal look-ahead. The victory screen uses the original platform and dancing characters. Simulation runs at 60 Hz and display updates target 30 Hz on every model. Floating-point rounding can differ from JavaScript doubles. A zero-length rope is guarded against to prevent invalid physics.
+Made by Mason Chen as part of NumPlay.
 
-## Storage
+## License
 
-The `.nwa` is **90,208 bytes**, down from 127,344 bytes (**29.16% smaller**). Repeated bumper parameters, rotations, palettes, pixel blocks and font glyphs are shared in flash. Unused sections are omitted from the installed image. These changes preserve the sprite pixels and physics values; there is no extra runtime decompression or RAM buffer.
-
-## Build
-
-Requires Python with Pillow, Node.js, `nwlink@1.0.0`, and an ARM embedded GCC toolchain. All required game assets and generated C tables are already included; building does not download the original game.
-
-```sh
-python build.py --arm-bin /path/to/arm/bin --nwlink /path/to/nwlink/bin/nwlink
-```
-
-The build creates `output/stickmanhook.nwa` and copies it to `build/apps/StickmanHook.nwa` at the repository root. A symbol-bearing `output/stickmanhook-debug.nwa` is kept for ARM tests. The installed release and debug bytes are compared automatically, using the smallest tested 107,674-byte app RAM budget.
-
-The Makefile also supports:
-
-```sh
-make build check
-make test HOST_CC=cc
-make test-fidelity HOST_CC=cc
-make test-arm NWLINK=nwlink
-```
-
-`test-arm` requires the dependencies used by NumPlay's `tools/emu.py`: Unicorn, pyelftools and Pillow. Run `make test` first to create its host fixtures. See [VALIDATION.md](VALIDATION.md).
-
-## Asset provenance
-
-The original game is Stickman Hook by Madbox. This fan adaptation is not affiliated with Madbox. The supplied files were pinned to commit `29006b0f11904704c390b457f7055c9fa1e53484`; hashes are recorded in `assets/provenance.json`. `assets/levels.json` and `assets/geometry.json` preserve the exported source data. `assets/sprites/` contains resized original frames, and `tools/assets.py` deterministically builds the ROM tables from those files.
-
-To reproduce the import, put the pinned `bundle.js` and its referenced images in a local reference directory, then run:
-
-```sh
-node tools/extract_reference.cjs /path/to/reference
-python tools/import_reference.py /path/to/reference
-python tools/assets.py
-```
-
-Original game assets, lettering, course data and JavaScript excerpts retain their original rights; this adaptation does not relicense them. NumPlay's common app/file helpers and compact packaging tools retain their existing notices. Calculator adaptation credit: **By Bobydeluxe**.
+The game's code is licensed under the GNU General Public License v3.0: see the `LICENSE` file at the root of the repository. The pictures, the font, the levels and the physics excerpts in `tests/original.js` are Madbox's and keep their own terms (see Credits).
