@@ -6,10 +6,18 @@ NumPlay.nwa from: base.o (the launcher), arena.o (the RAM the games share), an a
 icon, and one object per game, with a script made of script.json's parts (tools/gen_games.py).
 This copies them to OUT, gzipped, with kit.json (the games, their sizes, colours and
 limits), each game's icon and thumbnail, and checks that linking the default games from OUT
-gives NumPlay.nwa's bytes on the calculator.
+gives NumPlay.nwa's bytes on the calculator, and that each big game ("xl", for calculators
+with Enlarged Extra Apps: up to xlAppSpace bytes of apps) links with the launcher alone. The
+blocks of the script go in the games' order ("index"), so the big games come last: past the
+app area, where Enlarged Extra Apps put them, only they look for the calculator's files there
+(EPSILON_XL in games/common/epsilon_app.h).
+
+A game's "ram" in kit.json is what it takes in the arena (its .data, its .bss and the least heap
+it needs): it fits a calculator when ram + launcherRam (NumPlay's own RAM, before the arena) is
+at most what the calculator's software gives apps ("ram", "ramLimit", "upsilonRam").
 
 Usage: kit.py games.json BUILD OUT --version V --variants "..." --default "ids" --upsilon "ids"
-              --app-space N --ram N --upsilon-ram N --nwlink NWLINK
+              --app-space N --xl-app-space N --ram N --ram-limit N --upsilon-ram N --nwlink NWLINK
 """
 import argparse
 import gzip
@@ -89,7 +97,9 @@ def main():
     ap.add_argument("--default", required=True)
     ap.add_argument("--upsilon", default="")
     ap.add_argument("--app-space", type=int, required=True)
+    ap.add_argument("--xl-app-space", type=int, required=True)
     ap.add_argument("--ram", type=int, required=True)
+    ap.add_argument("--ram-limit", type=int, default=148928)
     ap.add_argument("--upsilon-ram", type=int, required=True)
     ap.add_argument("--nwlink", default="nwlink")
     ap.add_argument("--langs", default="", help="the languages make kit-langs adds (site-kit/<code>)")
@@ -135,7 +145,7 @@ def main():
                 flash = (flash + s[4] - 1) & ~(s[4] - 1)
                 flash += s[3]
         mod = json.load(open(os.path.join(B, "modules", i + ".json")))
-        ram = ((mod["data"] + 7) & ~7) + mod["bss"]
+        ram = ((((mod["data"] + 7) & ~7) + mod["bss"] + 7) & ~7) + g.get("heap", 0)
         icon = icon_of(i)
         if icon:
             shutil.copy(icon, os.path.join(O, "icons", i + ".png"))
@@ -148,28 +158,34 @@ def main():
         games.append({
             "id": i, "index": n, "title": g["title"], "tagline": g["tagline"], "credit": g.get("credit"),
             "top": g["top"], "bottom": g["bottom"], "accent": g["accent"],
-            "flash": flash, "ram": ram, "default": i in default, "upsilon": i in upsilon,
+            "flash": flash, "ram": ram, "heap": g.get("heap", 0), "default": i in default, "upsilon": i in upsilon,
             "roms": bool(g.get("roms")), "systems": g.get("systems"), "xl": bool(g.get("xl")),
             "bytes": os.path.getsize(os.path.join(O, "games", i + ".o.gz")),
             "icon": bool(icon), "thumb": os.path.exists(thumb), "preview": preview})
 
     # ---- check: the default games, linked from the kit, are NumPlay.nwa on the calculator
-    ld_script = os.path.join(tmp, "custom.ld")
-    open(ld_script, "w").write(script["head"] + "".join(script["blocks"][i] for i in default) + script["tail"])
+    def link(ids, nwa):
+        ld_script = nwa[:-4] + ".ld"
+        open(ld_script, "w").write(script["head"] + "".join(script["blocks"][i] for i in ids) + script["tail"])
+        subprocess.run(["arm-none-eabi-ld"] + LINK + ["-T", ld_script, local["base.o"], local["arena.o"],
+                        local["NumPlay-name.o"], local["NumPlay-icon.o"]] + [local[i] for i in ids] +
+                       ["-o", nwa], check=True)
+        subprocess.run(["arm-none-eabi-strip", "--strip-unneeded", nwa], check=True)
+        # only what the installer gives may be left undefined (a game's weak `numplay_launcher`, say,
+        # must find the launcher's; a game's heap is in the arena, its malloc's the launcher's)
+        nm = subprocess.run(["arm-none-eabi-nm", "-u", nwa], capture_output=True, text=True, check=True).stdout
+        loose = [l.split()[-1] for l in nm.splitlines()
+                 if not re.match(r"(eadk_|_heap_end$|_data_section_|_bss_section_)", l.split()[-1])
+                 and l.split() not in (["w", "__sf"], ["w", "_printf_float"])]  # (newlib's own weak hooks)
+        if loose:
+            sys.exit(f"kit: {ids[0] if len(ids) == 1 else 'NumPlay'} leaves undefined: {' '.join(loose)}")
     nwa = os.path.join(tmp, "custom.nwa")
-    subprocess.run(["arm-none-eabi-ld"] + LINK + ["-T", ld_script, local["base.o"], local["arena.o"],
-                    local["NumPlay-name.o"], local["NumPlay-icon.o"]] + [local[i] for i in default] +
-                   ["-o", nwa], check=True)
-    subprocess.run(["arm-none-eabi-strip", "--strip-unneeded", nwa], check=True)
-    # only what the installer gives may be left undefined (a game's weak `numplay_launcher`, say,
-    # must find the launcher's)
-    nm = subprocess.run(["arm-none-eabi-nm", "-u", nwa], capture_output=True, text=True, check=True).stdout
-    loose = [l.split()[-1] for l in nm.splitlines()
-             if not re.match(r"(eadk_|_heap_|_data_section_|_bss_section_|_sbrk$)", l.split()[-1])
-             and l.split() not in (["w", "__sf"], ["w", "_printf_float"])]  # (newlib's own weak hooks)
-    if loose:
-        sys.exit(f"kit: left undefined: {' '.join(loose)}")
-    ram = 148928
+    link(default, nwa)
+    # a big game calls nothing in base.o but the launcher (KIT_API in the Makefile): linked alone with it
+    for g in games:
+        if g["xl"]:
+            link([g["id"]], os.path.join(tmp, f"xl-{g['id']}.nwa"))
+    ram = a.ram_limit
     bins = []
     for f in (nwa, os.path.join(B, "NumPlay.nwa")):
         b = f + ".bin" if f == nwa else os.path.join(tmp, "make.bin")
@@ -183,8 +199,15 @@ def main():
     if not 0 <= runtime < 4096:
         sys.exit(f"kit: installed_size says {installed_size(nwa)}, nwlink {len(bins[0])}")
     base = len(bins[0]) - sum(g["flash"] for g in games if g["default"])
+    # NumPlay's own RAM before the arena (the installer's few bytes too), as the calculator lays it out
+    elf = os.path.join(tmp, "custom.elf")
+    subprocess.run([a.nwlink, "nwa-elf", nwa, elf, "--ram-start", "0x20000000", "--ram-length", str(ram)],
+                   check=True, stdout=subprocess.DEVNULL)
+    nm = subprocess.run(["arm-none-eabi-nm", elf], capture_output=True, text=True, check=True).stdout
+    launcher_ram = next(int(l.split()[0], 16) for l in nm.splitlines() if l.split()[-1] == "np_arena") - 0x20000000
 
-    kit = {"version": a.version, "appSpace": a.app_space, "ram": a.ram, "upsilonRam": a.upsilon_ram,
+    kit = {"version": a.version, "appSpace": a.app_space, "xlAppSpace": a.xl_app_space, "ram": a.ram,
+           "ramLimit": a.ram_limit, "upsilonRam": a.upsilon_ram, "launcherRam": launcher_ram,
            "arena": int(re.search(r"\.space (\d+)", open(os.path.join(B, "gen", "arena.s")).read()).group(1)),
            "base": base, "runtime": runtime, "numplay": len(bins[0]), "link": LINK, "variants": variants,
            "langs": ["en"] + a.langs.split(), "script": script, "games": games}

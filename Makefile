@@ -27,6 +27,10 @@ CUSTOM_RAM = 133652
 BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil
 # the calculator's space for installed apps (0x90200000 to 0x903F0000 in its flash)
 APP_SPACE = 2031616
+# with Enlarged Extra Apps (nwagyu's Nwagra), the app loader is told the space goes on to the end of the
+# external flash (0x90800000), over the second copy of the calculator's software: a NumPlay of the big
+# games (games.json "xl", made with the customizer website from `make kit`) is for that
+XL_APP_SPACE = 6291456
 # Upsilon, the N0110 and N0115's custom software, gives .nwa apps less RAM: NumPlay-Upsilon.nwa has
 # the games that fit it (NumPlay draws their text there: see launcher/src/compat.c)
 UPSILON_RAM = 107674
@@ -54,7 +58,7 @@ $(B)/games.mk: games/games.json tools/games_mk.py | $(B)
 -include $(B)/games.mk
 
 LAUNCHER_SRC = $(wildcard launcher/src/*.c)
-LAUNCHER_H = $(wildcard launcher/src/*.h)
+LAUNCHER_H = $(wildcard launcher/src/*.h games/common/*.h)
 # the release version, shown in NumPlay's settings (a release is tagged v$(VERSION))
 VERSION := $(shell cat VERSION)
 ARM_CFLAGS = -std=gnu11 $(EADK_CFLAGS) -DNP_VERSION='"$(VERSION)"' -Os -Wall -Wextra -Wno-unused-parameter -fno-math-errno \
@@ -90,13 +94,17 @@ $(B)/tetris/raw.o: FORCE | $(B)
 	$(ARM_LD) -r -z noexecstack --gc-sections -e np_tetris_main -u np_tetris_main \
 	  games/tetris/tetris/target/thumbv7em-none-eabihf/release/libtetris.a -o $@
 
+# A big game (XL_GAMES) becomes one from its own .nwa, which has its libraries in it. Its heap is the
+# RAM after its own in the arena: its _heap_start is np_<game>_heap and its malloc's _sbrk the launcher's.
 $(B)/modules/%.o: FORCE | $(B)
-	@if [ "$*" != tetris ]; then $(MAKE) --no-print-directory -C games/$* module NWLINK="$(NWLINK)"; \
-	else $(MAKE) --no-print-directory $(MOD_tetris); fi
-	$(ARM_LD) -r -d -T tools/module.ld $(MOD_$*) -o $(B)/modules/$*.1.o
+	@if [ "$*" = tetris ]; then $(MAKE) --no-print-directory $(MOD_tetris); \
+	elif [ -n "$(filter $*,$(XL_GAMES))" ]; then $(MAKE) --no-print-directory -C games/$* build NWLINK="$(NWLINK)"; \
+	else $(MAKE) --no-print-directory -C games/$* module NWLINK="$(NWLINK)"; fi
+	$(ARM_LD) -r -d -z noexecstack --force-group-allocation -T tools/module.ld $(MOD_$*) -o $(B)/modules/$*.1.o
 	$(ARM_OBJCOPY) --keep-global-symbol=$(or $(ENTRY_$*),$(ENTRY)) \
 	  --redefine-sym eadk_keyboard_scan=np_keyboard_scan --redefine-sym eadk_event_get=np_event_get \
 	  --redefine-sym eadk_display_draw_string=np_display_draw_string \
+	  --redefine-sym _heap_start=np_$*_heap --redefine-sym _sbrk=np_sbrk \
 	  $(B)/modules/$*.1.o $(B)/modules/$*.2.o
 	$(PY) tools/npmodule.py $(B)/modules/$*.2.o $@ --game $* --index $(INDEX_$*) \
 	  --entry $(or $(ENTRY_$*),$(ENTRY)) --json $(B)/modules/$*.json
@@ -108,6 +116,8 @@ MODULES = $(foreach g,$(GAMES),$(B)/modules/$(g).o)
 
 # ------------------------------------------------------------------ generated glue
 $(B)/gen/numplay.ld: games/games.json tools/gen_games.py $(foreach g,$(GAMES) $(OPTIONAL_GAMES),$(B)/modules/$(g).o)
+# (and the big games' modules, which take minutes: only for the kit)
+$(B)/gen/numplay.ld: $(if $(filter kit kit-langs,$(MAKECMDGOALS)),$(foreach g,$(XL_GAMES),$(B)/modules/$(g).o))
 	$(PY) tools/gen_games.py games/games.json $(B)/modules $(B)/gen
 
 $(B)/gen/shots_%.c: games/games.json tools/shots.py $$(SHOTS_$$*) | $(B)
@@ -125,9 +135,10 @@ $(B)/arm/roms.o: FORCE | $(B)
 # for a NumPlay with the games you pick (site/): base.o, the launcher with every library function
 # a game calls; arena.o, the RAM the games share; the app's name and icon; and one object per game
 # with its module, its entry in the launcher's table, its screenshots and the marks of its block.
-# Games marked "default": false in games.json (OPTIONAL_GAMES) are only in the kit.
+# Games marked "default": false in games.json (OPTIONAL_GAMES) are only in the kit, and so are the big
+# games (XL_GAMES, "xl": true), for calculators with Enlarged Extra Apps: a NumPlay with several of them.
 KIT = $(B)/kit
-KIT_ALL = $(GAMES) $(OPTIONAL_GAMES)
+KIT_ALL = $(GAMES) $(OPTIONAL_GAMES) $(XL_GAMES)
 LAUNCHER_OBJS = $(patsubst launcher/src/%.c,$(B)/arm/%.o,$(LAUNCHER_SRC))
 KIT_GAMES = $(foreach g,$(KIT_ALL),$(KIT)/games/$(g).o)
 NP_GAMES = $(foreach g,$(GAMES),$(KIT)/games/$(g).o)
@@ -148,10 +159,15 @@ $(KIT)/games/%.o: $(B)/modules/%.o $(B)/arm/entry_%.o $(B)/arm/shots_%.o $(B)/ar
 	$(ARM_LD) -r -z noexecstack $^ -o $@
 # Every symbol a game needs from the C library, libm or libgcc goes in base.o; each stays a
 # section of its own (tools/kit_base.ld), so the final link keeps only those its games call.
-$(KIT)/base.o: $(LAUNCHER_OBJS) $(KIT_GAMES) tools/kit_base.ld
+# The big games bring their libraries along: they only call the launcher (KIT_API, which tools/kit.py
+# checks), so base.o is the same without them.
+KIT_API = numplay_launcher np_keyboard_scan np_event_get np_display_draw_string np_sbrk
+KIT_SMALL = $(foreach g,$(GAMES) $(OPTIONAL_GAMES),$(KIT)/games/$(g).o)
+$(KIT)/base.o: $(LAUNCHER_OBJS) $(KIT_SMALL) tools/kit_base.ld
 	$(ARM_CC) $(ARM_CFLAGS) -nostartfiles --specs=nano.specs -Wl,--relocatable -Wl,--unique -Wl,--gc-sections \
 	  -Wl,-e,main -Wl,-u,eadk_api_level -Wl,-T,tools/kit_base.ld -flinker-output=nolto-rel $(LAUNCHER_OBJS) \
-	  $$(arm-none-eabi-nm -u $(KIT_GAMES) | awk '$$1 == "U" || $$1 == "w" {print "-Wl,-u," $$2}' | sort -u) -lm -lgcc -o $@
+	  $(foreach s,$(KIT_API),-Wl,-u,$(s)) \
+	  $$(arm-none-eabi-nm -u $(KIT_SMALL) | awk '$$1 == "U" || $$1 == "w" {print "-Wl,-u," $$2}' | sort -u) -lm -lgcc -o $@
 
 .SECONDARY: $(foreach v,$(VARIANTS),$(B)/variant/$(v)-name.o $(B)/variant/$(v)-icon.o) \
   $(foreach g,$(KIT_ALL),$(B)/arm/shots_$(g).o $(B)/arm/entry_$(g).o $(B)/arm/marks_$(g).o)
@@ -175,14 +191,15 @@ $(B)/%.nwa: $(KIT)/base.o $(B)/arm/arena.o $(NP_GAMES) $(B)/variant/%-name.o $(B
 kit: $(KIT)/base.o $(B)/arm/arena.o $(KIT_GAMES) $(B)/NumPlay.nwa \
   $(foreach v,$(VARIANTS),$(B)/variant/$(v)-name.o $(B)/variant/$(v)-icon.o)
 	$(PY) tools/kit.py games/games.json $(B) $(B)/site-kit --version $(VERSION) --variants "$(VARIANTS)" \
-	  --default "$(GAMES)" --upsilon "$(UPSILON_GAMES)" --app-space $(APP_SPACE) --ram $(CUSTOM_RAM) \
-	  --upsilon-ram $(UPSILON_RAM) --nwlink "$(NWLINK)" --langs "$(LANGS)"
+	  --default "$(GAMES)" --upsilon "$(UPSILON_GAMES)" --app-space $(APP_SPACE) --xl-app-space $(XL_APP_SPACE) \
+	  --ram $(CUSTOM_RAM) --ram-limit $(RAM_LIMIT) --upsilon-ram $(UPSILON_RAM) --nwlink "$(NWLINK)" --langs "$(LANGS)"
 
-# ...and in French and Chinese, from each language's tree (make lang), in site-kit/<code>
+# ...and in French and Chinese, from each language's tree (make lang), in site-kit/<code> (without the big
+# games, which are in English: the website uses them in English NumPlays)
 kit-langs: kit
 	@for l in $(LANGS); do \
 	  [ -d $(B)/lang/$$l ] || $(PY) tools/lang.py tree $$l $(B)/lang/$$l || exit 1; \
-	  $(MAKE) -C $(B)/lang/$$l kit NWLINK="$(NWLINK)" || exit 1; \
+	  $(MAKE) -C $(B)/lang/$$l kit XL_GAMES= NWLINK="$(NWLINK)" || exit 1; \
 	  rm -rf $(B)/site-kit/$$l && mkdir -p $(B)/site-kit/$$l && \
 	  cp -R $(B)/lang/$$l/build/site-kit/kit.json $(B)/lang/$$l/build/site-kit/base.o.gz \
 	    $(B)/lang/$$l/build/site-kit/arena.o.gz $(B)/lang/$$l/build/site-kit/games $(B)/site-kit/$$l/ || exit 1; \
@@ -261,6 +278,8 @@ APP_pvz = games/pvz/output/pvz.nwa:PlantsVsZombies.nwa
 APP_sonic = games/sonic/output/sonic.nwa:SonicTheHedgehog.nwa
 APP_cookieclicker = games/cookieclicker/output/cookieclicker.nwa:CookieClicker.nwa
 APP_leveldevil = games/leveldevil/output/leveldevil.nwa:LevelDevil.nwa
+# the big games' modules are made from these (the kit)
+$(foreach g,$(XL_GAMES),$(eval MOD_$(g) = $$(word 1,$$(subst :, ,$$(APP_$(g))))))
 
 apps: | $(B)
 	$(MAKE) -C games/numdash build NWLINK="node node_modules/nwlink/bin/nwlink"

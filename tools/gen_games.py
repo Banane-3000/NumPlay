@@ -7,7 +7,9 @@ From games/games.json and the module sizes written by npmodule.py:
   games it links in a row, np_games to np_games_end, so a NumPlay with any set of games is
   linked from the same objects (the customizer website does it in the browser);
 - arena.s: the RAM arena, and the symbols that place each game's .data and
-  .bss inside it (games never run together). It is the last of NumPlay's RAM
+  .bss inside it (games never run together), then its heap (np_<game>_heap, the
+  game's _heap_start: a big game takes the RAM after its own, its "heap" in
+  games.json the least it needs, and its malloc np_sbrk's). It is the last of NumPlay's RAM
   and holds what the launcher needs; a game uses it and the RAM after it, up to
   the end of what the calculator's software gives apps (_heap_end), so NumPlay
   installs with a smaller userland too and a game that doesn't fit there says
@@ -59,8 +61,8 @@ def main():
         games = [g for g in games if g.get("default", True)]  # the others only come from the website
     np_h = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "launcher", "src", "np.h")).read()
     limit = int(re.search(r"#define NP_MAX_GAMES (\d+)", np_h).group(1))
-    if len(games) > limit:
-        raise SystemExit(f"{len(games)} games, but the launcher holds {limit} (NP_MAX_GAMES in launcher/src/np.h)")
+    if len(manifest) > limit:  # (the website may link them all)
+        raise SystemExit(f"{len(manifest)} games, but the launcher holds {limit} (NP_MAX_GAMES in launcher/src/np.h)")
     os.makedirs(a.out, exist_ok=True)
     sizes = {}
     for g in manifest:
@@ -76,9 +78,10 @@ def main():
         s = sizes[g["id"]]
         data = s["data"]
         bss_off = (data + 7) & ~7
-        layout[g["id"]] = (0, bss_off)
+        heap_off = (bss_off + s["bss"] + 7) & ~7
+        layout[g["id"]] = (0, bss_off, heap_off)
         if g in games:
-            need = max(need, bss_off + s["bss"])
+            need = max(need, heap_off + g.get("heap", 0))
     need = (need + 7) & ~7
     # (the simulator's arena, a C array, keeps the hungriest game's size)
     arena = need if a.simulator else LAUNCHER_RAM
@@ -105,7 +108,8 @@ def main():
         return [f"  {{{c_str(i)}, {c_str(g['title'])}, {c_str(g['tagline'])}, {c_str(g.get('credit'))},",
                 f"   {g['top']}, {g['bottom']}, {g['accent']}, np_{i}_begin, np_{i}_end, np_{i}_main,",
                 f"   {r(f'np_{i}_data')}, {r(f'np_{i}_init')}, {z(s['data'])}, {r(f'np_{i}_bss')}, {z(s['bss'])},",
-                f"   np_{i}_shots, {len(g['shots'])}, {prefix}records, {prefix}progress, {est}}}"]
+                f"   np_{i}_shots, {len(g['shots'])}, {prefix}records, {prefix}progress, "
+                f"{g.get('heap', 0) if ram else est}}}"]  # (the calculator: its heap; the simulator: its size)
 
     if a.simulator:
         # ---- gametable.c: the simulator has no flash blocks and gives each game its own RAM
@@ -148,9 +152,10 @@ def main():
          f"  .word {arena}"]
     for g in kit:
         i = g["id"]
-        d, b = layout[i]
+        d, b, h = layout[i]
         S += [f"  .global np_{i}_data", f"  .set np_{i}_data, np_arena + {d}",
-              f"  .global np_{i}_bss", f"  .set np_{i}_bss, np_arena + {b}"]
+              f"  .global np_{i}_bss", f"  .set np_{i}_bss, np_arena + {b}",
+              f"  .global np_{i}_heap", f"  .set np_{i}_heap, np_arena + {h}"]
     open(os.path.join(a.out, "arena.s"), "w").write("\n".join(S) + "\n")
     open(os.path.join(a.out, "arena_extra"), "w").write(f"{need - arena}\n")
 

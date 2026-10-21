@@ -60,10 +60,15 @@ typedef struct {
   uint8_t nshots;
   const char *const *records;            /* save files, deleted on uninstall (name*: all starting so) */
   const char *const *progress;           /* the ones Reset deletes (not levels made in an editor) */
+#if NP_SIMULATOR
   uint32_t est_size;                     /* code and data, for the simulator */
+#else
+  uint32_t heap;                         /* the least RAM the game takes after its own (its heap) */
+#endif
 } np_game_t;
 
-#define NP_MAX_GAMES 32                  /* tools/gen_games.py checks games.json against it */
+/* every game of games.json, the kit's too, can be in one NumPlay (tools/gen_games.py checks it) */
+#define NP_MAX_GAMES 48
 #if NP_SIMULATOR
 extern const np_game_t np_games[];
 extern const int np_game_count;
@@ -77,6 +82,9 @@ bool np_game_installed(int i);
 uint32_t np_game_size(int i);            /* bytes of flash */
 uint32_t np_game_ram_missing(int i);  /* the bytes of RAM a game needs more than there is, or 0 */
 void np_game_run(int i);
+/* The C library's malloc of a big game takes its memory here (the build renames the game's _sbrk):
+ * the RAM after the running game's own, as _heap_start is for it (np_<game>_heap) */
+void *np_sbrk(ptrdiff_t incr);
 
 /* ---- storage (storage.c): Epsilon's record file system */
 bool np_storage_delete(const char *name);   /* true if gone (or never there) */

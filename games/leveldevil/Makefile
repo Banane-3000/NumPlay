@@ -17,7 +17,7 @@ ROOMS = $(BUILD_DIR)/rooms.inc
 HEADERS = ../common/epsilon_app.h ../common/epsilon_files.h ../common/np_text.h ../../launcher/src/gfx.h \
   ../../launcher/src/np.h ../../launcher/src/font.h
 
-CFLAGS = -std=c11 $(shell $(NWLINK) eadk-cflags-device) -I$(BUILD_DIR)
+CFLAGS = -std=c11 $(shell $(NWLINK) eadk-cflags-device) -DEPSILON_XL=1 -I$(BUILD_DIR)
 CFLAGS += -O2 -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant
 CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fwhole-program -fvisibility=internal
 LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
