@@ -257,6 +257,7 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Super Smash Bros
 - [ ] Rocket League
 - [ ] Temple Run
+- [ ] Deltarune: Chapter 1, and each later chapter as an app of its own
 
 ## Credits
 
