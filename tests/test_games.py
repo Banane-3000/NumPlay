@@ -349,12 +349,13 @@ def records(buf):
     raise ValueError("no end of the record list")
 
 
-def through_launcher(index, keys, home):
-    """The same session, started from NumPlay's carousel (game `index`)."""
+def through_launcher(index, keys, home, start=800):
+    """The same session, started from NumPlay's carousel (game `index`); the game's keys come `start` ms
+    after OK on its card."""
     lead = [(1200 + 300 * i, 1290 + 300 * i, K["right"]) for i in range(index)]
     ok = 1500 + 300 * index
     lead.append((ok, ok + 90, K["ok"]))
-    shift = ok + 800
+    shift = ok + start
     return lead + [(a + shift, b + shift, k) for a, b, k in keys], home + shift
 
 
@@ -382,6 +383,77 @@ def run_once(nwa, storage, keys, home, out, tag, quit_key="home"):
     return c, problems, stack
 
 
+def play(name, path, out, index=None, copy=None, tag=None, start=800):
+    """The two sessions of a game, in the app at path (a NumPlay when index, the game's place in its
+    carousel, is given; start: when its keys begin after OK on its card). copy: the script that holds the
+    game's own copy of its saves: only the scripts are left before the second session, as after installing
+    the app again. The problems, the stack used and the files after the first session."""
+    nwa, save, keys1, home1, keys2, home2 = GAMES[name]
+    tag = tag or name
+    if index is not None:  # Home in a game quits NumPlay altogether
+        keys1, home1 = through_launcher(index, keys1, home1, start)
+        keys2, home2 = through_launcher(index, keys2, home2, start)
+    with tempfile.TemporaryDirectory() as d:
+        storage = os.path.join(d, "storage.bin")
+        # the calculator already has a script
+        pre = [("pi.py", b"\x01print(3.14159)\n")]
+        if name in SEEDS:
+            pre.append((save, SEEDS[name]))
+        buf = bytearray(emu.STORAGE_SIZE)
+        p = 0
+        for rn, content in pre:
+            size = 2 + len(rn) + 1 + len(content)
+            struct.pack_into("<H", buf, p, size)
+            buf[p + 2:p + size] = rn.encode() + b"\0" + content
+            p += size
+        open(storage, "wb").write(buf)
+        c, problems, stack = run_once(path, storage, keys1, home1, out, f"{tag}_1")
+        recs = dict(records(open(storage, "rb").read()))
+        if recs.get("pi.py") != pre[0][1]:
+            problems.append("pi.py changed")
+        if save and save not in recs:
+            problems.append(f"{save} not written")
+        elif name in CHECKS and not CHECKS[name][0](recs[save]):
+            problems.append(f"{save} not updated")
+        # a script added after the save, then a second session
+        buf = bytearray(open(storage, "rb").read())
+        lst = records(buf)
+        if copy:
+            text = dict(lst).get(copy, b"")
+            mark = b"#>" + save.encode() + b":"
+            line = text[text.find(mark) + len(mark):].split(b"\n")[0] if mark in text else b""
+            if not line or __import__("base64").b64decode(line) != dict(lst).get(save):
+                problems.append(f"{copy} does not hold {save}")
+            lst = [(n, v) for n, v in lst if n.endswith(".py")]
+            buf = bytearray(emu.STORAGE_SIZE)
+            q = 0
+            for n, v in lst:
+                struct.pack_into("<H", buf, q, 2 + len(n) + 1 + len(v))
+                buf[q + 2:q + 3 + len(n) + len(v)] = n.encode() + b"\0" + v
+                q += 2 + len(n) + 1 + len(v)
+        p = sum(2 + len(n) + 1 + len(v) for n, v in lst)
+        late = b"\x01print('later')\n"
+        size = 2 + len("late.py") + 1 + len(late)
+        struct.pack_into("<H", buf, p, size)
+        buf[p + 2:p + size] = b"late.py\0" + late
+        struct.pack_into("<H", buf, p + size, 0)
+        open(storage, "wb").write(buf)
+        # (quitting with On/Off this time: it saves and leaves as Home does)
+        c2, problems2, stack2 = run_once(path, storage, keys2, home2, out, f"{tag}_2", "onoff")
+        problems += [f"second run: {x}" for x in problems2]
+        try:
+            recs2 = dict(records(open(storage, "rb").read()))
+            if recs2.get("pi.py") != pre[0][1] or recs2.get("late.py") != late:
+                problems.append("second run: other files changed")
+            if save and save not in recs2:
+                problems.append(f"second run: {save} lost")
+            elif name in CHECKS and not CHECKS[name][1](recs2[save]):
+                problems.append(f"second run: {save} not updated")
+        except ValueError as e:
+            problems.append(f"second run: file system corrupt ({e})")
+    return problems, max(stack, stack2), recs
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("apps")
@@ -393,75 +465,16 @@ def main():
                                                           "games.json"))) if g.get("default", True)]
     os.makedirs(a.out, exist_ok=True)
     failed = False
-    for name, (nwa, save, keys1, home1, keys2, home2) in GAMES.items():
+    for name in GAMES:
         if a.game and a.game != name or a.numplay and name not in order:  # (a big game: on its own only)
             continue
-        path = os.path.join(a.apps, nwa)
-        if a.numplay:  # Home in a game quits NumPlay altogether
-            path = a.numplay
-            keys1, home1 = through_launcher(order.index(name), keys1, home1)
-            keys2, home2 = through_launcher(order.index(name), keys2, home2)
-        with tempfile.TemporaryDirectory() as d:
-            storage = os.path.join(d, "storage.bin")
-            # the calculator already has a script
-            pre = [("pi.py", b"\x01print(3.14159)\n")]
-            if name in SEEDS:
-                pre.append((save, SEEDS[name]))
-            buf = bytearray(emu.STORAGE_SIZE)
-            p = 0
-            for rn, content in pre:
-                size = 2 + len(rn) + 1 + len(content)
-                struct.pack_into("<H", buf, p, size)
-                buf[p + 2:p + size] = rn.encode() + b"\0" + content
-                p += size
-            open(storage, "wb").write(buf)
-            c, problems, stack = run_once(path, storage, keys1, home1, a.out, f"{name}_1")
-            recs = dict(records(open(storage, "rb").read()))
-            if recs.get("pi.py") != pre[0][1]:
-                problems.append("pi.py changed")
-            if save and save not in recs:
-                problems.append(f"{save} not written")
-            elif name in CHECKS and not CHECKS[name][0](recs[save]):
-                problems.append(f"{save} not updated")
-            # a script added after the save, then a second session
-            buf = bytearray(open(storage, "rb").read())
-            lst = records(buf)
-            if name in COPIES and not a.numplay:  # (NumPlay's own copy, packed: tests/test_progress.py)
-                copy = dict(lst).get(COPIES[name], b"")
-                tag = b"#>" + save.encode() + b":"
-                line = copy[copy.find(tag) + len(tag):].split(b"\n")[0] if tag in copy else b""
-                if not line or __import__("base64").b64decode(line) != dict(lst).get(save):
-                    problems.append(f"{COPIES[name]} does not hold {save}")
-                lst = [(n, v) for n, v in lst if n.endswith(".py")]
-                buf = bytearray(emu.STORAGE_SIZE)
-                q = 0
-                for n, v in lst:
-                    struct.pack_into("<H", buf, q, 2 + len(n) + 1 + len(v))
-                    buf[q + 2:q + 3 + len(n) + len(v)] = n.encode() + b"\0" + v
-                    q += 2 + len(n) + 1 + len(v)
-            p = sum(2 + len(n) + 1 + len(v) for n, v in lst)
-            late = b"\x01print('later')\n"
-            size = 2 + len("late.py") + 1 + len(late)
-            struct.pack_into("<H", buf, p, size)
-            buf[p + 2:p + size] = b"late.py\0" + late
-            struct.pack_into("<H", buf, p + size, 0)
-            open(storage, "wb").write(buf)
-            # (quitting with On/Off this time: it saves and leaves as Home does)
-            c2, problems2, stack2 = run_once(path, storage, keys2, home2, a.out, f"{name}_2", "onoff")
-            problems += [f"second run: {x}" for x in problems2]
-            try:
-                recs2 = dict(records(open(storage, "rb").read()))
-                if recs2.get("pi.py") != pre[0][1] or recs2.get("late.py") != late:
-                    problems.append("second run: other files changed")
-                if save and save not in recs2:
-                    problems.append(f"second run: {save} lost")
-                elif name in CHECKS and not CHECKS[name][1](recs2[save]):
-                    problems.append(f"second run: {save} not updated")
-            except ValueError as e:
-                problems.append(f"second run: file system corrupt ({e})")
+        if a.numplay:  # (NumPlay keeps its own copy, packed: tests/test_progress.py)
+            problems, stack, recs = play(name, a.numplay, a.out, order.index(name))
+        else:
+            problems, stack, recs = play(name, os.path.join(a.apps, GAMES[name][0]), a.out, copy=COPIES.get(name))
         status = "ok" if not problems else "FAIL"
         failed |= bool(problems)
-        print(f"{name:11s} {status}  stack {max(stack, stack2)} bytes, files {sorted(recs)}", flush=True)
+        print(f"{name:11s} {status}  stack {stack} bytes, files {sorted(recs)}", flush=True)
         for x in problems:
             print("   ", x)
     sys.exit(1 if failed else 0)

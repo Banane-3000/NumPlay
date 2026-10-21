@@ -86,7 +86,7 @@ def main():
     keys.append((t, t + 90, emu.KEYS["right"]))      # choose Uninstall
     hold = t + 500
     keys.append((hold, hold + 1800, emu.KEYS["ok"]))  # hold OK to confirm
-    t = hold + 1800 + 5000
+    t = hold + 1800 + 5000 + 400 * ((end - begin) // SECTOR)  # (a big game's sectors take a while to erase)
     done = t - 200
     keys.append((t, t + 90, emu.KEYS["ok"]))          # dismiss "was uninstalled"
     t += 1000
