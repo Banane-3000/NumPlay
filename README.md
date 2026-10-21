@@ -233,6 +233,15 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Full Minecraft 1.18.2 as a standalone app
 - [ ] A customizer website: pick the games you want in your launcher, with Enlarged Extra Apps support to fit several big games, or big and small ones together
 - [ ] [Retro-Go](https://github.com/ducalex/retro-go) for Game Boy, NES and more: upload your own ROMs on the website and get a .nwa app that plays them
+- [ ] Among Us, against bots
+- [ ] Stickman Hook
+- [ ] Cat Ninja
+- [ ] A tower defense game: Kingdom Rush or Bloons TD
+- [ ] Into the Breach
+- [ ] A racing game: F1 or GT3
+- [ ] Ori and the Blind Forest
+- [ ] Bad Time Simulator: the Sans fight
+- [ ] A PICO-8 emulator: add your own .p8 games on the website
 
 ## Credits
 
