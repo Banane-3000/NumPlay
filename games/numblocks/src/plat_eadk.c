@@ -29,6 +29,14 @@ uint8_t *plat_save_open(const char *name, uint32_t len) {
   return ef_write(name, NULL, len) ? (uint8_t *)(uintptr_t)ef_read(name, &n) : NULL;
 }
 void plat_save_close(const char *name) { (void)name; }
+uint8_t *plat_save_grow(const char *name, uint32_t len) {
+  uint8_t *p = ef_resize(name, len);
+  if (p) return p;
+  ef_remove("numblocks_saves.py");
+  ef_remove("numplay_saves.py");
+  return ef_resize(name, len);
+}
+void plat_save_done(const char *name, uint32_t len) { ef_resize(name, len); }
 bool plat_record(int i, char *name, int max) {
   ef_fs_t fs;
   if (!ef_open(&fs)) return false;

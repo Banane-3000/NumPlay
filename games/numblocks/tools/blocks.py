@@ -240,6 +240,73 @@ MODELS = ['none', 'cube', 'cross', 'liquid', 'torch', 'slab', 'layer', 'cactus',
           'pane', 'fence', 'door', 'ladder', 'stairs', 'chest', 'bed']
 TOOLS = [None, 'pickaxe', 'axe', 'shovel', 'shears', 'sword']
 
+# --- the Nether and the End: only in NumBlocks.nwa (built with NB_DIMS; NumPlay's NumBlocks has no room).
+# Their states are numbered from FIRST_DIMS: a block is 9 bits there (see nb.h), and none of these has the
+# low byte of air. NumPlay's NumBlocks never sees them in a world: see save.c.
+FIRST_DIMS = 257
+D = []
+
+
+def bd(name, id, meta=0, model='cube', tex=None, light=0, hard=1.0, tool=None, level=0, box=None):
+    D.append(dict(name=name, id=id, meta=meta, model=model, tex=tex, tint=None, light=light, hard=hard, tool=tool,
+                  level=level, box=box))
+
+
+bd('NETHERRACK', 87, tex='netherrack', hard=0.4, tool='pickaxe')
+bd('SOUL_SAND', 88, tex='soul_sand', hard=0.5, tool='shovel')
+# BlockPortal: 4 pixels thick across the frame, along x (meta 1) or z (meta 2)
+bd('PORTAL_X', 90, 1, model='portal', tex='portal', light=11, hard=-1, box=[(0, 0, 6, 16, 16, 10)])
+bd('PORTAL_Z', 90, 2, model='portal', tex='portal', light=11, hard=-1, box=[(6, 0, 0, 10, 16, 16)])
+bd('NETHER_BRICK', 112, tex='nether_brick', hard=2.0, tool='pickaxe')
+bd('NETHER_BRICK_FENCE', 113, model='fence', tex='nether_brick', hard=2.0, tool='pickaxe')
+for v, d in [(0, 'E'), (1, 'W'), (2, 'S'), (3, 'N')]:
+    bd(f'NETHER_BRICK_STAIRS_{d}', 114, v, model='stairs', tex='nether_brick', hard=2.0, tool='pickaxe')
+# BlockNetherWart: ages 0 to 3, drawn at three stages
+for age, st in [(0, 0), (1, 1), (2, 1), (3, 2)]:
+    bd(f'NETHER_WART_{age}', 115, age, model='cross', tex=f'nether_wart_stage_{st}', hard=0)
+bd('END_PORTAL', 119, model='endportal', light=15, hard=-1, tex='end_stone', box=[(0, 0, 0, 16, 12, 16)])
+FRAME = {'top': 'endframe_top', 'side': 'endframe_side', 'bottom': 'end_stone'}
+bd('END_PORTAL_FRAME', 120, model='frame', tex=FRAME, light=1, hard=-1, box=[(0, 0, 0, 16, 13, 16)])
+bd('END_PORTAL_FRAME_EYE', 120, 4, model='frame', tex=dict(FRAME, eye='endframe_eye'), light=1, hard=-1,
+   box=[(0, 0, 0, 16, 13, 16), (4, 13, 4, 12, 16, 12)])
+bd('END_STONE', 121, tex='end_stone', hard=3.0, tool='pickaxe')
+bd('DRAGON_EGG', 122, model='egg', tex='dragon_egg', light=1, hard=3.0, box=[(1, 0, 1, 15, 16, 15)])
+bd('QUARTZ_ORE', 153, tex='quartz_ore', hard=3.0, tool='pickaxe')
+bd('QUARTZ_BLOCK', 155, 0, tex=tsb('quartz_block_top', 'quartz_block_side', 'quartz_block_bottom'), hard=0.8,
+   tool='pickaxe')
+bd('CHISELED_QUARTZ', 155, 1, tex=tsb('quartz_block_chiseled_top', 'quartz_block_chiseled'), hard=0.8, tool='pickaxe')
+bd('PILLAR_QUARTZ', 155, 2, tex=tsb('quartz_block_lines_top', 'quartz_block_lines'), hard=0.8, tool='pickaxe')
+bd('PILLAR_QUARTZ_X', 155, 3, tex={'top': 'quartz_block_lines', 'side': 'quartz_block_lines', 'bottom':
+   'quartz_block_lines', 'x': 'quartz_block_lines_top'}, hard=0.8, tool='pickaxe')
+bd('PILLAR_QUARTZ_Z', 155, 4, tex={'top': 'quartz_block_lines', 'side': 'quartz_block_lines', 'bottom':
+   'quartz_block_lines', 'z': 'quartz_block_lines_top'}, hard=0.8, tool='pickaxe')
+for v, d in [(0, 'E'), (1, 'W'), (2, 'S'), (3, 'N')]:
+    bd(f'QUARTZ_STAIRS_{d}', 156, v, model='stairs', tex=tsb('quartz_block_top', 'quartz_block_side',
+       'quartz_block_bottom'), hard=0.8, tool='pickaxe')
+bd('NETHER_BRICK_SLAB', 44, 6, model='slab', tex='nether_brick', hard=2.0, tool='pickaxe')
+bd('QUARTZ_SLAB', 44, 7, model='slab', tex=tsb('quartz_block_top', 'quartz_block_side', 'quartz_block_bottom'),
+   hard=2.0, tool='pickaxe')
+
+# what strongholds are built of past NumPlay's blocks (StructureStrongholdPieces): iron bars, stone brick
+# stairs, iron doors (as oak doors: lower half facing 0 east 1 south 2 west 3 north, + 4 open) and stone
+# buttons on a wall (BlockButton: 1 east, 2 west, 3 south, 4 north: the way it faces)
+bd('IRON_BARS', 101, model='pane', tex='iron_bars', hard=5.0, tool='pickaxe')
+for v, d in [(0, 'E'), (1, 'W'), (2, 'S'), (3, 'N')]:
+    bd(f'STONE_BRICK_STAIRS_{d}', 109, v, model='stairs', tex='stonebrick', hard=1.5, tool='pickaxe')
+for v, d in [(0, 'E'), (1, 'S'), (2, 'W'), (3, 'N'), (4, 'E_OPEN'), (5, 'S_OPEN'), (6, 'W_OPEN'), (7, 'N_OPEN')]:
+    bd(f'IRON_DOOR_LOWER_{d}', 71, v, model='door', tex='door_iron_lower', hard=5.0, tool='pickaxe')
+bd('IRON_DOOR_UPPER', 71, 8, model='door', tex='door_iron_upper', hard=5.0, tool='pickaxe')
+for v, d, bx in [(1, 'E', (0, 6, 5, 2, 10, 11)), (2, 'W', (14, 6, 5, 16, 10, 11)), (3, 'S', (5, 6, 0, 11, 10, 2)),
+                 (4, 'N', (5, 6, 14, 11, 10, 16))]:
+    bd(f'STONE_BUTTON_{d}', 77, v, model='button', tex='stone', hard=0.5, box=[bx])
+# the Nether's lava runs a level a block (BlockDynamicLiquid), so it has the odd levels too
+for lv in (1, 3, 5, 7):
+    bd(f'FLOWING_LAVA_{lv}', 10, lv, model='liquid', tex='lava_flow', light=15, hard=100)
+
+MODELS_DIMS = MODELS + ['portal', 'frame', 'endportal', 'egg', 'button']
+# every state of NumBlocks.nwa, by number: S, unused numbers (never a block), then D
+S_ALL = S + [dict(S[0], name=f'UNUSED_{i}') for i in range(len(S), FIRST_DIMS)] + D
+
 
 def header():
     out = ['/* Generated by tools/blocks.py: the block states NumBlocks knows. */',
@@ -250,6 +317,13 @@ def header():
     out += [f'  B_COUNT = {len(S)}', '};', '']
     out.append('enum { ' + ', '.join(f'M_{m.upper()}' for m in MODELS) + ' };')
     out.append('enum { T_NONE, ' + ', '.join(f'T_{t.upper()}' for t in TOOLS[1:]) + ' };')
+    out += ['', '/* the Nether and the End (NumBlocks.nwa only) */', '#if NB_DIMS', 'enum {']
+    for i, s in enumerate(D):
+        out.append(f'  B_{s["name"]} = {FIRST_DIMS + i},   /* {s["id"]}:{s["meta"]} */')
+    out += [f'  B_ALL = {FIRST_DIMS + len(D)}', '};']
+    out.append('enum { ' + ', '.join(f'M_{m.upper()} = {len(MODELS) + k}'
+                                     for k, m in enumerate(MODELS_DIMS[len(MODELS):])) + ' };')
+    out += ['#define B_N B_ALL', '#else', '#define B_N B_COUNT', '#endif']
     out += ['', '#endif', '']
     return '\n'.join(out)
 

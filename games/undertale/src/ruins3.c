@@ -6,6 +6,7 @@
 #include "event.h"
 #include "events.h"
 #include "game.h"
+#include "gfx.h"
 #include "items.h"
 #include "menu.h"
 #include "monsters.h"
@@ -49,7 +50,10 @@ void ruins3_setup(int room, int from) {
       obj_sign(9492, 2750, 24, 54, "* (You have seen this type of\n  plant before but do not know\n  its name.)");
       obj_sign(9746, 2775, 30, 47, "* (Room under renovations.)");
       obj_sign(9810, 2770, 60, 52, "* (It's you!)");
-      if (flag(F_TORIEL_HOME) && !flag(F_HOME_TOUR)) obj_toriel(9370, 2780, DIR_DOWN);
+      if (flag(F_TORIEL_HOME) && !flag(F_HOME_TOUR)) {
+        obj_toriel(9370, 2780, DIR_DOWN);
+        obj_trigger(9280, 2810, 24, 80, EV_HOME_TOUR, ACTOR_TRIGGER);
+      }
       break;
     case ROOM_ASRIELROOM:
       {
@@ -58,7 +62,7 @@ void ruins3_setup(int room, int from) {
       }
       obj_sign(9260, 2498, 62, 34, "* (Toys you aren't interested\n  in.)|* (An empty photo frame.)");
       obj_sign(9335, 2498, 32, 48, "* (A box of shoes in many\n  different sizes.)");
-      if (flag(F_BED_SLEPT) == 1) {
+      if (flag(F_BED_SLEPT) == 1 && !flag(F_PIE)) { /* (once taken, gone) */
         Obj *p = obj_deco(SPR_O_PIESLICE, 9322, 2572, false);
         if (p) p->flags |= OF_TALK | OF_BACK, p->event = EV_ITEM, p->arg = flag(F_HARDMODE) ? ITEM_SNAIL_PIE : ITEM_BUTTERSCOTCH_PIE,
                    p->arg2 = F_PIE;
@@ -103,25 +107,41 @@ void ruins3_setup(int room, int from) {
   }
 }
 
+/* the hallway's mirror: Frisk in its glass, as far behind the wall as they stand in front of it (their face when
+ * they face it) */
+#define MIRROR_X 9819
+#define MIRROR_Y 2786
+#define MIRROR_W 45
+#define MIRROR_H 18
+#define MIRROR_WALL 2820   /* (where the wall meets the floor) */
+void ruins3_draw(void) {
+  if (g_room != ROOM_TORHOUSE3 || pl.hidden) return;
+  static const uint16_t facing[4] = {SPR_FRISK_U, SPR_FRISK_D, SPR_FRISK_L, SPR_FRISK_R};
+  int feet = pl.y + 29, y = 2 * MIRROR_WALL - feet - 29;
+  if (pl.x + 20 <= MIRROR_X || pl.x >= MIRROR_X + MIRROR_W || y >= MIRROR_Y + MIRROR_H) return;
+  gfx_clip(MIRROR_X - cam_x, MIRROR_Y - cam_y, MIRROR_W, MIRROR_H);
+  gfx_sprite(facing[pl.dir], pl.frame, pl.x - cam_x, y - cam_y, 0, 255);
+  gfx_clip_all();
+}
+
 /* ---------------------------------------------------------------- the events */
 static int ev_home_tour(Ev *c) {
   EV_BEGIN;
   WAIT_UNTIL(!world_fading());
-  SAY(FACE_TORIEL, "`0* Smell that?|`2* Surprise! A butterscotch-\n  cinnamon pie, for you!|`0* No snail pie tonight.|`2* And one more surprise...");
-  WALK(obj_get(ACTOR_TORIEL), 8996, 2840, 3);
-  WALK(obj_get(ACTOR_TORIEL), 9200, 2840, 3);
-  obj_get(ACTOR_TORIEL)->kind = OBJ_NONE;
-  PL_WALK(pl.x + 40, pl.y, 3);
-  FADE_TO(ROOM_TORHOUSE3, 9196, 2836, DIR_RIGHT);
-  PL_WALK(9330, 2836, 3);
-  pl.dir = DIR_UP;
+  if (g_room != ROOM_TORHOUSE3) {
+    /* she goes on into the hallway, and waits by your room */
+    SAY(FACE_TORIEL, "`0* Smell that?|`2* Surprise! A butterscotch-\n  cinnamon pie, for you!|`0* No snail pie tonight.|`2* And one more surprise...");
+    LEAVE(obj_find(ACTOR_TORIEL), 3, 8996, 2840, 9200, 2840);
+    return 1;
+  }
+  if (c->self) c->self->kind = OBJ_NONE;
+  obj_get(ACTOR_TORIEL)->dir = DIR_LEFT;
   SAY(FACE_TORIEL, "`2* A room of your own.|* I hope you like it!");
   WAIT(20);
   SAY(FACE_TORIEL, "`7* ...!|`3* Is something burning...?|`0* Um, make yourself at home!");
-  WALK(obj_get(ACTOR_TORIEL), 9370, 2840, 4);
-  WALK(obj_get(ACTOR_TORIEL), 9180, 2840, 5);
-  obj_get(ACTOR_TORIEL)->kind = OBJ_NONE;
   set_flag(F_HOME_TOUR, 1);
+  obj_get(ACTOR_TORIEL)->flags &= (uint16_t)~OF_SOLID;
+  LEAVE(obj_find(ACTOR_TORIEL), 5, 9370, 2840, 9180, 2840);
   EV_END;
 }
 
@@ -155,9 +175,7 @@ static int ev_toriel_chair(Ev *c) {
     Obj *t = obj_toriel(8660, 2760, DIR_RIGHT);
     if (t) t->flags &= (uint16_t)~OF_SOLID;
   }
-  WALK(obj_get(ACTOR_TORIEL), 8800, 2780, 4);
-  WALK(obj_get(ACTOR_TORIEL), 8860, 2780, 4);
-  obj_get(ACTOR_TORIEL)->kind = OBJ_NONE;
+  LEAVE(obj_find(ACTOR_TORIEL), 4, 8800, 2780, 8860, 2780);
   EV_END;
 }
 
@@ -186,6 +204,7 @@ static int ev_bed(Ev *c) {
 static int ev_basement_talk(Ev *c) {
   EV_BEGIN;
   if (c->self) c->self->kind = OBJ_NONE;
+  WAIT_UNTIL(!obj_get(ACTOR_TORIEL)->walking);   /* (Frisk caught up with her) */
   obj_get(ACTOR_TORIEL)->dir = DIR_LEFT;
   switch (flag(F_BASEMENT_TALK)) {
     case 0:
@@ -202,27 +221,23 @@ static int ev_basement_talk(Ev *c) {
   set_flag(F_BASEMENT_TALK, flag(F_BASEMENT_TALK) + 1);
   if (g_room == ROOM_BASEMENT1 && flag(F_BASEMENT_TALK) == 1) {
     /* on ahead, to wait further down */
-    obj_get(ACTOR_TORIEL)->dir = DIR_RIGHT;
-    WALK(obj_get(ACTOR_TORIEL), 9560, 2300, 4);
-    obj_get(ACTOR_TORIEL)->dir = DIR_RIGHT;
+    WALK_ON(obj_find(ACTOR_TORIEL), 4, DIR_RIGHT, 9560, 2300);
     obj_trigger(9490, 2300, 16, 80, EV_BASEMENT_TALK, ACTOR_TRIGGER);
     return 1;
   }
   if (g_room == ROOM_BASEMENT1) {
-    WALK(obj_get(ACTOR_TORIEL), 10120, 2300, 5);
+    LEAVE(obj_find(ACTOR_TORIEL), 5, 10120, 2300);
   } else {
-    WALK(obj_get(ACTOR_TORIEL), 10004, 1984, 4);
-    obj_get(ACTOR_TORIEL)->dir = DIR_DOWN;
+    WALK_ON(obj_find(ACTOR_TORIEL), 4, DIR_DOWN, 10004, 1984);
     obj_trigger(9960, 2060, 140, 14, EV_TORIEL_DOOR, ACTOR_TRIGGER2);
-    return 1;
   }
-  obj_get(ACTOR_TORIEL)->kind = OBJ_NONE;
   EV_END;
 }
 
 static int ev_toriel_door(Ev *c) {
   EV_BEGIN;
   if (c->self) c->self->kind = OBJ_NONE;
+  WAIT_UNTIL(!obj_get(ACTOR_TORIEL)->walking);
   SAY(FACE_TORIEL, "`6* So you insist on leaving.|* Like all the others.|* Then show me you are\n  strong enough to survive.");
   BATTLE(FORM_TORIEL);
   if (flag(F_TORIEL_FIGHT) != 1) {
@@ -243,9 +258,7 @@ static int ev_toriel_door(Ev *c) {
   WAIT(20);
   SAY(FACE_TORIEL, "`0* Goodbye, my child.");
   obj_get(ACTOR_TORIEL)->flags &= (uint16_t)~OF_SOLID;
-  WALK(obj_get(ACTOR_TORIEL), 10040, 2050, 2);
-  WALK(obj_get(ACTOR_TORIEL), 10040, 2240, 2);
-  obj_get(ACTOR_TORIEL)->kind = OBJ_NONE;
+  LEAVE(obj_find(ACTOR_TORIEL), 2, 10040, 2050, 10040, 2240);
   EV_END;
 }
 

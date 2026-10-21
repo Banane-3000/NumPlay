@@ -43,6 +43,13 @@ jobs:
 
       - name: Build
         run: make -j4 nwa apps check NWLINK=nwlink && make lang NWLINK=nwlink
+        
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nwa
+          path: |
+            build/NumPlay*.nwa
+            build/apps/*.nwa
 
       - name: Test
         run: |
@@ -55,15 +62,27 @@ jobs:
           make -C games/numblocks host test
           make -C games/championisland host test
           make -C games/undertale host test
+          make -C games/doom host test
+          make -C games/isaac host test
+          make -C games/pvz host test
+          make -C games/fnaf host test
+          make -C games/sonic host test
+          make -C games/subway host test
+          make -C games/hillclimb host test
+          make -C games/leveldevil host test
+          make -C games/cookieclicker host test
+          make -C games/jetpackjoyride host test
+          make -C games/invaders host test
+          make -C games/sudoku host test
+          make -C games/uttt host test
+          make -C games/sokoban host test
+          make -C games/flappydunk host test
+          make -C games/towerblock host test
+          make -C games/doodlejump host test
           make -C games/suika test
           python3 tests/test_suika.py build/apps/SuikaGame.nwa
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: nwa
-          path: |
-            build/NumPlay*.nwa
-            build/apps/*.nwa
+
 
       - name: Release
         if: startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')

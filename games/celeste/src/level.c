@@ -643,6 +643,7 @@ static void transition_update(void) {
     g_level.transitioning = false;
     g_level.wind_pattern = g_level.room->info[RR_WIND];
     need_textures();
+    game_autosave();
   }
 }
 

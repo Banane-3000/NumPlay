@@ -13,7 +13,6 @@
 #include "snowdin.h"
 #include "world.h"
 
-static void gone(Obj *o) { o->kind = OBJ_NONE; }
 static Obj *thing(int x, int y, int w, int h, int event, int name, int arg) {
   Obj *o = obj_trigger(x, y, w, h, event, name);
   if (o) o->flags = OF_TALK | OF_SOLID, o->arg = (int16_t)arg;
@@ -88,10 +87,7 @@ static int ev_sans(Ev *c) {
   SAY(FACE_SANS, "* ...heh. lighten up.\n* thanks for dinner.|* wait. i said i'd pay, huh.\n* ...catch you later.");
   set_flag(F_RES_SANS, 1);
   s = obj_get(ACTOR_SANS);
-  WALK(s, s->x, 362, 2);   /* up past the tables, out east */
-  s = obj_get(ACTOR_SANS);
-  WALK(s, 780, 362, 3);
-  gone(obj_get(ACTOR_SANS));
+  LEAVE(s, 3, s->x, 362, 780, 362);   /* up past the tables, out east */
   EV_END;
 }
 

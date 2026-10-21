@@ -207,6 +207,10 @@ talk
 w60
 talk
 w30
+# she waits by your room down the hallway
+go:9300,2840
+talk
+w30
 # the living room: ask her how to leave
 go:9190,2840
 go:8840,2860

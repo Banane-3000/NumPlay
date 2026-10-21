@@ -996,7 +996,7 @@ void fx_dash_burst(float x, float y, bool facing_right, bool on_ground) { (void)
 
 void hero_leave_scene(int gate) {
   Hero *h = &g_hero;
-  spell_cancel();   /* (LEAVING SCENE) */
+  spell_cancel_regain();   /* (LEAVING SCENE: Spell Control's Cancel Some) */
   map_cancel();
   dialogue_cancel();
   h->accepting_input = false;   /* (IgnoreInputWithoutReset) */
@@ -1305,11 +1305,11 @@ void hero_take_damage(int side, int damage, int hazard) {
   if (damage <= 0) return;
   if (h->parry_t > 0 && hazard == HAZ_NORMAL) return;
   if (can_take_damage()) {
-    spell_cancel();   /* (HERO DAMAGED) */
+    if (h->damage_mode == DAMAGE_HAZARD_ONLY && hazard == HAZ_NORMAL) return;
+    spell_cancel_regain();   /* (HERO DAMAGED: Spell Control's Cancel All) */
     map_cancel();
     vm_broadcast(VMEV_HERO_DAMAGED);
     inv_damage();
-    if (h->damage_mode == DAMAGE_HAZARD_ONLY && hazard == HAZ_NORMAL) return;
     cancel_attack();
     if (h->cs.recoiling_left || h->cs.recoiling_right) cancel_recoil_horizontal();
     if (h->cs.bouncing) cancel_bounce(), h->body.vy = 0;

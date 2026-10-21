@@ -12,6 +12,8 @@
 #define HUD_PX (FOCAL / (-1.342f - CAM_Z))
 #define NSTATIONS 3
 #define RESERVE 80   /* (the frame's instances kept for it) */
+#define STAG_TITLE_OVER 0.16f   /* (Stations' baseline over its divider, as the game has it) */
+#define STAG_KEYS_GAP 0.15f     /* (between the two actions' lines) */
 
 typedef struct {
   float x, y, kx, ky;
@@ -156,11 +158,20 @@ static float key_box(const float *k, int name, float a, uint8_t white) {
   return k[0] - ui_key(name, at[0] + k[0] * g, at[1] + k[1] * g, white, a);
 }
 
-/* an action's text, ending before its key (the text bigger than the game's: kept clear of it) */
-static void act_text(int text, const UiText *t, float key_left) {
+/* an action's text, ending before its key (the text bigger than the game's: kept clear of it; the keys' actions'
+ * size, as elsewhere) */
+static void act_text(int text, const UiText *t, float key_left, float dy) {
   UiText u = *t;
   if (u.x > key_left - 0.15f) u.x = key_left - 0.15f;
-  put_text(text, STYLE_MSG, &u, 0, 2, 1);
+  put_text(text, STYLE_MSG_S, &u, dy, 2, 1);
+}
+
+/* how much higher than the game's a text must be to keep above what is under it (its top at top, what is under it at
+ * under; as far over it as the game's) */
+static float raise(int style, float top, float under, float over) {
+  const uint8_t *st = font_style(style);
+  float d = font_asc(st) / HUD_PX + over - (top - under);
+  return d > 0 ? d : 0;
 }
 
 static void stag_draw(void) {
@@ -182,7 +193,7 @@ static void stag_draw(void) {
   }
   /* the list: its title and divider, its rows, the pointers at the current one, the Knight's icon by his station */
   put_piece(&divider, 0, 0, faded);
-  put_text(TXT_STAG_STATIONS, STYLE_MSG, &t_stations, 0, 1, fade);
+  put_text(TXT_STAG_STATIONS, STYLE_MSG, &t_stations, raise(STYLE_MSG, t_stations.top, divider.y, STAG_TITLE_OVER), 1, fade);
   for (int i = 0; i < sg.n; i++) put_text(names[sg.rows[i]], STYLE_TUTE, &t_row, -i * STAG_ROW_DY, 1, fade);
   /* (the names bigger than the game's: the icon and the pointers kept clear of them) */
   float kx = fminf(list_knight.x, row0[0] - width_of(names[sg.rows[sg.init]], STYLE_TUTE) / 2 - 0.6f) - list_knight.x;
@@ -193,8 +204,13 @@ static void stag_draw(void) {
     put_piece(&ptr_l, row0[0] - px - ptr_l.x, y, white);
     put_piece(&ptr_r, row0[0] + px - ptr_r.x, y, white);
     /* the action keys (Buttons: after half a second) */
-    act_text(TXT_STAG_CTRL_TRAVEL, &t_act_confirm, key_box(key_confirm, TXT_KEY_OK, 1, white));
-    act_text(TXT_STAG_CTRL_CANCEL, &t_act_cancel, key_box(key_cancel, TXT_KEY_BACK, 1, white));
+    /* (Travel over Cancel: higher, for both their bigger text) */
+    const uint8_t *st = font_style(STYLE_MSG_S);
+    float up = (font_asc(st) + font_desc(st)) / HUD_PX + STAG_KEYS_GAP - (key_confirm[1] - key_cancel[1]);
+    up = up > 0 ? up : 0;
+    const float kc[2] = {key_confirm[0], key_confirm[1] + up};
+    act_text(TXT_STAG_CTRL_TRAVEL, &t_act_confirm, key_box(kc, TXT_KEY_OK, 1, white), up);
+    act_text(TXT_STAG_CTRL_CANCEL, &t_act_cancel, key_box(key_cancel, TXT_KEY_BACK, 1, white), 0);
   }
   for (int i = 0; i < 2; i++)
     if (sg.border[i].sprite >= 0) put(sg.border[i].sprite, borders[i].x, borders[i].y, borders[i].kx, borders[i].ky, white);

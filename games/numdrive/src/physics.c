@@ -1,5 +1,6 @@
 /* 2D rigid body physics (motion in the xy plane, rotation about z) for Fancade objects.
  * Collision shapes keep their z extents so only overlapping depth ranges interact. */
+#pragma GCC optimize ("O2")  /* (drawn every frame: fast, while the rest of the game is built small) */
 #include <string.h>
 #ifdef HOST
 #include <stdlib.h>
@@ -99,7 +100,9 @@ typedef struct {
 
 /* solver state of one step, kept in the free arena with the contacts */
 typedef struct {
-  float accl[3]; /* accumulated limit / lock impulses */
+  float accl[3]; /* accumulated lock impulses, or a range's at its lower limit */
+  float acch[3]; /* a range's at its upper limit */
+  uint8_t pass;  /* bit k: dof k would pass its lower limit this step, bit k + 3: its upper */
 } JointTmp;
 typedef struct {
   float acc[3], accm[3];          /* accumulated spring and motor impulses */
@@ -1887,6 +1890,17 @@ static void solve_joints(bool first) {
     const JointFrame *fr = joint_frame_get(ji);
     float rax = fr->rax, ray = fr->ray, rbx = fr->rbx, rby = fr->rby, cx = fr->cx, cy = fr->cy;
     const float *err = fr->err;
+    if (first)
+      for (int k = 0; k < 3; k++) {
+        if (!(j->lo[k] < j->hi[k])) continue;
+        /* the limits a range would pass this step, at the speed it starts with (Bullet takes the bodies'
+           centres for it) */
+        float rs = k == 2 ? B->w - (A ? A->w : 0)
+                          : (B->vx - (A ? A->vx : 0)) * (k ? -cy : cx) + (B->vy - (A ? A->vy : 0)) * (k ? cx : cy);
+        float e = err[k] + rs * DT;
+        if (e < j->lo[k]) jt->pass |= 1 << k;
+        if (e > j->hi[k]) jt->pass |= 8 << k;
+      }
     for (int k = 0; k < 3; k++) {
       float nx = 0, ny = 0;
       float m = fr->m[k];
@@ -1948,18 +1962,23 @@ static void solve_joints(bool first) {
           float d = m * (target - rv);
           jt->accl[k] += d;
           imp += d;
-        } else if (err[k] <= lo) {
+        } else {
+          /* like Bullet's 6DofSpring2, both limits of a range are solved all the time, not just once one is
+             passed: the joint may close on a limit by a fifth of the gap a step, and not at all when it
+             would pass it within the step. A truck's suspension settles onto its stops instead of slamming
+             into them (Parallel Parking's landing). */
           target = -0.2f / DT * (err[k] - lo);
-          float d = m * (fmaxf(target, 0) - rv);
-          float old = jt->accl[k];
+          if (jt->pass >> k & 1) target = fmaxf(target, 0);
+          float d = m * (target - rv), old = jt->accl[k];
           jt->accl[k] = fmaxf(old + d, 0);
-          imp += jt->accl[k] - old;
-        } else if (err[k] >= hi) {
+          d = jt->accl[k] - old;
+          imp += d;
+          rv += d / m;
           target = -0.2f / DT * (err[k] - hi);
-          float d = m * (fminf(target, 0) - rv);
-          float old = jt->accl[k];
-          jt->accl[k] = fminf(old + d, 0);
-          imp += jt->accl[k] - old;
+          if (jt->pass >> (k + 3) & 1) target = fminf(target, 0);
+          d = m * (target - rv), old = jt->acch[k];
+          jt->acch[k] = fminf(old + d, 0);
+          imp += jt->acch[k] - old;
         }
       }
       if (imp == 0) continue;

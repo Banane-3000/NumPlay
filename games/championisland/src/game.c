@@ -11,9 +11,11 @@ Input in;
 Game game;
 bool game_running = true;
 
-/* the big memory: the background layer (if the scene has one) and the sprite cache. On the calculator, the RAM after
- * the game's own (_heap_start to _heap_end), ARENA_BYTES of it at most: software 25.2 and newer gives apps 153676
- * bytes of RAM, 23.2 and 24 give 148928 and some builds of it less, and the sprite cache takes what there is */
+/* the big memory: the background layer (if the scene has one) and the sprite cache. On the calculator, all the RAM
+ * after the game's own (_heap_start to _heap_end): software 25.2 and newer gives apps 153676 bytes of RAM (an arena
+ * of 121 KB), 23.2 and 24 give 148928 (116 KB) and some builds of it less (101 KB), and the sprite cache takes what
+ * there is. It used to stop at 100000 bytes, which left the island's cache 18 KB on every calculator: by the blue
+ * team's headquarters a frame needs more, and its pictures were decoded again and again (Mason363/NumPlay#90) */
 #ifdef HOST
 static uint8_t arena_mem[ARENA_BYTES] __attribute__((aligned(4)));
 #define arena arena_mem
@@ -21,10 +23,7 @@ static uint32_t arena_size(void) { return ARENA_BYTES; }
 #else
 extern char _heap_start[], _heap_end[];
 #define arena ((uint8_t *)(((uintptr_t)_heap_start + 7) & ~(uintptr_t)7))
-static uint32_t arena_size(void) {
-  uint32_t n = (uint32_t)((uintptr_t)_heap_end - (uintptr_t)arena);
-  return n < ARENA_BYTES ? n : ARENA_BYTES;
-}
+static uint32_t arena_size(void) { return (uint32_t)((uintptr_t)_heap_end - (uintptr_t)arena); }
 #endif
 
 /* the arena: the scene's state, then its background layer, then the sprite cache */

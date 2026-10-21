@@ -1,0 +1,21 @@
+# Sudoku in Chinese: the English text as in the source, a tab, the translation (see tools/lang.py).
+Paused	暂停
+Resume	继续
+New game	新游戏
+How to play	玩法
+Quit game	退出游戏
+OK again to quit	再按 OK 退出
+Easy	简单
+Medium	中等
+Hard	困难
+Expert	专家
+Play	开始
+Solved!	完成！
+Every row, column and box holds 1 to 9 once.	每一行、每一列和每一宫都恰好包含 1 到 9。
+New best!	新纪录！
+Mistakes: 	错误：
+OK  notes	OK  笔记
+0  erase	0  擦除
+DEL  undo	DEL  撤销
+shift  hint	shift  提示
+Back  menu	Back  菜单

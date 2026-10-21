@@ -179,7 +179,7 @@ In Waterfall, walk into a bridge seed to push it: in the water it blooms into a 
 
 In Hotland, conveyor belts carry you and steam vents throw you over the lava (the one in the middle of the puzzle hub turns each time). Keep moving through orange lasers and stand still for blue ones. In a shooting puzzle, the arrows push every dark block one cell and Z shoots: break your way to the target in two shots. In Mettaton's quiz, move your SOUL onto an answer and press OK; Alphys signals the right one. Alphys's upgrade puts the Dimensional Box in your phone's CELL. On the second floor, the top conveyor belt carries you past three switches: press them one after another as you go by. In the vent puzzle, every panel you land on turns all the vents around, and the one at the top turns them back. To spare the Royal Guards, clean 02's armor, catch its green stars, then whisper to 01. In the news report, touch a bomb to face it, and Defuse it (or FIGHT it) while it's in the DEFUSE ZONE. On the third floor, ride the belt past the blue drones without a step. When Muffet turns your SOUL purple, it keeps to three strings: Up and Down hop between them, Left and Right move along. In the tile puzzle, red tiles are walls, yellow ones shock you back, orange ones make you smell of oranges (and the blue water's piranhas bite then), purple soap slides you on and makes you smell of lemons, and blue next to yellow is electrified. After it, ACT and press the yellow button: your SOUL turns yellow, and OK shoots. At the MTT Resort, the front desk rents you a room for the night, and the hotel's doors down the hall want room service: bring what they ask for. On the CORE's laser bridge, walk while the power is off and freeze the moment it flickers back on. Against Mettaton, turn him round first; then it's a show: Boast, Pose, a Heel Turn, his brand's food and every hit you take make the ratings climb, and once they're high enough the show is over. In New Home, find both keys to unchain the stairs down. Asgore breaks MERCY: you'll have to fight him, and then choose. Against Omega Flowey there are no turns: dodge, and when a SOUL fights for him, reach the ACT button that comes down among its attack to call for help. Once all six are on your side, reach FIGHT.
 
-Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) shows your items, your STAT and the phone numbers you have.
+Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) shows your items, your STAT and the phone numbers you have. Its SETUP, like Settings on the title, lets Frisk walk twice as fast: the game has no such thing, so it starts off.
 
 ## Controls
 
@@ -188,7 +188,7 @@ Walk up to a star and press OK to SAVE and fill your HP. The C menu (toolbox) sh
 | Arrows (or 4, 6, 8, 2) | Walk, move your SOUL, choose |
 | OK, EXE or 5 | Talk, read, confirm (Z in the game) |
 | Back or ⌫ | Cancel, show the whole text at once (X in the game) |
-| Toolbox, Shift or Var | The menu: ITEM, STAT, CELL (C in the game) |
+| Toolbox, Shift or Var | The menu: ITEM, STAT, CELL (C in the game), SETUP |
 | Home | Keep the moment and quit: the next start is back there |
 
 ## Good to know

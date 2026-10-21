@@ -24,7 +24,7 @@ static int letter;                    /* the naming screen's cursor */
 static int item_sel, item_act;
 static bool msg_open;                 /* a text in the dialogue box over the menu */
 
-enum { S_INTRO, S_TITLE, S_INSTR, S_NAME, S_CONFIRM, S_CONTINUE, S_GAMEOVER, S_FADEIN };
+enum { S_INTRO, S_TITLE, S_INSTR, S_NAME, S_CONFIRM, S_CONTINUE, S_GAMEOVER, S_FADEIN, S_SETTINGS };
 
 /* ---------------------------------------------------------------- the intro */
 static const char *const intro_lines[] = {
@@ -55,6 +55,28 @@ void menu_title_open(void) {
 static void title_open(void) {
   g_mode = MODE_TITLE;
   st = S_TITLE, t = 0, sel = 0;
+}
+
+/* ---------------------------------------------------------------- settings (the title's, and the C menu's) */
+static int set_sel, set_back;   /* EXIT or WALK; the screen to go back to */
+static void settings_open(int back) { set_sel = 1, set_back = back; }
+/* true when it closes */
+static bool settings_input(uint32_t pressed) {
+  if (pressed & (K_UP | K_DOWN)) set_sel ^= 1;
+  if (set_sel == 1 && (pressed & (K_Z | K_LEFT | K_RIGHT))) {
+    g_walk_fast ^= 1;
+    config_save();
+    return false;
+  }
+  return (pressed & K_X) || (set_sel == 0 && (pressed & K_Z));
+}
+static void settings_draw(int x, int y) {
+  gfx_text(FONT_MENU, x, y, "SETTINGS", C_WHITE, 255);
+  gfx_text(FONT_MENU, x + 14, y + 26, "EXIT", set_sel == 0 ? C_YELLOW : C_WHITE, 255);
+  gfx_text(FONT_MENU, x + 14, y + 46, "WALK", set_sel == 1 ? C_YELLOW : C_WHITE, 255);
+  gfx_text(FONT_MENU, x + 74, y + 46, g_walk_fast ? "FAST" : "NORMAL", set_sel == 1 ? C_YELLOW : C_WHITE, 255);
+  gfx_text(FONT_SMALL, x + 14, y + 66, g_walk_fast ? "Twice as fast." : "As in the game.", rgb565(0x808080), 255);
+  gfx_sprite(SPR_HEART, 0, x + 4, y + 32 + 20 * set_sel, 0, 255);
 }
 
 /* ---------------------------------------------------------------- naming */
@@ -146,7 +168,7 @@ static void name_input(uint32_t pressed) {
 }
 
 /* ---------------------------------------------------------------- the C menu */
-enum { M_MAIN, M_ITEMS, M_ITEM_ACT, M_STAT, M_CELL };
+enum { M_MAIN, M_ITEMS, M_ITEM_ACT, M_STAT, M_CELL, M_SETTINGS };
 /* the CELL's list: Toriel's phone (0); Papyrus's (1) once he gave his number; the Dimensional Box (2) once Alphys
  * upgraded the phone */
 static int cell_entries(int *calls) {
@@ -186,17 +208,21 @@ static void c_menu_input(uint32_t pressed) {
   }
   switch (st) {
     case M_MAIN: {
-      int n = flag(F_PHONE) ? 3 : 2;
+      int n = flag(F_PHONE) ? 4 : 3;   /* (SETTINGS last) */
       if (pressed & K_UP) sel = (sel + n - 1) % n;
       if (pressed & K_DOWN) sel = (sel + 1) % n;
       if (pressed & (K_X | K_C)) menu_close();
       if (pressed & K_Z) {
         if (sel == 0 && item_count()) st = M_ITEMS, item_sel = 0;
         else if (sel == 1) st = M_STAT;
+        else if (sel == n - 1) st = M_SETTINGS, settings_open(M_MAIN);
         else if (sel == 2) st = M_CELL, sub = 0;
       }
       break;
     }
+    case M_SETTINGS:
+      if (settings_input(pressed)) st = M_MAIN;
+      break;
     case M_ITEMS: {
       int n = item_count();
       if (pressed & K_UP) item_sel = (item_sel + n - 1) % n;
@@ -253,6 +279,7 @@ static void panel(int x, int y, int w, int h) {
 }
 
 static void draw_c_menu(void) {
+  if (msg_open) return; /* (an item's text: the menu closes for its box, as in the game) */
   bool low = pl.y + 15 - cam_y < 130;
   int oy = low ? 135 : 0;
   char s[64];
@@ -266,13 +293,13 @@ static void draw_c_menu(void) {
   gfx_text(FONT_SMALL, 23, 59 + oy, s, C_WHITE, 255);
   snprintf(s, sizeof s, "G   %d", sv.gold);
   gfx_text(FONT_SMALL, 23, 68 + oy, s, C_WHITE, 255);
-  /* ITEM, STAT, CELL */
-  int n = flag(F_PHONE) ? 3 : 2;
+  /* ITEM, STAT, CELL, and the settings */
+  int n = flag(F_PHONE) ? 4 : 3;
   panel(16, 84, 71, 18 + 18 * n);
   static const char *const opts[] = {"ITEM", "STAT", "CELL"};
   for (int i = 0; i < n; i++) {
     uint16_t c = (i == 0 && !item_count()) ? rgb565(0x808080) : C_WHITE;
-    gfx_text(FONT_MENU, 41, 92 + 18 * i, opts[i], c, 255);
+    gfx_text(FONT_MENU, 41, 92 + 18 * i, i == n - 1 ? "SETUP" : opts[i], c, 255);
   }
   if (st == M_MAIN) gfx_sprite(SPR_HEART, 0, 32, 98 + 18 * sel, 0, 255);
   if (st == M_ITEMS || st == M_ITEM_ACT) {
@@ -313,6 +340,10 @@ static void draw_c_menu(void) {
       snprintf(s, sizeof s, "KILLS: %d", sv.kills);
       gfx_text(FONT_MENU, 190, 200, s, C_WHITE, 255);
     }
+  }
+  if (st == M_SETTINGS) {
+    panel(94, 26, 173, 104);
+    settings_draw(108, 38);
   }
   if (st == M_CELL) {
     static const char *const names[3] = {"Toriel's Phone", "Papyrus's Phone", "Dimensional Box"};
@@ -414,7 +445,10 @@ void menu_update(uint32_t keys, uint32_t pressed) {
         if (pressed & (K_UP | K_DOWN)) sel ^= 1;
         if (pressed & K_Z && t > 5) {
           if (sel == 0) st = S_NAME, letter = 0, name_len = 0, t = 0;
+          else st = S_SETTINGS, settings_open(S_INSTR);
         }
+      } else if (st == S_SETTINGS) {
+        if (settings_input(pressed)) st = set_back, t = 0;
       } else if (st == S_NAME) {
         name_input(pressed);
       } else if (st == S_CONFIRM) {
@@ -433,9 +467,13 @@ void menu_update(uint32_t keys, uint32_t pressed) {
           }
         }
       } else if (st == S_CONTINUE) {
-        if (pressed & (K_LEFT | K_RIGHT)) sel ^= 1;
+        /* Continue and Reset, Settings under them */
+        if (pressed & (K_LEFT | K_RIGHT) && sel < 2) sel ^= 1;
+        if (pressed & K_DOWN) sel = 2;
+        if (pressed & K_UP) sel = 0;
         if (pressed & K_Z) {
           if (sel == 0) save_load();
+          else if (sel == 2) st = S_SETTINGS, settings_open(S_CONTINUE);
           else st = S_NAME, letter = 0, name_len = 0;
         }
       }
@@ -474,7 +512,9 @@ void menu_draw(void) {
                                             "[toolbox] - Menu (In-game)", "[Home] - Quit", "When HP is 0, you lose."};
         for (int i = 0; i < 6; i++) gfx_text(FONT_MAIN, 50, 30 + i * 18 + (i > 0) * 4, lines[i], rgb565(0xC0C0C0), 255);
         gfx_text(FONT_MAIN, 74, 160, "Begin Game", sel == 0 ? C_YELLOW : C_WHITE, 255);
-        gfx_text(FONT_MAIN, 74, 180, "Settings", sel == 1 ? C_YELLOW : rgb565(0x808080), 255);
+        gfx_text(FONT_MAIN, 74, 180, "Settings", sel == 1 ? C_YELLOW : C_WHITE, 255);
+      } else if (st == S_SETTINGS) {
+        settings_draw(110, 60);
       } else if (st == S_NAME) {
         gfx_text(FONT_MAIN, 76, 18, "Name the fallen human.", C_WHITE, 255);
         memcpy(s, name, (size_t)name_len), s[name_len] = 0;
@@ -516,6 +556,7 @@ void menu_draw(void) {
         }
         gfx_text(FONT_MENU, 84, 110, "Continue", sel == 0 ? C_YELLOW : C_WHITE, 255);
         gfx_text(FONT_MENU, 190, 110, "Reset", sel == 1 ? C_YELLOW : C_WHITE, 255);
+        gfx_text(FONT_MENU, 128, 130, "Settings", sel == 2 ? C_YELLOW : C_WHITE, 255);
       }
       break;
     case MODE_MENU:

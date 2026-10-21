@@ -344,13 +344,16 @@ static void rast_tiles(const Item *it, int by0, int by1) {
   const RoomInfo *r = world_room_info();
   if (!r) return;
   int y0 = it->y0 > by0 ? it->y0 : by0, y1 = it->y1 < by1 ? it->y1 : by1;
-  /* only inside the room's rectangle: outside it stays black */
-  int rx0 = r->x - it->x, rx1 = r->x + r->w - it->x;
+  /* only inside the room (its rectangle, and the game's room the camera keeps to): outside it stays black */
+  int ux0 = r->x < r->vx ? r->x : r->vx, uy0 = r->y < r->vy ? r->y : r->vy;
+  int ux1 = r->x + r->w > r->vx + r->vw ? r->x + r->w : r->vx + r->vw;
+  int uy1 = r->y + r->h > r->vy + r->vh ? r->y + r->h : r->vy + r->vh;
+  int rx0 = ux0 - it->x, rx1 = ux1 - it->x;
   if (rx0 < it->x0) rx0 = it->x0;
   if (rx1 > it->x1) rx1 = it->x1;
   for (int y = y0; y < y1; y++) {
     int wy = it->y + y;
-    if (wy < r->y || wy >= r->y + r->h) continue;
+    if (wy < uy0 || wy >= uy1) continue;
     int gy = wy - r->gy;
     if (gy < 0 || gy >= r->grows * 20) continue;
     int trow = gy / 20, ty = gy % 20;
