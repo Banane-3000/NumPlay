@@ -166,7 +166,8 @@ int main(int argc, char **argv) {
         sel = 1;
         continue;
       }
-      uint8_t b = ((k & KEY(K_LEFT)) ? 1 : 0) | ((k & KEY(K_RIGHT)) ? 2 : 0);
+      /* brake on Left or 4, gas on Right or 6: the arrows can't be held both at once (Speed Record wants both) */
+      uint8_t b = ((k & (KEY(K_LEFT) | KEY(K_FOUR))) ? 1 : 0) | ((k & (KEY(K_RIGHT) | KEY(K_SIX))) ? 2 : 0);
       bool ending = false;
       uint32_t t0 = plat_millis();
       for (int s = 0; s < steps && !ending; s++) {

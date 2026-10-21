@@ -184,4 +184,50 @@ __attribute__((unused)) static const uint8_t *ef_read(const char *name, uint32_t
   *len = ef_rd16(fs.buf + at) - 2 - nlen;
   return fs.buf + at + 2 + nlen;
 }
+static void ef_reverse(uint8_t *a, uint8_t *b) {
+  while (a < --b) {
+    uint8_t t = *a;
+    *a++ = *b, *b = t;
+  }
+}
+/* Makes a record `len` bytes long, keeping what it holds (cut, or with zeros after), and returns its content
+ * (unaligned!), or NULL if there is no room (then nothing changed). A record that has to grow is first turned
+ * to the end of the list, the ones after it sliding down, so it can grow where it is. */
+__attribute__((unused)) static uint8_t *ef_resize(const char *name, uint32_t len) {
+  ef_fs_t fs;
+  if (!ef_open(&fs)) return NULL;
+  int end = ef_end(&fs);
+  if (end < 0) return NULL;
+  uint32_t nlen = ef_strlen(name) + 1, total = 2 + nlen + len;
+  if (total > 0xFFFF) return NULL;
+  int at = ef_find(&fs, name, end);
+  if (at < 0) return ef_write(name, NULL, len) ? fs.buf + end + 2 + nlen : NULL;
+  uint32_t size = ef_rd16(fs.buf + at);
+  if (total == size) return fs.buf + at + 2 + nlen;
+  if ((uint32_t)end - size + total + 2 > fs.size) return NULL;
+  if (at + (int)size != end && total > size) {
+    uint32_t *cache = ef_cache(&fs, end);
+    if (!cache) return NULL;
+    ef_reverse(fs.buf + at, fs.buf + at + size);
+    ef_reverse(fs.buf + at + size, fs.buf + end);
+    ef_reverse(fs.buf + at, fs.buf + end);
+    cache[1] = cache[2] = 0;
+    at = end - (int)size;
+  }
+  if (at + (int)size == end) {
+    for (uint32_t i = size; i < total; i++) fs.buf[at + i] = 0;
+    for (uint32_t i = total + 2; i < size + 2; i++) fs.buf[at + i] = 0;
+    ef_wr16(fs.buf + at + total, 0);
+  } else {  /* (smaller, in the middle: the ones after slide down) */
+    uint32_t *cache = ef_cache(&fs, end);
+    if (!cache) return NULL;
+    uint8_t *d = fs.buf + at + total;
+    const uint8_t *s = fs.buf + at + size;
+    for (int n = end + 2 - (at + (int)size); n > 0; n--) *d++ = *s++;
+    for (uint32_t n = size - total; n > 0; n--) *d++ = 0;
+    cache[1] = cache[2] = 0;
+  }
+  ef_wr16(fs.buf + at, total);
+  return fs.buf + at + 2 + nlen;
+}
 #endif

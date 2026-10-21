@@ -338,6 +338,30 @@ static void hud_text(int text, int style, float x, float top, int align, uint32_
   }
 }
 
+/* a next area's name (centered at x, its top): its edge by the arrow where the game has it, the text being bigger
+ * than the one its place was made for (tools/gamemap.py: the message's size then, MSG_LAYOUT_EM pixels an em) */
+#define MSG_LAYOUT_EM 8.23f
+#define NEXT_MARGIN 0.25f   /* (a name kept this far in from the screen's side, ...) */
+#define NEXT_UNDER 0.45f    /* (... its top this far under its arrow) */
+static void next_name_at(const MapNext *n, float ox, float oy, float k, float *x, float *top) {
+  const uint8_t *st = font_style(STYLE_MSG), *s = text_get(n->text);
+  float r = MSG_LAYOUT_EM / font_em(st);
+  float w = text_width(STYLE_MSG, s, (int)strlen((const char *)s)) / HUD_PX, h = (font_asc(st) + font_desc(st)) / HUD_PX;
+  float w0 = w * r, h0 = h * r, t0 = oy + n->top * k;
+  float cx0 = ox + n->tx * k + (n->align == 0 ? w0 / 2 : n->align == 2 ? -w0 / 2 : 0), cy0 = t0 - h0 / 2;
+  float dx = cx0 - (ox + n->x * k), dy = cy0 - (oy + n->y * k);
+  *x = cx0, *top = cy0 + h / 2;
+  if (fabsf(dx) > fabsf(dy)) *x = dx > 0 ? cx0 - w0 / 2 + w / 2 : cx0 + w0 / 2 - w / 2;   /* (beside it: that side kept) */
+  else if (dy > 0) *top = t0 - h0 + h;                                                    /* (over it: its bottom kept) */
+  else *top = t0;                                                                         /* (under it: its top kept) */
+  /* (past the screen's side: inside it, under the arrow) */
+  float edge = VIEW_W / 2 / HUD_PX - NEXT_MARGIN;
+  if (*x + w / 2 > edge || *x - w / 2 < -edge) {
+    *x = *x + w / 2 > edge ? edge - w / 2 : -edge + w / 2;
+    *top = oy + n->y * k - NEXT_UNDER;
+  }
+}
+
 /* a room of the map shown: rough with its area's map; else once mapped */
 static bool room_shown(int i) {
   const MapRoom *r = &rooms[i];
@@ -376,7 +400,9 @@ static void draw_area(int a, float ox, float oy, float k, bool quick) {
     const MapNext *n = &nexts[i];
     if (rooms[n->room].area != a || !room_shown(n->room) || (n->visited >= 0 && !pd_flag(n->visited))) continue;
     hud_sprite(n->sprite, ox + n->x * k, oy + n->y * k, sk, n->ang, map_tint(0xFFFFFF, 255));
-    hud_text(n->text, STYLE_MSG, ox + n->tx * k, oy + n->top * k, n->align, 0xFFFFFF, 1);
+    float x, top;
+    next_name_at(n, ox, oy, k, &x, &top);
+    hud_text(n->text, STYLE_MSG, x, top, 1, 0xFFFFFF, 1);
   }
 }
 
@@ -509,6 +535,7 @@ static void map_msg_draw(void) {
  * (Map Key: the pins had, the key and the pins shown or not); the markers' menu (MapMarkerMenu: placed and taken back,
  * six of each kind). Places: the pane's from the inventory's, Game_Map's from the HUD's middle.) */
 typedef struct { UiPiece piece; int16_t text; UiText name; float zx, zy, cx, cy, ext[4]; } WidePiece;
+#define MAP_NAME_GAP 0.4f   /* (the least room between two areas' names) */
 typedef struct { UiPiece back; float key[2]; UiText text; int16_t texts[3]; } MapAction;
 typedef struct { UiPiece icon; int16_t text; UiText at; } KeyRow;
 static const WidePiece wide[NAREAS] = MAP_WIDE;
@@ -812,7 +839,7 @@ static void action_draw(const MapAction *m, int which, int key, float ox, float 
   UiText t = m->text;
   if (right && t.x > m->key[0] - hw - 0.15f) t.x = m->key[0] - hw - 0.15f;
   if (!right && t.x < m->key[0] + hw + 0.15f) t.x = m->key[0] + hw + 0.15f;
-  ui_text_at(m->texts[which], STYLE_MSG, &t, ox, oy, right ? 2 : 0, a);
+  ui_text_at(m->texts[which], STYLE_MSG_S, &t, ox, oy, right ? 2 : 0, a);   /* (as the keys' actions elsewhere) */
 }
 
 /* the pane at (ox, oy) (its alpha a; its white); current: the pane shown (else going: Pane Reset, nothing chosen) */
@@ -823,12 +850,24 @@ void map_pane_draw(float ox, float oy, float a, uint8_t white, bool current) {
   float wa = current ? mp.wide_a : 1;
   if (wa > 0) {
     uint8_t wa8 = (uint8_t)(wa * 255 + 0.5f);
+    /* (the names, in the smallest of the bigger text: those of areas side by side moved apart where they would meet) */
+    float nx[NAREAS], hw[NAREAS];
+    for (int i = 0; i < NAREAS; i++) {
+      const uint8_t *s = text_get(wide[i].text);
+      nx[i] = wide[i].name.x, hw[i] = text_width(STYLE_MSG_XS, s, (int)strlen((const char *)s)) / HUD_PX / 2 + MAP_NAME_GAP / 2;
+    }
+    for (int i = 0; i < NAREAS; i++)
+      for (int j = 0; j < NAREAS; j++) {
+        if (i == j || !have_area(i) || !have_area(j) || fabsf(wide[i].name.top - wide[j].name.top) > 1 || nx[i] > nx[j]) continue;
+        float over = nx[i] + hw[i] - (nx[j] - hw[j]);
+        if (over > 0) nx[i] -= over / 2, nx[j] += over / 2;
+      }
     for (int i = 0; i < NAREAS; i++) {
       if (!have_area(i) || wide[i].piece.sprite < 0) continue;
       bool on = current && st == MP_WIDE && mp.sel == i;
       uint8_t g = on ? 255 : MAP_WIDE_GREY, gn = on ? 255 : MAP_WIDE_NAME_GREY;
       ui_piece(&wide[i].piece, ox, oy, 1, map_tint((uint32_t)g * 0x10101u, wa8));
-      hud_text(wide[i].text, STYLE_MSG_S, ox + wide[i].name.x, oy + wide[i].name.top, 1, (uint32_t)gn * 0x10101u, wa);
+      hud_text(wide[i].text, STYLE_MSG_XS, ox + nx[i], oy + wide[i].name.top, 1, (uint32_t)gn * 0x10101u, wa);
     }
     /* (its compass: where the Knight's area is) */
     int z = area_of_zone();

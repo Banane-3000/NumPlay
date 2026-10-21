@@ -460,8 +460,7 @@ static int ev_wf_mk(Ev *c) {
   pl.dir = DIR_RIGHT;
   NARRATE("* Yo! Are you going to see Undyne too?|* She's the head of the Royal Guard!\n* She's SO cool!|* Come on, let's go!");
   set_flag(F_WF_MK, 1);
-  WALK(mk, 1180, 1496, 4);
-  gone(mk);
+  LEAVE(mk, 4, 1180, 1496);
   if (c->self) gone(c->self);
   EV_END;
 }
@@ -513,8 +512,7 @@ static int ev_wf_undyne1(Ev *c) {
     obj_mk(1840, 1530, DIR_LEFT);
     NARRATE("* Yo! Did you see that?!\n* She was looking right at you!|* That's so awesome!!");
     mk = obj_get(ACTOR_MK);
-    WALK(mk, 2120, 1520, 4);
-    gone(mk);
+    LEAVE(mk, 4, 2120, 1520);
   }
   set_flag(F_WF_UNDYNE1, 1);
   if (c->self) gone(c->self);
@@ -556,8 +554,7 @@ static int ev_wf_grass(Ev *c) {
   if (flag(F_WF_MK)) {
     NARRATE("* Yo! She almost got you!\n* ...wait, why WAS she after you?|* Never mind! Let's keep going!");
     mk = obj_get(ACTOR_MK);
-    WALK(mk, 6900, 580, 4);
-    gone(mk);
+    LEAVE(mk, 4, 6900, 580);
   }
   set_flag(F_CHASE1, 1);
   if (c->self) gone(c->self);

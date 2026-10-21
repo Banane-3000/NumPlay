@@ -1054,6 +1054,19 @@ static uint32_t band_need(uint16_t stream_sp, const bool *dirty) {
   return most;
 }
 
+/* a stream is read top down: a sprite drawn more than once is read again
+ * for each, one below the other (not in the same band) */
+static bool streamable(int big) {
+  for (int i = 0; i < nitems; i++) {
+    const Item *a = &items[i];
+    if (i == big || (a->kind == DI_SPRITE ? a->ref : a->kind == DI_AFFINE ? a->color : NONE16) != items[big].ref) continue;
+    if (a->kind != DI_SPRITE || (a->flags & (DF_FLIPY | DF_OPAQUE)) || a->y1 - a->y0 != items[big].y1 - items[big].y0) return false;   /* (nor a stretched copy) */
+    for (int j = 0; j < nitems; j++)
+      if (j != i && items[j].kind == DI_SPRITE && items[j].ref == a->ref && a->y0 < items[j].y1 + BAND && items[j].y0 < a->y1 + BAND) return false;
+  }
+  return true;
+}
+
 #ifdef HOST
 int gfx_peak_items, gfx_peak_affs;   /* tests: the most a frame used */
 int gfx_missing;                     /* tests: items the last frame left for the next (not cached) */
@@ -1190,16 +1203,11 @@ void gfx_end(void) {
           continue;
         Sprite t;
         sprite_info(it->ref, &t);
-        if (t.kind <= 1 && t.rle > bigsz && it->y1 - it->y0 == t.h) { big = i; bigsz = t.rle; }   /* (a stream is not stretched) */
-      }
-      /* a stream is read top down: a sprite drawn more than once is read
-       * again for each, one below the other (not in the same band) */
-      for (int i = 0; big >= 0 && i < nitems; i++) {
-        const Item *a = &items[i];
-        if (i == big || (a->kind == DI_SPRITE ? a->ref : a->kind == DI_AFFINE ? a->color : NONE16) != items[big].ref) continue;
-        if (a->kind != DI_SPRITE || (a->flags & (DF_FLIPY | DF_OPAQUE)) || a->y1 - a->y0 != items[big].y1 - items[big].y0) big = -1;   /* (nor a stretched copy) */
-        for (int j = 0; big >= 0 && j < nitems; j++)
-          if (j != i && items[j].kind == DI_SPRITE && items[j].ref == a->ref && a->y0 < items[j].y1 + BAND && items[j].y0 < a->y1 + BAND) big = -1;
+        /* (a stream is not stretched) the biggest that can stream: a house
+         * drawn twice side by side (by the blue team's headquarters) cannot,
+         * and when it was the biggest the frame was decoded band by band,
+         * its biggest pictures 4 times each */
+        if (t.kind <= 1 && t.rle > bigsz && it->y1 - it->y0 == t.h && streamable(i)) { big = i; bigsz = t.rle; }
       }
       uint32_t bs = big >= 0 && !stream_already ? (bigsz + 3) & ~3u : 0;
       /* (a little too much: the last small ones come next frame) */

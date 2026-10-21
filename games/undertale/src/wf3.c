@@ -209,8 +209,7 @@ static int ev_mk_chasm(Ev *c) {
     mk->dir = DIR_LEFT;
     NARRATE("* Yo... thanks for saving me.|* We're still friends, right? Cool.|* I'd better get home before my parents worry. Later!");
     mk = obj_get(ACTOR_MK);
-    WALK(mk, 22920, mk->y, 4);
-    gone(mk);
+    LEAVE(mk, 4, 22920, mk->y);
     set_flag(F_MK_CHASM, 2);
     return 1;
   }
@@ -229,9 +228,8 @@ static int ev_mk_chasm(Ev *c) {
     NARRATE("* (Undyne climbs back up, Monster Kid with her.)\n* (She's badly hurt.)");
     NARRATE("* Undyne... you were right about them.|* They just stood there and watched me fall.");
     u = obj_get(ACTOR_UNDYNE), mk = obj_get(ACTOR_MK);
-    WALK_TO(mk, 22940, mk->y, 2);
-    WALK(u, 22920, u->y, 2);
-    gone(obj_get(ACTOR_UNDYNE)), gone(obj_get(ACTOR_MK));
+    LEAVE(mk, 2, 22940, mk->y);
+    LEAVE(u, 2, 22920, u->y);
     set_flag(F_MK_CHASM, 3);
     return 1;
   }
@@ -335,8 +333,7 @@ static int ev_hot_undyne(Ev *c) {
   WAIT(20);
   NARRATE("* (Undyne gets up... and stares at you for a long time.)");
   u = obj_get(ACTOR_UNDYNE);
-  WALK(u, -20, u->y, 2);
-  gone(u);
+  LEAVE(u, 2, -20, u->y);
   set_flag(F_UNDYNE, 4);
   EV_END;
 }

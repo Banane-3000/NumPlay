@@ -10,6 +10,10 @@
 #define UNIT (1.0f / 128)
 #define CELL 8.0f
 #define SKIN 0.01f   /* how far a body rests from the ground (Box2D's polygon radius) */
+/* how near counts as just touching: a body resting SKIN from the ground is there only as closely as floats round, and
+ * the calculator rounds otherwise than a computer; within this it neither sinks into the ground's seams (where two of
+ * its pieces meet, every tile's edge) and stops against them, nor rests on the end of one beside it */
+#define TOUCH 0.001f
 
 typedef struct {
   int16_t x0, y0, x1, y1;   /* (1/128 unit) */
@@ -146,14 +150,27 @@ static int gather(float x0, float y0, float x1, float y1, uint8_t mask, Cand *ou
   if (ty0 < 0) ty0 = 0;
   if (tx1 >= g_tw) tx1 = g_tw - 1;
   if (ty1 >= g_th) ty1 = g_th - 1;
+  /* (each straight run of faces one segment, as the tilemap's edge colliders are chains: no corner inside a wall or a
+   * floor for a body sliding along it to catch on; the runs' ends out here, past where the box can reach) */
+  for (int tx = tx0; tx <= tx1; tx++)
+    for (int side = -1; side <= 1; side += 2) {   /* (left faces, right faces) */
+      float X = (float)(side < 0 ? tx : tx + 1);
+      for (int ty = ty0; ty <= ty1 && n < MAX_CAND; ty++) {
+        if (!phys_tile_solid(tx, ty) || phys_tile_solid(tx + side, ty)) continue;
+        int t0 = ty;
+        while (ty < ty1 && phys_tile_solid(tx, ty + 1) && !phys_tile_solid(tx + side, ty + 1)) ty++;
+        out[n++] = (Cand){X, (float)t0, X, (float)(ty + 1), 0};
+      }
+    }
   for (int ty = ty0; ty <= ty1; ty++)
-    for (int tx = tx0; tx <= tx1; tx++) {
-      if (!phys_tile_solid(tx, ty) || n > MAX_CAND - 4) continue;
-      float X = (float)tx, Y = (float)ty;
-      if (!phys_tile_solid(tx - 1, ty)) out[n++] = (Cand){X, Y, X, Y + 1, 0};
-      if (!phys_tile_solid(tx + 1, ty)) out[n++] = (Cand){X + 1, Y, X + 1, Y + 1, 0};
-      if (!phys_tile_solid(tx, ty - 1)) out[n++] = (Cand){X, Y, X + 1, Y, 0};
-      if (!phys_tile_solid(tx, ty + 1)) out[n++] = (Cand){X, Y + 1, X + 1, Y + 1, 0};
+    for (int side = -1; side <= 1; side += 2) {   /* (bottom faces, top faces) */
+      float Y = (float)(side < 0 ? ty : ty + 1);
+      for (int tx = tx0; tx <= tx1 && n < MAX_CAND; tx++) {
+        if (!phys_tile_solid(tx, ty) || phys_tile_solid(tx, ty + side)) continue;
+        int t0 = tx;
+        while (tx < tx1 && phys_tile_solid(tx + 1, ty) && !phys_tile_solid(tx + 1, ty + side)) tx++;
+        out[n++] = (Cand){(float)t0, Y, (float)(tx + 1), Y, 0};
+      }
     }
   return n;
 }
@@ -209,8 +226,10 @@ static bool box_seg(float cx, float cy, float hx, float hy, float dx, float dy, 
       if (out_hi < pen) pen = out_hi, pnx = ux, pny = uy;
     } else
       inside = false;
-    if (fabsf(v) < 1e-12f) {
-      if (c <= lo || c >= hi) return false;   /* never meet on this axis */
+    bool touching = c <= lo + TOUCH || c >= hi - TOUCH;
+    if (fabsf(v) < 1e-12f || (touching && fabsf(v) < TOUCH)) {
+      /* (still on this axis, or along it by less than TOUCH where it only touches: sliding along it) */
+      if (touching) return false;   /* never meet on this axis (touching at most) */
       continue;
     }
     float ta = (lo - c) / v, tb = (hi - c) / v;
@@ -239,7 +258,8 @@ static bool box_seg(float cx, float cy, float hx, float hy, float dx, float dy, 
 
 static void body_box(const Body *b, float *cx, float *cy) { *cx = b->x + b->ox, *cy = b->y + b->oy; }
 
-/* the colliders the box touches now, with a normal each (towards the box) */
+/* the colliders the box touches now, with a normal each (towards the box): those it rests against (no further than
+ * SKIN, as the steps leave it), not those it only passes near */
 static int touching(const Body *b, uint8_t mask, uint8_t *cols, float *nxs, float *nys, int max) {
   float cx, cy;
   body_box(b, &cx, &cy);
@@ -249,7 +269,7 @@ static int touching(const Body *b, uint8_t mask, uint8_t *cols, float *nxs, floa
   for (int k = 0; k < nc; k++) {
     const Cand *s = &cand[k];
     float toi, nx, ny, depth;
-    if (!box_seg(cx, cy, hx, hy, 0, 0, s, &toi, &nx, &ny, &depth)) continue;
+    if (!box_seg(cx, cy, hx, hy, 0, 0, s, &toi, &nx, &ny, &depth) || depth < SKIN - TOUCH) continue;
     int i = 0;
     while (i < n && cols[i] != s->col) i++;
     if (i < n) {
@@ -285,7 +305,7 @@ void body_step(Body *b, float dt) {
     body_box(b, &cx, &cy);
     float hx = b->hx + SKIN, hy = b->hy + SKIN;
     float bx0 = fminf(cx, cx + dx) - hx, bx1 = fmaxf(cx, cx + dx) + hx, by0 = fminf(cy, cy + dy) - hy, by1 = fmaxf(cy, cy + dy) + hy;
-    float best = 2, bnx = 0, bny = 0, deep = 0, dnx = 0, dny = 0;
+    float best = 2, bnx = 0, bny = 0, btop = 0, deep = 0, dnx = 0, dny = 0;
     int dcol = -1;
     bool caught = false;   /* (inside a collider whose sides push opposite ways: out of it whole) */
     Cand cand[MAX_CAND];
@@ -302,7 +322,7 @@ void body_step(Body *b, float dt) {
         continue;
       }
       if (nx * dx + ny * dy >= 0) continue;   /* moving away from it */
-      if (toi < best) best = toi, bnx = nx, bny = ny;
+      if (toi < best) best = toi, bnx = nx, bny = ny, btop = fmaxf(s->ay, s->by);
     }
 #ifdef HOST
     if (getenv("PHYSDBG")) fprintf(stderr, "it %d d %.4f,%.4f best %.3f n %.2f,%.2f deep %.4f dn %.2f,%.2f nc %d\n", it, dx, dy, best, bnx, bny, deep, dnx, dny, nc);
@@ -342,6 +362,13 @@ void body_step(Body *b, float dt) {
       break;
     }
     b->x += dx * best, b->y += dy * best;
+    /* (a side no higher above its feet than its skin: up onto it, as a box with Box2D's rounded corners rides over it) */
+    float lip = btop - (b->y + b->oy - b->hy);
+    if (fabsf(bnx) > 0.99f && b->gravity_scale > 0 && b->vy <= 0 && lip > -SKIN && lip <= SKIN) {
+      b->y += lip + SKIN;
+      left *= 1 - best;
+      continue;
+    }
     float vn = b->vx * bnx + b->vy * bny;
     if (vn < 0) b->vx -= vn * bnx, b->vy -= vn * bny;
     left *= 1 - best;

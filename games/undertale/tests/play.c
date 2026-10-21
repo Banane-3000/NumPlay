@@ -1,7 +1,7 @@
 /* Plays Undertale on a computer, with scripted keys, and saves frames.
  *
  *   play [--frames N] [--keys "10-40:right,50:z,..."] [--shots 30,60|all] [--out DIR] [--saves DIR]
- *        [--room N --at X,Y] [--name NAME] [--flag F=V]... [--gold N] [--battle ID] [--trace]
+ *        [--room N --at X,Y] [--name NAME] [--flag F=V]... [--gold N] [--item ID]... [--battle ID] [--trace]
  *
  * --path "x,y;x,y;z;w30;..." steers Frisk to each point in turn (holding arrows), presses Z ("z"), X ("x"),
  * waits ("wN": N frames) or mashes Z through talks ("talk": until no text or event is left), when the scripted
@@ -361,7 +361,7 @@ int main(int argc, char **argv) {
   const char *out = "build/play", *saves = NULL, *shots = "";
   int frames = 120, room = -1, ax = 0, ay = 0, battle = -1;
   const char *name = NULL;
-  int nflags = 0, fl[64][2], gold = -1;
+  int nflags = 0, fl[64][2], gold = -1, nitems_ = 0, items_[8];
   bool trace = false, coll = false, god = false;
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "--frames") && i + 1 < argc) frames = atoi(argv[++i]);
@@ -399,6 +399,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--noenc")) g_no_encounters = true;
     else if (!strcmp(argv[i], "--god")) god = true;
     else if (!strcmp(argv[i], "--gold") && i + 1 < argc) gold = atoi(argv[++i]);
+    else if (!strcmp(argv[i], "--item") && i + 1 < argc && nitems_ < 8) items_[nitems_++] = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--coll")) coll = true;
     else fprintf(stderr, "unknown option %s\n", argv[i]), exit(2);
   }
@@ -425,6 +426,7 @@ int main(int argc, char **argv) {
   }
   for (int i = 0; i < nflags; i++) set_flag(fl[i][0], fl[i][1]);
   if (gold >= 0) sv.gold = (uint16_t)gold;
+  for (int i = 0; i < nitems_; i++) item_add(items_[i]);
   if (battle >= 0) battle_start(battle);
   bool all = !strcmp(shots, "all");
   for (int f = 0; f < frames && g_running; f++) {

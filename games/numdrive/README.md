@@ -23,8 +23,9 @@ NumDrive is a Drive Mad style driving game for the NumWorks N0120 calculator.
 
 | Key | Action |
 | --- | --- |
-| Right arrow | Drive forward |
-| Left arrow | Brake and reverse |
+| Right arrow or 6 | Drive forward |
+| Left arrow or 4 | Brake and reverse |
+| An arrow and the other number | Both at once (the arrows can't be held together) |
 | OK or Back | Pause |
 | Arrows, then OK | Pick a button or a level |
 | Back on a card | Level list |

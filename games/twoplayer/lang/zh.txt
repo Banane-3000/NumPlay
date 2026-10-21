@@ -1,0 +1,33 @@
+# 2 Players in Chinese: the English text as in the source, a tab, the translation (see tools/lang.py).
+Pong	乒乓
+Air Hockey	桌上冰球
+Tanks	坦克大战
+Light Cycles	光速摩托
+Return the ball with your paddle: its middle sends the ball back straight, its ends at a steep angle. The longer a rally lasts, the faster the ball.	用球拍把球打回去：拍子中间把球直直打回，两端打出斜角。来回越久，球越快。
+Knock the puck into the other goal. Your mallet stays in your half; hit the puck on the move to send it flying.	把冰球打进对方球门。你的球槌只能在自己半场；边移动边击球，球就会飞出去。
+Drive through the maze and hit the other tank. Shells bounce off the walls: watch out for your own!	在迷宫里开坦克，击中对方。炮弹会在墙上反弹：小心别打到自己！
+Steer your light cycle and make the other one crash into a wall or a trail. It never stops and never turns back.	驾驶你的光速摩托，让对方撞上墙壁或光轨。摩托从不停下，也不能掉头。
+Computer	电脑
+Player 2	玩家 2
+You	你
+Player 1	玩家 1
+Computer: easy	电脑：简单
+Computer: normal	电脑：普通
+Computer: hard	电脑：困难
+2 Players	双人对战
+First to 	先得 
+Play	开始
+Draw!	平局！
+Resume	继续
+Restart	重新开始
+Other games	其他游戏
+Quit game	退出游戏
+Paused	暂停
+Player 1 wins!	玩家 1 获胜！
+Player 2 wins!	玩家 2 获胜！
+You win!	你赢了！
+The computer wins	电脑获胜
+Rematch	再来一局
+No	否
+Yes	是
+Quit game?	退出游戏？

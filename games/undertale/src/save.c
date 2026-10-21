@@ -13,7 +13,9 @@
 #define SAVE_NAME "undertale.sav"
 #define RESUME_NAME "utresume.sav"
 #define COPY_NAME "undertale_saves.py"
+#define CONFIG_NAME "utconfig.sav"
 #define MAGIC 0x31305455u   /* "UT01" */
+#define CONFIG_MAGIC 0x31435455u   /* "UTC1" */
 
 typedef struct {
   uint32_t magic;
@@ -21,10 +23,10 @@ typedef struct {
   Save s;
 } SaveFile;
 
-static const char *const kept[] = {SAVE_NAME, RESUME_NAME};
+static const char *const kept[] = {SAVE_NAME, RESUME_NAME, CONFIG_NAME};
 #define NKEPT (int)(sizeof kept / sizeof kept[0])
 static const char copy_head[] =
-  "# Undertale keeps a copy of your SAVE here, so that\n"
+  "# Undertale keeps a copy of your SAVE and settings here, so that\n"
   "# reinstalling it doesn't erase it. If you delete this file,\n"
   "# the game writes it again: your SAVE stays either way.\n";
 static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -168,4 +170,28 @@ bool save_resume_load(void) {
   g_mode = MODE_WORLD;
   world_enter(sv.room, sv.x, sv.y, DIR_DOWN);
   return true;
+}
+
+/* Settings: kept apart from the SAVE (a new game keeps them), as the game keeps its own */
+uint8_t g_walk_fast;
+typedef struct {
+  uint32_t magic;
+  uint8_t walk_fast, unused[3];
+} ConfigFile;
+
+void config_load(void) {
+  uint32_t len;
+  const uint8_t *d = plat_load(CONFIG_NAME, &len);
+  ConfigFile f;
+  if (!d || len != sizeof f) return;
+  memcpy(&f, d, sizeof f);
+  if (f.magic == CONFIG_MAGIC) g_walk_fast = f.walk_fast ? 1 : 0;
+}
+
+void config_save(void) {
+  ConfigFile f;
+  memset(&f, 0, sizeof f);
+  f.magic = CONFIG_MAGIC, f.walk_fast = g_walk_fast;
+  plat_save(CONFIG_NAME, &f, sizeof f);
+  copy_write();
 }

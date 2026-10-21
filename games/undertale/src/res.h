@@ -49,6 +49,7 @@ typedef struct {
   uint8_t area, flags;
   uint16_t name;            /* string: what SAVE shows */
   const uint8_t *ice;       /* the same bits for ice (Frisk slides), NULL none */
+  int16_t vx, vy, vw, vh;   /* what the camera keeps to: the game's room */
 } RoomInfo;
 #define ROOM_ICE 1
 void room_info(int room, RoomInfo *r);

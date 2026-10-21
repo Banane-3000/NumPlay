@@ -29,10 +29,9 @@ int soul_x(void) { return bt.sx / FX; }
 int soul_y(void) { return bt.sy / FX; }
 
 /* the SOUL: 8 x 8, moved inside the board by the arrows (X held: slower, as in the game) */
-/* the blue SOUL: it falls, and up jumps (higher while held), as the game's (halved) */
-static int32_t soul_vy;
-#define BLUE_JUMP (3 * FX)
-#define BLUE_GRAVITY 3          /* 1/16 px a frame, each frame */
+/* the blue SOUL: it falls, and up jumps, higher while held: the game's own steps, its speed in tenths of the
+ * game's pixels a frame (twice the board's here), what's left of a 1/16 pixel kept for the next frame */
+static int32_t soul_vy, soul_vy_rem;
 /* the purple SOUL: the string it's on; the strings, evenly down the board (pulled down, they come round again) */
 static int string_on;
 int32_t soul_strings_shift;
@@ -43,7 +42,7 @@ int soul_string_y(int i) {
 static uint32_t keys_before;
 void soul_set_mode(int mode) {
   bt.soul_mode = mode;
-  soul_vy = 0;
+  soul_vy = 0, soul_vy_rem = 0;
   string_on = NSTRINGS / 2, soul_strings_shift = 0;
   if (mode == SOUL_PURPLE) bt.sy = soul_string_y(string_on) * FX;
 }
@@ -90,15 +89,22 @@ void soul_update(uint32_t keys) {
   }
   if (bt.soul_mode == SOUL_BLUE) {
     bt.sx += dx * sp;
-    if (bt.sy >= y1) {
-      soul_vy = (keys & K_UP) ? -BLUE_JUMP : 0;
-    } else {
-      /* letting go of up cuts the jump short */
-      if (soul_vy < -FX / 2 && !(keys & K_UP)) soul_vy = -FX / 2;
-      soul_vy += BLUE_GRAVITY;
+    if (bt.sy >= y1 && soul_vy >= 0) {
+      /* on the floor: up jumps at 6 pixels a frame */
+      soul_vy = (keys & K_UP) ? -60 : 0, soul_vy_rem = 0;
     }
-    bt.sy += soul_vy;
-    if (bt.sy < y0) bt.sy = y0, soul_vy = 0;
+    if (bt.sy < y1 || soul_vy < 0) {
+      /* letting go of up cuts the jump short; then it slows, and falls faster and faster (to 8 a frame) */
+      if (!(keys & K_UP) && soul_vy <= -10) soul_vy = -10;
+      if (soul_vy > 5 && soul_vy < 80) soul_vy += 6;
+      else if (soul_vy > -10 && soul_vy <= 5) soul_vy += 2;
+      else if (soul_vy > -40 && soul_vy <= -10) soul_vy += 5;
+      else if (soul_vy <= -40) soul_vy += 2;
+    }
+    int32_t d = soul_vy * FX + soul_vy_rem;   /* (1/20 of a 1/16 pixel) */
+    bt.sy += d / 20, soul_vy_rem = d % 20;
+    if (bt.sy < y0) bt.sy = y0, soul_vy = 0, soul_vy_rem = 0;
+    if (bt.sy > y1) bt.sy = y1, soul_vy = 0, soul_vy_rem = 0;
   } else {
     bt.sx += dx * sp, bt.sy += dy * sp;
   }

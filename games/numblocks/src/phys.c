@@ -50,6 +50,9 @@ int block_boxes(int b, int x, int y, int z, int8_t (*o)[6]) {
     int lo = world_get(x, y - 1, z);
     if (blk_model[lo] == M_DOOR && lo != B_DOOR_OAK_UPPER) b = lo;
   }
+#if NB_DIMS
+  if (b == B_IRON_DOOR_UPPER && is_iron_door(world_get(x, y - 1, z))) b = world_get(x, y - 1, z);
+#endif
   int n = blk_nbox[b];
   memcpy(o, blk_box[b], (size_t)n * 6);
   return n;
@@ -85,6 +88,12 @@ void select_box(int b, int x, int y, int z, float *o) {
 static int block_cboxes(int x, int y, int z, float *b) {
   int s = world_get(x, y, z);
   if (!(blk_flags[s] & BF_SOLID)) return 0;
+#if NB_DIMS
+  if (s == B_SOUL_SAND) {   /* (BlockSoulSand.getCollisionBoundingBox) */
+    b[0] = (float)x, b[1] = (float)y, b[2] = (float)z, b[3] = x + 1.0f, b[4] = y + 0.875f, b[5] = z + 1.0f;
+    return 1;
+  }
+#endif
   int8_t bx[5][6];
   int n = block_boxes(s, x, y, z, bx);
   if (!n) {

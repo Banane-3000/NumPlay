@@ -202,7 +202,7 @@ void spell_update(void) {
   }
 }
 
-/* the FSM's global events: the Knight hit (Cancel All), leaving the room (Cancel Some) */
+/* the FSM's FSM CANCEL (and the Knight's death): its focus or spell stopped */
 void spell_cancel(void) {
   if (sp.state == SP_INACTIVE) return;
   bool focusing = sp.state >= SP_FOCUS_START && sp.state <= SP_FOCUS_CANCEL;
@@ -218,6 +218,16 @@ void spell_cancel(void) {
     hero_start_anim_control();
     hero_gravity(true);
   }
+}
+
+/* its global events as the Knight is hit (Reset Cam Zoom, Cancel All) or leaves the room (Cancel Some): the same, then,
+ * whatever it was doing (their Can Cancel test is switched off), RegainControl, StartAnimationControl and
+ * AffectedByGravity: what a door, a script or anything else took from him, he has again in the next room */
+void spell_cancel_regain(void) {
+  spell_cancel();
+  hero_regain_control();
+  hero_start_anim_control();
+  hero_gravity(true);
 }
 
 bool spell_busy(void) { return sp.state != SP_INACTIVE && sp.state != SP_BUTTON_DOWN; }
