@@ -5,7 +5,7 @@
 <h1 align="center">NumPlay</h1>
 
 <p align="center">
-  <b>27 free games for your NumWorks calculator, in one app.</b><br>
+  <b>28 free games for your NumWorks calculator, in one app.</b><br>
   Plus 16 big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
 </p>
 
@@ -45,32 +45,33 @@ All of these come in one app, **NumPlay.nwa**.
   <tr>
     <td align="center"><a href="games/buckshot/README.md"><img src="docs/media/thumb_buckshot.png" width="120" alt="Buckshot Roulette"><br><b>Buckshot Roulette</b></a></td>
     <td align="center"><a href="games/blockblast/README.md"><img src="docs/media/thumb_blockblast.png" width="120" alt="Block Blast"><br><b>Block Blast</b></a></td>
+    <td align="center"><a href="games/suika/README.md"><img src="docs/media/thumb_suika.png" width="120" alt="Suika Game"><br><b>Suika Game</b></a></td>
     <td align="center"><a href="games/portal/README.md"><img src="docs/media/thumb_portal.png" width="120" alt="Portal Returns"><br><b>Portal Returns</b></a></td>
     <td align="center"><a href="games/tetris/README.md"><img src="docs/media/thumb_tetris.png" width="120" alt="Tetris"><br><b>Tetris</b></a></td>
-    <td align="center"><a href="games/dinorun/README.md"><img src="docs/media/thumb_dinorun.png" width="120" alt="Chrome Dino"><br><b>Chrome Dino</b></a></td>
   </tr>
   <tr>
+    <td align="center"><a href="games/dinorun/README.md"><img src="docs/media/thumb_dinorun.png" width="120" alt="Chrome Dino"><br><b>Chrome Dino</b></a></td>
     <td align="center"><a href="games/doodlejump/README.md"><img src="docs/media/thumb_doodlejump.png" width="120" alt="Doodle Jump"><br><b>Doodle Jump</b></a></td>
     <td align="center"><a href="games/chess/README.md"><img src="docs/media/thumb_chess.png" width="120" alt="Chess"><br><b>Chess</b></a></td>
     <td align="center"><a href="games/flappybird/README.md"><img src="docs/media/thumb_flappybird.png" width="120" alt="Flappy Bird"><br><b>Flappy Bird</b></a></td>
     <td align="center"><a href="games/flappydunk/README.md"><img src="docs/media/thumb_flappydunk.png" width="120" alt="Flappy Dunk"><br><b>Flappy Dunk</b></a></td>
-    <td align="center"><a href="games/towerblock/README.md"><img src="docs/media/thumb_towerblock.png" width="120" alt="Tower Blocks"><br><b>Tower Blocks</b></a></td>
   </tr>
   <tr>
+    <td align="center"><a href="games/towerblock/README.md"><img src="docs/media/thumb_towerblock.png" width="120" alt="Tower Blocks"><br><b>Tower Blocks</b></a></td>
     <td align="center"><a href="games/pacman/README.md"><img src="docs/media/thumb_pacman.png" width="120" alt="Pac-Man"><br><b>Pac-Man</b></a></td>
     <td align="center"><a href="games/snake/README.md"><img src="docs/media/thumb_snake.png" width="120" alt="Snake"><br><b>Snake</b></a></td>
     <td align="center"><a href="games/connectfour/README.md"><img src="docs/media/thumb_connectfour.png" width="120" alt="Connect Four"><br><b>Connect Four</b></a></td>
     <td align="center"><a href="games/solitaire/README.md"><img src="docs/media/thumb_solitaire.png" width="120" alt="Solitaire"><br><b>Solitaire</b></a></td>
-    <td align="center"><a href="games/g2048/README.md"><img src="docs/media/thumb_g2048.png" width="120" alt="2048"><br><b>2048</b></a></td>
   </tr>
   <tr>
+    <td align="center"><a href="games/g2048/README.md"><img src="docs/media/thumb_g2048.png" width="120" alt="2048"><br><b>2048</b></a></td>
     <td align="center"><a href="games/minesweeper/README.md"><img src="docs/media/thumb_minesweeper.png" width="120" alt="Minesweeper"><br><b>Minesweeper</b></a></td>
     <td align="center"><a href="games/breakout/README.md"><img src="docs/media/thumb_breakout.png" width="120" alt="Block Breaker"><br><b>Block Breaker</b></a></td>
     <td align="center"><a href="games/twoplayer/README.md"><img src="docs/media/thumb_twoplayer.png" width="120" alt="2 Players"><br><b>2 Players</b></a></td>
     <td align="center"><a href="games/invaders/README.md"><img src="docs/media/thumb_invaders.png" width="120" alt="Space Invaders"><br><b>Space Invaders</b></a></td>
-    <td align="center"><a href="games/sudoku/README.md"><img src="docs/media/thumb_sudoku.png" width="120" alt="Sudoku"><br><b>Sudoku</b></a></td>
   </tr>
   <tr>
+    <td align="center"><a href="games/sudoku/README.md"><img src="docs/media/thumb_sudoku.png" width="120" alt="Sudoku"><br><b>Sudoku</b></a></td>
     <td align="center"><a href="games/uttt/README.md"><img src="docs/media/thumb_uttt.png" width="120" alt="Ultimate Tic-Tac-Toe"><br><b>Ultimate Tic-Tac-Toe</b></a></td>
     <td align="center"><a href="games/sokoban/README.md"><img src="docs/media/thumb_sokoban.png" width="120" alt="Sokoban"><br><b>Sokoban</b></a></td>
   </tr>
@@ -140,7 +141,7 @@ You need your calculator, its USB cable, and a computer with **Google Chrome** o
 | --- | --- | --- |
 | N0120 | Epsilon 23.2 or newer (the calculator's own software) | Everything |
 | N0110, N0115 | Epsilon 23.2 or newer | Everything. These models are about 2.5 times slower, so the big games show fewer frames per second, but they keep their speed. |
-| N0110, N0115 | Upsilon | NumPlay-Upsilon.nwa: 22 games (see Other versions) |
+| N0110, N0115 | Upsilon | NumPlay-Upsilon.nwa: 23 games (see Other versions) |
 | Any | Custom software built from Epsilon 25.2's source | Everything. These builds can give apps less memory (133 KB): on one that gives even less, a game that needs more says how much on its card. |
 
 To see your calculator's model and software, open **Settings**, then **About**. To update the software, go to [my.numworks.com](https://my.numworks.com) with the calculator plugged in.
@@ -156,7 +157,7 @@ To see your calculator's model and software, open **Settings**, then **About**. 
 | [NumPlay-Matrices.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay-Matrices.nwa) | The same app, in disguise: it looks like a math app called **Matrices**. |
 | [NumPlay-French.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay-French.nwa) | NumPlay en français : tous les jeux, en français. |
 | [NumPlay-Chinese.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay-Chinese.nwa) | NumPlay 中文版：所有游戏，简体中文。 |
-| [NumPlay-Upsilon.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay-Upsilon.nwa) | For calculators running **Upsilon**: the 22 games that fit in the memory it gives apps. |
+| [NumPlay-Upsilon.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay-Upsilon.nwa) | For calculators running **Upsilon**: the 23 games that fit in the memory it gives apps. |
 
 <img src="docs/media/home_invisible.png" width="240" alt="The home screen with NumPlay-Invisible: the spot after Settings looks empty"> <img src="docs/media/home_matrices.png" width="240" alt="The home screen with NumPlay-Matrices among the calculator's own apps">
 
@@ -238,6 +239,7 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [x] Ultimate Tic-Tac-Toe
 - [x] Super Mario 64, in a repository of its own: [NumWorks-Super-Mario-64](https://github.com/Mason363/NumWorks-Super-Mario-64)
 - [x] The Nether and the End in NumBlocks: portals, fortresses, strongholds and the Ender Dragon, in NumBlocks.nwa
+- [x] Suika Game
 - [ ] Full Minecraft 1.18.2 as a standalone app
 - [ ] A customizer website: pick the games you want in your launcher, with Enlarged Extra Apps support to fit several big games, or big and small ones together
 - [ ] [Retro-Go](https://github.com/ducalex/retro-go) for Game Boy, NES and more: upload your own ROMs on the website and get a .nwa app that plays them
@@ -252,6 +254,7 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] A PICO-8 emulator: add your own .p8 games on the website
 - [ ] Hades
 - [ ] Super Smash Bros
+- [ ] Rocket League
 
 ## Credits
 
@@ -265,6 +268,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 - **Flappy Dunk** by Voodoo (made with Acid Cousins) inspired NumPlay's Flappy Dunk, written in C for NumPlay with no code or art from it. Its physics and hoops follow the numbers in the game's Android build. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. Not affiliated with Voodoo.
 - **Tower Blocks** by [Steve Gardner](https://codepen.io/ste-vg/pen/ppLQNW) (MIT License) is ported to C for NumPlay from its source: its sizes, speeds, colours, light and camera are the original's. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay.
 - **Doodle Jump** by Lima Sky inspired NumPlay's Doodle Jump, written in C for NumPlay with no code or art from it, drawn in its style on its own page size. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. Not affiliated with Lima Sky.
+- **Suika Game** by Aladdin X inspired NumPlay's Suika Game, written in C for NumPlay with no code or art from it. Its fruit sizes, colours, speeds and timings were measured on the Switch version, with the sizes checked against [kairess/suika-game](https://github.com/kairess/suika-game). **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. Not affiliated with Aladdin X.
 - Snake, Solitaire and Block Breaker look and play like **Google's games** in Search. They are drawn from scratch; nothing is taken from Google.
 - **Chrome's dinosaur game** by Google inspired Chrome Dino, which ports its rules, numbers and pictures from [Chromium's source](https://chromium.googlesource.com/chromium/src/+/main/components/neterror/resources/dino_game/) (BSD license). **[LilyTheCatgirl](https://github.com/LilyTheCuteCatgirl)** brought it to NumPlay, and also made the live emulator (`tools/emulator.py`) and the builder (`tools/build.py`). Not affiliated with Google.
 - **[gd3ds](https://github.com/AleFunky/gd3ds)** by AleFunky and friends, whose research into Geometry Dash made NumDash possible. Clubstep, Deadlocked and Dash also rely on [gdsolver](https://github.com/gdsolver/gdsolver)'s measurements of Geometry Dash 2.2, level data from [gmdkit](https://github.com/UHDanke/gmdkit) by HDanke and checks against [GDRWeb](https://github.com/iliasHDZ/GDRWeb) by IliasHDZ.
@@ -307,16 +311,11 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 
 NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyright (c) 2026 Mason Chen. Code and fonts from others keep their own licenses: the `UNLICENSE` files in the games' folders and the [LICENSES](LICENSES) folder. The names, artwork and music of the games NumPlay is inspired by belong to their makers and are not covered by it.
 
-<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Voodoo (Flappy Dunk), Lima Sky (Doodle Jump), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Halfbrick (Jetpack Joyride), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Chrome Dino, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Chrome of Google LLC, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog of SEGA and Space Invaders of Taito.</sub>
+<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Aladdin X (Suika Game), Voodoo (Flappy Dunk), Lima Sky (Doodle Jump), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Halfbrick (Jetpack Joyride), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Chrome Dino, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Chrome of Google LLC, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog of SEGA and Space Invaders of Taito.</sub>
 
 ## Gallery
 
 <table>
-  <tr>
-    <td align="center" width="33%"><img src="docs/media/gallery/numdash.gif" width="100%" alt="NumDash on a real NumWorks calculator"><br><a href="games/numdash/README.md"><b>NumDash</b></a></td>
-    <td align="center" width="33%"><img src="docs/media/gallery/crossyroad.gif" width="100%" alt="Crossy Road on a real NumWorks calculator"><br><a href="games/crossyroad/README.md"><b>Crossy Road</b></a></td>
-    <td align="center" width="33%"><img src="docs/media/gallery/numblocks.gif" width="100%" alt="NumBlocks: lighting TNT and blowing a crater in the ground"><br><a href="games/numblocks/README.md"><b>NumBlocks</b></a></td>
-  </tr>
   <tr>
     <td align="center"><img src="docs/media/gallery/numblocks_real.gif" alt="NumBlocks on a real NumWorks calculator, walking past trees and a sheep"><br><a href="games/numblocks/README.md"><b>NumBlocks</b></a></td>
     <td align="center"><img src="docs/media/gallery/numdrive.gif" alt="NumDrive on a real NumWorks calculator: a monster truck jumps off a ramp"><br><a href="games/numdrive/README.md"><b>NumDrive</b></a></td>
@@ -325,66 +324,69 @@ NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyri
   <tr>
     <td align="center"><img src="docs/media/gallery/buckshot.gif" alt="Buckshot Roulette on a real NumWorks calculator: picking up the shotgun"><br><a href="games/buckshot/README.md"><b>Buckshot Roulette</b></a></td>
     <td align="center"><img src="docs/media/gallery/blockblast.gif" alt="Block Blast: two rows clear for Good!, then a combo of 3"><br><a href="games/blockblast/README.md"><b>Block Blast</b></a></td>
-    <td align="center"><img src="docs/media/gallery/portal.gif" alt="Portal Returns: jumping through portals in a test chamber"><br><a href="games/portal/README.md"><b>Portal Returns</b></a></td>
+    <td align="center"><img src="docs/media/gallery/suika.gif" alt="Suika Game: fruit dropped into the box, two melons join and a pineapple appears"><br><a href="games/suika/README.md"><b>Suika Game</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/portal.gif" alt="Portal Returns: jumping through portals in a test chamber"><br><a href="games/portal/README.md"><b>Portal Returns</b></a></td>
     <td align="center"><img src="docs/media/gallery/tetris.gif" alt="Tetris on a real NumWorks calculator: pieces drop and a line clears"><br><a href="games/tetris/README.md"><b>Tetris</b></a></td>
     <td align="center"><img src="docs/media/gallery/dinorun.gif" alt="Chrome Dino: jumping over cacti, then night falls and a pterodactyl flies by"><br><a href="games/dinorun/README.md"><b>Chrome Dino</b></a></td>
-    <td align="center"><img src="docs/media/gallery/chess.gif" alt="Chess: the opening moves of a game against a bot"><br><a href="games/chess/README.md"><b>Chess</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/chess.gif" alt="Chess: the opening moves of a game against a bot"><br><a href="games/chess/README.md"><b>Chess</b></a></td>
     <td align="center"><img src="docs/media/gallery/flappybird.gif" alt="Flappy Bird: flapping through the pipes"><br><a href="games/flappybird/README.md"><b>Flappy Bird</b></a></td>
     <td align="center"><img src="docs/media/gallery/pacman.gif" alt="Pac-Man: eating dots in the maze"><br><a href="games/pacman/README.md"><b>Pac-Man</b></a></td>
-    <td align="center"><img src="docs/media/gallery/snake.gif" alt="Snake: the snake eats apples and grows"><br><a href="games/snake/README.md"><b>Snake</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/snake.gif" alt="Snake: the snake eats apples and grows"><br><a href="games/snake/README.md"><b>Snake</b></a></td>
     <td align="center"><img src="docs/media/gallery/connectfour.gif" alt="Connect Four: winning a round against the computer"><br><a href="games/connectfour/README.md"><b>Connect Four</b></a></td>
     <td align="center"><img src="docs/media/gallery/solitaire.gif" alt="Solitaire: moving cards between the columns"><br><a href="games/solitaire/README.md"><b>Solitaire</b></a></td>
-    <td align="center"><img src="docs/media/gallery/g2048.gif" alt="2048: sliding and merging tiles up to 128"><br><a href="games/g2048/README.md"><b>2048</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/g2048.gif" alt="2048: sliding and merging tiles up to 128"><br><a href="games/g2048/README.md"><b>2048</b></a></td>
     <td align="center"><img src="docs/media/gallery/minesweeper.gif" alt="Minesweeper: opening the field, flagging the mines and winning"><br><a href="games/minesweeper/README.md"><b>Minesweeper</b></a></td>
     <td align="center"><img src="docs/media/gallery/breakout.gif" alt="Block Breaker: the ball breaks bricks"><br><a href="games/breakout/README.md"><b>Block Breaker</b></a></td>
-    <td align="center"><img src="docs/media/gallery/numvisuals.gif" alt="NumVisuals: moving backgrounds, from northern lights to a lava lamp"><br><a href="games/numvisuals/README.md"><b>NumVisuals</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/numvisuals.gif" alt="NumVisuals: moving backgrounds, from northern lights to a lava lamp"><br><a href="games/numvisuals/README.md"><b>NumVisuals</b></a></td>
     <td align="center"><img src="docs/media/gallery/numpowder.gif" alt="NumPowder: water floods the sand, then lava pours in and boils it"><br><a href="games/numpowder/README.md"><b>NumPowder</b></a></td>
     <td align="center"><img src="docs/media/gallery/finalearth2.gif" alt="The Final Earth 2: building a house in a city on a floating island"><br><a href="games/finalearth2/README.md"><b>The Final Earth 2</b></a></td>
-    <td align="center"><img src="docs/media/gallery/hollowknight.gif" alt="Hollow Knight: fighting the False Knight and Hornet"><br><a href="games/hollowknight/README.md"><b>Hollow Knight</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/hollowknight.gif" alt="Hollow Knight: fighting the False Knight and Hornet"><br><a href="games/hollowknight/README.md"><b>Hollow Knight</b></a></td>
     <td align="center"><img src="docs/media/gallery/celeste.gif" alt="Celeste on a real NumWorks calculator: Madeline climbs the first level"><br><a href="games/celeste/README.md"><b>Celeste</b></a></td>
     <td align="center"><img src="docs/media/gallery/championisland.gif" alt="Champion Island: climbing, artistic swimming and the marathon"><br><a href="games/championisland/README.md"><b>Champion Island</b></a></td>
-    <td align="center"><img src="docs/media/gallery/undertale.gif" alt="Undertale: Flowey's friendliness pellets, Toriel's tile puzzle and her fire"><br><a href="games/undertale/README.md"><b>Undertale</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/undertale.gif" alt="Undertale: Flowey's friendliness pellets, Toriel's tile puzzle and her fire"><br><a href="games/undertale/README.md"><b>Undertale</b></a></td>
     <td align="center"><img src="docs/media/gallery/doom.gif" alt="Doom: imps down a corridor of Phobos Lab, then zombiemen around the yellow key"><br><a href="games/doom/README.md"><b>Doom</b></a></td>
     <td align="center"><img src="docs/media/gallery/isaac.gif" alt="The Binding of Isaac: a room of the Basement, then Monstro"><br><a href="games/isaac/README.md"><b>The Binding of Isaac</b></a></td>
-    <td align="center"><img src="docs/media/gallery/pvz.gif" alt="Plants vs. Zombies: the front lawn, the pool and Dr. Zomboss"><br><a href="games/pvz/README.md"><b>Plants vs. Zombies</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/pvz.gif" alt="Plants vs. Zombies: the front lawn, the pool and Dr. Zomboss"><br><a href="games/pvz/README.md"><b>Plants vs. Zombies</b></a></td>
     <td align="center"><img src="docs/media/gallery/fnaf.gif" alt="Five Nights at Freddy's: the office, Bonnie at the left door, the door comes down"><br><a href="games/fnaf/README.md"><b>Five Nights at Freddy's</b></a></td>
     <td align="center"><img src="docs/media/gallery/sonic.gif" alt="Sonic the Hedgehog: the title, Green Hill, Marble, Spring Yard and a Special Stage"><br><a href="games/sonic/README.md"><b>Sonic the Hedgehog</b></a></td>
-    <td align="center"><img src="docs/media/gallery/subway.gif" alt="Subway Surfers: the title, running between trains, then the jetpack"><br><a href="games/subway/README.md"><b>Subway Surfers</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/subway.gif" alt="Subway Surfers: the title, running between trains, then the jetpack"><br><a href="games/subway/README.md"><b>Subway Surfers</b></a></td>
     <td align="center"><img src="docs/media/gallery/hillclimb.gif" alt="Hill Climb Racing: a rope bridge on the Countryside, then the Forest's pine trees"><br><a href="games/hillclimb/README.md"><b>Hill Climb Racing</b></a></td>
     <td align="center"><img src="docs/media/gallery/leveldevil.gif" alt="Level Devil: platforms give way, a saw comes out of the floor, the ice slides the runner onto a spring, gravity flips past the saws"><br><a href="games/leveldevil/README.md"><b>Level Devil</b></a></td>
-    <td align="center"><img src="docs/media/gallery/twoplayer.gif" alt="2 Players: Pong, Air Hockey, Tanks and Light Cycles against the computer"><br><a href="games/twoplayer/README.md"><b>2 Players</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/twoplayer.gif" alt="2 Players: Pong, Air Hockey, Tanks and Light Cycles against the computer"><br><a href="games/twoplayer/README.md"><b>2 Players</b></a></td>
     <td align="center"><img src="docs/media/gallery/cookieclicker.gif" alt="Cookie Clicker: a golden cookie caught for a Frenzy, the store's upgrades, then an ascension: the cookie bursts and the heavens open"><br><a href="games/cookieclicker/README.md"><b>Cookie Clicker</b></a></td>
     <td align="center"><img src="docs/media/gallery/invaders.gif" alt="Space Invaders: the rack marches down, the saucer is hit for 100"><br><a href="games/invaders/README.md"><b>Space Invaders</b></a></td>
-    <td align="center"><img src="docs/media/gallery/sudoku.gif" alt="Sudoku: notes in two cells, a mistake undone, then hints"><br><a href="games/sudoku/README.md"><b>Sudoku</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/sudoku.gif" alt="Sudoku: notes in two cells, a mistake undone, then hints"><br><a href="games/sudoku/README.md"><b>Sudoku</b></a></td>
     <td align="center"><img src="docs/media/gallery/uttt.gif" alt="Ultimate Tic-Tac-Toe: a game against the computer, which wins the middle board"><br><a href="games/uttt/README.md"><b>Ultimate Tic-Tac-Toe</b></a></td>
     <td align="center"><img src="docs/media/gallery/sokoban.gif" alt="Sokoban: Microban's ninth level, pushed through to its goals"><br><a href="games/sokoban/README.md"><b>Sokoban</b></a></td>
-    <td align="center"><img src="docs/media/gallery/flappydunk.gif" alt="Flappy Dunk: swishes in a row, the ball on fire"><br><a href="games/flappydunk/README.md"><b>Flappy Dunk</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/flappydunk.gif" alt="Flappy Dunk: swishes in a row, the ball on fire"><br><a href="games/flappydunk/README.md"><b>Flappy Dunk</b></a></td>
     <td align="center"><img src="docs/media/gallery/towerblock.gif" alt="Tower Blocks: blocks dropped on the tower, the overhangs falling away"><br><a href="games/towerblock/README.md"><b>Tower Blocks</b></a></td>
     <td align="center"><img src="docs/media/gallery/doodlejump.gif" alt="Doodle Jump: the doodler climbs past blue platforms and a monster"><br><a href="games/doodlejump/README.md"><b>Doodle Jump</b></a></td>
+  </tr>
+  <tr>
     <td align="center"><img src="docs/media/jetpackjoyride.gif" alt="Jetpack Joyride: lasers, a missile, then the Lil' Stomper"><br><a href="games/jetpackjoyride/README.md"><b>Jetpack Joyride</b></a></td>
   </tr>
 </table>
