@@ -76,6 +76,7 @@ jobs:
           make -C games/uttt host test
           make -C games/sokoban host test
           make -C games/flappydunk host test
+          make -C games/towerblock host test
 
 
 
