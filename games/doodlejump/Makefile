@@ -1,51 +1,83 @@
-# Doodle Jump: English-only app and NumPlay module.
+# Doodle Jump: bounce from platform to platform, as high as you can.
+#   make          build output/doodlejump.nwa
+#   make check    link the app like the calculator does (output/doodlejump.bin)
+#
+# In NumPlay the game draws with the launcher's strips, shapes and fonts and saves through its
+# file functions (module.o leaves them to the launcher); on its own it brings them along.
+Q ?= @
 CC = arm-none-eabi-gcc
 NWLINK ?= npx --yes -- nwlink@1.0.0
-PYTHON ?= python3
-ARM_LD ?= arm-none-eabi-ld
-OBJCOPY = arm-none-eabi-objcopy
-PACKER = tools/compact_nwa.py tools/standalone.ld
-SRC = src/main.c src/physics.c src/save.c src/render.c
-HEADERS = $(wildcard src/*.h) ../common/epsilon_app.h ../common/epsilon_files.h
-OBJECTS = $(patsubst src/%.c,output/%.o,$(SRC))
-CFLAGS = -std=c11 $(shell $(NWLINK) eadk-cflags-device) -Os -Wall -Wextra -Werror
-CFLAGS += -fno-math-errno -fsingle-precision-constant -ffunction-sections -fdata-sections -fstack-usage
-CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fvisibility=internal
-LINK = -nostartfiles --specs=nano.specs -Wl,--relocatable,--gc-sections,-e,main -flinker-output=nolto-rel
+BUILD_DIR = output
+SRC = src/main.c
+HEADERS = ../common/epsilon_app.h ../common/epsilon_files.h ../common/np_text.h ../../launcher/src/gfx.h \
+  ../../launcher/src/np.h ../../launcher/src/font.h
 
-.PHONY: build check module sim-module test clean
-build: output/doodlejump.nwa
-output/%.o: src/%.c $(HEADERS) | output
-	$(CC) $(CFLAGS) -c $< -o $@
-output/icon.o: src/icon.png | output
-	$(NWLINK) png-icon-o $< $@
-output/icon-compact.o: output/icon.o $(PACKER)
-	$(PYTHON) tools/compact_nwa.py icon $< $@ --objcopy $(OBJCOPY)
-output/doodlejump-debug.nwa: $(OBJECTS) output/icon-compact.o $(PACKER)
-	$(CC) $(CFLAGS) $(LINK) -Wl,-u,eadk_app_name,-u,eadk_app_icon,-u,eadk_api_level $(OBJECTS) output/icon-compact.o -lm -o output/standalone.o
-	$(PYTHON) tools/compact_nwa.py app output/standalone.o $@ --ld $(ARM_LD)
-output/doodlejump.nwa: output/doodlejump-debug.nwa $(PACKER)
-	$(PYTHON) tools/compact_nwa.py release $< $@ --objcopy $(OBJCOPY)
-module: output/module.o
-output/module.o: $(OBJECTS)
-	$(CC) $(CFLAGS) $(LINK) $^ -lm -o $@
-check: build
-	$(NWLINK) nwa-bin output/doodlejump.nwa output/doodlejump.bin --ram-length 107674
-	$(NWLINK) nwa-bin output/doodlejump-debug.nwa output/doodlejump-debug.bin --ram-length 107674
-	$(PYTHON) -c "from pathlib import Path; assert Path('output/doodlejump.bin').read_bytes() == Path('output/doodlejump-debug.bin').read_bytes(), 'Release compaction changed installed bytes'"
-output:
-	mkdir -p $@
-test: | output
-	$(PYTHON) tests/test_compact_nwa.py
-	$(HOST_CC) -std=c11 -O2 -Wall -Wextra -Werror -Isrc tests/test.c src/physics.c src/save.c src/render.c -lm -o output/test
-	cd output && ./test
-HOST_CC ?= cc
-sim-module: | output
-	mkdir -p output/sim
-	cc -std=c11 -O2 -fPIC $(shell $(NWLINK) eadk-cflags-simulator) -Dmain=np_doodlejump_main -c src/main.c -o output/sim/main.o
-	cc -std=c11 -O2 -fPIC -c src/physics.c -o output/sim/physics.o
-	cc -std=c11 -O2 -fPIC -c src/save.c -o output/sim/save.o
-	cc -std=c11 -O2 -fPIC -c src/render.c -o output/sim/render.o
-	ld -r output/sim/*.o -exported_symbol _np_doodlejump_main -o output/sim-module.o
+CFLAGS = -std=c11 $(shell $(NWLINK) eadk-cflags-device)
+CFLAGS += -Os -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant
+CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fwhole-program -fvisibility=internal
+LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
+LDFLAGS += -Wl,-e,main -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
+LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
+
+.PHONY: build check clean
+build: $(BUILD_DIR)/doodlejump.nwa
+
+check: $(BUILD_DIR)/doodlejump.nwa
+	$(Q) $(NWLINK) nwa-bin $< $(BUILD_DIR)/doodlejump.bin
+	@echo "BIN     $(BUILD_DIR)/doodlejump.bin: $$(wc -c < $(BUILD_DIR)/doodlejump.bin) bytes"
+
+# compiled, then linked (the link options would upset the compiler)
+$(BUILD_DIR)/main.o: $(SRC) $(HEADERS) | $(BUILD_DIR)
+	@echo "CC      $<"
+	$(Q) $(CC) $(CFLAGS) -c $(SRC) -o $@
+$(BUILD_DIR)/gfx.o: ../../launcher/src/gfx.c $(HEADERS) | $(BUILD_DIR)
+	$(Q) $(CC) $(CFLAGS) -c $< -o $@
+$(BUILD_DIR)/font_data.o: ../../launcher/src/font_data.c ../../launcher/src/font.h | $(BUILD_DIR)
+	$(Q) $(CC) $(CFLAGS) -c $< -o $@
+$(BUILD_DIR)/xfont.o: ../../launcher/src/xfont.c ../../launcher/src/np_xfont.h $(HEADERS) | $(BUILD_DIR)
+	$(Q) $(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/doodlejump.nwa: $(BUILD_DIR)/main.o $(BUILD_DIR)/gfx.o $(BUILD_DIR)/font_data.o $(BUILD_DIR)/xfont.o \
+  $(BUILD_DIR)/icon.o
+	@echo "LD      $@"
+	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+	$(Q) arm-none-eabi-strip --strip-unneeded $@
+
+$(BUILD_DIR)/icon.o: src/icon.png | $(BUILD_DIR)
+	@echo "ICON    $<"
+	$(Q) $(NWLINK) png-icon-o $< $@
+
+$(BUILD_DIR):
+	$(Q) mkdir -p $@
+
 clean:
-	rm -rf output
+	$(Q) rm -rf $(BUILD_DIR)
+
+# NumPlay launcher: the app as a module (see ../../tools/npmodule.py) for the
+# calculator, and as a relocatable object for the simulator build.
+.PHONY: module sim-module
+module: $(BUILD_DIR)/module.o
+$(BUILD_DIR)/module-main.o: $(SRC) $(HEADERS) | $(BUILD_DIR)
+	$(Q) $(CC) $(CFLAGS) -DNP_MODULE=1 -c $(SRC) -o $@
+$(BUILD_DIR)/module.o: $(BUILD_DIR)/module-main.o
+	$(Q) $(CC) $(CFLAGS) -Wl,--relocatable -nostartfiles -nostdlib -Wl,-e,main -flinker-output=nolto-rel $< -o $@
+
+sim-module: $(BUILD_DIR)/sim-module.o
+$(BUILD_DIR)/sim-module.o: $(SRC) $(HEADERS) | $(BUILD_DIR)
+	$(Q) mkdir -p $(BUILD_DIR)/sim
+	$(Q) cc -std=c11 -O2 -fPIC $(shell $(NWLINK) eadk-cflags-simulator) -DNP_MODULE=1 -Dmain=np_doodlejump_main \
+	  -c $(SRC) -o $(BUILD_DIR)/sim/main.o
+	$(Q) ld -r $(BUILD_DIR)/sim/main.o -exported_symbol _np_doodlejump_main -o $@
+
+# on a computer, with the sanitizers: a bot climbs 300 times (tests/play.c)
+HOST_FLAGS = -std=gnu11 -O1 -g -Wall -Wextra -Wno-unused-parameter -DPLATFORM_DEVICE=1 -DHOST \
+  $(shell $(NWLINK) eadk-cflags-simulator) -fsanitize=address,undefined -fno-sanitize-recover=undefined
+.PHONY: host test
+host: build/play
+build/play: $(SRC) tests/play.c $(HEADERS)
+	$(Q) mkdir -p build
+	$(Q) cc $(HOST_FLAGS) tests/play.c ../../launcher/src/gfx.c ../../launcher/src/font_data.c \
+	  ../../launcher/src/xfont.c -lm -o $@
+	@echo "HOST    $@"
+test: build/play
+	build/play test
