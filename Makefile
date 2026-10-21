@@ -24,7 +24,7 @@ RAM_LIMIT = 148928
 # custom builds of Epsilon 25.2's source give apps less: 133652 bytes; every game fits there too, in NumPlay and on
 # its own (their big buffers are on the stack, 32 KB apart from that RAM, or in the RAM the software has left)
 CUSTOM_RAM = 133652
-BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook DonkeyKong
+BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook DonkeyKong Dune
 # the calculator's space for installed apps (0x90200000 to 0x903F0000 in its flash)
 APP_SPACE = 2031616
 # Upsilon, the N0110 and N0115's custom software, gives .nwa apps less RAM: NumPlay-Upsilon.nwa has
@@ -253,6 +253,7 @@ apps: | $(B)
 	$(MAKE) -C games/jetpackjoyride build NWLINK="$(NWLINK)"
 	$(MAKE) -C games/stickmanhook build NWLINK="$(NWLINK)"
 	$(MAKE) -C games/donkeykong build NWLINK="$(NWLINK)"
+	$(MAKE) -C games/dune build NWLINK="$(NWLINK)"
 	cd games/tetris/tetris && NWLINK="$(NWLINK)" $(CARGO) build --release --quiet
 	cp $(word 1,$(subst :, ,$(APP_numdash))) $(B)/apps/$(word 2,$(subst :, ,$(APP_numdash)))
 	cp $(word 1,$(subst :, ,$(APP_crossyroad))) $(B)/apps/$(word 2,$(subst :, ,$(APP_crossyroad)))
@@ -281,6 +282,7 @@ apps: | $(B)
 	cp $(word 1,$(subst :, ,$(APP_jetpackjoyride))) $(B)/apps/$(word 2,$(subst :, ,$(APP_jetpackjoyride)))
 	cp $(word 1,$(subst :, ,$(APP_stickmanhook))) $(B)/apps/$(word 2,$(subst :, ,$(APP_stickmanhook)))
 	cp $(word 1,$(subst :, ,$(APP_donkeykong))) $(B)/apps/$(word 2,$(subst :, ,$(APP_donkeykong)))
+	cp $(word 1,$(subst :, ,$(APP_dune))) $(B)/apps/$(word 2,$(subst :, ,$(APP_dune)))
 	arm-none-eabi-strip --strip-unneeded $(B)/apps/Tetris.nwa
 
 STD_APPS = $(foreach g,$(STD_GAMES),$(B)/apps/$(NWA_$(g)))
@@ -288,17 +290,6 @@ apps: $(STD_APPS)
 $(STD_APPS): $(B)/apps/%.nwa: FORCE | $(B)
 	$(MAKE) --no-print-directory -C games/$(APPID_$*) build NWLINK="$(NWLINK)"
 	cp games/$(APPID_$*)/output/$(APPID_$*).nwa $@
-
-# Dune is published as its own app.
-.PHONY: check-dune
-apps: $(B)/apps/Dune.nwa
-$(B)/apps/Dune.nwa: FORCE | $(B)
-	$(MAKE) --no-print-directory -C games/dune build NWLINK="$(NWLINK)"
-	mkdir -p $(B)/apps
-	cp games/dune/output/dune.nwa $@
-check: check-dune
-check-dune: $(B)/apps/Dune.nwa
-	$(NWLINK) nwa-bin $< $(B)/apps/Dune.bin --ram-length $(UPSILON_RAM)
 
 # ------------------------------------------------------------------ simulator
 SIM_numdash = games/numdash/build/sim-module.o

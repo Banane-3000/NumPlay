@@ -13,7 +13,7 @@ NWLINK ?= npx --yes -- nwlink@1.0.0
 BUILD_DIR = output
 
 SRC = src/main.c src/game.c src/draw.c src/save.c src/art.c src/plat_eadk.c
-HEADERS = $(wildcard src/*.h) ../common/epsilon_app.h ../common/epsilon_files.h ../common/np_lz.h
+HEADERS = $(wildcard src/*.h) ../common/epsilon_app.h ../common/epsilon_files.h
 
 CFLAGS = -std=gnu11 $(shell $(NWLINK) eadk-cflags-device) -DPLATFORM_DEVICE=1
 CFLAGS += -Os -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant

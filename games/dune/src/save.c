@@ -1,8 +1,7 @@
-/* The save (save.h): a packed file with a magic, a version, its size and a checksum; anything else (a file
+/* The save (save.h): a bytes file with a magic, a version, its size and a checksum; anything else (a file
  * from another version, damaged, cut short) is not read: the copy in the Python script is tried, then a fresh
  * start. */
 #include <string.h>
-#include "../../common/np_lz.h"
 #include "plat.h"
 #include "save.h"
 
@@ -34,13 +33,12 @@ bool dn_file_ok(const dn_file *f, dn_run *scratch) {
 static const char head[] = "# Dune keeps a copy of your best, your coins and what you bought\n"
                            "# here, so that installing it again doesn't erase them.\n";
 static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-static uint8_t packed[NP_LZ_BOUND(sizeof(dn_file))];
-static uint16_t table[NP_LZ_HASH];
-static uint8_t copy[1 + sizeof head + 2 + sizeof DN_SAVE_NAME + 1 + (NP_LZ_BOUND(sizeof(dn_file)) + 2) / 3 * 4 + 2];
+static uint8_t copy[1 + sizeof head + 2 + sizeof DN_SAVE_NAME + 1 + (sizeof(dn_file) + 2) / 3 * 4 + 2];
 
-/* the copy: the file packed (np_lz), in base 64, in a comment line of a script */
+/* the copy: the file in base 64, in a comment line of a script */
 static bool copy_write(const dn_file *f) {
-  uint32_t len = np_lz_pack((const uint8_t *)f, sizeof *f, packed, table), nl = sizeof DN_SAVE_NAME - 1;
+  const uint8_t *bytes = (const uint8_t *)f;
+  uint32_t len = sizeof *f, nl = sizeof DN_SAVE_NAME - 1;
   uint8_t *p = copy;
   *p++ = 0;   /* (a script's first byte: not imported) */
   memcpy(p, head, sizeof head - 1), p += sizeof head - 1;
@@ -48,7 +46,7 @@ static bool copy_write(const dn_file *f) {
   memcpy(p, DN_SAVE_NAME, nl), p += nl;
   *p++ = ':';
   for (uint32_t i = 0; i < len; i += 3, p += 4) {
-    uint32_t left = len - i, v = (uint32_t)packed[i] << 16 | (left > 1 ? (uint32_t)packed[i + 1] << 8 : 0) | (left > 2 ? packed[i + 2] : 0);
+    uint32_t left = len - i, v = (uint32_t)bytes[i] << 16 | (left > 1 ? (uint32_t)bytes[i + 1] << 8 : 0) | (left > 2 ? bytes[i + 2] : 0);
     p[0] = (uint8_t)b64[v >> 18 & 63];
     p[1] = (uint8_t)b64[v >> 12 & 63];
     p[2] = left > 1 ? (uint8_t)b64[v >> 6 & 63] : '=';
@@ -73,17 +71,18 @@ static bool copy_read(dn_file *f) {
     const uint8_t *l = c + i + 3 + nl;
     uint32_t m = 0;
     while (l + m < c + n && l[m] != '\n' && l[m]) m++;
-    if (m % 4 || m / 4 * 3 > sizeof packed) return false;
+    if (m != (sizeof *f + 2) / 3 * 4) return false;
+    uint8_t *bytes = (uint8_t *)f;
     uint32_t o = 0;
     for (uint32_t k = 0; k < m; k += 4) {
       int v0 = b64v(l[k]), v1 = b64v(l[k + 1]), v2 = l[k + 2] == '=' ? 0 : b64v(l[k + 2]), v3 = l[k + 3] == '=' ? 0 : b64v(l[k + 3]);
       if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0) return false;
       uint32_t w = (uint32_t)(v0 << 18 | v1 << 12 | v2 << 6 | v3);
-      packed[o++] = (uint8_t)(w >> 16);
-      if (l[k + 2] != '=') packed[o++] = (uint8_t)(w >> 8);
-      if (l[k + 3] != '=') packed[o++] = (uint8_t)w;
+      if (o < sizeof *f) bytes[o++] = (uint8_t)(w >> 16);
+      if (o < sizeof *f) bytes[o++] = (uint8_t)(w >> 8);
+      if (o < sizeof *f) bytes[o++] = (uint8_t)w;
     }
-    return np_lz_unpack(packed, o, (uint8_t *)f, sizeof *f) == (int32_t)sizeof *f;
+    return true;
   }
   return false;
 }
