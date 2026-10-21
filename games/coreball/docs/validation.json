@@ -1,0 +1,86 @@
+{
+  "date": "2026-10-21",
+  "build": {
+    "static_ram_bytes": 5557,
+    "sha256": "43c1b6d9be3c1d554193d9465cb5c1faa60406498092830b17cb7b371ab359f4",
+    "nwa_bytes": 35692,
+    "installed_bytes": 30653,
+    "release_installed_matches_debug": true
+  },
+  "host": {
+    "levels_solved": 60,
+    "simulation_frames": 36964,
+    "max_solver_attempts": 4,
+    "game_bytes": 164,
+    "stats_bytes": 16,
+    "remaining_offset": 150,
+    "level_offset": 148,
+    "rotation_soak_frames": 4320000
+  },
+  "arm": [
+    {
+      "profile": "n0120",
+      "pause_save_reload_exit": "pass",
+      "stack_bytes": 388,
+      "frames": 64,
+      "slowest_draw_ms": 7,
+      "frames_over_33ms": 0
+    },
+    {
+      "profile": "n0110",
+      "pause_save_reload_exit": "pass",
+      "stack_bytes": 388,
+      "frames": 64,
+      "slowest_draw_ms": 7,
+      "frames_over_33ms": 0
+    },
+    {
+      "profile": "n0115",
+      "pause_save_reload_exit": "pass",
+      "stack_bytes": 388,
+      "frames": 64,
+      "slowest_draw_ms": 7,
+      "frames_over_33ms": 0
+    },
+    {
+      "profile": "upsilon",
+      "pause_save_reload_exit": "pass",
+      "stack_bytes": 388,
+      "frames": 64,
+      "slowest_draw_ms": 7,
+      "frames_over_33ms": 0
+    },
+    {
+      "scenes": "60 original levels",
+      "slowest_draw_ms": 7,
+      "stack_bytes": 388
+    },
+    {
+      "ending": "60/60 saved, last level replayed without level 61"
+    },
+    {
+      "full_storage": "continue and exit preserve other files"
+    }
+  ],
+  "source": {
+    "repository": "https://github.com/Gr4ys0n/Gr4ys0n.github.io",
+    "path": "public/assets/games/core-ball",
+    "commit": "29006b0f11904704c390b457f7055c9fa1e53484",
+    "javascript_sha256": "fd9c4ded61a00aa100630e4dc47698bd5e8015fab24068629d369ad5b87ae266"
+  },
+  "source_comparison": {
+    "motion_samples": 66000,
+    "max_degrees_error": 0.00632
+  },
+  "text_rendering": {
+    "coverage_bits": 4,
+    "native_font_sizes": [
+      13,
+      22,
+      32
+    ],
+    "bitmap_scaling": false,
+    "offset_text_shadow": false
+  },
+  "upstream_base": "979c19e828fee928d2d9b2843f8a2f6f2fea500e"
+}

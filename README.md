@@ -255,6 +255,8 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 
 ## Credits
 
+- **[Bobydeluxe](https://github.com/Bobydeluxe)** made the **[Core Ball](games/coreball/README.md)** NumWorks adaptation: 60 original levels with an English interface. It installs on its own as **CoreBall.nwa**, available from the releases once included. Based on the supplied Core Ball reference; original code and lettering are credited in the game README. Not affiliated with its original creators.
+
 NumPlay is a fan project, made out of love for these games and for the NumWorks calculator. If you enjoy a game here, go play the original and support the people who made it. NumWorks also has a great community of people making games by hand: try [Numcraft](https://github.com/yannis300307/NumcraftRust), [Celeste Classic](https://github.com/BenchatonDev/Celeste-Numworks), [Tatone26's All the Apps](https://github.com/Tatone26/Numworks-games), the apps on [Nwagyu](https://nwagyu.org/guide/) and [yannis300307's list](https://gist.github.com/yannis300307/9123136f90877107ec0d49ba96b303e5).
 
 - **[Tatone26](https://github.com/Tatone26/Numworks-games)**'s **All the Apps** inspired NumPlay's list of classics. Flappy Bird, Pac-Man, Snake, Connect Four, Solitaire and 2048 are written in C for NumPlay and keep its options, with no code copied from it. Tetris is Tatone26's own, which they released into the public domain, adapted for NumPlay.

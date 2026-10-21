@@ -23,6 +23,7 @@ REPO = "https://github.com/Mason363/NumPlay"
 EXTRAS = set()
 # games too big to fit next to NumPlay on the calculator: only on their own, in a section of their own
 ALONE = {
+    "coreball": ("Core Ball", "60 original levels with an English interface, adapted by Bobydeluxe; installed separately"),
     "celeste": ("Celeste", "the whole climb up Celeste Mountain"),
     "hollowknight": ("Hollow Knight", "from King's Pass to Hornet in Greenpath"),
     "undertale": ("Undertale", "the whole Underground, to the barrier and the neutral ending"),
