@@ -495,6 +495,34 @@ Run to the door. These are the game's 80 rooms in its order: sixteen worlds of f
 Barry runs through the lab by himself: hold OK to fire the jetpack and fly, let go to drop. Keep clear of the zappers, the lasers that charge up across the screen and the missiles that warn, lock on and fire. Grab coins, and the vehicle boxes for a ride that takes one hit. Spin tokens play the Final Spin when the run ends, where a Second Chance brings it back. Your best distance and coins are saved.
 
 <br clear="right">
+## Stickman Hook
+
+<img src="../games/stickmanhook/docs/shot.png" width="320" align="right" alt="Stickman Hook">
+
+| Key | What it does |
+| --- | --- |
+| **OK** (or **EXE**), held | Hook onto the nearest hook; let go to fly |
+| **Arrows** | Move in the menus |
+| **Back** | Pause (with Restart, Levels, How to play and Quit) |
+
+Swing the stickman from hook to hook and over the finish line. Hold OK to grab the nearest hook and let go at the top of the swing to fly; bumpers throw you on, walls stop you, and falling off the bottom starts the level again. The first 39 levels are the game's own; after that every level is a new course made from the game's pieces. Reaching some levels opens new skins. Your level and skins are saved.
+
+<br clear="right">
+
+## Donkey Kong
+
+<img src="../games/donkeykong/docs/shot.png" width="320" align="right" alt="Donkey Kong">
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** (or **4, 6, 8, 2**) | Walk, climb ladders |
+| **OK** (or **EXE**) | Jump |
+| **Back** | Pause (with New game, How to play and Quit) |
+
+Climb to the top and save Pauline, as in the 1981 arcade game. Jump over Kong's barrels for points, or grab a hammer (in mid-jump) and smash them. Four boards: the girders, the pie factory, the elevators and the rivets, where pulling out all eight rivets brings Kong down. Watch the bonus timer: it's your points if you finish and your life if it runs out. An extra life comes at 7,000 points. Home saves your game, and your best score is kept.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">
