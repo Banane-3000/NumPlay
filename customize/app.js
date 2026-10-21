@@ -60,7 +60,17 @@
   const romBytes = (r) => ROM_ENTRY + align4(r.bytes.length);
   const iconUrl = () => st.app.icon === 'custom' && custom ? custom.url : KIT + 'variants/' + st.app.icon + '.png';
   const ordered = () => st.order.filter((id) => st.picked.has(id));
+  // a big game too big to go beside the launcher in 1.94 MB (kit.json "alone") goes on its own there,
+  // as its own app: as if you installed just that game
+  const alone = (id) => st.cap === 'std' && !!byId[id].alone;
+  const solo = () => ordered().find(alone) || null;
+  let before = null;  // your games while one of those is picked, back when it's taken out
   function items() {
+    const s = solo();
+    if (s) {
+      const g = byId[s];
+      return [{ key: s, id: s, name: g.title, bytes: g.alone.size, color: hex(g.top), icon: g.icon ? KIT + 'icons/' + s + '.png' : null }];
+    }
     const out = [{ key: '_core', name: st.app.name.trim() || 'NumPlay', bytes: langKit().base, color: '#3a3a3c', icon: iconUrl() }];
     for (const id of ordered()) {
       const g = byId[id];
@@ -205,18 +215,24 @@
 
     // the icons, in the order they go in the launcher
     for (const [id, b] of buttons) {
-      const g = byId[id], on = st.picked.has(id), english = !g.xl || st.lang === 'en', fits = english && used + flash(id) <= cap;
+      const g = byId[id], on = st.picked.has(id), english = !g.xl || st.lang === 'en' || alone(id);
+      const fits = english && (alone(id) || used + flash(id) <= cap);
       b.classList.toggle('on', on);
       b.classList.toggle('off', !on && fits);
       b.classList.toggle('nofit', !on && !fits);
       b.setAttribute('aria-pressed', on);
-      b.dataset.tip = g.title + '|' + (english ? size(flash(id)) + ' · drag to move' : 'in English NumPlays only');
+      b.dataset.tip = g.title + '|' + (alone(id) ? size(g.alone.size) + ', on its own' : english ? size(flash(id)) + ' · drag to move' : 'in English NumPlays only');
     }
     for (const box of [$('#small'), $('#big')]) {
       const want2 = st.order.map((id) => buttons.get(id)).filter((b) => b && b.parentNode === box);
       if ([...box.children].some((c, i) => c !== want2[i])) for (const b of want2) box.appendChild(b);
     }
     for (const b of document.querySelectorAll('.cap button')) b.setAttribute('aria-checked', b.dataset.cap === st.cap);
+    // (a game on its own has its own icon, name and language)
+    const s = solo(), file = s ? byId[s].alone.file : 'NumPlay.nwa';
+    for (const c of [$('#app-chip'), $('#lang-chip')]) c.disabled = !!s;
+    $('#download').setAttribute('aria-label', 'Download ' + file);
+    $('#download').dataset.tip = 'Download ' + file;
     $('#app-chip-icon').src = iconUrl();
     $('#lang-chip-label').textContent = LANGS[st.lang][0];
     renderCarts();
@@ -282,9 +298,20 @@
     setTimeout(() => render(), 500);
   }
   function toggle(id, quiet) {
-    const b = buttons.get(id);
-    if (st.picked.has(id)) st.picked.delete(id);
-    else {
+    const b = buttons.get(id), s = solo();
+    if (st.picked.has(id)) {
+      st.picked.delete(id);
+      if (alone(id) && before) { st.picked = new Set(before); before = null; }
+    } else if (alone(id)) {
+      if (!s) before = ordered();
+      st.picked = new Set([id]);
+      bump(b, 'bounce');
+      if (!quiet) {
+        toast(byId[id].title + ' fills the whole calculator, so it goes on its own. Pick it again to get your games back');
+        fetchBytes(KIT + 'apps/' + id + '.nwa.gz').catch(() => {});
+      }
+    } else {
+      if (s) { bump(b, 'shake'); if (!quiet) toast(byId[s].title + ' takes the whole calculator. Pick it again to take it out'); return; }
       if (byId[id].xl && st.lang !== 'en') { bump(b, 'shake'); toast('The big games are in English: pick English to add them'); return; }
       const over = usedBytes() + flash(id) - capacity();
       if (over > 0) { bump(b, 'shake'); if (!quiet) overflow(over); return; }
@@ -296,6 +323,7 @@
   }
 
   async function addRoms(files) {
+    if (solo()) { toast(byId[solo()].title + " takes the whole calculator, so there's no room for Retro-Go"); return; }
     const ok = new Set(rg && rg.systems ? rg.systems : [1, 2, 3]);
     for (const f of files) {
       const ext = (f.name.split('.').pop() || '').toLowerCase(), sys = EXT[ext];
@@ -453,7 +481,8 @@
     st.app.open = open[0] === 'matrices' ? 'matrices' : 'numplay';
     st.app.secret = Math.min(SECRETS.length - 1, Math.max(0, parseInt(open[1], 10) || 0));
     st.app.hint = !open.includes('nohint');
-    if (st.lang !== 'en') for (const id of [...st.picked]) if (byId[id].xl) st.picked.delete(id);  // (English only)
+    if (st.lang !== 'en') for (const id of [...st.picked]) if (byId[id].xl && !alone(id)) st.picked.delete(id);  // (English only)
+    if (solo()) st.picked = new Set([solo()]);
     // a pick that no longer fits the calculator (the kit grew): drop the biggest games until it does
     const big = ordered().sort((a, b) => flash(a) - flash(b));
     while (usedBytes() > capacity() && big.length) st.picked.delete(big.pop());
@@ -639,6 +668,8 @@
   }
 
   async function build() {
+    const one = solo();
+    if (one) return { bytes: await fetchBytes(KIT + 'apps/' + one + '.nwa.gz'), file: byId[one].alone.file };
     await loadKit(st.lang);
     const k = langKit();
     const sel = ordered();
@@ -667,11 +698,11 @@
     const nwa = s.m.FS.readFile('out.nwa');
     const n = installedSize(nwa) + k.runtime;
     if (n > capacity()) throw new Error("That's " + size(n - capacity()) + ' more than the calculator holds');
-    return nwa;
+    return { bytes: nwa, file: 'NumPlay.nwa' };
   }
 
-  function download(bytes) {
-    const a = el('a', '', { download: 'NumPlay.nwa', href: URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' })) });
+  function download(bytes, file) {
+    const a = el('a', '', { download: file, href: URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' })) });
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
@@ -680,16 +711,18 @@
     if (btn.classList.contains('busy')) return;
     btn.classList.add('busy');
     try {
-      download(await build());
-      if (sheet) openSheet();
+      const out = await build();
+      download(out.bytes, out.file);
+      if (sheet) openSheet(out.file);
     } catch (e) {
       console.error(e);
-      toast(/more than/.test(e.message) ? e.message : "Couldn't make NumPlay.nwa, try again");
+      toast(/more than/.test(e.message) ? e.message : solo() ? "Couldn't get " + byId[solo()].alone.file + ', try again' : "Couldn't make NumPlay.nwa, try again");
     } finally {
       btn.classList.remove('busy');
     }
   }
   function prefetch() {
+    if (solo()) { fetchBytes(KIT + 'apps/' + solo() + '.nwa.gz').catch(() => {}); return; }
     loadTools().catch(() => {});
     loadKit(st.lang).then(() => {
       const lang = st.lang === 'en' ? '' : st.lang + '/';
@@ -756,7 +789,7 @@
       const b = el('button', '', { type: 'button', role: 'radio', 'aria-checked': st.lang === l });
       b.textContent = LANGS[l][1];
       b.addEventListener('click', async () => {
-        if (l !== 'en' && ordered().some((id) => byId[id].xl)) { toast('The big games are in English: take them out first'); return; }
+        if (l !== 'en' && ordered().some((id) => byId[id].xl && !alone(id))) { toast('The big games are in English: take them out first'); return; }
         try { await loadKit(l); } catch (e) { toast("That language didn't load, try again"); return; }
         st.lang = l;
         closePops(); renderApp(); render();
@@ -776,7 +809,11 @@
         '<p class="xl-warn">It only works on older calculator software. On the newest, the calculator shows exam mode.</p>' +
         '<div class="xl-buttons"><a class="xl-guide" href="' + NWAGRA + '" target="_blank" rel="noopener">nwagyu\'s guide</a><button type="button" class="install xl-ok">Use 6 MB</button></div>';
       document.body.appendChild(pop);
-      pop.querySelector('.xl-ok').addEventListener('click', () => { st.cap = 'xl'; store('numplay-xl-seen', '1'); closePops(); render(); });
+      pop.querySelector('.xl-ok').addEventListener('click', () => {
+        st.cap = 'xl';
+        if (before) { st.picked = new Set([...before, ...st.picked]); before = null; }  // (6 MB has room for it all)
+        store('numplay-xl-seen', '1'); closePops(); render();
+      });
     }
     openPop(pop, btn, true);
   }
@@ -977,8 +1014,9 @@
   }
 
   // ------------------------------------------------------------------ the sheet, tips and toasts
-  function openSheet() {
+  function openSheet(file) {
     const s = $('#sheet');
+    for (const f of s.querySelectorAll('.sheet-file')) f.textContent = file;
     for (const li of s.querySelectorAll('.xl-only')) li.hidden = st.cap !== 'xl';
     s.hidden = false;
     s.querySelector('.sheet-card a.install').focus();
@@ -1085,9 +1123,16 @@
     for (const b of document.querySelectorAll('.cap button'))
       b.addEventListener('click', () => {
         if (b.dataset.cap === 'std' && st.cap === 'xl') {
+          st.cap = 'std';
+          const one = solo();
+          if (one && ordered().length > 1) {  // (it goes on its own in 1.94 MB: the rest come back when it's out)
+            before = ordered().filter((id) => !alone(id));
+            st.picked = new Set([one]);
+            toast(byId[one].title + ' goes on its own in 1.94 MB. Pick it again to get your other games back');
+          }
           const over = usedBytes() - kit.appSpace;
-          if (over > 0) { bump(b, 'shake'); toast('Take ' + size(over) + ' of games out first'); return; }
-          st.cap = 'std'; closePops(); render(); return;
+          if (over > 0) { st.cap = 'xl'; bump(b, 'shake'); toast('Take ' + size(over) + ' of games out first'); return; }
+          closePops(); render(); return;
         }
         if (b.dataset.cap === 'xl' && st.cap !== 'xl') askXL(b);
       });

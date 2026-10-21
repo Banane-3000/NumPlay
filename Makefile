@@ -192,7 +192,8 @@ kit: $(KIT)/base.o $(B)/arm/arena.o $(KIT_GAMES) $(B)/NumPlay.nwa \
   $(foreach v,$(VARIANTS),$(B)/variant/$(v)-name.o $(B)/variant/$(v)-icon.o)
 	$(PY) tools/kit.py games/games.json $(B) $(B)/site-kit --version $(VERSION) --variants "$(VARIANTS)" \
 	  --default "$(GAMES)" --upsilon "$(UPSILON_GAMES)" --app-space $(APP_SPACE) --xl-app-space $(XL_APP_SPACE) \
-	  --ram $(CUSTOM_RAM) --ram-limit $(RAM_LIMIT) --upsilon-ram $(UPSILON_RAM) --nwlink "$(NWLINK)" --langs "$(LANGS)"
+	  --ram $(CUSTOM_RAM) --ram-limit $(RAM_LIMIT) --upsilon-ram $(UPSILON_RAM) --nwlink "$(NWLINK)" --langs "$(LANGS)" \
+	  --alone "$(foreach g,$(XL_GAMES),$(g)=$(APP_$(g)))"
 
 # ...and in French and Chinese, from each language's tree (make lang), in site-kit/<code> (without the big
 # games, which are in English: the website uses them in English NumPlays)

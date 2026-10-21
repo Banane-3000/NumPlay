@@ -10,7 +10,9 @@ gives NumPlay.nwa's bytes on the calculator, and that each big game ("xl", for c
 with Enlarged Extra Apps: up to xlAppSpace bytes of apps) links with the launcher alone. The
 blocks of the script go in the games' order ("index"), so the big games come last: past the
 app area, where Enlarged Extra Apps put them, only they look for the calculator's files there
-(EPSILON_XL in games/common/epsilon_app.h).
+(EPSILON_XL in games/common/epsilon_app.h). A big game too big to fit beside the launcher in the
+app area ("alone") comes as its own app too (apps/<id>.nwa.gz, --alone): the website hands it out
+as it is, for calculators without Enlarged Extra Apps.
 
 A game's "ram" in kit.json is what it takes in the arena (its .data, its .bss and the least heap
 it needs): it fits a calculator when ram + launcherRam (NumPlay's own RAM, before the arena) is
@@ -18,6 +20,7 @@ at most what the calculator's software gives apps ("ram", "ramLimit", "upsilonRa
 
 Usage: kit.py games.json BUILD OUT --version V --variants "..." --default "ids" --upsilon "ids"
               --app-space N --xl-app-space N --ram N --ram-limit N --upsilon-ram N --nwlink NWLINK
+              --alone "id=game.nwa:Name.nwa ..."
 """
 import argparse
 import gzip
@@ -103,6 +106,7 @@ def main():
     ap.add_argument("--upsilon-ram", type=int, required=True)
     ap.add_argument("--nwlink", default="nwlink")
     ap.add_argument("--langs", default="", help="the languages make kit-langs adds (site-kit/<code>)")
+    ap.add_argument("--alone", default="", help="each big game's own app, id=game.nwa:Name.nwa")
     a = ap.parse_args()
     B, O = a.build, a.out
     manifest = json.load(open(a.manifest))
@@ -111,7 +115,7 @@ def main():
     script = json.load(open(os.path.join(B, "gen", "script.json")))
     if os.path.exists(O):
         shutil.rmtree(O)
-    for d in ("games", "icons", "thumbs", "variants"):
+    for d in ("games", "icons", "thumbs", "variants", "apps"):
         os.makedirs(os.path.join(O, d))
 
     # ---- the objects, stripped of what no link needs, and gzipped
@@ -199,6 +203,20 @@ def main():
     if not 0 <= runtime < 4096:
         sys.exit(f"kit: installed_size says {installed_size(nwa)}, nwlink {len(bins[0])}")
     base = len(bins[0]) - sum(g["flash"] for g in games if g["default"])
+    # a big game that only fits the app area without the launcher goes on its own, as its own app
+    apps = dict(x.split("=", 1) for x in a.alone.split())
+    for g in games:
+        if not g["xl"] or installed_size(os.path.join(tmp, f"xl-{g['id']}.nwa")) + runtime <= a.app_space:
+            continue
+        if g["id"] not in apps:
+            sys.exit(f"kit: {g['id']} doesn't fit beside the launcher, and --alone hasn't got its own app")
+        src, name = apps[g["id"]].split(":")
+        b = os.path.join(tmp, "alone.bin")
+        subprocess.run([a.nwlink, "nwa-bin", "--ram-length", str(ram), src, b], check=True, stdout=subprocess.DEVNULL)
+        if os.path.getsize(b) > a.app_space:
+            sys.exit(f"kit: {name} doesn't fit the app area even on its own")
+        gz(src, os.path.join(O, "apps", g["id"] + ".nwa.gz"))
+        g["alone"] = {"file": name, "size": os.path.getsize(b)}
     # NumPlay's own RAM before the arena (the installer's few bytes too), as the calculator lays it out
     elf = os.path.join(tmp, "custom.elf")
     subprocess.run([a.nwlink, "nwa-elf", nwa, elf, "--ram-start", "0x20000000", "--ram-length", str(ram)],

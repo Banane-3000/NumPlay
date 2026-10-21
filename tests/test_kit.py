@@ -3,7 +3,8 @@
 the kit's objects, with a script of script.json's parts), and plays their games through the launcher
 in the ARM emulator, with tests/test_games.py's sessions:
 
-- alone: each big game alone in a NumPlay of the calculator's app space (APP_SPACE), where it fits;
+- alone: each big game alone in a NumPlay of the calculator's app space (APP_SPACE), where it fits, and
+  where it doesn't, its own app in the kit for the website to hand out (kit.json "alone");
 - sets: several big games, and big games with small ones, in a NumPlay for Enlarged Extra Apps (up to
   6291456 bytes, 0x90200000 to the external flash's end: the emulator's apps go on there while the
   userland header still says the app area ends at 0x903F0000, as on a calculator with nwagyu's Nwagra);
@@ -177,11 +178,27 @@ def main():
             size, msg = installed(nwa, k["appSpace"])
             g = kit.games[i]
             if size is None or size > k["appSpace"]:
-                # too big for the app space next to the launcher: then only with Enlarged Extra Apps
+                # too big for the app space next to the launcher: in NumPlay only with Enlarged Extra Apps, and the
+                # website hands out its own app instead (kit.json "alone": build/apps' file, as it is)
                 big, msg2 = installed(nwa, k["xlAppSpace"])
                 problems = [] if big and big > k["appSpace"] else [f"nwa-bin: {msg or msg2}"]
+                own = g.get("alone") or {}
+                gz = os.path.join(a.kit, "apps", i + ".nwa.gz")
+                app = os.path.join(ROOT, "build", "apps", own.get("file", "?"))
+                if not own or not os.path.exists(gz):
+                    problems.append("the kit hasn't got it on its own (kit.json alone, apps/)")
+                else:
+                    with gzip.open(gz) as f:
+                        data = f.read()
+                    if not os.path.exists(app) or open(app, "rb").read() != data:
+                        problems.append(f"apps/{i}.nwa.gz isn't build/apps/{own['file']}")
+                    mine = os.path.join(tmp, f"own-{i}.nwa")
+                    open(mine, "wb").write(data)
+                    n, msg3 = installed(mine, k["appSpace"])
+                    if n is None or n > k["appSpace"] or n != own["size"]:
+                        problems.append(f"on its own: {n} bytes, kit.json says {own['size']} ({msg3})")
                 failed |= report(f"alone {i}", problems, f"{big} bytes, {big - k['appSpace']} over the app space: "
-                                 "only with Enlarged Extra Apps" if big else "")
+                                 f"only with Enlarged Extra Apps, else {own.get('file')} on its own" if big else "")
                 continue
             emu.configure("n0120", "epsilon", a.ram or (CUSTOM_RAM if kit.ram(i) <= CUSTOM_RAM else RAM_LIMIT))
             problems, stack, heap = session(nwa, ids, i, a.out, f"alone_{i}")

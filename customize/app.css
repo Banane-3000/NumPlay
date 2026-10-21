@@ -217,6 +217,7 @@ body.dragging .drop-hint { opacity: 1; }
 .chip.lang span { font-size: 13px; font-weight: 750; min-width: 22px; text-align: center; }
 .chip .caret { color: var(--mute); transition: transform var(--t) var(--ease); }
 .chip[aria-expanded="true"] .caret { transform: rotate(180deg); }
+.chip:disabled { opacity: 0.35; cursor: default; box-shadow: none; }  /* (a game on its own: its own icon and language) */
 .chip:hover { transform: translateY(-2px); }
 .install {
   position: relative; border: 0; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
