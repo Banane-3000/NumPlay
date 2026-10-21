@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import re
 import time
 import os
 from pathlib import Path
@@ -581,7 +582,9 @@ def publish_outputs(*, apps: bool, langs: bool, output: Path = OUTPUT,
     # Publish user-facing variants and standalone games first.
     # Publish the stable live file *last*, marking the completed build.
     main_src = None
-    for src in sources:
+    ordered_sources = [p for p in sources if p.name != "NumPlay.nwa"]
+    ordered_sources += [p for p in sources if p.name == "NumPlay.nwa"]
+    for src in ordered_sources:
         if src.name == "NumPlay.nwa":
             main_src = src
         dest = destination_for(src.name, output)
@@ -685,7 +688,7 @@ def differences(a: dict, b: dict) -> list[str]:
 
 
 def run_watch(build_once, *, interval: float = 1.0,
-              settle: float = 1.0, root: Path = ROOT) -> None:
+              settle: float = 1.0, root: Path = ROOT, game: str | None = None) -> None:
     """Debounce editor save bursts; rebuild and publish only on success.
 
     No extra watchdog package needed. Capture the baseline after a build so
@@ -695,12 +698,21 @@ def run_watch(build_once, *, interval: float = 1.0,
         raise ValueError("watch interval and settle time must be positive")
     print("\nWatching NumPlay source files. Save an edit to rebuild; Ctrl+C to stop.")
     print("Build failures keep the previous build/compiled/NumPlay.nwa untouched.\n")
-    baseline = source_snapshot(root)
+    def snapshot():
+        files = source_snapshot(root)
+        if game is None:
+            return files
+        prefixes = (f"games/{game}/", "games/common/", "tools/")
+        shared = {"Makefile", "VERSION", "games/games.json"}
+        return {name: st for name, st in files.items()
+                if name in shared or name.startswith(prefixes)}
+
+    baseline = snapshot()
     pending: dict[str, tuple[int, int]] | None = None
     last_change = 0.0
     while True:
         time.sleep(interval)
-        current = source_snapshot(root)
+        current = snapshot()
         now = time.monotonic()
         if current == baseline:
             pending = None
@@ -719,12 +731,12 @@ def run_watch(build_once, *, interval: float = 1.0,
             print(f"  ... plus {len(changed) - 12} more")
         try:
             build_once()
-        except (OSError, RuntimeError) as exc:
-            print("\nBuild failed; keeping last good build/compiled/NumPlay.nwa:", exc,
+        except (OSError, RuntimeError, subprocess.CalledProcessError, ValueError) as exc:
+            print("\nBuild failed; keeping last good build/compiled/ app:", exc,
                   file=sys.stderr, flush=True)
         # Rescan after build. Generated files, if any, become the new baseline.
         # A human edit made during the build may need a further save to trigger.
-        baseline = source_snapshot(root)
+        baseline = snapshot()
         pending = None
         print("\nWatching for the next edit...", flush=True)
 
@@ -753,6 +765,7 @@ def _run_make(args: list[str], *, jobs: int) -> None:
         run_bash(bash, make, make_name, arm, jobs, apps=False, check=False, langs=False,
                  target_args=args)
     else:
+        ensure_build_directories()
         cmd = ["make", f"-j{jobs}", *args, "NWLINK=" + _nwlink()]
         subprocess.run(cmd, check=True, cwd=ROOT)
 
@@ -773,9 +786,16 @@ def _game_output(game: str) -> tuple[str, Path]:
     file = labels[game]
     # A small set of games have unusual outputs. Only select the exact expected
     # game-specific NWA, not a random newest .nwa in the output directory.
-    candidate = [game_dir / "output" / f"{game}.nwa",
-                 game_dir / "output" / "device" / f"{game}.nwa",
-                 game_dir / "build" / f"{game}.nwa"]
+    makefile = (game_dir / "Makefile").read_text(encoding="utf-8") if (game_dir / "Makefile").exists() else ""
+    active = "\n".join(line for line in makefile.splitlines()
+                       if not line.lstrip().startswith("#"))
+    conventional = ("output/" not in active) and any(
+        re.search(rf"(?m)^{variable}\s*=\s*output\s*$", makefile)
+        for variable in ("BUILD_DIR", "OUT"))
+    candidate = ([ROOT / "build" / "data" / "games" / game / f"{game}.nwa"]
+                 if conventional else [game_dir / "output" / f"{game}.nwa",
+                                      game_dir / "output" / "device" / f"{game}.nwa",
+                                      game_dir / "build" / f"{game}.nwa"])
     if game == "tetris":
         candidate = [game_dir / "tetris" / "target" / "thumbv7em-none-eabihf" / "release" / "tetris"]
     return file, next((p for p in candidate if p.is_file()), candidate[0])
@@ -799,7 +819,15 @@ def _build_once(a) -> None:
             # is intentionally disabled until the bridge is generalized.
             raise RuntimeError("Tetris standalone single-game mode is not wired yet; use a full build")
         _game_output(a.game)  # Fail before launching a compiler on invalid IDs.
-        _run_make(["-C", f"games/{a.game}", "build"], jobs=a.jobs)
+        source_makefile = (ROOT / "games" / a.game / "Makefile").read_text(encoding="utf-8")
+        active = "\n".join(x for x in source_makefile.splitlines()
+                           if not x.lstrip().startswith("#"))
+        variable = next((v for v in ("BUILD_DIR", "OUT")
+                         if re.search(rf"(?m)^{v}\s*=\s*output\s*$", source_makefile)), None)
+        make_args = ["-C", f"games/{a.game}", "build"]
+        if variable and "output/" not in active:
+            make_args.append(f"{variable}=../../build/data/games/{a.game}")
+        _run_make(make_args, jobs=a.jobs)
         _publish_game(a.game)
         return
     if os.name == "nt":
@@ -861,9 +889,15 @@ def main() -> int:
             install_make(a.make_zip)
         return 0
     if a.clean:
-        _run_make(["clean"], jobs=1)
-        # Only compiler-generated outputs: user saves are in ~/.numplay-emulator.
-        shutil.rmtree(OUTPUT, ignore_errors=True)
+        # Do not call `make clean`: several game recipes erase local build/
+        # folders also used by host tests (including host-saves).
+        for location in (ROOT / "build" / "data", OUTPUT):
+            if location.is_symlink():
+                raise RuntimeError(f"Refusing to clean symlink: {location}")
+            if location.is_dir():
+                shutil.rmtree(location)
+                print("Removed disposable build directory:", location.relative_to(ROOT))
+        print("Kept game-local folders and ~/.numplay-emulator/ (saves and settings).")
         return 0
     if a.organize_only:
         publish_outputs(apps=True, langs=True)
@@ -878,7 +912,7 @@ def main() -> int:
             return 1
     if a.watch and not a.once:
         try:
-            run_watch(lambda: _build_once(a), interval=a.watch_interval)
+            run_watch(lambda: _build_once(a), interval=a.watch_interval, game=a.game)
         except KeyboardInterrupt:
             return 0
     return 0

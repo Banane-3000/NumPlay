@@ -308,28 +308,4 @@ emu: $(B)/NumPlay.nwa
 	$(PY) tools/emulator.py $< --ms 4000 --shots 3000 --out $(B)/emu
 
 clean:
-	rm -rf $(B)
-	-$(MAKE) -C games/numdash clean
-	-$(MAKE) -C games/crossyroad clean
-	-$(MAKE) -C games/numdrive clean
-	-$(MAKE) -C games/balatro clean
-	-$(MAKE) -C games/buckshot clean
-	-$(MAKE) -C games/portal clean
-	-$(MAKE) -C games/chess clean
-	-$(MAKE) -C games/numvisuals clean
-	-$(MAKE) -C games/championisland clean
-	-$(MAKE) -C games/hollowknight clean
-	-$(MAKE) -C games/undertale clean
-	-$(MAKE) -C games/subway clean
-	-$(MAKE) -C games/fnaf clean
-	-$(MAKE) -C games/hillclimb clean
-	-$(MAKE) -C games/finalearth2 clean
-	-$(MAKE) -C games/numpowder clean
-	-$(MAKE) -C games/doom clean
-	-$(MAKE) -C games/isaac clean
-	-$(MAKE) -C games/pvz clean
-	-$(MAKE) -C games/sonic clean
-	-$(MAKE) -C games/cookieclicker clean
-	-$(MAKE) -C games/leveldevil clean
-	-cd games/tetris/tetris && $(CARGO) clean
-	-$(foreach g,$(STD_GAMES),$(MAKE) -C games/$(g) clean;)
+	rm -rf $(B) build/compiled
