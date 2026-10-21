@@ -167,6 +167,25 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/blockblast"
   },
   {
+    "id": "suika",
+    "rank": 9,
+    "title": "Suika Game",
+    "tagline": "Merge the fruit into a watermelon",
+    "credit": "Based on Suika Game by Aladdin X",
+    "top": "0xF2C46A",
+    "bottom": "0x9A5A22",
+    "accent": "0x6CC530",
+    "colors": 16,
+    "records": [
+      "suika.sav"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "app": "SuikaGame.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/suika"
+  },
+  {
     "id": "portal",
     "rank": 7,
     "title": "Portal Returns",
@@ -185,7 +204,7 @@
   },
   {
     "id": "tetris",
-    "rank": 9,
+    "rank": 10,
     "title": "Tetris",
     "tagline": "Stack and clear lines",
     "credit": "By Tatone26, from All the Apps",
@@ -203,7 +222,7 @@
   },
   {
     "id": "dinorun",
-    "rank": 16,
+    "rank": 17,
     "title": "Chrome Dino",
     "tagline": "Jump, duck, survive",
     "credit": "Based on Chrome's dinosaur game by Google",
@@ -221,7 +240,7 @@
   },
   {
     "id": "doodlejump",
-    "rank": 10,
+    "rank": 11,
     "title": "Doodle Jump",
     "tagline": "Bounce as high as you can",
     "credit": "Based on Doodle Jump by Lima Sky",
@@ -240,7 +259,7 @@
   },
   {
     "id": "chess",
-    "rank": 14,
+    "rank": 15,
     "title": "Chess",
     "tagline": "Bots, puzzles, 2 players",
     "credit": null,
@@ -257,7 +276,7 @@
   },
   {
     "id": "flappybird",
-    "rank": 12,
+    "rank": 13,
     "title": "Flappy Bird",
     "tagline": "Flap through the pipes",
     "credit": "Inspired by Tatone26's All the Apps",
@@ -275,7 +294,7 @@
   },
   {
     "id": "flappydunk",
-    "rank": 15,
+    "rank": 16,
     "title": "Flappy Dunk",
     "tagline": "Flap the ball down through every hoop",
     "credit": "Based on Flappy Dunk by Voodoo",
@@ -294,7 +313,7 @@
   },
   {
     "id": "towerblock",
-    "rank": 18,
+    "rank": 19,
     "title": "Tower Blocks",
     "tagline": "Stack the blocks as high as you can",
     "credit": "Based on Tower Blocks by Steve Gardner",
@@ -313,7 +332,7 @@
   },
   {
     "id": "pacman",
-    "rank": 11,
+    "rank": 12,
     "title": "Pac-Man",
     "tagline": "Eat dots, dodge ghosts",
     "credit": "Inspired by Tatone26's All the Apps",
@@ -331,7 +350,7 @@
   },
   {
     "id": "snake",
-    "rank": 17,
+    "rank": 18,
     "title": "Snake",
     "tagline": "Eat apples, grow long",
     "credit": "Inspired by Tatone26's All the Apps",
@@ -349,7 +368,7 @@
   },
   {
     "id": "connectfour",
-    "rank": 22,
+    "rank": 23,
     "title": "Connect Four",
     "tagline": "Four in a row wins",
     "credit": "Inspired by Tatone26's All the Apps",
@@ -367,7 +386,7 @@
   },
   {
     "id": "solitaire",
-    "rank": 27,
+    "rank": 28,
     "title": "Solitaire",
     "tagline": "The classic card game",
     "credit": "Inspired by Tatone26's All the Apps",
@@ -385,7 +404,7 @@
   },
   {
     "id": "g2048",
-    "rank": 21,
+    "rank": 22,
     "title": "2048",
     "tagline": "Slide, merge, reach 2048",
     "credit": "Based on 2048 by Gabriele Cirulli",
@@ -403,7 +422,7 @@
   },
   {
     "id": "minesweeper",
-    "rank": 26,
+    "rank": 27,
     "title": "Minesweeper",
     "tagline": "Clear the field, flag the mines",
     "credit": null,
@@ -421,7 +440,7 @@
   },
   {
     "id": "breakout",
-    "rank": 20,
+    "rank": 21,
     "title": "Block Breaker",
     "tagline": "Break every brick",
     "credit": null,
@@ -439,7 +458,7 @@
   },
   {
     "id": "twoplayer",
-    "rank": 13,
+    "rank": 14,
     "title": "2 Players",
     "tagline": "Pong and more, side by side",
     "credit": null,
@@ -458,7 +477,7 @@
   },
   {
     "id": "invaders",
-    "rank": 19,
+    "rank": 20,
     "title": "Space Invaders",
     "tagline": "Stop the invasion, one cannon",
     "credit": "Based on Space Invaders by Taito",
@@ -477,7 +496,7 @@
   },
   {
     "id": "sudoku",
-    "rank": 25,
+    "rank": 26,
     "title": "Sudoku",
     "tagline": "Fill the grid, 1 to 9",
     "credit": null,
@@ -496,7 +515,7 @@
   },
   {
     "id": "uttt",
-    "rank": 23,
+    "rank": 24,
     "title": "Ultimate Tic-Tac-Toe",
     "tagline": "Tic-tac-toe in tic-tac-toe",
     "credit": null,
@@ -515,7 +534,7 @@
   },
   {
     "id": "sokoban",
-    "rank": 24,
+    "rank": 25,
     "title": "Sokoban",
     "tagline": "Push every box home",
     "credit": "Levels: Microban by David W. Skinner",
@@ -534,7 +553,7 @@
   },
   {
     "id": "retrogo",
-    "rank": 28,
+    "rank": 29,
     "title": "Retro-Go",
     "tagline": "Game Boy, NES and Sega games",
     "credit": "Based on Retro-Go by ducalex",
@@ -639,7 +658,7 @@
   },
   {
     "id": "championisland",
-    "rank": 13,
+    "rank": 15,
     "title": "Champion Island",
     "tagline": "Seven sports, one island",
     "credit": "Based on Google's Champion Island Games",
@@ -661,7 +680,7 @@
   },
   {
     "id": "finalearth2",
-    "rank": 14,
+    "rank": 16,
     "title": "The Final Earth 2",
     "tagline": "Build a city in space",
     "credit": "Based on the game by Florian van Strien",
@@ -683,7 +702,7 @@
   },
   {
     "id": "numpowder",
-    "rank": 9,
+    "rank": 11,
     "title": "NumPowder",
     "tagline": "Sand, water, fire and more",
     "credit": "Inspired by The Powder Toy",
@@ -737,7 +756,7 @@
   },
   {
     "id": "fnaf",
-    "rank": 8,
+    "rank": 9,
     "title": "Five Nights at Freddy's",
     "tagline": "Survive five nights",
     "credit": "Based on the game by Scott Cawthon",
@@ -759,7 +778,7 @@
   },
   {
     "id": "doom",
-    "rank": 7,
+    "rank": 8,
     "title": "Doom",
     "tagline": "Rip and tear",
     "credit": "Based on Doom by id Software",
@@ -798,7 +817,7 @@
   },
   {
     "id": "isaac",
-    "rank": 11,
+    "rank": 13,
     "title": "The Binding of Isaac",
     "tagline": "Cry through the basement",
     "credit": "Based on the game by Edmund McMillen",
@@ -820,7 +839,7 @@
   },
   {
     "id": "hillclimb",
-    "rank": 12,
+    "rank": 14,
     "title": "Hill Climb Racing",
     "tagline": "Drive up, don't flip",
     "credit": "Based on Hill Climb Racing by Fingersoft",
@@ -864,7 +883,7 @@
   },
   {
     "id": "sonic",
-    "rank": 10,
+    "rank": 12,
     "title": "Sonic the Hedgehog",
     "tagline": "Run through six zones",
     "credit": "Based on the game by Sonic Team",
@@ -885,7 +904,7 @@
   },
   {
     "id": "cookieclicker",
-    "rank": 16,
+    "rank": 18,
     "title": "Cookie Clicker",
     "tagline": "Bake billions of cookies",
     "credit": "Based on Cookie Clicker by Orteil",
@@ -906,7 +925,7 @@
   },
   {
     "id": "leveldevil",
-    "rank": 15,
+    "rank": 17,
     "title": "Level Devil",
     "tagline": "Run to the door",
     "credit": "Based on Level Devil by Unept",
@@ -943,6 +962,48 @@
       "docs/title.png"
     ],
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/jetpackjoyride",
+    "default": false,
+    "xl": true
+  },
+  {
+    "id": "stickmanhook",
+    "rank": 7,
+    "title": "Stickman Hook",
+    "tagline": "Swing from hook to hook",
+    "credit": "Based on Stickman Hook by Madbox",
+    "top": "0x8A5CC8",
+    "bottom": "0x3E2C8A",
+    "accent": "0xE8303A",
+    "colors": 16,
+    "records": [
+      "stickmanhook.sav",
+      "stickmanhook_saves.py"
+    ],
+    "shots": [
+      "docs/title.png"
+    ],
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/stickmanhook",
+    "default": false,
+    "xl": true
+  },
+  {
+    "id": "donkeykong",
+    "rank": 10,
+    "title": "Donkey Kong",
+    "tagline": "Climb the girders and save Pauline",
+    "credit": "Based on Donkey Kong by Nintendo",
+    "top": "0x2A1018",
+    "bottom": "0x0C0C14",
+    "accent": "0xE8406A",
+    "colors": 16,
+    "records": [
+      "donkeykong.sav",
+      "donkeykong_saves.py"
+    ],
+    "shots": [
+      "docs/title.png"
+    ],
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/donkeykong",
     "default": false,
     "xl": true
   }

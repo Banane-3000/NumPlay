@@ -1,0 +1,23 @@
+# Suika Game in Chinese: the English text as in the source, a tab, the translation (see tools/lang.py).
+Score	分数
+Best score	最高分
+Next	下一个
+Circle of	进化
+Evolution	之轮
+Move	移动
+Drop	放下
+Back	返回
+Menu	菜单
+Resume	继续
+Restart	重新开始
+How to play	玩法
+Quit	退出
+No	否
+Yes	是
+Play	开始
+Paused	暂停
+Start again?	重新开始？
+New best!	新纪录！
+Game over	游戏结束
+Move the cloud with the arrows and drop the fruit with OK. Two of the same fruit that touch join into the next one, up to the watermelon. If fruit stays above the box, it's over.	用方向键移动云朵，按 OK 放下水果。两个相同的水果碰到一起会合成下一种，一直到西瓜。水果停在箱子上方，游戏就结束了。
+Best 	最高

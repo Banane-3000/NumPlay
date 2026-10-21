@@ -69,6 +69,10 @@ GAMES = {
     # past how to play, two flaps; next time the run goes on after a flap
     "flappydunk": ("FlappyDunk.nwa", "flappydunk.sav", presses((1500, "ok"), (2200, "ok"), (2550, "ok")), 3500,
                    presses((1500, "ok")), 2500),
+    # past how to play, a fruit dropped, the cloud moved, another dropped; next time the box is still there, and one
+    # more falls in
+    "suika": ("SuikaGame.nwa", "suika.sav", presses((1500, "ok"), (2200, "ok"), (2600, "right", 400), (3600, "ok")), 4800,
+              presses((1500, "ok")), 3000),
     # past how to play, a game started and a block placed; next time the tower is still there, waiting
     "towerblock": ("TowerBlocks.nwa", "towerblocks.sav", presses((1500, "ok"), (2200, "ok"), (3000, "ok")), 3600, [], 2500),
     # past how to play, a climb started; next time it goes on after OK
@@ -217,6 +221,14 @@ GAMES = {
     # copy, it opens paused: Back, another second, paused again, quit with On/Off
     "jetpackjoyride": ("JetpackJoyride.nwa", "jetpackjoyride.sav", presses((1500, "ok"), (2500, "ok"), (3600, "back")), 5000,
                        presses((1500, "back"), (2700, "back")), 4000),
+    # the title, how to play (the first time), then level 1: the stickman falls and swings; Home keeps the level.
+    # Next time, from the copy, Play goes back to it, then Back pauses it; quit with On/Off
+    "stickmanhook": ("StickmanHook.nwa", "stickmanhook.sav", presses((1500, "ok"), (2500, "ok"), (3300, "ok", 700)), 5000,
+                     presses((1500, "ok"), (2700, "back")), 4000),
+    # the title, how to play, then the game: a second of Kong's climb, paused (that saves it); Home keeps it. Next
+    # time, from the copy, it opens paused: Back, a second more, paused again, quit with On/Off
+    "donkeykong": ("DonkeyKong.nwa", "donkeykong.sav", presses((1500, "ok"), (2500, "ok"), (3600, "back")), 5000,
+                   presses((1500, "back"), (2700, "back")), 4000),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -249,7 +261,25 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "fnaf": "fnaf_saves.py", "doom": "doom_saves.py", "isaac": "isaac_saves.py",
           "hillclimb": "hillclimb_saves.py", "pvz": "pvz_saves.py", "sonic": "sonic_saves.py",
           "cookieclicker": "cookieclicker_saves.py", "leveldevil": "leveldevil_saves.py",
-          "jetpackjoyride": "jetpackjoyride_saves.py"}
+          "jetpackjoyride": "jetpackjoyride_saves.py", "stickmanhook": "stickmanhook_saves.py",
+          "donkeykong": "donkeykong_saves.py"}
+
+
+def dk_frames(v):
+    """Donkey Kong's save: the frames since the game began (the arcade's difficulty clock, in the packed RAM)."""
+    raw, i = bytearray(), 24
+    while i < len(v) - 4 and len(raw) <= 0x384:
+        c = v[i]
+        i += 1
+        if c < 128:
+            raw += v[i:i + c + 1]
+            i += c + 1
+        else:
+            raw += bytes([v[i]]) * (c - 126)
+            i += 1
+    return raw[0x381] * 256 + raw[0x384] if len(raw) > 0x384 else -1
+
+
 CHECKS = {
     # the island remembers where Lucky was; after the reinstall, from the copy
     "championisland": (lambda v: v[:3] == b"CI1" and b"PLAYER_LOC" in v,) * 2,
@@ -297,6 +327,9 @@ CHECKS = {
     # a run kept (guide read), the ball on its way; then further along the same run
     "flappydunk": (lambda v: len(v) == 200 and v[:2] == b"F\1" and v[2] & 3 == 3 and struct.unpack_from("<f", v, 24)[0] > 1,
                    lambda v: v[2] & 1 and struct.unpack_from("<f", v, 24)[0] > 6),
+    # a game kept (guide read) with fruit in the box; then one more
+    "suika": (lambda v: len(v) == 1052 and v[:2] == b"S\1" and v[2] & 3 == 3 and sum(v[42 + 16 * i] > 0 for i in range(64)) >= 1,
+              lambda v: v[2] & 1 and sum(v[42 + 16 * i] > 0 for i in range(64)) >= 2),
     # a tower kept (guide read) with one block placed; then kept as it was
     "towerblock": (lambda v: len(v) == 668 and v[:2] == b"T\1" and v[2] & 3 == 3 and struct.unpack_from("<I", v, 12)[0] == 1,
                    lambda v: v[2] & 1 and struct.unpack_from("<I", v, 12)[0] == 1),
@@ -353,6 +386,13 @@ CHECKS = {
     # a run kept ("JJR1", has_run at 23, its frames at 60); after the reinstall, from the copy, it goes on
     "jetpackjoyride": (lambda v: len(v) == 728 and v[:4] == b"JJR1" and v[23] == 1 and struct.unpack_from("<I", v, 60)[0] >= 30,
                        lambda v: v[:4] == b"JJR1" and v[23] == 1 and struct.unpack_from("<I", v, 60)[0] >= 90),
+    # how to play seen, level 1 being played ("SHK3", guide_seen at 17, has_course at 18, the course at 20); after the
+    # reinstall, from the copy, the same level and course
+    "stickmanhook": (lambda v: len(v) == 28 and v[:4] == b"SHK3" and v[17] == 1 and v[18] == 1 and v[20] == 0
+                     and v[21] == 255,) * 2,
+    # a game kept ("DKG1", the game at 23, one game played) a second in; after the reinstall, from the copy, it goes on
+    "donkeykong": (lambda v: v[:4] == b"DKG1" and v[23] == 1 and v[12] == 1 and dk_frames(v) >= 30,
+                   lambda v: v[:4] == b"DKG1" and v[23] == 1 and v[12] == 1 and dk_frames(v) >= 90),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
     # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies kept

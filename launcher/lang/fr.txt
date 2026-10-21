@@ -74,6 +74,8 @@ Buckshot Roulette	Buckshot Roulette
 You, the Dealer, one shotgun	Toi, le croupier, un fusil
 Block Blast	Block Blast
 Fit the blocks, blast the lines	Place les blocs, fais sauter les lignes
+Suika Game	Suika Game
+Merge the fruit into a watermelon	Fusionne les fruits jusqu'à la pastèque
 Portal Returns	Portal Returns
 Think with portals	Pense avec les portails
 Tetris	Tetris
@@ -120,6 +122,7 @@ By Tatone26, from All the Apps	Par Tatone26, tiré d'All the Apps
 Inspired by Tatone26's All the Apps	Inspiré d'All the Apps de Tatone26
 Based on 2048 by Gabriele Cirulli	D'après 2048 de Gabriele Cirulli
 Based on Block Blast! by Hungry Studio	D'après Block Blast! de Hungry Studio
+Based on Suika Game by Aladdin X	D'après Suika Game d'Aladdin X
 Based on Space Invaders by Taito	D'après Space Invaders de Taito
 Based on Chrome's dinosaur game by Google	D'après le jeu du dinosaure de Chrome, de Google
 Based on Retro-Go by ducalex	D'après Retro-Go de ducalex
