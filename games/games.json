@@ -315,6 +315,24 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/towerblock"
   },
   {
+    "id": "coreball",
+    "title": "Core Ball",
+    "tagline": "Stick every ball to the spinning core",
+    "credit": "Based on Core Ball by Yang Hao",
+    "top": "0x5A5A5A",
+    "bottom": "0x0A0A0A",
+    "accent": "0x1CB01A",
+    "colors": 8,
+    "records": [
+      "coreball.sav"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "app": "CoreBall.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/coreball"
+  },
+  {
     "id": "pacman",
     "title": "Pac-Man",
     "tagline": "Eat dots, dodge ghosts",

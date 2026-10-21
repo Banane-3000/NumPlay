@@ -75,6 +75,11 @@ GAMES = {
               presses((1500, "ok")), 3000),
     # past how to play, a game started and a block placed; next time the tower is still there, waiting
     "towerblock": ("TowerBlocks.nwa", "towerblocks.sav", presses((1500, "ok"), (2200, "ok"), (3000, "ok")), 3600, [], 2500),
+    # past how to play (the saved level 5 kept), level 5 started and two balls shot; next time the menu, Levels,
+    # two to the right and OK: level 7, saved
+    "coreball": ("CoreBall.nwa", "coreball.sav", presses((1500, "ok"), (2000, "ok"), (2800, "ok"), (3300, "ok")), 3800,
+                 presses((1500, "back"), (1800, "down"), (2100, "down"), (2400, "ok"), (2800, "right"), (3100, "right"),
+                         (3400, "ok")), 4500),
     # past how to play, a climb started; next time it goes on after OK
     "doodlejump": ("DoodleJump.nwa", "doodlejump.sav", presses((1500, "ok"), (2200, "ok")), 3500,
                    presses((1500, "ok")), 2500),
@@ -233,7 +238,18 @@ GAMES = {
 
 
 # saves already on the calculator, and what each session must leave in them
+def coreball_save(level, best, flags=0):
+    """coreball.sav: 'C', version 1, flags, level, best, 3 spare bytes, then FNV-1a of those 8"""
+    v = bytes([ord("C"), 1, flags, level, best, 0, 0, 0])
+    h = 0x811C9DC5
+    for x in v:
+        h = (h ^ x) * 0x01000193 & 0xFFFFFFFF
+    return v + struct.pack("<I", h)
+
+
 SEEDS = {
+    # level 5 to play, 9 reached, how to play not read yet
+    "coreball": coreball_save(5, 9),
     # the first level done and last played
     "numdrive": b"MD" + bytes([1] + [0] * 24) + b"\0\0\0",
     # puzzle rating 1234, a streak of 3, the bot Hugo, side 1, a 10-minute clock
@@ -326,6 +342,9 @@ CHECKS = {
     # a game kept (guide read) with fruit in the box; then one more
     "suika": (lambda v: len(v) == 1052 and v[:2] == b"S\1" and v[2] & 3 == 3 and sum(v[42 + 16 * i] > 0 for i in range(64)) >= 1,
               lambda v: v[2] & 1 and sum(v[42 + 16 * i] > 0 for i in range(64)) >= 2),
+    # read back and kept, the guide read; then level 7 picked in the list
+    "coreball": (lambda v: v == coreball_save(5, 9, 2),
+                 lambda v: v == coreball_save(7, 9, 2)),
     # a tower kept (guide read) with one block placed; then kept as it was
     "towerblock": (lambda v: len(v) == 668 and v[:2] == b"T\1" and v[2] & 3 == 3 and struct.unpack_from("<I", v, 12)[0] == 1,
                    lambda v: v[2] & 1 and struct.unpack_from("<I", v, 12)[0] == 1),

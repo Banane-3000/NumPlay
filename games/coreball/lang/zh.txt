@@ -1,0 +1,15 @@
+# Core Ball in Chinese: the English text as in the source, a tab, the translation (see tools/lang.py).
+Back  menu	返回  菜单
+OK  shoot	OK  发射
+OK  play	OK  开始
+Levels	关卡
+Resume	继续
+Restart	重新开始
+How to play	玩法
+Quit	退出
+No	否
+Yes	是
+Play	开始
+Menu	菜单
+Quit Core Ball?	退出酷啵？
+Press OK to shoot a ball at the spinning core. Don't hit the balls already on it. Shoot them all to clear the level.	按 OK 向旋转的核心发射小球。不要碰到已经插在上面的球。全部发射完就能过关。
