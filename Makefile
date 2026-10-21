@@ -222,6 +222,7 @@ APP_sonic = games/sonic/output/sonic.nwa:SonicTheHedgehog.nwa
 APP_cookieclicker = games/cookieclicker/output/cookieclicker.nwa:CookieClicker.nwa
 APP_leveldevil = games/leveldevil/output/leveldevil.nwa:LevelDevil.nwa
 APP_jetpackjoyride = games/jetpackjoyride/output/jetpackjoyride.nwa:JetpackJoyride.nwa
+APP_dune = games/dune/output/dune.nwa:Dune.nwa
 
 apps: | $(B)
 	$(MAKE) -C games/numdash build NWLINK="node node_modules/nwlink/bin/nwlink"
@@ -282,6 +283,17 @@ $(STD_APPS): $(B)/apps/%.nwa: FORCE | $(B)
 	$(MAKE) --no-print-directory -C games/$(APPID_$*) build NWLINK="$(NWLINK)"
 	cp games/$(APPID_$*)/output/$(APPID_$*).nwa $@
 
+# Dune is published as its own app.
+.PHONY: check-dune
+apps: $(B)/apps/Dune.nwa
+$(B)/apps/Dune.nwa: FORCE | $(B)
+	$(MAKE) --no-print-directory -C games/dune build NWLINK="$(NWLINK)"
+	mkdir -p $(B)/apps
+	cp games/dune/output/dune.nwa $@
+check: check-dune
+check-dune: $(B)/apps/Dune.nwa
+	$(NWLINK) nwa-bin $< $(B)/apps/Dune.bin --ram-length $(UPSILON_RAM)
+
 # ------------------------------------------------------------------ simulator
 SIM_numdash = games/numdash/build/sim-module.o
 SIM_crossyroad = games/crossyroad/output/sim-module.o
@@ -340,5 +352,6 @@ clean:
 	-$(MAKE) -C games/cookieclicker clean
 	-$(MAKE) -C games/leveldevil clean
 	-$(MAKE) -C games/jetpackjoyride clean
+	-$(MAKE) -C games/dune clean
 	-cd games/tetris/tetris && $(CARGO) clean
 	-$(foreach g,$(STD_GAMES),$(MAKE) -C games/$(g) clean;)

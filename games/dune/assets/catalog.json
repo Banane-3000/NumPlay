@@ -1,0 +1,118 @@
+{
+  "balls": [
+    {
+      "rotates": false,
+      "spriteName": "",
+      "name": "Basic_Ball",
+      "price": 0,
+      "trailData": {
+        "gradient_type": 0,
+        "colors": [
+          "#ffffff"
+        ]
+      },
+      "original_id": 0
+    },
+    {
+      "rotates": true,
+      "spriteName": "",
+      "name": "Basketball",
+      "price": 100,
+      "trailData": {
+        "gradient_type": 0,
+        "colors": [
+          "#ff5900"
+        ]
+      },
+      "original_id": 5
+    },
+    {
+      "rotates": true,
+      "spriteName": "",
+      "name": "8-Ball",
+      "price": 100,
+      "trailData": {
+        "gradient_type": 1,
+        "height": 50,
+        "colors": [
+          "#89ceff",
+          "#000000",
+          "#89ceff"
+        ]
+      },
+      "original_id": 6
+    },
+    {
+      "rotates": true,
+      "spriteName": "",
+      "name": "Football",
+      "price": 100,
+      "trailData": {
+        "gradient_type": 2,
+        "colors": [
+          "#ffffff",
+          "#000000"
+        ]
+      },
+      "original_id": 7
+    },
+    {
+      "rotates": true,
+      "spriteName": "",
+      "name": "Donut",
+      "price": 500,
+      "trailData": {
+        "gradient_type": 0,
+        "colors": [
+          "#ffffff",
+          "#e91e7f",
+          "#ec8d45",
+          "#ec8d45"
+        ]
+      },
+      "original_id": 13
+    },
+    {
+      "rotates": false,
+      "spriteName": "",
+      "name": "Smiley",
+      "price": 1000,
+      "trailData": {
+        "gradient_type": 1,
+        "colors": [
+          "#f8ba1e"
+        ]
+      },
+      "original_id": 18
+    },
+    {
+      "rotates": true,
+      "spriteName": "",
+      "name": "Rainbow Bubble",
+      "price": 1500,
+      "trailData": {
+        "gradient_type": 0,
+        "height": 52,
+        "colors": [
+          "#0042ff",
+          "#b900ff",
+          "#ff0058",
+          "#ffe700",
+          "#90ff61"
+        ]
+      },
+      "original_id": 23
+    }
+  ],
+  "landscapes": [
+    {
+      "name": "Mountains",
+      "price": 0,
+      "surfaceColor": "#ccf173",
+      "lineColor": "#ccf173",
+      "skyColor": "#56a5d2",
+      "groundColor": "#332a21",
+      "original_id": 1
+    }
+  ]
+}
