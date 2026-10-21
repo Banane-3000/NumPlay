@@ -160,6 +160,24 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/blockblast"
   },
   {
+    "id": "suika",
+    "title": "Suika Game",
+    "tagline": "Merge the fruit into a watermelon",
+    "credit": "Based on Suika Game by Aladdin X",
+    "top": "0xF2C46A",
+    "bottom": "0x9A5A22",
+    "accent": "0x6CC530",
+    "colors": 16,
+    "records": [
+      "suika.sav"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "app": "SuikaGame.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/suika"
+  },
+  {
     "id": "portal",
     "title": "Portal Returns",
     "tagline": "Think with portals",
