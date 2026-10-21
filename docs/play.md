@@ -95,7 +95,7 @@ Hollow Knight comes as its own app, `HollowKnight.nwa`: it is too big to share t
 | **⌫** | Pause |
 | **Home** | Save and quit |
 
-Choose Start Game, then a save. Rest at benches to save and to change charms. In menus, **OK** or **EXE** confirms and **Back** goes back. In the inventory, left and right at the edges change pages; on the map page, **OK** places markers once you have them, and **shift** shows or hides the key and the pins. Home saves and quits, as Quit to Menu does. Your saves are also copied into `hollowknight_saves.py`, so installing the app again doesn't erase them.
+Choose Start Game, then a save. Rest at benches to save and to change charms: **toolbox**, right to Charms, then **OK** on a charm. In menus, **OK** or **EXE** confirms and **Back** goes back. In the inventory, left and right at the edges change pages; on the map page, **OK** places markers once you have them, and **shift** shows or hides the key and the pins. Home saves and quits, as Quit to Menu does. Your saves are also copied into `hollowknight_saves.py`, so installing the app again doesn't erase them.
 
 <br clear="right">
 
