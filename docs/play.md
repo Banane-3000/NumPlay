@@ -509,6 +509,20 @@ Swing the stickman from hook to hook and over the finish line. Hold OK to grab t
 
 <br clear="right">
 
+## Donkey Kong
+
+<img src="../games/donkeykong/docs/shot.png" width="320" align="right" alt="Donkey Kong">
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** (or **4, 6, 8, 2**) | Walk, climb ladders |
+| **OK** (or **EXE**) | Jump |
+| **Back** | Pause (with New game, How to play and Quit) |
+
+Climb to the top and save Pauline, as in the 1981 arcade game. Jump over Kong's barrels for points, or grab a hammer (in mid-jump) and smash them. Four boards: the girders, the pie factory, the elevators and the rivets, where pulling out all eight rivets brings Kong down. Watch the bonus timer: it's your points if you finish and your life if it runs out. An extra life comes at 7,000 points. Home saves your game, and your best score is kept.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">

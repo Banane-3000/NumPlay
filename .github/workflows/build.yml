@@ -72,6 +72,7 @@ jobs:
           make -C games/leveldevil host test
           make -C games/cookieclicker host test
           make -C games/jetpackjoyride host test
+          make -C games/donkeykong host test
           make -C games/invaders host test
           make -C games/sudoku host test
           make -C games/uttt host test
