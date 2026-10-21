@@ -38,11 +38,19 @@
 }
 </script>
 <link rel="stylesheet" href="app.css">
+<script>
+  // (the intro plays the first time: the page stays hidden until it starts, so it doesn't show twice)
+  try {
+    if ((!localStorage.getItem('numplay-intro3') || /[?&]intro\b/.test(location.search)) && innerWidth >= 900 &&
+        !matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('intro-wait');
+  } catch (e) {}
+  setTimeout(() => document.documentElement.classList.remove('intro-wait'), 5000);
+</script>
 </head>
 <body>
 <main id="studio">
   <div class="head">
-    <h1 class="title">NumPlay</h1>
+    <h1 class="title"><button id="replay" type="button" data-tip="Play the intro again"><span>NumPlay</span></button></h1>
     <div class="chips">
       <button id="app-chip" type="button" class="chip" aria-haspopup="dialog" aria-expanded="false" data-tip="Its icon and name on your calculator, and how it opens">
         <img id="app-chip-icon" src="kit/variants/NumPlay.png" alt="" width="28" height="28">
@@ -58,7 +66,10 @@
 
   <div class="games">
     <div class="row-head"><h2>Games in NumPlay</h2></div>
-    <section id="small" class="grid" aria-label="Games in NumPlay, best first"></section>
+    <section id="small" class="grid small" aria-label="Games in NumPlay, best first"></section>
+  </div>
+
+  <aside class="side" aria-label="Big games, and your own Game Boy, NES and Sega games">
     <div class="row-head">
       <h2>Big games</h2>
       <div class="cap" role="radiogroup" aria-label="Space for apps">
@@ -66,24 +77,23 @@
         <button type="button" role="radio" data-cap="xl" aria-checked="false" data-tip="With Enlarged Extra Apps">6 MB</button>
       </div>
     </div>
-    <section id="big" class="grid" aria-label="Big games, best first"></section>
+    <section id="big" class="grid big" aria-label="Big games, best first"></section>
     <section id="retro" class="retro" aria-label="Your own Game Boy, NES and Sega games" hidden>
       <div class="row-head"><h2>Your own Game Boy, NES and Sega games</h2></div>
-      <div class="carts-row">
-        <div id="carts" class="carts" aria-label="Your games"></div>
-        <label id="drop" class="add-cart" for="rom-file" data-tip=".gb .gbc .nes .sms .gg">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-          Add game files
-        </label>
-        <input id="rom-file" type="file" multiple accept=".gb,.gbc,.nes,.sms,.gg">
-      </div>
+      <label id="drop" class="drop" for="rom-file">
+        <span class="drop-art" aria-hidden="true"><i class="c1"></i><i class="c2"></i><i class="c3"></i></span>
+        <span class="drop-text">Add game files</span>
+        <span id="drop-sub" class="drop-sub">.gb .gbc .nes .sms .gg</span>
+      </label>
+      <input id="rom-file" type="file" multiple accept=".gb,.gbc,.nes,.sms,.gg">
+      <div id="carts" class="carts" aria-label="Your games"></div>
     </section>
     <footer class="foot">
       <a href="https://github.com/Mason363/NumPlay">Made by Mason Chen as part of NumPlay</a>
       <span aria-hidden="true">·</span>
       <a href="../">NumPlay's page</a>
     </footer>
-  </div>
+  </aside>
 
   <section class="device" aria-label="Your calculator">
     <div id="calc" class="calc">

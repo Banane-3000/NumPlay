@@ -209,7 +209,8 @@
       have.add('c' + r.key);
       if (box.querySelector('[data-k="c' + r.key + '"]')) continue;
       const s = SYS[r.sys];
-      const c = el('button', 'cart', { type: 'button', 'data-k': 'c' + r.key, 'aria-label': 'Remove ' + r.name });
+      const c = el('button', 'cart enter', { type: 'button', 'data-k': 'c' + r.key, 'aria-label': 'Remove ' + r.name });
+      c.addEventListener('animationend', () => c.classList.remove('enter'), { once: true });
       c.style.background = s.shell;
       c.dataset.tip = r.name + '|' + s.name + ', ' + size(r.bytes.length);
       const lab = c.appendChild(el('span', 'label'));
@@ -247,36 +248,47 @@
   }
 
   // ------------------------------------------------------------------ picking
+  // the icon's answer to a press: up with a tick, back down, or no
+  function bump(b, cls) {
+    if (!b) return;
+    b.classList.remove('pop-on', 'pop-off', 'shake');
+    void b.offsetWidth;  // (restarts it)
+    b.classList.add(cls);
+    b.addEventListener('animationend', () => b.classList.remove(cls), { once: true });
+  }
   function overflow(bytes) {
     toast("That doesn't fit: " + size(bytes) + ' too much' + (st.cap === 'std' ? '. 6 MB can take more' : ''));
     $('#screen').classList.add('over');
     setTimeout(() => render(), 500);
   }
   function toggle(id, quiet) {
-    const s = solo();
+    const s = solo(), b = quiet ? null : buttons.get(id);
     if (st.picked.has(id)) {
       st.picked.delete(id);
+      bump(b, 'pop-off');
       if (alone(id) && before) { st.picked = new Set(before); before = null; }
     } else if (alone(id)) {
       if (!s) before = ordered();
       st.picked = new Set([id]);
+      bump(b, 'pop-on');
       if (!quiet) {
         toast(byId[id].title + ' fills the whole calculator, so it goes on its own. Pick it again to get your games back');
         fetchBytes(KIT + 'apps/' + id + '.nwa.gz').catch(() => {});
       }
     } else {
-      if (s) { if (!quiet) toast(byId[s].title + ' takes the whole calculator. Pick it again to take it out'); return; }
-      if (byId[id].xl && st.lang !== 'en') { toast('The big games are in English: pick English to add them'); return; }
+      if (s) { if (!quiet) { bump(b, 'shake'); toast(byId[s].title + ' takes the whole calculator. Pick it again to take it out'); } return; }
+      if (byId[id].xl && st.lang !== 'en') { bump(b, 'shake'); toast('The big games are in English: pick English to add them'); return; }
       const over = usedBytes() + flash(id) - capacity();
-      if (over > 0) { if (!quiet) overflow(over); return; }
+      if (over > 0) { if (!quiet) { bump(b, 'shake'); overflow(over); } return; }
       st.picked.add(id);
+      bump(b, 'pop-on');
       if (!quiet) fetchObj(objPath(id)).catch(() => {});  // (ready by the time you install)
     }
     render();
   }
 
   async function addRoms(files) {
-    if (solo()) { toast(byId[solo()].title + " takes the whole calculator, so there's no room for Retro-Go"); return; }
+    if (solo()) { bump($('#drop'), 'shake'); toast(byId[solo()].title + " takes the whole calculator, so there's no room for Retro-Go"); return; }
     const ok = new Set(rg && rg.systems ? rg.systems : [1, 2, 3]);
     for (const f of files) {
       const ext = (f.name.split('.').pop() || '').toLowerCase(), sys = EXT[ext];
@@ -288,7 +300,7 @@
       const r = { key: ++romKey, sys, bytes, name: romName(f.name) };
       const extra = (st.roms.length ? 0 : flash(rg.id) + ROM_HEAD) + romBytes(r);
       const over = usedBytes() + extra - capacity();
-      if (over > 0) { overflow(over); continue; }
+      if (over > 0) { bump($('#drop'), 'shake'); overflow(over); continue; }
       st.roms.push(r);
       fetchObj(objPath(rg.id)).catch(() => {});
     }
@@ -939,7 +951,7 @@
 
   // The keys at the top of the keypad, where the photo has them (measured from it): the D-pad's cross with
   // its corners rounded (a quadratic curve through each corner), OK and Back's circles, and pills.
-  const KEY_H = 14;
+  const KEY_H = 12;
   function roundPoly(pts, radii, n) {
     const out = [];
     pts.forEach((p, i) => {
@@ -953,8 +965,18 @@
     });
     return out;
   }
-  const circlePts = (cx, cy, r) => Array.from({ length: 40 }, (_, i) => [cx + r * Math.cos(i * Math.PI / 20), cy + r * Math.sin(i * Math.PI / 20)]);
-  const pill = (x0, y0, x1, y1, r) => roundPoly([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], [r, r, r, r], 7);
+  const circlePts = (cx, cy, r, n = 40) => Array.from({ length: n }, (_, i) => [cx + r * Math.cos(i * 2 * Math.PI / n), cy + r * Math.sin(i * 2 * Math.PI / n)]);
+  const pill = (x0, y0, x1, y1, r, n = 7) => roundPoly([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], [r, r, r, r], n);
+  // an outline moved out by d (along each corner's bisector), for the hole a key stands in
+  function grow(pts, d) {
+    const nrm = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; return [dy / l, -dx / l]; };
+    return pts.map((p, i) => {
+      const a = pts[(i + pts.length - 1) % pts.length], b = pts[(i + 1) % pts.length];
+      const n1 = nrm(a, p), n2 = nrm(p, b), bx = n1[0] + n2[0], by = n1[1] + n2[1], l = Math.hypot(bx, by) || 1;
+      const k = d / Math.max(0.35, (bx * n1[0] + by * n1[1]) / l);
+      return [p[0] + bx / l * k, p[1] + by / l * k];
+    });
+  }
   // a shape as a mask (outlines in the photo's pixels, drawn on a canvas, w x h from x0, y0; evenodd: holes)
   function maskOf(outlines, x0, y0, w, h, scale, evenodd) {
     const c = el('canvas');
@@ -968,27 +990,37 @@
     return 'url(' + c.toDataURL() + ')';
   }
   function keyOutlines() {
-    // (each taking in the dark edge the photo draws round it)
-    const cross = [[190.5, 794.5], [267.5, 794.5], [267.5, 885.5], [356.5, 885.5], [356.5, 958.5], [267.5, 958.5], [267.5, 1051.5], [190.5, 1051.5],
-      [190.5, 958.5], [100.5, 958.5], [100.5, 885.5], [190.5, 885.5]];
+    // Measured from the photo: each key's outline runs along the outer edge of the dark line the photo draws
+    // round it, so its top carries that line and none of the front's white. Its sides follow a coarser outline
+    // (fewer walls) laid just outside it, and it stands in a hole a hair wider, the gap only a crease.
+    const cross = [[193, 797], [266.5, 797], [266.5, 887.5], [355.5, 887.5], [355.5, 957.5], [266.5, 957.5], [266.5, 1050.5], [193, 1050.5],
+      [193, 957.5], [104, 957.5], [104, 887.5], [193, 887.5]];
+    const cr = [22, 22, 7.5, 22, 22, 7.5, 22, 22, 7.5, 22, 22, 7.5];
     const white = [222, 222, 219];
-    // and the hole each sits in, 2 wider, so none of the photo's own edge is left on the front
-    const hole = cross.map(([x, y]) => [x + (x > 229 ? 2 : -2), y + (y > 922 ? 2 : -2)]);
     const keys = [
-      { id: 'dpad', pts: roundPoly(cross, [23.5, 23.5, 7.5, 23.5, 23.5, 7.5, 23.5, 23.5, 7.5, 23.5, 23.5, 7.5], 6),
-        hole: roundPoly(hole, [25.5, 25.5, 5.5, 25.5, 25.5, 5.5, 25.5, 25.5, 5.5, 25.5, 25.5, 5.5], 6), side: white },
-      { id: 'home', pts: pill(438.5, 815.5, 578.5, 905.5, 44.5), hole: pill(436.5, 813.5, 580.5, 907.5, 46.5), side: [212, 148, 34] },
-      { id: 'power', pts: pill(438.5, 938.5, 578.5, 1028.5, 44.5), hole: pill(436.5, 936.5, 580.5, 1030.5, 46.5), side: [36, 36, 38] },
-      { id: 'ok', pts: circlePts(718, 923, 57), hole: circlePts(718, 923, 59), side: white },
-      { id: 'back', pts: circlePts(857.5, 923, 57), hole: circlePts(857.5, 923, 59), side: white },
+      { id: 'dpad', pts: roundPoly(cross, cr, 6), walls: grow(roundPoly(cross, cr, 3), 0.6), side: white },
+      { id: 'home', box: [439.5, 817.5, 578.5, 906.5], side: [212, 148, 34] },
+      { id: 'power', box: [439.5, 940.5, 578.5, 1029.5], side: [36, 36, 38] },
+      { id: 'ok', pts: circlePts(718.5, 924, 56.5), walls: circlePts(718.5, 924, 57, 20), side: white },
+      { id: 'back', pts: circlePts(858, 924, 56.5), walls: circlePts(858, 924, 57, 20), side: white },
     ];
-    return keys.concat([160, 299, 439, 578, 718, 858].map((x, i) => ({ id: 'row' + i, pts: pill(x - 58.5, 1090.5, x + 58.5, 1169.5, 39.5),
-      hole: pill(x - 60.5, 1088.5, x + 60.5, 1171.5, 41.5), side: white })));
+    const xs = [[102.5, 216.5], [241.5, 356.5], [381.5, 495.5], [521.5, 635.5], [661.5, 775.5], [800.5, 914.5]];
+    [[1092.5, 1169.5], [1204.5, 1281.5], [1316.5, 1393.5]].forEach(([y0, y1], r) =>
+      xs.forEach(([x0, x1], c) => keys.push({ id: 'row' + r + c, box: [x0, y0, x1, y1], side: white })));
+    for (const k of keys) {
+      if (k.box) {
+        const [x0, y0, x1, y1] = k.box, r = (y1 - y0) / 2;
+        k.pts = pill(x0, y0, x1, y1, r);
+        k.walls = grow(pill(x0, y0, x1, y1, r, 3), 0.6);
+      }
+      k.hole = grow(k.pts, 0.4);
+    }
+    return keys;
   }
   // each key: its top, cut from the photo, standing on its sides, a wall at each step of its outline lit by
-  // the calculator's light, darker down in its hole. Under them all, the dark of the keypad's bed. OK and
-  // Back carry Install and Download.
-  const KEY_DOWN = 10;
+  // the calculator's light, a little darker where it meets the front and dark down in its hole. Under them
+  // all, the keypad's bed. OK and Back carry Install and Download.
+  const KEY_DOWN = 8;
   function keys3d(calc, keys) {
     part(calc, 'i', 'keybed', { left: U(90), top: U(780), width: U(840), height: U(1220), transform: 'translateZ(' + U(-KEY_DOWN) + ')' });
     for (const k of keys) {
@@ -997,14 +1029,15 @@
       const w = Math.ceil(Math.max(...xs)) + 1 - x0, h = Math.ceil(Math.max(...ys)) + 1 - y0;
       const g = part(calc, 'div', 'key3d', { left: U(x0), top: U(y0), width: U(w), height: U(h) });
       g.dataset.key = k.id;
-      k.pts.forEach(([x, y], i) => {
-        const [x2, y2] = k.pts[(i + 1) % k.pts.length], len = Math.hypot(x2 - x, y2 - y);
+      k.walls.forEach(([x, y], i) => {
+        const [x2, y2] = k.walls[(i + 1) % k.walls.length], len = Math.hypot(x2 - x, y2 - y);
         if (len < 0.01) return;
         const phi = Math.atan2(y2 - y, x2 - x), n = [Math.sin(phi), -Math.cos(phi), 0];  // (facing out)
-        const deep = k.side.map((v) => Math.round(v * lit(n) * 0.45)), top = k.side.map((v) => Math.round(Math.min(255, v * lit(n))));
-        part(g, 'i', 'kwall', { left: U(x - x0), top: U(y - y0), width: U(len + 2), height: U(KEY_H + KEY_DOWN),  // (over its neighbours: no seams)
-          transform: 'rotateZ(' + (phi * 180 / Math.PI).toFixed(2) + 'deg) translate3d(' + U(-1) + ', 0, ' + U(-KEY_DOWN) + ') rotateX(90deg)',
-          background: 'linear-gradient(rgb(' + deep.join(',') + '), rgb(' + top.join(',') + ') ' + (100 * KEY_DOWN / (KEY_H + KEY_DOWN)).toFixed(0) + '%, rgb(' + top.join(',') + '))' });
+        const tone = (f) => 'rgb(' + k.side.map((v) => Math.round(Math.min(255, v * lit(n) * f))).join(',') + ')';
+        const at = (z) => (100 * (z + KEY_DOWN) / (KEY_H + KEY_DOWN)).toFixed(1) + '%';
+        part(g, 'i', 'kwall', { left: U(x - x0), top: U(y - y0), width: U(len + 1.4), height: U(KEY_H + KEY_DOWN),  // (over its neighbours: no seams)
+          transform: 'rotateZ(' + (phi * 180 / Math.PI).toFixed(2) + 'deg) translate3d(' + U(-0.7) + ', 0, ' + U(-KEY_DOWN) + ') rotateX(90deg)',
+          background: 'linear-gradient(' + tone(0.4) + ', ' + tone(0.78) + ' ' + at(0) + ', ' + tone(0.94) + ' ' + at(KEY_H * 0.45) + ', ' + tone(1) + ')' });
       });
       const top = part(g, 'i', 'ktop', { transform: 'translateZ(' + U(KEY_H) + ')' });
       top.style.setProperty('--key', maskOf([k.pts], x0, y0, w, h, 3));
@@ -1217,11 +1250,123 @@
     document.addEventListener('pointerdown', () => tip.classList.remove('show'));
   }
 
+  // ------------------------------------------------------------------ the intro
+  // The page puts itself together. The calculator comes up into place, then the name and what NumPlay is,
+  // and the games take their places. Then each game you have goes into the calculator, in launcher order:
+  // its tick comes on, it lifts off its place, flies into the screen, and its block opens there as the
+  // count of space goes up. Last, the big games and your own come in beside it. Any key or click ends it.
+  let introRun = null;
+  function intro(force) {
+    const ready = () => document.documentElement.classList.remove('intro-wait');
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || innerWidth < 900) return ready();
+    if (!force && store('numplay-intro3')) return ready();
+    store('numplay-intro3', '1');
+    if (introRun) introRun();
+    const anims = [], flyers = [], E = {
+      out: 'cubic-bezier(0.16, 1, 0.3, 1)', spring: 'cubic-bezier(0.34, 1.36, 0.64, 1)', soft: 'cubic-bezier(0.22, 1, 0.36, 1)',
+    };
+    const anim = (node, kf, opt) => { if (node) anims.push(node.animate(kf, { fill: 'backwards', ...opt })); };
+    const rect = (n) => n.getBoundingClientRect();
+    hidePreview();
+    document.body.classList.add('intro-on');
+    $('#tip').classList.remove('show');
+    // where everything ends up, before anything moves
+    const list = items(), cap = capacity(), used = list.reduce((a, it) => a + it.bytes, 0);
+    const games = ordered().filter((id) => buttons.get(id) && buttons.get(id).parentNode.id === 'small');
+    const from = new Map(games.map((id) => [id, rect(buttons.get(id).querySelector('img'))]));
+    const to = new Map(games.map((id) => [id, tiles.get(id) && rect(tiles.get(id))]));
+    // 1. the calculator, then the words, then the games in their places (a wave down the grid)
+    anim($('.device'), [{ opacity: 0 }, { opacity: 1 }], { duration: 700, easing: 'linear' });
+    anim($('#calc'), [{ translate: '0 80px', scale: '0.93' }, { translate: '0 0', scale: '1' }], { duration: 1400, easing: E.out });
+    anim($('.title span'), [{ transform: 'translateY(108%)' }, { transform: 'none' }], { duration: 1000, delay: 180, easing: E.out });
+    anim($('.lede'), [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 900, delay: 340, easing: E.out });
+    anim($('.chips'), [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 800, delay: 420, easing: E.out });
+    anim($('.games .row-head'), [{ opacity: 0 }, { opacity: 1 }], { duration: 600, delay: 520, easing: 'linear' });
+    [...$('#small').children].forEach((b, i) => {
+      anim(b.querySelector('img'), [{ opacity: 0, transform: 'translateY(14px) scale(0.6)' }, { opacity: 1, transform: 'none' }],
+        { duration: 700, delay: 560 + i * 24, easing: E.spring });
+      if (!st.picked.has(b.dataset.id))  // (their + comes with them)
+        anim(b.querySelector('.badge'), [{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: 900 + i * 24, easing: 'linear' });
+    });
+    // 2. on the screen: the free space and NumPlay's own block first, the games' blocks as they land
+    const T0 = 1150, GAP = 70, FLY = 760, landed = [];
+    for (const [key, e] of tiles) {
+      const id = key, gi = games.indexOf(id);
+      const at = key === '_free' ? 700 : key === '_core' ? 980 : gi >= 0 ? T0 + gi * GAP + FLY * 0.82 : T0 + games.length * GAP + FLY;
+      anim(e, [{ opacity: 0, scale: '0.55' }, { opacity: 1, scale: '1' }], { duration: key === '_free' ? 500 : 620, delay: at, easing: key === '_free' ? 'linear' : E.spring });
+      const it = list.find((x) => x.key === key);
+      if (it) landed.push([at, it.bytes]);
+    }
+    // 3. the flights: each game's copy lifts off its place and arcs into its block on the screen
+    games.forEach((id, i) => {
+      const a = from.get(id), b = to.get(id), btn = buttons.get(id);
+      anim(btn.querySelector('.badge'), [{ transform: 'scale(0)' }, { transform: 'scale(1)' }], { duration: 420, delay: T0 + i * GAP - 60, easing: E.spring });
+      if (!a || !b) return;
+      const f = el('div', 'flyer');
+      f.appendChild(el('img', '', { src: btn.querySelector('img').src, alt: '' }));
+      f.style.width = a.width + 'px';
+      f.style.opacity = '0';
+      document.body.appendChild(f);
+      const tw = Math.max(10, Math.min(b.width, b.height) * 0.62);
+      flyers.push({ f, start: T0 + i * GAP, x0: a.left, y0: a.top, w0: a.width, x1: b.left + b.width / 2 - tw / 2, y1: b.top + b.height / 2 - tw / 2, w1: tw });
+    });
+    // the count of space and the flights, a frame at a time
+    const t0 = performance.now(), ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    let raf = 0, shown = 0;
+    const end = T0 + games.length * GAP + FLY + 300;
+    const frame = (now) => {
+      const t = now - t0;
+      for (const fl of flyers) {
+        const k = (t - fl.start) / FLY;
+        if (k < 0 || k > 1.05) { fl.f.style.opacity = '0'; continue; }
+        const e = ease(Math.min(1, k)), lift = 150 + 0.1 * Math.abs(fl.x1 - fl.x0);
+        const cx = (fl.x0 + fl.x1) / 2, cy = Math.min(fl.y0, fl.y1) - lift;
+        const x = (1 - e) * (1 - e) * fl.x0 + 2 * (1 - e) * e * cx + e * e * fl.x1;
+        const y = (1 - e) * (1 - e) * fl.y0 + 2 * (1 - e) * e * cy + e * e * fl.y1;
+        const sc = (fl.w0 + (fl.w1 - fl.w0) * e) / fl.w0;
+        fl.f.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) scale(' + sc.toFixed(3) + ')';
+        fl.f.style.opacity = String(k < 0.06 ? k / 0.06 : k > 0.86 ? Math.max(0, (1 - k) / 0.14) : 1);
+      }
+      const target = landed.reduce((a, [at, bytes]) => a + (t >= at ? bytes : 0), 0);
+      shown += (target - shown) * 0.2;
+      $('#status-line').textContent = (shown / MiB).toFixed(2) + ' OF ' + +(cap / MiB).toFixed(2) + ' MB';
+      $('#battery').style.width = 'calc(' + Math.min(100, 100 * shown / cap) + '% - 2px)';
+      if (t < end) raf = requestAnimationFrame(frame); else finish();
+    };
+    raf = requestAnimationFrame(frame);
+    ready();
+    // 4. beside it: the big games and your own
+    const S = T0 + games.length * GAP + 200;
+    const side = $('.side');
+    [...side.querySelectorAll(':scope > .row-head, #retro > .row-head, .drop, .foot')].forEach((n, i) =>
+      anim(n, [{ opacity: 0, transform: 'translateX(26px)' }, { opacity: 1, transform: 'none' }], { duration: 900, delay: S + (i ? 260 + i * 70 : 0), easing: E.out }));
+    [...$('#big').children].forEach((b, i) =>
+      anim(b, [{ opacity: 0, translate: '18px 0' }, { opacity: 1, translate: '0 0' }], { duration: 800, delay: S + 80 + i * 26, easing: E.out }));
+    function finish(e) {
+      // (a click that ends it is only that: it doesn't also pick the game under it)
+      if (e && e.type === 'pointerdown') addEventListener('click', (c) => { c.stopPropagation(); c.preventDefault(); }, { capture: true, once: true });
+      cancelAnimationFrame(raf);
+      for (const a of anims) a.finish();
+      for (const fl of flyers) fl.f.remove();
+      flyers.length = 0;
+      document.body.classList.remove('intro-on');
+      removeEventListener('pointerdown', finish, true);
+      removeEventListener('keydown', finish, true);
+      introRun = null;
+      hidePreview();
+      render();
+    }
+    addEventListener('pointerdown', finish, true);
+    addEventListener('keydown', finish, true);
+    introRun = finish;
+  }
+
   // ------------------------------------------------------------------ start
   async function start() {
     try {
       kit = await fetch(KIT + 'kit.json').then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
     } catch (e) {
+      document.documentElement.classList.remove('intro-wait');
       toast("The games didn't load, try again in a minute");
       return;
     }
@@ -1236,7 +1381,9 @@
     } catch (e) { custom = null; }
 
     const small = $('#small'), big = $('#big');
-    const badge = '<span class="badge" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+    const badge = '<span class="badge" aria-hidden="true">' +
+      '<svg class="b-tick" viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '<svg class="b-plus" viewBox="0 0 12 12"><path d="M6 2.5v7M2.5 6h7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>';
     for (const g of kit.games) {
       if (g === rg) continue;
       const b = el('button', 'app off', { type: 'button', 'aria-label': g.title, 'aria-pressed': 'false', 'data-id': g.id });
@@ -1315,7 +1462,7 @@
       $('#retro').hidden = false;
       const exts = Object.keys(EXT).filter((x) => (rg.systems || [1, 2, 3]).includes(EXT[x]));
       $('#rom-file').accept = exts.map((x) => '.' + x).join(',');
-      $('#drop').dataset.tip = 'Add a game|' + exts.map((x) => '.' + x).join(' ') + ', or drop the files anywhere';
+      $('#drop-sub').textContent = exts.map((x) => '.' + x).join(' ');
       $('#rom-file').addEventListener('change', (e) => { addRoms([...e.target.files]); e.target.value = ''; });
       let depth = 0;
       const files = (e) => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
@@ -1336,6 +1483,8 @@
     restore();
     if (st.lang !== 'en') loadKit(st.lang).then(render).catch(() => { st.lang = 'en'; render(); });
     render();
+    $('#replay').addEventListener('click', () => intro(true));
+    requestAnimationFrame(() => intro(new URLSearchParams(location.search).has('intro')));
     addEventListener('hashchange', () => { restore(); render(); });
     stars();
     (window.requestIdleCallback || setTimeout)(() => loadTools().catch(() => {}), { timeout: 3000 });
