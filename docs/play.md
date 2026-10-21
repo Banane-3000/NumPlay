@@ -468,6 +468,19 @@ Run to the door. These are the game's 80 rooms in its order: sixteen worlds of f
 
 <br clear="right">
 
+## Jetpack Joyride
+
+<img src="../games/jetpackjoyride/docs/shot.png" width="320" align="right" alt="Jetpack Joyride">
+
+| Key | What it does |
+| --- | --- |
+| **OK** (or **EXE**, **Up**), held | Fly; let go to fall |
+| **OK** on a vehicle | What the vehicle does: jump, flap, flip gravity, teleport |
+| **Back** | Pause (with Retry, How to play and Quit) |
+
+Barry runs through the lab by himself: hold OK to fire the jetpack and fly, let go to drop. Keep clear of the zappers, the lasers that charge up across the screen and the missiles that warn, lock on and fire. Grab coins, and the vehicle boxes for a ride that takes one hit. Spin tokens play the Final Spin when the run ends, where a Second Chance brings it back. Your best distance and coins are saved.
+
+<br clear="right">
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">
