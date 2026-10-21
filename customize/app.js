@@ -5,7 +5,7 @@
 'use strict';
 (() => {
   const KIT = 'kit/';
-  const PREVIEWS = '../docs/media/gallery/';
+  const MEDIA = '../docs/media/';  // the games' clips (kit.json: previews/ or gallery/)
   const MiB = 1048576;
   // Enlarged Extra Apps (nwagyu's Nwagra): it moves the end of the app area from the end of
   // Epsilon's slot to the end of the 8 MB flash, so apps go from 0x90200000 to 0x90800000
@@ -253,7 +253,7 @@
     clearTimeout(previewTimer);
     previewing = id;
     const p = $('#preview'), img = p.querySelector('img');
-    const src = PREVIEWS + id + '.gif';
+    const src = MEDIA + (g.preview === true ? 'gallery/' + id + '.gif' : g.preview);
     if (img.getAttribute('src') !== src) img.src = src;
     p.classList.add('show');
     $('#status-line').textContent = g.title.toUpperCase();
@@ -768,66 +768,164 @@
   }
 
   // ------------------------------------------------------------------ the intro
-  // A few words while the calculator fills up, the first time and when the logo is clicked
-  const intro = { on: false, run: 0 };
+  // The first time (and when the logo is clicked): the calculator rises and boots, NumPlay's
+  // letters come off its keypad to make the logo, the games fly into its screen one by one,
+  // Retro-Go's cartridges drop in, Install presses itself. A few words on the way; any key skips.
+  const intro = { on: false, run: 0, anims: [], temps: [] };
+  const OUT = 'cubic-bezier(0.2, 0.9, 0.25, 1)', SPRING = 'cubic-bezier(0.3, 1.45, 0.5, 1)';
+  // where NumPlay's letters sit on the keypad (their alpha keys), in the calculator picture's pixels
+  const LETTER_KEYS = [[340, 1474], [677, 1598], [172, 1474], [677, 1474], [857, 1354], [159, 1242], [509, 1722]];
   function caption(text) {
     const c = $('#caption');
     c.classList.remove('show');
-    setTimeout(() => { c.textContent = text; if (text) c.classList.add('show'); }, text ? 180 : 0);
+    setTimeout(() => { c.textContent = text; if (text) c.classList.add('show'); }, text ? 160 : 0);
   }
+  function play(e, frames, opts) {
+    const a = e.animate(frames, { fill: 'backwards', ...opts });
+    intro.anims.push(a);
+    e.classList.remove('ih');
+    return a.finished.catch(() => {});
+  }
+  const temp = (e) => { intro.temps.push(e); return e; };
+  const center = (r) => [r.left + r.width / 2, r.top + r.height / 2];
+
   async function playIntro() {
-    if (intro.on) return;
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (intro.on || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     intro.on = true;
-    const run = ++intro.run, alive = () => intro.run === run;
+    const run = ++intro.run, alive = () => intro.on && intro.run === run;
     closePops(); hidePreview();
     const target = ordered(), roms = st.roms;
+    intro.restore = () => { st.picked = new Set(target); st.roms = roms; };
+    st.picked = new Set(); st.roms = [];
     const body = document.body;
-    const skip = el('button', 'intro-skip', { type: 'button' });
+    body.classList.add('intro');
+    const hide = [$('#calc'), document.querySelector('.logo-icon'), ...document.querySelectorAll('.keys i'), $('#star'),
+      ...buttons.values(), document.querySelector('.meter'), document.querySelector('.side'), document.querySelector('.actions'), document.querySelector('.foot')];
+    for (const e of hide) e.classList.add('ih');
+    render();
+    const skip = temp(el('button', 'intro-skip', { type: 'button' }));
     skip.textContent = 'Skip';
     skip.addEventListener('click', endIntro);
     body.appendChild(skip);
-    st.picked = new Set(); st.roms = [];
-    body.classList.add('intro', 's0', 'start');
-    render();
-    intro.restore = () => { st.picked = new Set(target); st.roms = roms; };
-    await wait(60);
+
+    // the screen, off; it boots to NumPlay's splash
+    const screen = $('#screen'), calc = $('#calc');
+    const boot = temp(el('div', 'boot'));
+    boot.innerHTML = '<i class="crt"></i><div class="splash"><img alt=""><b>NumPlay</b><span>free games</span></div>';
+    boot.querySelector('img').src = KIT + 'variants/NumPlay.png';
+    screen.appendChild(boot);
+    previewing = 'intro';
+    $('#status-line').textContent = '';
+    await play(calc, [{ opacity: 0, transform: 'perspective(1400px) translateY(70vh) rotateX(42deg) scale(0.86)' },
+      { opacity: 1, offset: 0.35 }, { opacity: 1, transform: 'perspective(1400px) translateY(0) rotateX(0) scale(1)' }], { duration: 900, easing: OUT });
     if (!alive()) return;
-    body.classList.remove('start');
+    const crt = boot.querySelector('.crt'), splash = boot.querySelector('.splash');
+    await play(crt, [{ transform: 'scaleX(0)', opacity: 1 }, { transform: 'scaleX(1)', opacity: 1 }], { duration: 170, easing: 'ease-in', fill: 'forwards' });
+    play(crt, [{ transform: 'scaleX(1) scaleY(1)', opacity: 1 }, { transform: 'scaleX(1) scaleY(140)', opacity: 0 }], { duration: 320, easing: 'ease-out', fill: 'forwards' });
+    $('#status-line').textContent = 'NUMPLAY';
+    await play(splash, [{ opacity: 0, transform: 'scale(0.5)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 460, delay: 140, easing: SPRING, fill: 'forwards' });
+    if (!alive()) return;
+
+    // NumPlay's letters come off the keypad, key by key, and make the logo
+    const cr = calc.getBoundingClientRect(), k = cr.width / 1018;
+    const keys = [...document.querySelectorAll('.keys i')];
+    const flights = keys.map((key, i) => {
+      const [kx, ky] = LETTER_KEYS[i], sx = cr.left + kx * k, sy = cr.top + ky * k * (cr.height / cr.width) / (2000 / 1018);
+      const r = key.getBoundingClientRect(), [fx, fy] = center(r);
+      const flash = temp(el('i', 'keyflash'));
+      flash.style.left = (kx / 10.18) + '%';
+      flash.style.top = (ky / 20) + '%';
+      calc.appendChild(flash);
+      const d = 80 * i;
+      play(flash, [{ opacity: 0, transform: 'translate(-50%, -50%) scale(0.5)' }, { opacity: 1, offset: 0.3 },
+        { opacity: 0, transform: 'translate(-50%, -50%) scale(1.5)' }], { duration: 520, delay: d, easing: 'ease-out', fill: 'forwards' });
+      const dx = sx - fx, dy = sy - fy, lift = Math.min(260, Math.abs(dy) * 0.35);
+      return play(key, [
+        { opacity: 0, transform: `translate(${dx}px, ${dy}px) scale(1.9) rotate(0deg)` },
+        { opacity: 1, offset: 0.12, transform: `translate(${dx}px, ${dy - 24}px) scale(2) rotate(-8deg)` },
+        { offset: 0.6, transform: `translate(${dx * 0.35}px, ${dy * 0.35 - lift}px) scale(1.25) rotate(${i % 2 ? 14 : -14}deg)` },
+        { opacity: 1, transform: 'translate(0, 0) scale(1) rotate(0deg)' }], { duration: 820, delay: d + 60, easing: OUT });
+    });
+    play(document.querySelector('.logo-icon'), [{ opacity: 0, transform: 'scale(0) rotate(-90deg)' }, { opacity: 1, transform: 'scale(1) rotate(0)' }],
+      { duration: 560, delay: 80 * keys.length + 200, easing: SPRING });
+    await Promise.all(flights);
+    if (!alive()) return;
+
+    // the games wave in, then fly into the calculator, which fills up block by block
     caption('Free games for your NumWorks');
-    await wait(1500);
+    const all = [...buttons.values()].filter((b) => b.parentNode.id === 'small');
+    all.forEach((b, i) => play(b, [{ opacity: 0, transform: 'translateY(26px) scale(0.4) rotate(-12deg)' },
+      { opacity: 0.5, transform: 'translateY(0) scale(0.9) rotate(0)' }], { duration: 480, delay: 16 * i, easing: SPRING }));
+    play(document.querySelector('.meter'), [{ opacity: 0, transform: 'translateX(30px)' }, { opacity: 1, transform: 'none' }], { duration: 600, delay: 200, easing: OUT });
+    await wait(450 + 16 * all.length);
     if (!alive()) return;
-    body.classList.replace('s0', 's1');
     caption('Pick the ones you want');
-    await wait(500);
+    play(splash, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(1.3)' }], { duration: 380, delay: 200, fill: 'forwards' });
+    play(boot, [{ opacity: 1 }, { opacity: 0 }], { duration: 500, delay: 300, fill: 'forwards' });
+    const map = $('#map');
+    const step = Math.max(40, Math.min(100, 1300 / Math.max(target.length, 1)));
     for (const id of target) {
       if (!alive()) return;
+      const b = buttons.get(id), from = b.getBoundingClientRect();
       st.picked.add(id);
-      bump(buttons.get(id), 'bounce');
+      if (st.picked.size === 1) previewing = null;
       render();
-      await wait(target.length > 16 ? 45 : 80);
+      bump(b, 'bounce');
+      const t = tiles.get(id), mr = map.getBoundingClientRect();
+      const tx = mr.left + (parseFloat(t.style.left) + parseFloat(t.style.width) / 2) / 100 * mr.width;
+      const ty = mr.top + (parseFloat(t.style.top) + parseFloat(t.style.height) / 2) / 100 * mr.height;
+      const g = temp(el('img', 'ghost-icon', { src: KIT + 'icons/' + id + '.png', alt: '' }));
+      Object.assign(g.style, { left: from.left + 'px', top: from.top + 'px', width: from.width + 'px', height: from.height + 'px' });
+      body.appendChild(g);
+      const [fx, fy] = center(from), dx = tx - fx, dy = ty - fy;
+      play(g, [{ transform: 'translate(0, 0) scale(1) rotate(0)', opacity: 1 },
+        { offset: 0.55, transform: `translate(${dx * 0.55}px, ${dy * 0.55 - 70}px) scale(0.75) rotate(${dx > 0 ? 20 : -20}deg)`, opacity: 1 },
+        { transform: `translate(${dx}px, ${dy}px) scale(0.18) rotate(0)`, opacity: 0.2 }], { duration: 640, easing: 'cubic-bezier(0.5, 0, 0.2, 1)', fill: 'forwards' })
+        .then(() => g.remove());
+      await wait(step);
     }
-    await wait(700);
+    await wait(500);
     if (!alive()) return;
-    body.classList.replace('s1', 's2');
+
+    // Retro-Go: three cartridges drop into its slot
     if (rg) {
-      caption('Add Game Boy, NES and Sega games');
-      await wait(1600);
+      caption('Add your Game Boy, NES and Sega games');
+      await play(document.querySelector('.side'), [{ opacity: 0, transform: 'translateX(40px)' }, { opacity: 1, transform: 'none' }], { duration: 520, easing: OUT });
+      const carts = [...document.querySelectorAll('.drop-art i')];
+      carts.forEach((c, i) => play(c, [{ opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 1 }], { duration: 780, delay: 130 * i }));
+      await Promise.all(carts.map((c, i) => play(c, [  // (added to each cartridge's own tilt)
+        { transform: `translateY(-${220 + 60 * i}px) rotate(${[-40, 25, 50][i]}deg)`, composite: 'add' },
+        { transform: 'translateY(0) rotate(0deg)', composite: 'add' }], { duration: 780, delay: 130 * i, easing: 'cubic-bezier(0.35, 1.6, 0.55, 1)' })));
+      play($('#drop'), [{ transform: 'scale(1)' }, { transform: 'scale(1.04)', offset: 0.4 }, { transform: 'scale(1)' }], { duration: 360 });
+      await wait(600);
       if (!alive()) return;
     }
-    body.classList.replace('s2', 's3');
+
+    // and Install presses itself
     caption('Install it in one click');
-    await wait(1700);
+    await play(document.querySelector('.actions'), [{ opacity: 0, transform: 'translateY(30px)' }, { opacity: 1, transform: 'none' }], { duration: 560, easing: OUT });
+    play($('#star'), [{ opacity: 0, transform: 'translateX(60px) rotate(8deg)' }, { opacity: 1, transform: 'none' }], { duration: 700, easing: SPRING });
+    play(document.querySelector('.foot'), [{ opacity: 0 }, { opacity: 1 }], { duration: 600 });
+    await wait(200);
+    if (!alive()) return;
+    await play($('#install'), [{ transform: 'scale(1)' }, { transform: 'scale(0.9)', offset: 0.25 }, { transform: 'scale(1.08)', offset: 0.6 }, { transform: 'scale(1)' }], { duration: 620, easing: 'ease-out' });
+    const ring = temp(el('i', 'press-ring'));
+    $('#install').appendChild(ring);
+    await play(ring, [{ opacity: 0.6, transform: 'scale(0.9)' }, { opacity: 0, transform: 'scale(1.6)' }], { duration: 700, easing: 'ease-out', fill: 'forwards' });
+    await wait(500);
     if (alive()) endIntro();
   }
   function endIntro() {
     if (!intro.on) return;
     intro.on = false;
     intro.run++;
+    for (const a of intro.anims) a.cancel();
+    for (const e of intro.temps) e.remove();
+    intro.anims = []; intro.temps = [];
+    for (const e of document.querySelectorAll('.ih')) e.classList.remove('ih');
+    document.body.classList.remove('intro');
+    previewing = null;
     if (intro.restore) intro.restore();
-    document.body.classList.remove('intro', 's0', 's1', 's2', 's3', 'start');
-    const s = document.querySelector('.intro-skip');
-    if (s) s.remove();
     caption('');
     store('numplay-intro', '1');
     render();
@@ -921,8 +1019,8 @@
     } catch (e) { custom = null; }
 
     const small = $('#small'), big = $('#big');
-    const badge = '<span class="badge"><svg class="tick" viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-      '<svg class="plus" viewBox="0 0 12 12"><path d="M6 2.5v7M2.5 6h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>';
+    const badge = '<span class="badge"><svg class="b-tick" viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '<svg class="b-plus" viewBox="0 0 12 12"><path d="M6 2.5v7M2.5 6h7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span>';
     for (const g of kit.games) {
       if (g === rg) continue;
       const b = el('button', 'app off', { type: 'button', 'aria-label': g.title, 'aria-pressed': 'false', 'data-id': g.id });

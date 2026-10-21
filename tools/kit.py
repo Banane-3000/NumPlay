@@ -139,7 +139,9 @@ def main():
         icon = icon_of(i)
         if icon:
             shutil.copy(icon, os.path.join(O, "icons", i + ".png"))
-        preview = os.path.exists(os.path.join(ROOT, "docs", "media", "gallery", f"{i}.gif"))
+        # the clip the website plays: from the emulator (tools/previews.py), else the gallery's GIF
+        preview = next((f"{d}/{i}.gif" for d in ("previews", "gallery")
+                        if os.path.exists(os.path.join(ROOT, "docs", "media", d, f"{i}.gif"))), None)
         thumb = os.path.join(ROOT, "docs", "media", f"thumb_{i}.png")
         if os.path.exists(thumb):
             shutil.copy(thumb, os.path.join(O, "thumbs", i + ".png"))
