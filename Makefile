@@ -199,7 +199,6 @@ APP_buckshot = games/buckshot/output/buckshot.nwa:BuckshotRoulette.nwa
 APP_portal = games/portal/output/portal.nwa:PortalReturns.nwa
 APP_chess = games/chess/output/chess.nwa:NumChess.nwa
 APP_tetris = games/tetris/tetris/target/thumbv7em-none-eabihf/release/tetris:Tetris.nwa
-APP_coreball = games/coreball/output/coreball.nwa:CoreBall.nwa
 # Tetris on its own, without building every game (tools/build.py --game tetris)
 tetris-app: | $(B)
 	cd games/tetris/tetris && NWLINK="$(NWLINK)" $(CARGO) build --release --quiet
@@ -277,17 +276,6 @@ apps: | $(B)
 	cp $(word 1,$(subst :, ,$(APP_jetpackjoyride))) $(B)/apps/$(word 2,$(subst :, ,$(APP_jetpackjoyride)))
 	arm-none-eabi-strip --strip-unneeded $(B)/apps/Tetris.nwa
 
-# Core Ball is published as its own app.
-.PHONY: check-coreball
-apps: $(B)/apps/CoreBall.nwa
-$(B)/apps/CoreBall.nwa: FORCE | $(B)
-	$(MAKE) --no-print-directory -C games/coreball build NWLINK="$(NWLINK)"
-	mkdir -p $(B)/apps
-	cp games/coreball/output/coreball.nwa $@
-check: check-coreball
-check-coreball: $(B)/apps/CoreBall.nwa
-	$(NWLINK) nwa-bin $< $(B)/apps/CoreBall.bin --ram-length $(UPSILON_RAM)
-
 STD_APPS = $(foreach g,$(STD_GAMES),$(B)/apps/$(NWA_$(g)))
 apps: $(STD_APPS)
 $(STD_APPS): $(B)/apps/%.nwa: FORCE | $(B)
@@ -330,7 +318,6 @@ emu: $(B)/NumPlay.nwa
 clean:
 	rm -rf $(B)
 	-$(MAKE) -C games/numdash clean
-	-$(MAKE) -C games/coreball clean
 	-$(MAKE) -C games/crossyroad clean
 	-$(MAKE) -C games/numdrive clean
 	-$(MAKE) -C games/balatro clean
