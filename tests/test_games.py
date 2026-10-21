@@ -69,6 +69,10 @@ GAMES = {
     # past how to play, two flaps; next time the run goes on after a flap
     "flappydunk": ("FlappyDunk.nwa", "flappydunk.sav", presses((1500, "ok"), (2200, "ok"), (2550, "ok")), 3500,
                    presses((1500, "ok")), 2500),
+    # past how to play, a fruit dropped, the cloud moved, another dropped; next time the box is still there, and one
+    # more falls in
+    "suika": ("SuikaGame.nwa", "suika.sav", presses((1500, "ok"), (2200, "ok"), (2600, "right", 400), (3600, "ok")), 4800,
+              presses((1500, "ok")), 3000),
     # past how to play, a game started and a block placed; next time the tower is still there, waiting
     "towerblock": ("TowerBlocks.nwa", "towerblocks.sav", presses((1500, "ok"), (2200, "ok"), (3000, "ok")), 3600, [], 2500),
     "flappybird": ("FlappyBird.nwa", "flappy.sav",
@@ -285,6 +289,9 @@ CHECKS = {
     # a run kept (guide read), the ball on its way; then further along the same run
     "flappydunk": (lambda v: len(v) == 200 and v[:2] == b"F\1" and v[2] & 3 == 3 and struct.unpack_from("<f", v, 24)[0] > 1,
                    lambda v: v[2] & 1 and struct.unpack_from("<f", v, 24)[0] > 6),
+    # a game kept (guide read) with fruit in the box; then one more
+    "suika": (lambda v: len(v) == 1052 and v[:2] == b"S\1" and v[2] & 3 == 3 and sum(v[42 + 16 * i] > 0 for i in range(64)) >= 1,
+              lambda v: v[2] & 1 and sum(v[42 + 16 * i] > 0 for i in range(64)) >= 2),
     # a tower kept (guide read) with one block placed; then kept as it was
     "towerblock": (lambda v: len(v) == 668 and v[:2] == b"T\1" and v[2] & 3 == 3 and struct.unpack_from("<I", v, 12)[0] == 1,
                    lambda v: v[2] & 1 and struct.unpack_from("<I", v, 12)[0] == 1),

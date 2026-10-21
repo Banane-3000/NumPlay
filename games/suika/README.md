@@ -1,89 +1,30 @@
 # Suika Game
 
-An English-only fruit-merging game for NumWorks, rebuilt for NumPlay.
-Match two identical fruits to grow the next one, from cherry to watermelon.
-Each merge awards its base value: 1, 3, 6, 10, 15, 21, 28, 36, 45, 55 or 66
-points. Two watermelons clear each other. There are no combo bonuses.
+Drop fruit in the box and join two of a kind into the next one, all the way to the watermelon. Aladdin X's Suika Game for the NumWorks calculator, playing and looking like the Switch game.
 
-**Game made by [Bobydeluxe](https://github.com/Bobydeluxe).**
+<img src="docs/shot.png" width="320" alt="A game of Suika Game: a melon, a pineapple and apples in the box, the cloud holding a grape">
 
-![The fruit basket](docs/shot.png)
-![Title screen](docs/title.png)
+- **The 11 fruit**, cherry to watermelon, at the original's sizes and colours, with their faces. Drops come from the first five, each as likely as the others.
+- **Two of a kind join** where they touch, into the next fruit of the circle. Two watermelons vanish. Each merge scores as in the original: 1, 3, 6, 10, 15, 21, 28, 36, 45, 55, and 66 for two watermelons.
+- **The original's physics.** Fruit fall, roll and stack as on the Switch, measured frame by frame: the same gravity, no bounce, and the next fruit comes the moment the last one touches down.
+- **Over the top and it's over.** A fruit that stays above the box for about a second ends the game.
+- The cloud, the Next bubble and the circle of evolution, as in the original.
+- Your game and best score are saved, so you can stop and carry on later.
+
+## Controls
 
 | Key | Action |
 | --- | --- |
-| Left / Right | Move the cloud |
-| OK / EXE | Drop one fruit (holding does not repeat) |
-| Back | Pause / resume |
-| Home / On-Off | Save and leave |
+| Left and Right, or 4 and 6 | Move the cloud |
+| OK or EXE | Drop the fruit |
+| Back | Menu: Resume, Restart, How to play, Quit |
 
-Only the next fruit is shown. The cloud holds the fruit ready to drop. Each
-new fruit is an independent, equally weighted draw from cherry, strawberry,
-grape, dekopon and persimmon. Repeats and streaks are possible. There is no
-reserve, three-fruit queue, bag, position suggestion or landing guide.
+## Credits
 
-The warm checked background, glass box, cloud, score/Next bubbles, evolution
-circle, fruit proportions, colours and expressions are adapted at 320 x 240
-from the classic skin shown in the [official screenshots](https://www.nintendo.com/us/store/products/suika-game-switch/).
-Fruit radii are 5, 7, 9, 11, 14, 17, 20, 25, 28, 31 and 40 calculator pixels;
-this is a small-screen procedural interpretation, not the original sprites.
+Suika Game is **Aladdin X**'s game (2021). **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. This version is written in C for NumPlay with no code or art from the original. Its fruit sizes, colours, speeds and timings were measured on the Switch version, with the sizes checked against [kairess/suika-game](https://github.com/kairess/suika-game) and players' measurements.
 
-Newly dropped fruit has time to fall before counting toward overflow. A mature
-fruit protruding above the box triggers a red rim warning. It has 180 simulation
-ticks (2.88 seconds) to settle or merge; clearing the rim resets the timer.
-The 48-body pool blocks overlapping or excess drops while the pile settles.
+Inside NumPlay it draws with the launcher's own shapes and fonts and saves through its file functions, so the game itself is about 9 KB.
 
-Pause freezes simulation. **New game** asks before discarding a run and keeps
-the record. **Title screen** leaves the run available under **Continue**.
-Back on the title returns to NumPlay.
+It comes inside [NumPlay](https://github.com/Mason363/NumPlay), or on its own as `SuikaGame.nwa` from the [latest release](https://github.com/Mason363/NumPlay/releases/latest).
 
-## Memory and saves
-
-No heap or full-screen framebuffer. Fruit, faces and scenery are drawn with
-code. Only dirty regions are composed, at most eight rows at a time (5120
-bytes). Physics uses two substeps and six contact passes per 16 ms tick;
-drawing runs at up to 31.25 Hz with bounded simulation catch-up.
-
-The fixed 608-byte `suika.sav` payload now uses version `SKA2`. It preserves
-the run, best score, random generator, current fruit, single next fruit and
-danger timer. Existing NumPlay `SKA1` saves are imported: scores and fruit
-ranks remain, positions are scaled/clamped to the new box, and removed
-reserve/queue/combo state is discarded. The pile settles under the updated
-geometry on resuming. Historical scores are kept as earned. A save written
-by this update cannot be loaded by the previous app. NumGames `.nwa` saves
-are not imported.
-
-Length, checksum and field validation finish before loading live state.
-Writes occur on pause, game over, exit and every five seconds while playing,
-skipping identical payloads. Save failures offer retry, return to play or
-explicit exit without saving. The existing NumPlay backup/reset/uninstall
-mechanisms cover the same registered save record.
-
-## Build and check
-
-With ARM GCC, nwlink 1.0.0 and Python/pyelftools available:
-
-```sh
-make -C games/suika build check NWLINK=nwlink
-make -C games/suika test
-python tests/test_suika.py games/suika/output/suika-debug.nwa --nwlink nwlink
-```
-
-The host suite must run before the ARM scenarios to generate the scene fixture.
-The release output is `games/suika/output/suika.nwa`. The root build copies it
-to `build/apps/SuikaGame.nwa` and includes the separate module in NumPlay.
-The portable standalone build also works on Windows:
-
-```sh
-python games/suika/tools/build.py --toolchain /path/to/arm/bin --nwlink /path/to/nwlink/bin/nwlink
-```
-
-It writes `output/SuikaGame.nwa` and four-profile size/link reports. Standalone
-packing uses the game-local lossless NWA/icon packer, with no extra runtime memory.
-The debug and release files must produce identical installed bytes on all
-profiles. The build enforces 12 KiB static RAM and 64 KiB installed flash limits.
-Pillow is needed to regenerate the icon with `tools/icon.py`.
-
-See [validation](VALIDATION.md) for measured results. Code and procedural
-artwork are under the repository's GPL-3.0 licence. Inspired by Suika Game;
-not affiliated with Aladdin X. No original game's artwork or binary is included.
+Build: `make` (needs `arm-none-eabi-gcc` and Node.js for nwlink). Tests: `make test`.
