@@ -54,7 +54,8 @@ static const uint8_t notch_full_rgb[3] = CH_NOTCH_FULL_RGB, notch_over_rgb[3] = 
 #define EQ_Y (-3.86f)
 #define EQ_SCALE 1.15f
 #define DETAIL_SCALE 1.5f
-/* (a description's bottom, from the panes' top: over the border; over the Equip key at a bench; under the cost) */
+/* (a description's bottom, from the panes' top: over the border; for a charm, over Equip and its key at a bench, or
+ * where charms are changed away from one; under the cost) */
 #define DESC_BOTTOM (-13.7f)
 #define DESC_BOTTOM_BENCH (-12.35f)
 #define CH_DESC_GAP 0.3f
@@ -393,7 +394,7 @@ static void tween_done(void) {
     /* Check Points */
     g_pd.charm_slots_filled = (uint8_t)(g_pd.charm_slots_filled + costs[id]);
     if (g_pd.charm_slots_filled > g_pd.charm_slots) {
-      /* Overcharm Check: the sixth try breaks through (canOvercharm after) */
+      /* Overcharm Check: the fifth try breaks through (canOvercharm after) */
       if (!pd_flag(PDF_CAN_OVERCHARM) && ++iv.oc_attempts < 5) {
         iv.tween = TW_FAIL, iv.tw_t = 0;   /* (Fail: 0.5 s shaking, then back) */
         return;
@@ -424,6 +425,13 @@ static void tween_done(void) {
     iv.eq = (uint8_t)(equipped_count() + (g_pd.charm_slots_filled < g_pd.charm_slots));
   if (iv.area == CA_EQUIPPED && iv.eq < 1) iv.area = CA_COLLECTION;
   charms_cursor();
+}
+
+/* (Home as it is open: a charm on its way put in its place) -> whether the game may be saved, as with it closed */
+bool inv_settle(void) {
+  if (iv.st != IV_OPEN) return false;
+  while (iv.tween != TW_NONE) tween_done();
+  return true;
 }
 
 static void charms_move(uint32_t p) {
@@ -716,7 +724,7 @@ static void charms_draw(float ox, float oy, float a, uint8_t white) {
   /* (its picture under its cost where its description still fits under that, in the message's size or the smaller;
    * else the description up in the picture's place) */
   float down = name_below(ch_name.top, ch_cost_text.top);   /* (all under the name lower by as much as it is bigger) */
-  float bottom = detail && pd_flag(PDF_AT_BENCH) ? DESC_BOTTOM_BENCH : DESC_BOTTOM, top = ch_desc.top - down;
+  float bottom = detail ? DESC_BOTTOM_BENCH : DESC_BOTTOM, top = ch_desc.top - down;
   int style = text_box(desc, STYLE_MSG, 0, 0, ch_desc.w, 0, 0) <= top - bottom ? STYLE_MSG : STYLE_MSG_S;
   bool picture = !detail || text_box(desc, style, 0, 0, ch_desc.w, 0, 0) <= top - bottom;
   if (!picture) {
@@ -745,6 +753,9 @@ static void charms_draw(float ox, float oy, float a, uint8_t white) {
     gfx_text(STYLE_MSG_S, VIEW_W / 2 + cx * HUD_PX - w / 2,
              VIEW_H / 2 - (oy + ch_key.y) * HUD_PX + (font_asc(st) - font_desc(st)) / 2, text_get(TXT_KEY_OK), 2,
              (uint32_t)(a * 255 + 0.5f) << 24 | 0xFFFFFF, 0);
+  } else if (detail) {
+    /* (away from a bench, in their place: where charms are changed) */
+    ui_text_at(TXT_CHARM_BENCH, STYLE_MSG_S, &ch_confirm, ox, oy, 2, a);
   }
   if (iv.cursor_set) cursor_draw(ox, oy, white);
 }
