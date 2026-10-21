@@ -125,6 +125,7 @@ int main(void) {
   dn_redraw();
   uint32_t stale = plat_keys(), prev = stale, last = plat_millis(), acc = 0, drawn = 0, saved_at = last;
   uint8_t shown = 0xFF;
+  bool pressed = false;
   for (;;) {
     uint32_t now = plat_millis(), keys = plat_keys();
     stale &= keys;                      /* keys still down from the screen before don't count */
@@ -141,11 +142,14 @@ int main(void) {
     bool quit = false, frozen = view.screen == V_PAUSE || view.screen == V_QUIT || view.under == V_PAUSE;
     if (view.screen == V_TITLE || view.screen == V_PLAY || view.screen == V_RESULT) frozen = false;
     /* the world goes on behind the menus (the game's physics runs there too), not while paused */
+    /* a press waits for the next step (a loop can go by without one) */
+    if (view.screen == V_PLAY && (hit & (K_OK | K_SHIFT))) pressed = true;
     int steps = 0;
     if (!frozen)
       for (; steps < ticks; steps++) {
         bool play_ = view.screen == V_PLAY;
-        dn_step(&run, play_ && (live & (K_OK | K_SHIFT)), play_ && steps == 0 && (hit & (K_OK | K_SHIFT)));
+        dn_step(&run, play_ && (live & (K_OK | K_SHIFT)), play_ && pressed);
+        pressed = false;
       }
     if (run.picked) prof.coins += run.picked, run.picked = 0;   /* coins count at once */
     if (run.score > prof.best) prof.best = run.score;
@@ -228,7 +232,7 @@ int main(void) {
     }
     if (quit) break;
     if (view.screen != shown) {
-      stale = keys, prev = 0;           /* a new screen starts with all keys up */
+      stale = keys, prev = 0, pressed = false;   /* a new screen starts with all keys up */
       shown = view.screen;
       drawn = now - 1000;
     }

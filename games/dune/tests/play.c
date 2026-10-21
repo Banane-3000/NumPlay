@@ -26,7 +26,7 @@ static double clock_ms;
 static uint32_t (*script)(uint32_t frame);
 static uint32_t frame_no, quit_at;
 uint32_t plat_keys(void) {
-  clock_ms += 1000.0 / 30;   /* the app's loop at 30 a second */
+  clock_ms += 10;   /* the app's loop, faster than the game's 60 steps a second: some loops have none */
   frame_no++;
   if (frame_no >= quit_at) return K_HOME;
   return script ? script(frame_no) : 0;
@@ -470,14 +470,36 @@ static uint32_t fuzz_keys(uint32_t f) {
   }
   return held;
 }
+/* one short tap counts, even when the loop it falls in goes by without a step of the game */
+static uint32_t tap_at;
+static uint8_t tap_valid;
+static uint32_t tap_keys(uint32_t f) {
+  if (f == 60) return K_OK;                       /* Play */
+  if (f == tap_at + 60) tap_valid = run.valid && !run.guide;
+  return f == tap_at ? K_OK : 0;                  /* one key scan of 10 ms */
+}
+static void taps(void) {
+  int ok = 0;
+  for (uint32_t k = 0; k < 6; k++) {
+    forget(DN_SAVE_NAME), forget(DN_COPY_NAME);
+    memset(&run, 0, sizeof run), memset(&prof, 0, sizeof prof), memset(&view, 0, sizeof view);
+    tap_at = 130 + k, tap_valid = 0;
+    script = tap_keys, frame_no = 0, quit_at = 260;
+    dn_app_main();
+    ok += tap_valid;
+  }
+  CHECK(ok == 6, "short taps that counted: %d of 6", ok);
+}
+
 static void fuzz(void) {
+  taps();
   int sessions = 300;
   dn_clipped = 0;
   for (int s = 0; s < sessions; s++) {
     if (s % 50 == 0) forget(DN_SAVE_NAME), forget(DN_COPY_NAME);
     memset(&run, 0, sizeof run), memset(&prof, 0, sizeof prof), memset(&view, 0, sizeof view);
     fuzz_rng = (uint32_t)s * 7919u + 1;
-    script = fuzz_keys, frame_no = 0, quit_at = 60 + dn_rand(&fuzz_rng) % 700;
+    script = fuzz_keys, frame_no = 0, quit_at = 150 + dn_rand(&fuzz_rng) % 2000;
     if (s % 10 == 0) prof.coins = 0;
     dn_app_main();
     uint32_t n;
