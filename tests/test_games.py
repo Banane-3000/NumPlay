@@ -217,6 +217,10 @@ GAMES = {
     # copy, it opens paused: Back, another second, paused again, quit with On/Off
     "jetpackjoyride": ("JetpackJoyride.nwa", "jetpackjoyride.sav", presses((1500, "ok"), (2500, "ok"), (3600, "back")), 5000,
                        presses((1500, "back"), (2700, "back")), 4000),
+    # the title, how to play (the first time), then level 1: the stickman falls and swings; Home keeps the level.
+    # Next time, from the copy, Play goes back to it, then Back pauses it; quit with On/Off
+    "stickmanhook": ("StickmanHook.nwa", "stickmanhook.sav", presses((1500, "ok"), (2500, "ok"), (3300, "ok", 700)), 5000,
+                     presses((1500, "ok"), (2700, "back")), 4000),
     # the title, how to play, then the game: a second of Kong's climb, paused (that saves it); Home keeps it. Next
     # time, from the copy, it opens paused: Back, a second more, paused again, quit with On/Off
     "donkeykong": ("DonkeyKong.nwa", "donkeykong.sav", presses((1500, "ok"), (2500, "ok"), (3600, "back")), 5000,
@@ -253,7 +257,8 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "fnaf": "fnaf_saves.py", "doom": "doom_saves.py", "isaac": "isaac_saves.py",
           "hillclimb": "hillclimb_saves.py", "pvz": "pvz_saves.py", "sonic": "sonic_saves.py",
           "cookieclicker": "cookieclicker_saves.py", "leveldevil": "leveldevil_saves.py",
-          "jetpackjoyride": "jetpackjoyride_saves.py", "donkeykong": "donkeykong_saves.py"}
+          "jetpackjoyride": "jetpackjoyride_saves.py", "stickmanhook": "stickmanhook_saves.py",
+          "donkeykong": "donkeykong_saves.py"}
 
 
 def dk_frames(v):
@@ -377,6 +382,10 @@ CHECKS = {
     # a run kept ("JJR1", has_run at 23, its frames at 60); after the reinstall, from the copy, it goes on
     "jetpackjoyride": (lambda v: len(v) == 728 and v[:4] == b"JJR1" and v[23] == 1 and struct.unpack_from("<I", v, 60)[0] >= 30,
                        lambda v: v[:4] == b"JJR1" and v[23] == 1 and struct.unpack_from("<I", v, 60)[0] >= 90),
+    # how to play seen, level 1 being played ("SHK3", guide_seen at 17, has_course at 18, the course at 20); after the
+    # reinstall, from the copy, the same level and course
+    "stickmanhook": (lambda v: len(v) == 28 and v[:4] == b"SHK3" and v[17] == 1 and v[18] == 1 and v[20] == 0
+                     and v[21] == 255,) * 2,
     # a game kept ("DKG1", the game at 23, one game played) a second in; after the reinstall, from the copy, it goes on
     "donkeykong": (lambda v: v[:4] == b"DKG1" and v[23] == 1 and v[12] == 1 and dk_frames(v) >= 30,
                    lambda v: v[:4] == b"DKG1" and v[23] == 1 and v[12] == 1 and dk_frames(v) >= 90),
