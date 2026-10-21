@@ -1,115 +1,87 @@
-# Jetpack Joyride
+> **Jetpack Joyride is a [NumPlay](../../README.md) game that comes on its own.** It is too big to fit next to NumPlay on the calculator. Get `JetpackJoyride.nwa` from the [latest release](https://github.com/Mason363/NumPlay/releases/latest).
 
-By **Bobydeluxe**. An English-only NumWorks adaptation with artwork from the
-[Jetpack Joyride Facebook assets archive](https://archive.org/download/jetpack-joyride-assets),
-created by **Halfbrick**. See [artwork provenance](assets/README.md).
+<p align="center">
+  <img src="src/icon.png" width="84" alt="Jetpack Joyride icon">
+</p>
 
-![Main menu](docs/title.png)
-![Animated main menu](docs/menu-animation.gif)
-![Laboratory run](docs/gameplay.png)
-![The Stash](docs/shop.png)
+<h1 align="center">Jetpack Joyride</h1>
 
-## Play
+<p align="center">
+  <b>Barry Steakfries steals a jetpack and flies through the lab, on the NumWorks calculator.</b><br>
+  The zappers, missiles, lasers, coins, vehicles and the Final Spin of Halfbrick's game.
+</p>
 
-Install standalone `JetpackJoyride.nwa` with a compatible NumWorks external-app
-installer, then open Jetpack Joyride from the calculator's Home menu. Build and
-install it separately from the combined NumPlay launcher. A module build is
-provided for later integration.
+<p align="center">
+  <a href="https://github.com/Mason363/NumPlay/releases/latest/download/JetpackJoyride.nwa"><b>Download JetpackJoyride.nwa</b></a>
+  &nbsp;·&nbsp; <a href="#controls">Controls</a>
+</p>
 
-| Key | Action |
+<p align="center">
+  <img src="../../docs/media/jetpackjoyride.gif" width="640" alt="Jetpack Joyride: Barry grabs coins and rides the Profit Bird until it hits a zapper, then flies on past a missile">
+</p>
+
+## Highlights
+
+* **The machine gun jetpack:** hold to fly, let go to fall, with the game's own gravity, thrust and speed. Barry starts at 11 m/s and speeds up to 28 m/s by 2000 m.
+* **Zappers:** horizontal, vertical and diagonal ones of every length, and the orange ones that turn, from 400 m.
+* **Missiles:** a warning follows your height, locks on, then the missile fires. Sometimes a whole swarm comes.
+* **Lasers:** all 29 of the game's laser patterns, from a single shot to the sweepers and the Stager, from 400 m to 6000 m.
+* **Coins:** the game's 26 coin patterns, and coin streaks.
+* **Five vehicles** from the vehicle boxes: the Lil' Stomper, the Profit Bird, the Crazy Freaking Teleporter, the Bad As Hog and the Gravity Suit, each with its own controls, speed and obstacles. A vehicle takes a hit for you.
+* **The Final Spin:** spin tokens play the slot machine after a run, for coins, blasts, a Second Chance, double coins or a head start.
+* **The game's look:** Halfbrick's own pictures of Barry, the lab, the hazards and the vehicles, and the game's font for the distance.
+* **Saved as you go:** Home saves the run and quits, and the next start picks it up paused. Your best and coins are also copied into `jetpackjoyride_saves.py`, so installing the app again doesn't erase them.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/shot.png" width="390" alt="Lasers firing across the lab"><br><sub>A laser pattern</sub></td>
+    <td align="center"><img src="docs/missile.png" width="390" alt="A missile flying at Barry"><br><sub>A missile, fired after its warning</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/stomper.png" width="390" alt="Barry in the Lil' Stomper"><br><sub>The Lil' Stomper</sub></td>
+    <td align="center"><img src="docs/teleporter.png" width="390" alt="The Crazy Freaking Teleporter and its arrow"><br><sub>The Crazy Freaking Teleporter</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/spin.png" width="390" alt="The Final Spin paying a Second Chance"><br><sub>The Final Spin</sub></td>
+    <td align="center"><img src="docs/title.png" width="390" alt="The title screen"><br><sub>The title screen</sub></td>
+  </tr>
+</table>
+
+## How to play
+
+Press **OK** on the title to start. Hold **OK** to fire the jetpack and fly up, and let go to fall. Barry runs on by himself: dodge the zappers, the missiles and the lasers, and grab the coins. A missile's warning shows on the right and follows your height, then stops and flashes: move away before it fires. A laser charges for a moment before it fires across the whole screen.
+
+Fly into a vehicle box to get a vehicle. The Stomper jumps and glides while you hold **OK**, the Profit Bird flaps each time you press it, the Hog jumps, the Gravity Suit flips gravity, and the Teleporter jumps to where its arrow points. If a vehicle is hit, it breaks and Barry runs on.
+
+Grab the spin tokens: when the run ends, each one is a spin of the Final Spin. Press **OK** to spin, or **Back** to cash the rest in for coins.
+
+## Controls
+
+| Key | What it does |
 | --- | --- |
-| Hold OK / EXE / Up | Thrust upward |
-| Release | Fall; no fuel limit |
-| Back | Pause, or return in menus |
-| Home / On-Off | Save and exit |
-| Arrows, then OK / EXE | Select a menu entry |
+| OK, EXE or Up | Fly (hold), or the vehicle's action |
+| Up, Down | Move the focus in menus |
+| OK | Choose, spin the Final Spin |
+| Back | Pause: Resume, Retry, How to play, Quit (it asks first) |
+| Home | Save and quit |
 
-The main menu uses the original silver/gold wordmarks, character artwork,
-a slowly scrolling laboratory and large industrial buttons. **Play/Resume**,
-**The Stash** and **How to Play** are the three entries. The credit remains
-**by Bobydeluxe**. The guide, shop, pause, restart, purchase and result screens
-share the new steel/navy/gold design, with all text in English.
+## Good to know
 
-During play, Barry runs or flies with the original head/body animation frames
-and a machine-gun jetpack. The supplied laboratory wall and floor scroll past
-background scientists, spinning coins, electric zappers, missiles and shields.
-Rotating zappers use matching electric colours and the original endpoint
-sprites. The compact HUD shows meters, run coins, pause bars and an equipped
-shield. Original images are resized and palette-adapted to the 320x240 display.
+* **On its own:** Jetpack Joyride is too big to fit next to NumPlay. Installing it from the NumWorks website swaps out NumPlay and the other apps, and installing NumPlay again swaps it back out.
+* **The first year's game:** the numbers are those of versions 1.1 and 1.3.5, with the five vehicles of the first release. Mr. Cuddles and the later vehicles aren't here.
+* **Left out:** The Stash (outfits, jetpacks, gadgets and upgrades), missions, coin purchases and ads, and music and sound (the calculator has no speaker). Coins add up on the title.
+* **One lab:** one picture of the lab is drawn, not all of the game's rooms.
 
-Keep changing altitude. Laser groups include a low/high/low slalom, a narrow
-gate followed by a middle beam, a staircase, vertically offset gates and paired
-rotating beams with floor/ceiling bars. The opening weave blocks floor, ceiling
-and centre camping. Static columns are 260 pixels apart, rotating columns 300.
-Every fifth group is a missile: its warning follows your altitude, locks, then
-fires. Move after the lock. Shields absorb one hit and do not stack.
+## Credits
 
-Collected coins enter a persistent wallet immediately. **The Stash** previews,
-buys and equips permanent outfits: Classic is free, Arctic costs 50 coins,
-Rose 120 and Lime 200. Purchases require confirmation; owned outfits can be
-re-equipped for free. Outfits only change appearance. Existing purchases and
-wallet balances are retained.
+Inspired by [Jetpack Joyride](https://www.halfbrick.com/games/jetpack-joyride) by [Halfbrick](https://www.halfbrick.com), not affiliated with them. Go play the original: it's free on iOS and Android, with the Stash, missions and much more.
 
-Distance determines the record. Speed increases from 2.25 to 4.5 pixels per
-16 ms simulation tick. Rotating beams complete a revolution in 128 ticks,
-with both directions and varied initial phases. Their collider follows the
-finite beam, so empty corners are safe. Flights end at 1,000,000 meters to
-keep counters bounded. Physics and obstacle generation are unchanged by the
-artwork revision.
+* The numbers come from the game's own files (its settings, level pacing, zapper, laser, missile, coin, vehicle and slot machine data), read by [tools/data.py](tools/data.py) into [src/data.h](src/data.h).
+* The pictures are Halfbrick's: from archive.org's [Jetpack Joyride Facebook assets](https://archive.org/details/jetpack-joyride-assets), and from the game's Android package for the Lil' Stomper, the Bad As Hog, the spin token, the distance font (New Athletic M54) and the Final Spin's prizes, packed by [tools/art.py](tools/art.py) into [src/art.h](src/art.h).
+* Brought to NumPlay by **[Bobydeluxe](https://github.com/Bobydeluxe)**, who chose the Facebook assets.
 
-Pausing freezes the simulation; resuming waits for a fresh launch press.
-Restarting asks before replacing a live flight. The checked 260-byte JJN2 save
-preserves the exact world, random state, obstacle phases, records, wallet and
-outfits. JJN1 saves still import their world and lifetime coins. Full-storage
-recovery offers retry, return, or explicit exit without saving. Other
-calculator records are preserved.
+Made by Mason Chen as part of NumPlay.
 
-## Build
+## License
 
-Requires ARM GCC with newlib, Python 3 and nwlink 1.0.0. The portable builder
-also uses pyelftools. Pillow is needed only for asset regeneration and
-screenshot/ARM tests, not the ordinary ARM build.
-
-```sh
-make build module check
-make test
-python tests/arm.py --nwlink nwlink
-python tests/menu.py --nwlink nwlink
-
-# Optional portable build, including Windows without Make:
-python tools/build.py --toolchain /path/to/arm/bin --nwlink /path/to/nwlink/bin/nwlink
-
-# Optional offline sprite/icon regeneration:
-python tools/assets.py
-python tools/assets.py --check
-```
-
-Generated sprites live in `src/assets.h`. The source manifest records original
-filenames and hashes. The game-local icon/ELF packer verifies identical release/debug
-installed bytes on four target profiles. Native tests create ARM fixtures in
-`output/`; the ARM suite uses the unstripped debug NWA.
-
-| Resource | Bytes |
-| --- | ---: |
-| Downloadable NWA | 57,432 |
-| Installed code/assets | 49,732 |
-| Static RAM | 5,857 |
-| Deepest observed ARM stack | 436 |
-| Save payload / with record overhead | 260 / 281 |
-| Compressed launcher icon | 1,559 |
-
-The artwork increases flash storage compared with the preceding procedural
-version (20,008 downloadable / 13,804 installed bytes). Static RAM and save size
-are unchanged. The device stores only the packed sprites it uses; the original
-archive and source PNGs are not installed on the calculator.
-
-One 320x8 RGB565 strip uses 5,120 bytes. Row-indexed RLE, packed 4-bit literals
-and shared outfit palettes avoid full-screen textures in RAM, a PNG decoder,
-heap allocations and texture caches. The laboratory repeats one small tile at
-2x scale. Fixed-point physics uses four hazard slots and eighteen pickup slots.
-
-Simulation runs at 62.5 Hz and drawing at up to 31.25 Hz. The title's independent
-80 ms cosmetic clock never advances the saved simulation. Static menus push
-no pixels when unchanged. All tested ARM scenes stay within the 32 ms drawing
-budget; measured maximum is 12 ms. These are emulator measurements; physical
-calculator display timing remains to be checked. See [validation](VALIDATION.md).
+The game's code is licensed under the GNU General Public License v3.0: see the `LICENSE` file at the root of the repository. The pictures and the game's data are Halfbrick's and keep their own terms (see Credits).

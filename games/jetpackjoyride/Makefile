@@ -1,55 +1,63 @@
-# Jetpack Joyride: English-only app and NumPlay module.
+# Jetpack Joyride on the NumWorks calculator.
+#   make            output/jetpackjoyride.nwa
+#   make check      link it like the calculator does (output/jetpackjoyride.bin)
+#   make host       build/play: the game on a computer, for tests and pictures
+#   make test       the rules against the original's numbers, a bot's runs, random keys, saves (with the sanitizers)
+#   make data APK=DIR          src/data.h again, from the game's Android package unzipped in DIR (tools/data.py)
+#   make art FB=DIR APK=DIR    src/art.h again: FB the PNGs of archive.org's Facebook assets, APK as above
+#                              (tools/art.py: Python + Pillow; both are only read)
+Q ?= @
 CC = arm-none-eabi-gcc
 NWLINK ?= npx --yes -- nwlink@1.0.0
-PYTHON ?= python3
-ARM_LD ?= arm-none-eabi-ld
-OBJCOPY = arm-none-eabi-objcopy
-PACKER = tools/compact_nwa.py tools/standalone.ld
-SRC = src/main.c src/physics.c src/save.c src/render.c
-HEADERS = $(wildcard src/*.h) ../common/epsilon_app.h ../common/epsilon_files.h
-OBJECTS = $(patsubst src/%.c,output/%.o,$(SRC))
-CFLAGS = -std=c11 $(shell $(NWLINK) eadk-cflags-device) -Os -Wall -Wextra -Werror
-CFLAGS += -fno-math-errno -fsingle-precision-constant -ffunction-sections -fdata-sections -fstack-usage
-CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fvisibility=internal
-LINK = -nostartfiles --specs=nano.specs -Wl,--relocatable,--gc-sections,-e,main -flinker-output=nolto-rel
+BUILD_DIR = output
+L = ../../launcher/src
 
-.PHONY: build check module sim-module test clean assets check-assets
-build: output/jetpackjoyride.nwa
-assets:
-	$(PYTHON) tools/assets.py
-check-assets:
-	$(PYTHON) tools/assets.py --check
-output/%.o: src/%.c $(HEADERS) | output
-	$(CC) $(CFLAGS) -c $< -o $@
-output/icon.o: src/icon.png | output
-	$(NWLINK) png-icon-o $< $@
-output/icon-compact.o: output/icon.o $(PACKER)
-	$(PYTHON) tools/compact_nwa.py icon $< $@ --objcopy $(OBJCOPY)
-output/jetpackjoyride-debug.nwa: $(OBJECTS) output/icon-compact.o $(PACKER)
-	$(CC) $(CFLAGS) $(LINK) -Wl,-u,eadk_app_name,-u,eadk_app_icon,-u,eadk_api_level $(OBJECTS) output/icon-compact.o -lm -o output/standalone.o
-	$(PYTHON) tools/compact_nwa.py app output/standalone.o $@ --ld $(ARM_LD)
-output/jetpackjoyride.nwa: output/jetpackjoyride-debug.nwa $(PACKER)
-	$(PYTHON) tools/compact_nwa.py release $< $@ --objcopy $(OBJCOPY)
-module: output/module.o
-output/module.o: $(OBJECTS)
-	$(CC) $(CFLAGS) $(LINK) $^ -lm -o $@
-check: build
-	$(NWLINK) nwa-bin output/jetpackjoyride.nwa output/jetpackjoyride.bin --ram-length 107674
-	$(NWLINK) nwa-bin output/jetpackjoyride-debug.nwa output/jetpackjoyride-debug.bin --ram-length 107674
-	$(PYTHON) -c "from pathlib import Path; assert Path('output/jetpackjoyride.bin').read_bytes() == Path('output/jetpackjoyride-debug.bin').read_bytes(), 'Release compaction changed installed bytes'"
-output:
-	mkdir -p $@
-test: | output
-	$(PYTHON) tests/test_compact_nwa.py
-	$(HOST_CC) -std=c11 -O2 -Wall -Wextra -Werror -Isrc tests/test.c src/physics.c src/save.c src/render.c -lm -o output/test
-	cd output && ./test
-HOST_CC ?= cc
-sim-module: | output
-	mkdir -p output/sim
-	cc -std=c11 -O2 -fPIC $(shell $(NWLINK) eadk-cflags-simulator) -Dmain=np_jetpackjoyride_main -c src/main.c -o output/sim/main.o
-	cc -std=c11 -O2 -fPIC -c src/physics.c -o output/sim/physics.o
-	cc -std=c11 -O2 -fPIC -c src/save.c -o output/sim/save.o
-	cc -std=c11 -O2 -fPIC -c src/render.c -o output/sim/render.o
-	ld -r output/sim/*.o -exported_symbol _np_jetpackjoyride_main -o output/sim-module.o
+SRC = src/main.c src/sim.c src/draw.c src/save.c src/plat_eadk.c
+HEADERS = $(wildcard src/*.h) ../common/epsilon_app.h ../common/epsilon_files.h ../common/np_text.h $(L)/gfx.h $(L)/np.h $(L)/font.h
+
+CFLAGS = -std=gnu11 $(shell $(NWLINK) eadk-cflags-device) -DPLATFORM_DEVICE=1
+CFLAGS += -Os -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant
+CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fwhole-program -fvisibility=internal
+CFLAGS += -ffunction-sections -fdata-sections
+LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
+LDFLAGS += -Wl,-e,main -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
+LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
+
+.PHONY: build check clean host test data art
+build: $(BUILD_DIR)/jetpackjoyride.nwa
+
+# apps get 133652 bytes of RAM on custom builds of Epsilon 25.2 (148928 or more on official ones)
+check: $(BUILD_DIR)/jetpackjoyride.nwa
+	$(Q) $(NWLINK) nwa-bin --ram-length 133652 $< $(BUILD_DIR)/jetpackjoyride.bin
+	@echo "BIN     $(BUILD_DIR)/jetpackjoyride.bin: $$(wc -c < $(BUILD_DIR)/jetpackjoyride.bin) bytes"
+
+$(BUILD_DIR)/jetpackjoyride.nwa: $(SRC) $(HEADERS) $(L)/gfx.c $(L)/font_data.c $(L)/xfont.c $(BUILD_DIR)/icon.o
+	@echo "LD      $@"
+	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $(SRC) $(L)/gfx.c $(L)/font_data.c $(L)/xfont.c $(BUILD_DIR)/icon.o -lm -o $@
+	$(Q) arm-none-eabi-strip --strip-unneeded $@
+
+$(BUILD_DIR)/icon.o: src/icon.png | $(BUILD_DIR)
+	@echo "ICON    $<"
+	$(Q) $(NWLINK) png-icon-o $< $@
+
+$(BUILD_DIR):
+	$(Q) mkdir -p $@
+
+# on a computer: tests/play.c runs the game with scripted keys, checks it and saves pictures
+HOST_FLAGS = -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Isrc -DHOST \
+  -fsanitize=address,undefined -fno-sanitize-recover=undefined
+host: build/play
+build/play: $(filter-out src/plat_eadk.c,$(SRC)) tests/play.c $(HEADERS) $(L)/gfx.c $(L)/font_data.c $(L)/xfont.c
+	$(Q) mkdir -p build
+	$(Q) cc $(HOST_FLAGS) tests/play.c src/sim.c src/draw.c src/save.c $(L)/gfx.c $(L)/font_data.c $(L)/xfont.c -lm -o $@
+	@echo "HOST    $@"
+test: build/play
+	build/play test
+
+data:
+	python3 -I tools/data.py $(APK) src/data.h
+art:
+	python3 -I tools/art.py $(FB) $(APK) src/art.h
+
 clean:
-	rm -rf output
+	$(Q) rm -rf $(BUILD_DIR) build

@@ -1,130 +1,249 @@
-/* SPDX-License-Identifier: GPL-3.0-only */
-#include <eadk.h>
-#include "jetpack.h"
-#include "render.h"
-#include "../../common/epsilon_app.h"
-#include "../../common/epsilon_files.h"
-#ifdef __ELF__
-const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name")))="Jetpack Joyride";
-const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level")))=0;
+/* Jetpack Joyride (Halfbrick, 2011) on the NumWorks calculator.
+ *
+ * Barry Steakfries breaks into Legitimate Research's lab, steals the machine gun jetpack and flies as far as
+ * he can: hold to fly, let go to fall, through zappers, missiles and lasers, grabbing coins, spin tokens and
+ * vehicle boxes (the Lil' Stomper, the Profit Bird, the Crazy Freaking Teleporter, the Bad As Hog, the Gravity
+ * Suit). The run steps 60 times a second with the original's numbers (sim.c, data.h); the Final Spin plays the
+ * tokens after it.
+ *
+ * Keys: OK, EXE or Up fly (or a vehicle's action), Back pauses, Home saves and quits. */
+#include <string.h>
+#include "../../../launcher/src/gfx.h"
+#include "jj.h"
+#include "draw.h"
+#include "plat.h"
+#include "save.h"
+#include "data.h"
+
+static jj_run run;
+static jj_profile prof;
+static jj_view view;
+static jj_spin spin;
+static uint32_t rng, blast_m;
+static uint8_t back_to, banked, spin_t;
+static color_t strip[SCREEN_W * STRIP_H];
+/* frames drawn, the slowest (ms) and those over 33 ms: read by tools/emu.py */
+#ifndef HOST
+__attribute__((used, externally_visible))
 #endif
-#define KEY(k) (UINT64_C(1)<<(k))
-static jj_game game;
-static jj_stats stats;
-static uint8_t save_data[JJ_SAVE_BYTES];
-static bool have_save,save_failed;
-static uint32_t last_checksum;
-uint32_t perf_frames,perf_max,perf_slow;
-static void push(int x,int y,int w,int h,const uint16_t *p) {
-  eadk_display_push_rect((eadk_rect_t){x,y,w,h},p);
+uint32_t perf_frames, perf_max, perf_slow;
+
+static const uint16_t prize_coins[JJ_PRIZES] = {100, 500, 1000};
+static const uint16_t prize_blast[JJ_PRIZES] = {[JJ_PRIZE_EXPLOSION1] = 160, [JJ_PRIZE_EXPLOSION2] = 280, [JJ_PRIZE_EXPLOSION3] = 400};
+
+static void new_run(void) {
+  jj_start(&run, jj_rand(&rng), prof.double_coins, prof.head_start);
+  prof.double_coins = prof.head_start = 0;
+  prof.has_run = 1;
+  if (prof.runs < 0xffffffffu) prof.runs++;
+  blast_m = 0, banked = 0;
+  view.screen = JJ_SCREEN_PLAY;
 }
-static bool save(void) {
-  jj_encode(&game,&stats,save_data);
-  unsigned n=JJ_SAVE_BYTES-4;
-  uint32_t hash=save_data[n]|(uint32_t)save_data[n+1]<<8|(uint32_t)save_data[n+2]<<16|(uint32_t)save_data[n+3]<<24;
-  if(have_save&&hash==last_checksum&&!save_failed)return true;
-  save_failed=!ef_write("jetpackjoyride.sav",save_data,JJ_SAVE_BYTES);
-  if(!save_failed)have_save=true,last_checksum=hash;
-  return !save_failed;
+
+/* the run's over: its coins go in the bank, and its distance may be the best */
+static void bank(void) {
+  if (banked) return;
+  banked = 1;
+  prof.coins += run.coins;
+  prof.has_run = 0;
 }
-static void fresh(uint32_t seed) {jj_new(&game,seed);}
-int main(void) {
-  np_app_begin();
-  uint32_t length=0;const uint8_t *data=ef_read("jetpackjoyride.sav",&length);
-  jj_decode(&game,&stats,data,length);
-  unsigned view=JJ_TITLE,selected=0,help_return=JJ_TITLE,help_selection=2;
-  unsigned error_return=JJ_TITLE,error_selection=0;
-  uint64_t previous=eadk_keyboard_scan(),stale=previous;
-  uint32_t now=(uint32_t)eadk_timing_millis(),tick_at=now,draw_at=now,save_at=now;
-  jj_invalidate();
-  for(;;) {
-    now=(uint32_t)eadk_timing_millis();uint64_t keys=eadk_keyboard_scan();stale&=keys;
-    uint64_t active=keys&~stale,hit=active&~previous;previous=active;
-    bool ok=(hit&(KEY(eadk_key_ok)|KEY(eadk_key_exe)))!=0;
-    bool back=(hit&KEY(eadk_key_back))!=0;
-    bool next=(hit&(KEY(eadk_key_right)|KEY(eadk_key_down)))!=0;
-    bool prev=(hit&(KEY(eadk_key_left)|KEY(eadk_key_up)))!=0;
-    if(view!=JJ_SAVE_ERROR&&(keys&(KEY(eadk_key_home)|KEY(eadk_key_on_off)))) {
-      if(save())break;
-      error_return=view==JJ_PLAY?JJ_READY:view;error_selection=selected;
-      view=JJ_SAVE_ERROR;hit=0;ok=back=next=prev=false;stale=keys;
+
+static void results(void) {
+  bank();
+  uint32_t m = jj_metres(&run) + blast_m;
+  view.run_m = m, view.run_coins = run.coins;
+  view.new_best = m > prof.best;
+  if (m > prof.best) prof.best = m;
+  view.screen = JJ_SCREEN_RESULTS, view.sel = 0;
+  save_write(&prof, 0);
+}
+
+static void cash_in(void) {
+  prof.coins += run.tokens * 50u;
+  run.tokens = 0;
+}
+
+static void sync_view(void) {
+  view.best = prof.best, view.coins = prof.coins;
+  view.head_start = prof.head_start, view.double_coins = prof.double_coins;
+  view.tokens = run.tokens;
+}
+
+/* a 60th of a second of the Final Spin: the reels turn, then stop one after the other on the result */
+static void spin_tick(void) {
+  spin_t++;
+  for (int i = 0; i < 3; i++) {
+    int stop = 40 + i * 14;
+    if (spin_t < stop) {
+      view.reel[i] = (uint16_t)((view.reel[i] + 12) % (48 * JJ_PRIZES));
+    } else if (spin_t == stop) {
+      int icon = spin.won ? spin.won - 1 : (int)((jj_rand(&rng) % JJ_PRIZES + (unsigned)i * 3) % JJ_PRIZES);
+      if (!spin.won && i == 2 && view.reel[0] / 48 == view.reel[1] / 48 && (int)(view.reel[0] / 48) == icon)
+        icon = (icon + 1) % JJ_PRIZES;   /* a losing spin never shows three of a kind */
+      view.reel[i] = (uint16_t)(48 * icon);
     }
-    if(view==JJ_PLAY) {
-      if(back)view=JJ_PAUSE,selected=0,save();
-      else {
-        bool thrust=(active&(KEY(eadk_key_ok)|KEY(eadk_key_exe)|KEY(eadk_key_up)))!=0;
-        if(now-tick_at>4*JJ_TICK_MS)tick_at=now-4*JJ_TICK_MS;
-        while(now-tick_at>=JJ_TICK_MS&&game.phase==JJ_RUNNING) {
-          jj_step(&game,&stats,thrust);tick_at+=JJ_TICK_MS;
-        }
-        if(game.phase==JJ_OVER)view=JJ_RESULT,selected=0,save();
-        if(now-save_at>=5000)save(),save_at=now;
-      }
-    } else {
-      tick_at=now;
-      if(view==JJ_TITLE) {
-        if(next)selected=(selected+1)%3;
-        if(prev)selected=(selected+2)%3;
-        if(back) {
-          if(save())break;
-          error_return=JJ_TITLE;error_selection=selected;view=JJ_SAVE_ERROR;
-        } else if(ok) {
-          if(selected==0) {
-            if(!game.present||game.phase==JJ_OVER)fresh(now^(stats.runs*0x9E3779B9u));
-            view=JJ_READY;selected=0;
-          } else if(selected==1)view=JJ_SHOP,selected=stats.suit;
-          else help_return=JJ_TITLE,help_selection=2,view=JJ_GUIDE;
-        }
-      } else if(view==JJ_READY) {
-        if(back)view=JJ_TITLE,selected=0;
-        else if(ok)jj_start(&game,&stats),view=JJ_PLAY,tick_at=now;
-      } else if(view==JJ_PAUSE) {
-        if(next)selected=(selected+1)%4;
-        if(prev)selected=(selected+3)%4;
-        if(back||(ok&&selected==0))view=JJ_READY;
-        else if(ok&&selected==1)view=JJ_CONFIRM,selected=0;
-        else if(ok&&selected==2)help_return=JJ_PAUSE,help_selection=2,view=JJ_GUIDE;
-        else if(ok&&selected==3)view=JJ_TITLE,selected=0;
-      } else if(view==JJ_CONFIRM) {
-        if(next||prev)selected=!selected;
-        if(back||(ok&&selected==0))view=JJ_PAUSE,selected=1;
-        else if(ok)fresh(now^(stats.runs*0x9E3779B9u)),view=JJ_READY,selected=0;
-      } else if(view==JJ_RESULT) {
-        if(next||prev)selected=!selected;
-        if(back||(ok&&selected))view=JJ_TITLE,selected=0;
-        else if(ok)fresh(now^(stats.runs*0x9E3779B9u)),view=JJ_READY,selected=0;
-      } else if(view==JJ_SHOP) {
-        if(next)selected=(selected+1)%4;
-        if(prev)selected=(selected+3)%4;
-        if(back)view=JJ_TITLE,selected=1;
-        else if(ok) {
-          if(!selected||(stats.owned&(1u<<selected)))jj_equip(&stats,selected),save();
-          else if(stats.wallet>=jj_price(selected))view=JJ_BUY,selected<<=1;
-        }
-      } else if(view==JJ_BUY) {
-        if(next||prev)selected^=1;
-        if(back||(ok&&!(selected&1)))view=JJ_SHOP,selected>>=1;
-        else if(ok) {
-          selected>>=1;jj_equip(&stats,selected);save();view=JJ_SHOP;
-        }
-      } else if(view==JJ_GUIDE) {
-        if(back||ok)view=help_return,selected=help_selection;
-      } else if(view==JJ_SAVE_ERROR) {
-        if(back)break;
-        if(ok&&save())break;
-        if(hit&KEY(eadk_key_one))view=error_return,selected=error_selection;
-      }
-    }
-    if(now-draw_at>=32||hit||!perf_frames) {
-      uint32_t start=(uint32_t)eadk_timing_millis();
-      jj_menu_time(now);
-      jj_render(&game,&stats,view,selected,save_failed,push);
-      uint32_t spent=(uint32_t)eadk_timing_millis()-start;
-      if(spent>perf_max)perf_max=spent;
-      if(spent>32)++perf_slow;
-      ++perf_frames;draw_at=now;
-    }
-    eadk_timing_msleep(4);
   }
-  return np_app_end();
+  if (spin_t < 40 + 2 * 14 + 4) return;
+  view.spinning = 0;
+  int p = spin.won ? spin.won - 1 : -1;
+  view.spin_msg = (int8_t)(p >= 0 ? p : -2);
+  if (p < 0) return;
+  prof.coins += prize_coins[p];
+  blast_m += prize_blast[p];
+  if (p == JJ_PRIZE_TOKENS) run.tokens = (uint8_t)(run.tokens + 3);
+  if (p == JJ_PRIZE_DOUBLE_COINS) prof.double_coins = 1;
+  if (p == JJ_PRIZE_START_500M) prof.head_start = 1;
+}
+
+/* a Second Chance: the run goes on, its coins out of the bank again */
+static void second_chance(void) {
+  jj_revive(&run);
+  banked = 0, prof.coins -= run.coins, prof.has_run = 1;
+  view.screen = JJ_SCREEN_PLAY, view.spin_msg = -1;
+}
+
+int main(void) {
+  plat_begin();
+  gfx_buf = strip;
+  save_load(&prof, &run);
+  rng = plat_random() ^ prof.runs * 0x9E3779B9u;
+  if (!rng) rng = 1;
+  view.screen = prof.has_run ? JJ_SCREEN_PAUSE : JJ_SCREEN_TITLE;
+  view.spin_msg = -1;
+  uint32_t stale = plat_keys(), prev = stale, last = plat_millis(), acc = 0, saved_at = last;
+  uint8_t shown = 0xff;
+  bool redraw = true;
+  for (;;) {
+    uint32_t now = plat_millis(), keys = plat_keys();
+    stale &= keys;                      /* keys still down from the screen before don't count */
+    uint32_t live = keys & ~stale, hit = live & ~prev;
+    prev = live;
+    if (keys & JK_HOME) {
+      if (view.screen == JJ_SCREEN_SPIN) {
+        while (view.spinning) spin_tick();   /* the spin under way counts; the other tokens are cashed in */
+        if (view.spin_msg == JJ_PRIZE_REVIVE) second_chance();
+        else cash_in(), results();
+      }
+      save_write(&prof, prof.has_run ? &run : 0);
+      break;
+    }
+    uint32_t dt = now - last;
+    last = now;
+    if (dt > 100) dt = 100;
+    /* 60ths of a second gone by: the run (and the reels) step that many times, 4 at most */
+    acc += dt * 60;
+    int ticks = 0;
+    while (acc >= 1000 && ticks < 4) acc -= 1000, ticks++;
+    if (acc >= 1000) acc = 0;   /* too slow: the game slows down rather than skip */
+    int steps = 0;
+    switch (view.screen) {
+    case JJ_SCREEN_TITLE:
+      view.clock += dt / 8;
+      redraw = true;
+      if (hit & JK_BACK) {
+        save_write(&prof, 0);
+        return plat_end();
+      }
+      if (hit & JK_OK) {
+        if (!prof.guide_seen) back_to = JJ_SCREEN_PLAY, view.screen = JJ_SCREEN_GUIDE;
+        else new_run();
+      }
+      break;
+    case JJ_SCREEN_GUIDE:
+      if (hit & (JK_OK | JK_BACK)) {
+        prof.guide_seen = 1;
+        if (back_to == JJ_SCREEN_PLAY) new_run();
+        else view.screen = back_to, view.sel = 2;
+      }
+      break;
+    case JJ_SCREEN_PLAY:
+      if (hit & JK_BACK) {
+        view.screen = JJ_SCREEN_PAUSE, view.sel = 0;
+        save_write(&prof, &run), saved_at = now;
+        break;
+      }
+      for (; steps < ticks; steps++) jj_step(&run, (live & (JK_OK | JK_UP)) != 0);
+      if (jj_over(&run)) {
+        bank();
+        if (run.tokens) {
+          jj_spin_start(&spin);
+          view.screen = JJ_SCREEN_SPIN, view.spinning = 0, view.spin_msg = -1;
+          for (int i = 0; i < 3; i++) view.reel[i] = (uint16_t)(48 * (i * 3 + 1));
+        } else {
+          results();
+        }
+      } else if (now - saved_at > 10000) {
+        save_write(&prof, &run), saved_at = now;
+      }
+      break;
+    case JJ_SCREEN_PAUSE:
+      if (hit & JK_UP) view.sel = (uint8_t)((view.sel + 3) % 4);
+      if (hit & JK_DOWN) view.sel = (uint8_t)((view.sel + 1) % 4);
+      if (hit & JK_BACK) view.screen = JJ_SCREEN_PLAY, acc = 0;
+      else if (hit & JK_OK) {
+        if (view.sel == 0) view.screen = JJ_SCREEN_PLAY, acc = 0;
+        else if (view.sel == 2) back_to = JJ_SCREEN_PAUSE, view.screen = JJ_SCREEN_GUIDE;
+        else view.screen = JJ_SCREEN_CONFIRM, view.sel = view.sel == 3;
+      }
+      break;
+    case JJ_SCREEN_CONFIRM:
+      if (hit & JK_BACK) view.sel = view.sel ? 3 : 1, view.screen = JJ_SCREEN_PAUSE;
+      else if (hit & JK_OK) {
+        bank();
+        uint32_t m = jj_metres(&run);
+        if (m > prof.best) prof.best = m;
+        if (view.sel) view.screen = JJ_SCREEN_TITLE, save_write(&prof, 0);
+        else new_run();
+      }
+      break;
+    case JJ_SCREEN_SPIN:
+      if (view.spinning) {
+        for (int k = 0; k < ticks && view.spinning; k++) spin_tick();
+        redraw = true;
+        break;
+      }
+      if (view.spin_msg == JJ_PRIZE_REVIVE && (hit & (JK_OK | JK_BACK))) {
+        second_chance();
+        acc = 0;
+        break;
+      }
+      if (hit & JK_BACK) cash_in(), results();
+      else if (hit & JK_OK) {
+        if (!run.tokens) results();
+        else {
+          run.tokens--;
+          jj_spin_roll(&spin, &rng);
+          view.spinning = 1, spin_t = 0, view.spin_msg = -1;
+        }
+      }
+      break;
+    case JJ_SCREEN_RESULTS:
+      if (hit & (JK_UP | JK_DOWN)) view.sel ^= 1;
+      if (hit & JK_BACK) view.screen = JJ_SCREEN_TITLE;
+      else if (hit & JK_OK) {
+        if (view.sel == 0) new_run();
+        else view.screen = JJ_SCREEN_TITLE;
+      }
+      break;
+    }
+    if (view.screen != shown) {
+      stale = keys, prev = 0;           /* a new screen starts with all keys up */
+      shown = view.screen, redraw = true;
+    }
+    if (steps || redraw || hit) {
+      sync_view();
+      uint32_t t0 = plat_millis();
+      jj_draw(&run, &view);
+      uint32_t spent = plat_millis() - t0;
+      if (view.screen == JJ_SCREEN_PLAY) {
+        perf_frames++;
+        if (spent > perf_max) perf_max = spent;
+        if (spent > 33) perf_slow++;
+      }
+      redraw = false;
+    } else {
+      plat_sleep(2);
+    }
+  }
+  return plat_end();
 }

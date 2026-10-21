@@ -209,6 +209,10 @@ GAMES = {
     "cookieclicker": ("CookieClicker.nwa", "cookieclicker.sav",
                       presses((2500, "ok"), (3500, "ok"), (4000, "ok"), (4500, "ok")), 6500,
                       presses((3000, "ok"), (3600, "ok")), 5500),
+    # the title, how to play, then the run: a second of it, paused (that saves it); Home keeps it. Next time, from the
+    # copy, it opens paused: Back, another second, paused again, quit with On/Off
+    "jetpackjoyride": ("JetpackJoyride.nwa", "jetpackjoyride.sav", presses((1500, "ok"), (2500, "ok"), (3600, "back")), 5000,
+                       presses((1500, "back"), (2700, "back")), 4000),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -240,7 +244,8 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "numpowder": "numpowder_saves.py", "undertale": "undertale_saves.py", "subway": "subway_saves.py",
           "fnaf": "fnaf_saves.py", "doom": "doom_saves.py", "isaac": "isaac_saves.py",
           "hillclimb": "hillclimb_saves.py", "pvz": "pvz_saves.py", "sonic": "sonic_saves.py",
-          "cookieclicker": "cookieclicker_saves.py", "leveldevil": "leveldevil_saves.py"}
+          "cookieclicker": "cookieclicker_saves.py", "leveldevil": "leveldevil_saves.py",
+          "jetpackjoyride": "jetpackjoyride_saves.py"}
 CHECKS = {
     # the island remembers where Lucky was; after the reinstall, from the copy
     "championisland": (lambda v: v[:3] == b"CI1" and b"PLAYER_LOC" in v,) * 2,
@@ -341,6 +346,9 @@ CHECKS = {
     "cookieclicker": (lambda v: v[:4] == b"CCK1" and struct.unpack_from("<d", v, 48)[0] == 3
                       and struct.unpack_from("<d", v, 8)[0] >= 3,
                       lambda v: v[:4] == b"CCK1" and struct.unpack_from("<d", v, 48)[0] == 5),
+    # a run kept ("JJR1", has_run at 23, its frames at 60); after the reinstall, from the copy, it goes on
+    "jetpackjoyride": (lambda v: len(v) == 728 and v[:4] == b"JJR1" and v[23] == 1 and struct.unpack_from("<I", v, 60)[0] >= 30,
+                       lambda v: v[:4] == b"JJR1" and v[23] == 1 and struct.unpack_from("<I", v, 60)[0] >= 90),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
     # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies kept
