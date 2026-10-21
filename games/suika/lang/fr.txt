@@ -1,0 +1,23 @@
+# Suika Game in French: the English text as in the source, a tab, the translation (see tools/lang.py).
+Score	Score
+Best score	Record
+Next	Suivant
+Circle of	Cercle
+Evolution	d'évolution
+Move	Bouger
+Drop	Lâcher
+Back	Retour
+Menu	Menu
+Resume	Reprendre
+Restart	Recommencer
+How to play	Comment jouer
+Quit	Quitter
+No	Non
+Yes	Oui
+Play	Jouer
+Paused	Pause
+Start again?	Recommencer ?
+New best!	Nouveau record !
+Game over	Partie terminée
+Move the cloud with the arrows and drop the fruit with OK. Two of the same fruit that touch join into the next one, up to the watermelon. If fruit stays above the box, it's over.	Déplace le nuage avec les flèches et lâche le fruit avec OK. Deux fruits pareils qui se touchent deviennent le suivant, jusqu'à la pastèque. Si un fruit reste au-dessus de la boîte, c'est fini.
+Best 	Record
