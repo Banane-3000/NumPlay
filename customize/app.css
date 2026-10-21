@@ -43,11 +43,9 @@ main {
 .title { margin: 0; font-size: clamp(40px, calc((100cqw - 170px) / 4.3), 76px); font-weight: 800; letter-spacing: -0.045em; line-height: 1; }
 .chips { display: flex; gap: 8px; }
 .lede { grid-column: 1 / -1; margin: 10px 0 0; max-width: 34em; font-size: 18px; line-height: 1.4; font-weight: 550; color: var(--ink); }
-.note { grid-column: 1 / -1; margin: 6px 0 0; font-size: 14px; line-height: 1.45; color: var(--text); }
-.row-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: 16px; }
+.row-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
 .row-head:first-child { margin-top: 0; }
 .row-head h2 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.1px; }
-.row-head .sub { display: block; margin-top: 2px; font-size: 13px; color: var(--text); }
 
 /* ---- the game grids: the same size for every game, the best first */
 .grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px 12px; }
@@ -227,7 +225,6 @@ body.dragging .drop-hint { display: flex; }
 
 /* ---- Retro-Go: your own games, as cartridges */
 .retro { display: flex; flex-direction: column; gap: 10px; }
-.retro .sub { margin: 0; font-size: 13px; line-height: 1.45; color: var(--text); }
 .carts-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .retro input[type=file] { position: absolute; left: -9999px; }
 .add-cart {

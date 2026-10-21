@@ -198,8 +198,6 @@
     $('#app-chip').dataset.tip = (s ? byId[s].title : st.app.name.trim() || 'No name') + '|its icon and name on your calculator, and how it opens';
     $('#lang-chip').dataset.tip = LANGS[st.lang][1] + '|the language of its menus';
     $('#lang-chip-label').textContent = LANGS[st.lang][0];
-    $('#space-note').textContent = st.cap === 'xl' ? 'Your calculator has 6 MB for apps, with Enlarged Extra Apps. Its screen shows what fits.'
-      : 'Your calculator has 1.94 MB for apps. Its screen shows what fits.';
     renderCarts();
     save();
   }
