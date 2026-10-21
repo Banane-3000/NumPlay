@@ -243,6 +243,24 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/flappybird"
   },
   {
+    "id": "flappydunk",
+    "title": "Flappy Dunk",
+    "tagline": "Flap the ball down through every hoop",
+    "credit": "Based on Flappy Dunk by Voodoo",
+    "top": "0xFFA53D",
+    "bottom": "0xB8400F",
+    "accent": "0xFFE08A",
+    "colors": 16,
+    "records": [
+      "flappydunk.sav"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "app": "FlappyDunk.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/flappydunk"
+  },
+  {
     "id": "pacman",
     "title": "Pac-Man",
     "tagline": "Eat dots, dodge ghosts",

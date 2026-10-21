@@ -1,87 +1,30 @@
 # Flappy Dunk
 
-Game made by **Bobydeluxe**.
+Flap the winged ball and drop it down through every hoop. Voodoo's endless game for the NumWorks calculator, playing and looking like the phone game.
 
-An English-only NumWorks game inspired by one-button basketball. Fly a winged
-ball and descend through every hoop. Menus, physics and procedural artwork
-are original; no mobile-game assets are bundled.
+<img src="docs/shot.png" width="320" alt="A run of Flappy Dunk: the ball on fire after four swishes in a row">
 
-![Title screen](docs/title.png)
-![A clean swish](docs/gameplay.png)
+- **One button.** Each press of OK flaps the wings once, and the ball falls in between.
+- **Every hoop, from above.** Miss one and the run is over. The floor and the ceiling bounce the ball back, and the rims stop it dead, like in the original.
+- **Swishes.** Go through without touching the rim for a swish. A basket is worth 1, a swish 2, and every swish in a row one more: 3, 4, 5... From the second one the ball catches fire.
+- **The real numbers.** Gravity, flap, speed, the size of the ball and hoops, and how the rims and floor behave come from the game's own files.
+- **Harder as you go.** Tilted hoops after 10 baskets, hoops moving up and down or side to side after 20, narrower ones after 40.
+- **Six balls**, unlocked with the original's goals: score 20, 50 or 125, 10 swishes in a row, 100 swishes in all.
+- Your run, best score and balls are saved, so you can stop and carry on later.
 
-## Play
-
-Install `FlappyDunk.nwa` with a compatible NumWorks external-app installer.
-This PR provides a separate application; open Flappy Dunk from the calculator's Home menu after installation.
+## Controls
 
 | Key | Action |
 | --- | --- |
-| OK, EXE or Up | Flap once; release before the next flap |
-| Back | Pause during flight; go back in menus |
-| Home or On/Off | Save and exit |
-| Arrows | Choose a menu item or ball |
+| OK, EXE or Up | Flap |
+| Back | Menu: Resume, Balls, How to play, Quit |
 
-The title has three choices: **Play / Continue**, **Locker**, **How to Play**.
-The two decorative slogans, Flight School, challenges and medal system have
-been removed. Only endless flight remains, with gradually increasing speed.
+## Credits
 
-Pass through hoops from above, with the entire ball clearing the rim. A normal
-basket earns one point. A centred shot without rim contact is a swish;
-consecutive swishes award 2, 3, 4, then 5 points each. Missing a hoop or hitting
-the floor or ceiling ends the flight. The green marker identifies the next hoop.
+Flappy Dunk is **Voodoo**'s game (2017), developed with Acid Cousins. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. This version is written in C for NumPlay with no code or art from the original. Its physics and hoops follow the numbers in the game's Android build, and its French and Chinese texts are the original's own where it has them.
 
-The Locker's balls are cosmetic and do not change difficulty. New unlocks
-use the best score from a single endless run:
+Inside NumPlay it draws with the launcher's own shapes and fonts and saves through its file functions, so the game itself is about 8 KB.
 
-| Ball | Required best score |
-| --- | ---: |
-| Classic | Available from the start |
-| Midnight | 15 |
-| Mint | 35 |
-| Candy | 70 |
-| Golden | 120 |
-| Cosmic | 200 |
+It comes inside [NumPlay](https://github.com/Mason363/NumPlay), or on its own as `FlappyDunk.nwa` from the [latest release](https://github.com/Mason363/NumPlay/releases/latest).
 
-![Locker](docs/locker.png)
-
-Previously earned balls remain unlocked when importing an old save, including
-those obtained through the former medal system. No new medals can be earned
-or used. The selected ball, best and lifetime statistics survive the update.
-A normal flight resumes; an old challenge opens a fresh endless flight instead.
-
-Continuing opens a ready screen and waits for a fresh flap. Pause freezes
-simulation. Replacing a flight asks for confirmation. A full-storage exit
-offers Retry, Return, or an explicit exit without saving.
-
-## Build and verify
-
-Requires ARM GCC, Python 3 and nwlink 1.0.0:
-
-```sh
-make build check
-make test playability
-python tests/arm.py --nwlink /path/to/nwlink
-
-# Optional portable standalone build
-python tools/build.py --toolchain /path/to/arm/bin --nwlink /path/to/nwlink/bin/nwlink
-```
-
-The Python build needs pyelftools and creates `output/FlappyDunk.nwa`, a debug
-build, an optional module object, four linked profiles and `output/sizes.json`. Pillow
-is needed to regenerate the launcher icon with `tools/icon.py`. The game-local
-lossless packer verifies that release/debug apps install identical bytes.
-
-The host suite tests scoring, rim contact, missed hoops, score-unlock
-boundaries, old save import, corruption rejection, 120,000 physics ticks and
-pixel-exact dirty redraws. The offline controller reaches 50 baskets through
-normal flap input; it is not shipped in the game. Run both host programs before
-the ARM suite because they generate its save and keyboard fixtures.
-
-The title screen credits **Bobydeluxe**.
-
-No heap or full-screen framebuffer: a 5,120-byte strip buffer, three reusable
-hoops and sixteen bounded particles. The fixed `FDK2` save payload remains
-160 bytes and imports `FDK1`. Older apps cannot read the new format. See
-[VALIDATION.md](VALIDATION.md) for measurements and limitations.
-
-Licensed under GPL-3.0-only, like NumPlay.
+Build: `make` (needs `arm-none-eabi-gcc` and Node.js for nwlink). Tests: `make test`.
