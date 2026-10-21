@@ -2422,6 +2422,7 @@ class CalculatorSkinApp(LiveApp):
                                              state="readonly", width=30)
         self._compiled_picker.pack(fill="x", pady=(2, 4))
         self._compiled_picker.bind("<Button-1>", lambda _e: self._refresh_compiled_games())
+        self._compiled_picker.bind("<<ComboboxSelected>>", self._on_compiled_selection_changed)
         self._refresh_compiled_games()
         actions = tk.Frame(inner, bg=PANEL)
         actions.pack(fill="x", pady=(0, 3))
@@ -2696,9 +2697,23 @@ class CalculatorSkinApp(LiveApp):
                 style = ttk.Style(self.root)
                 style.theme_use("clam")
                 style.configure(".", background=PANEL, foreground=FG)
-                style.configure("TButton", background=PANEL_2)
+                style.configure("TButton", background=PANEL_2, foreground=FG)
+                style.map("TButton",
+                          foreground=[("disabled", MUTED), ("pressed", FG), ("active", FG)],
+                          background=[("pressed", SELECT), ("active", HOVER)])
                 style.configure("TCheckbutton", background=PANEL, foreground=FG)
+                style.map("TCheckbutton",
+                          foreground=[("disabled", MUTED), ("active", FG)],
+                          background=[("active", PANEL)])
                 style.configure("TMenubutton", background=PANEL_2, foreground=FG)
+                style.map("TMenubutton",
+                          foreground=[("disabled", MUTED), ("pressed", FG), ("active", FG)],
+                          background=[("pressed", SELECT), ("active", HOVER)])
+                style.configure("TCombobox", foreground=FG, fieldbackground=PANEL_2,
+                                background=PANEL_2, arrowcolor=FG)
+                style.map("TCombobox", foreground=[("readonly", FG), ("disabled", MUTED)],
+                          fieldbackground=[("readonly", PANEL_2)],
+                          background=[("active", HOVER)])
                 style.configure("Horizontal.TProgressbar", background=ACCENT, troughcolor=PANEL_2)
             except tk.TclError:
                 pass
@@ -2741,10 +2756,27 @@ class CalculatorSkinApp(LiveApp):
                                   "a file, and reload it.")
 
     def _compiled_choices(self):
+        """Offer every known app before it has been built, not just files on disk.
+
+        A game is built on demand by `tools/build.py --game ID`. Discover its
+        release filename from the manifest and the same APP_ assignments used
+        by the root Makefile, including special-layout games.
+        """
         root = REPO_ROOT / "build" / "compiled"
-        return ([root / "NumPlay.nwa"] if (root / "NumPlay.nwa").is_file() else []) + \
-               sorted(p for p in root.glob("NumPlay-*.nwa") if p.is_file()) + \
-               sorted(p for p in (root / "games").glob("*.nwa") if p.is_file())
+        filenames = [
+            "NumPlay.nwa", "NumPlay-Invisible.nwa", "NumPlay-Matrices.nwa",
+            "NumPlay-Upsilon.nwa", "NumPlay-French.nwa", "NumPlay-Chinese.nwa",
+        ]
+        manifest = json.loads((REPO_ROOT / "games" / "games.json").read_text(encoding="utf-8"))
+        game_names = {record["app"] for record in manifest if record.get("app")}
+        makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+        game_names.update(re.findall(
+            r"(?m)^APP_\w+\s*=\s*[^:\n]+:(\S+\.nwa)\s*$", makefile))
+        filenames.extend("games/" + name for name in sorted(game_names, key=str.casefold))
+        # Keep any existing nonstandard exported files reachable, too.
+        filenames.extend(p.relative_to(root).as_posix() for p in root.glob("NumPlay-*.nwa") if p.is_file())
+        filenames.extend(p.relative_to(root).as_posix() for p in (root / "games").glob("*.nwa") if p.is_file())
+        return [root / name for name in dict.fromkeys(filenames)]
 
     def _refresh_compiled_games(self):
         paths = self._compiled_choices()
@@ -2753,6 +2785,17 @@ class CalculatorSkinApp(LiveApp):
         if not self._compiled_choice.get() or self._compiled_choice.get() not in self._compiled_paths:
             if self._compiled_paths:
                 self._compiled_choice.set(next(iter(self._compiled_paths)))
+
+    def _on_compiled_selection_changed(self, _event=None):
+        """Retarget an active live watcher; never let two builds run together."""
+        if self.mode_var.get() != "live" or self._closing:
+            return
+        selected = self._compiled_choice.get()
+        self._stop_builder()
+        self._set_build_state("Switching live target", selected, busy=True)
+        # _start_builder waits for the stopped process tree on Windows before
+        # starting a new compiler. It reads the *current* selection then.
+        self._start_builder()
 
     def _selected_compiled_path(self):
         return (REPO_ROOT / "build" / "compiled" / self._compiled_choice.get()).resolve()
@@ -2781,6 +2824,8 @@ class CalculatorSkinApp(LiveApp):
         self.load(path)
 
     def _build_compiled_selection(self):
+        if self.mode_var.get() == "live":
+            self._stop_builder()
         self.mode_var.set("live")
         self.live_var.set(True)
         self._switch_mode()
@@ -2883,11 +2928,17 @@ class CalculatorSkinApp(LiveApp):
         self.watch_var.set(True)
         selected = self._selected_compiled_path()
         game_id = self._game_id_for_compiled(selected) if selected else None
+        if selected.parent.name == "games" and not game_id:
+            self._set_build_state("Unknown standalone game", selected.name, error=True)
+            return
         cmd = [sys.executable, "-u", str(BUILD_SCRIPT), "--watch", "-j2"]
         if game_id:
+            # Only this game's sources compile; no full NumPlay launcher rebuild.
             cmd.extend(["--game", game_id])
         else:
-            cmd.extend(["--launcher-only", "--skip-languages"])
+            cmd.append("--launcher-only")
+            if selected.name not in ("NumPlay-French.nwa", "NumPlay-Chinese.nwa"):
+                cmd.append("--skip-languages")
         flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
         try:
             self.build_process = subprocess.Popen(cmd, cwd=str(REPO_ROOT),
@@ -2995,7 +3046,7 @@ class CalculatorSkinApp(LiveApp):
             elif "Stable live-emulator input:" in line:
                 self._builder_has_error = False
                 self._builder_ready = True
-                self._set_build_state("Built", "Reloading build/compiled/NumPlay.nwa", busy=False)
+                self._set_build_state("Built", f"Reloading {self._compiled_choice.get()}", busy=False)
                 if self.mode_var.get() == "live" and self._selected_compiled_path().is_file():
                     # Emulation runs in its own thread and will stop gracefully
                     # before loading the atomically replaced file.

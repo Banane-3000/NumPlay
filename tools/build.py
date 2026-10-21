@@ -797,7 +797,7 @@ def _game_output(game: str) -> tuple[str, Path]:
                                       game_dir / "output" / "device" / f"{game}.nwa",
                                       game_dir / "build" / f"{game}.nwa"])
     if game == "tetris":
-        candidate = [game_dir / "tetris" / "target" / "thumbv7em-none-eabihf" / "release" / "tetris"]
+        candidate = [ROOT / "build" / "data" / "apps" / "Tetris.nwa"]
     return file, next((p for p in candidate if p.is_file()), candidate[0])
 
 
@@ -814,10 +814,11 @@ def _publish_game(game: str) -> Path:
 def _build_once(a) -> None:
     if a.game:
         if a.game == "tetris":
-            # Tetris is a Cargo project; the regular root apps target also
-            # creates standalone Tetris, but would compile ALL games. This path
-            # is intentionally disabled until the bridge is generalized.
-            raise RuntimeError("Tetris standalone single-game mode is not wired yet; use a full build")
+            # Dedicated Cargo target: do not compile all NumPlay games.
+            # The Make recipe uses the existing Windows nwlink.exe bridge.
+            _run_make(["tetris-app"], jobs=a.jobs)
+            _publish_game("tetris")
+            return
         _game_output(a.game)  # Fail before launching a compiler on invalid IDs.
         source_makefile = (ROOT / "games" / a.game / "Makefile").read_text(encoding="utf-8")
         active = "\n".join(x for x in source_makefile.splitlines()

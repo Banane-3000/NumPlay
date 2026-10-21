@@ -66,7 +66,7 @@ ARM_CFLAGS = -std=gnu11 $(EADK_CFLAGS) -DNP_VERSION='"$(VERSION)"' -Os -Wall -We
 ARM_LINK = -nostartfiles --specs=nano.specs -Wl,--relocatable -Wl,--gc-sections -Wl,-e,main \
   -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
 
-.PHONY: all nwa apps check sim emu clean lang FORCE
+.PHONY: all nwa apps check sim emu clean lang FORCE tetris-app
 all: nwa apps
 nwa: $(foreach v,$(VARIANTS),$(B)/$(v).nwa) $(B)/NumPlay-Upsilon.nwa
 
@@ -203,6 +203,12 @@ APP_buckshot = $(B)/games/buckshot/buckshot.nwa:BuckshotRoulette.nwa
 APP_portal = $(B)/games/portal/portal.nwa:PortalReturns.nwa
 APP_chess = $(B)/games/chess/chess.nwa:NumChess.nwa
 APP_tetris = games/tetris/tetris/target/thumbv7em-none-eabihf/release/tetris:Tetris.nwa
+
+# Standalone Rust Tetris, without the full `apps` / launcher build.
+tetris-app: | $(B)
+	cd games/tetris/tetris && NWLINK="$(NWLINK)" $(CARGO) build --release --quiet
+	cp $(word 1,$(subst :, ,$(APP_tetris))) $(B)/apps/Tetris.nwa
+	arm-none-eabi-strip --strip-unneeded $(B)/apps/Tetris.nwa
 APP_numvisuals = $(B)/games/numvisuals/numvisuals.nwa:NumVisuals.nwa
 # too big to share the calculator's app space with NumPlay: only on their own
 APP_celeste = $(B)/games/celeste/celeste.nwa:Celeste.nwa
