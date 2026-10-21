@@ -89,7 +89,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tag", required=True)
     ap.add_argument("--notes", required=True)
-    ap.add_argument("--build", default="build")
+    ap.add_argument("--build", default="build/compiled")
     a = ap.parse_args()
     games = json.load(open(os.path.join(ROOT, "games", "games.json")))
     apps = standalone_names()

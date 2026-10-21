@@ -27,7 +27,7 @@ python3 NumPlay/tools/setup.py
 | --- | --- |
 | **macOS** (Apple silicon or Intel) | If `make` is missing, run `xcode-select --install` first. Then, in each new terminal: `source ~/.numplay/env.sh` |
 | **Linux** | Same as macOS: `source ~/.numplay/env.sh` |
-| **Windows** | `tools/setup.py` prints the PowerShell line to use. `python tools/build_windows.py` builds NumPlay natively (it gets GNU make for you), or use WSL |
+| **Windows** | `tools/setup.py` prints the PowerShell line to use. `python tools/build.py` builds NumPlay natively (it gets GNU make for you), or use WSL |
 
 ## 2. Start a game
 
@@ -45,19 +45,19 @@ You get `games/mygame/output/mygame.nwa`. Now change `games/mygame/src/main.c` i
 
 ## 3. Try it without a calculator
 
-`tools/emu.py` runs a `.nwa` in an emulator of the calculator's ARM chip, with its screen, keys, clock and files. It takes pictures and GIFs, so you can see your game without installing it:
+`tools/emulator.py` runs a `.nwa` in an emulator of the calculator's ARM chip, with its screen, keys, clock and files. It takes pictures and GIFs, so you can see your game without installing it:
 
 ```bash
-python3 tools/emu.py games/mygame/output/mygame.nwa --ms 6000 --keys "1500-1600:ok,2000-4000:right" --shots 1400,3900 --out shots
+python3 tools/emulator.py games/mygame/output/mygame.nwa --ms 6000 --keys "1500-1600:ok,2000-4000:right" --shots 1400,3900 --out shots
 ```
 
 To play it with your mouse and keyboard instead, open it in the live emulator, a calculator in a window (made by LilyTheCuteCatgirl). With `--live` it builds your game again each time you save a file and reloads it:
 
 ```bash
-python3 tools/emu_live.py games/mygame/output/mygame.nwa
+python3 tools/emulator.py games/mygame/output/mygame.nwa
 ```
 
-`tools/emu.py`'s `--keys` holds keys over time ranges in milliseconds (`ok`, `back`, `left`, `up`, `exe`, `home`, `1`...`9`, `shift`, `alpha`...). `--gif 0-5000` records a GIF, `--model n0110` emulates the slower N0110 and N0115 (if your game is smooth there, it's smooth everywhere), `--system upsilon` emulates Upsilon. It runs at about the speed of an N0110.
+`tools/emulator.py`'s `--keys` holds keys over time ranges in milliseconds (`ok`, `back`, `left`, `up`, `exe`, `home`, `1`...`9`, `shift`, `alpha`...). `--gif 0-5000` records a GIF, `--model n0110` emulates the slower N0110 and N0115 (if your game is smooth there, it's smooth everywhere), `--system upsilon` emulates Upsilon. It runs at about the speed of an N0110.
 
 ## 4. Put it on a calculator
 

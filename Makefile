@@ -15,7 +15,7 @@ ARM_LD = arm-none-eabi-ld
 ARM_OBJCOPY = arm-none-eabi-objcopy
 PY ?= python3
 CARGO ?= cargo
-B = build
+B = build/data
 # the RAM the oldest calculator software that runs apps gives them (23.2: 148928 bytes; 25.2 gives 153676).
 # NumPlay itself takes less: a game goes on past it into the RAM the software has left (see
 # tools/gen_games.py), so it installs with less too, custom builds of the software say, where a game that
@@ -183,12 +183,12 @@ lang: $(foreach l,$(LANGS),$(B)/NumPlay-$(LANG_$(l)).nwa)
 $(foreach l,$(LANGS),$(B)/NumPlay-$(LANG_$(l)).nwa): $(B)/NumPlay-%.nwa: FORCE | $(B)
 	$(eval L := $(if $(filter French,$*),fr,zh))
 	$(PY) tools/lang.py tree $(L) $(B)/lang/$(L)
-	$(MAKE) -C $(B)/lang/$(L) build/NumPlay.nwa NWLINK="$(NWLINK)"
-	$(NWLINK) nwa-bin --ram-length $$(( $(CUSTOM_RAM) - $$(cat $(B)/lang/$(L)/build/gen/arena_extra) )) \
-	  $(B)/lang/$(L)/build/NumPlay.nwa $(B)/lang/$(L)/build/NumPlay.bin
-	@n=$$(wc -c < $(B)/lang/$(L)/build/NumPlay.bin); echo "NumPlay-$*.nwa installs as $$n bytes ($$(( $(APP_SPACE) - n )) to spare)"; \
+	$(MAKE) -C $(B)/lang/$(L) build/data/NumPlay.nwa NWLINK="$(NWLINK)"
+	$(NWLINK) nwa-bin --ram-length $$(( $(CUSTOM_RAM) - $$(cat $(B)/lang/$(L)/build/data/gen/arena_extra) )) \
+	  $(B)/lang/$(L)/build/data/NumPlay.nwa $(B)/lang/$(L)/build/data/NumPlay.bin
+	@n=$$(wc -c < $(B)/lang/$(L)/build/data/NumPlay.bin); echo "NumPlay-$*.nwa installs as $$n bytes ($$(( $(APP_SPACE) - n )) to spare)"; \
 	  [ $$n -le $(APP_SPACE) ] || { echo "NumPlay-$*.nwa is bigger than the calculator's app space"; exit 1; }
-	cp $(B)/lang/$(L)/build/NumPlay.nwa $@
+	cp $(B)/lang/$(L)/build/data/NumPlay.nwa $@
 
 # ------------------------------------------------------------------ games on their own
 APP_numdash = games/numdash/build/numdash.nwa:NumDash.nwa
