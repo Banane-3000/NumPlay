@@ -78,6 +78,7 @@ jobs:
           make -C games/sokoban host test
           make -C games/flappydunk host test
           make -C games/towerblock host test
+          make -C games/suika host test
           make -C games/doodlejump host test
           make -C games/stickmanhook check test-fidelity NWLINK=nwlink
           python3 games/stickmanhook/tests/test_artwork.py

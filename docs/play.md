@@ -229,6 +229,20 @@ Fill a row or a column to clear it; blocks never turn. The lines a block would f
 
 <br clear="right">
 
+## Suika Game
+
+<img src="../games/suika/docs/shot.png" width="320" align="right" alt="Suika Game">
+
+| Key | What it does |
+| --- | --- |
+| **Left, Right** (or **4, 6**) | Move the fruit |
+| **OK** or **EXE** | Drop it |
+| **Back** | Menu (with Restart, How to play and Quit) |
+
+Drop fruit into the box. Two of the same fruit touching join into the next one up, from cherry to watermelon, and score points; two watermelons vanish. The next fruit is shown in the bubble. The game ends when the box overflows. Your game and best score are saved.
+
+<br clear="right">
+
 ## Champion Island
 
 <img src="media/championisland.gif" width="320" align="right" alt="Champion Island: Lucky crossing the island, then the island map">
