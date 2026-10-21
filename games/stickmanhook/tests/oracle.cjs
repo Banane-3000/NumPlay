@@ -1,9 +1,10 @@
-// The physics against the web game's own code (tests/original.js, its functions as they are in the bundle):
+// The physics against the web game's own code: ORIGINAL is a file with its functions as they are in the bundle
+// (the vector, bumpers, walls and the stickman's step, hookTo, unhook and onHit), kept with the reference, not here.
 // every step of the bot's replays (written by `play test` to cases.json) is played again from the same state
 // by the original stickman, bumpers and walls, and must land where the port did.
-//   node tests/oracle.cjs build/cases.json
+//   ORIGINAL=.../original.js node tests/oracle.cjs build/cases.json
 const fs = require('fs'), path = require('path');
-const {Vec, install, bumper, wall} = require('./original.js');
+const {Vec, install, bumper, wall} = require(path.resolve(process.env.ORIGINAL));
 const outlines = JSON.parse(fs.readFileSync(path.join(__dirname, 'walls.json')));
 const names = Object.keys(outlines);
 const {parts, cases} = JSON.parse(fs.readFileSync(process.argv[2]));

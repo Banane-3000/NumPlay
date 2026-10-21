@@ -72,7 +72,7 @@ The bar at the top shows how far you've got. The button with a character on the 
 
 Inspired by [Stickman Hook](https://apps.apple.com/app/stickman-hook/id1435807944) by Madbox, not affiliated with them. Go play the original: it's free on iOS, Android and [the web](https://poki.com/en/g/stickman-hook).
 
-* The levels, the skins and their pictures come from the game's web version, read by [tools/data.py](tools/data.py) into [src/levels.c](src/levels.c) and [src/art.c](src/art.c). Its physics are checked step by step against the game's own code ([tests/original.js](tests/original.js), [tests/oracle.cjs](tests/oracle.cjs)).
+* The levels, the skins and their pictures come from the game's web version, read by [tools/data.py](tools/data.py) into [src/levels.c](src/levels.c) and [src/art.c](src/art.c). Its physics are checked step by step against the game's own code ([tests/oracle.cjs](tests/oracle.cjs), which reads it from the web build).
 * The pictures (the stickmen and their dances, the hooks, bumpers, walls, finish platform, backgrounds and logo) and the JUNEGULL font are Madbox's, from the game.
 * Adapted for the calculator by **[Bobydeluxe](https://github.com/Bobydeluxe)**.
 
@@ -80,4 +80,4 @@ Made by Mason Chen as part of NumPlay.
 
 ## License
 
-The game's code is licensed under the GNU General Public License v3.0: see the `LICENSE` file at the root of the repository. The pictures, the font, the levels and the physics excerpts in `tests/original.js` are Madbox's and keep their own terms (see Credits).
+The game's code is licensed under the GNU General Public License v3.0: see the `LICENSE` file at the root of the repository. The pictures, the font and the levels are Madbox's and keep their own terms (see Credits).

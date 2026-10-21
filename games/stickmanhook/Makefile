@@ -2,8 +2,9 @@
 #   make            output/stickmanhook.nwa
 #   make check      link it like the calculator does (output/stickmanhook.bin)
 #   make host       build/play: the game on a computer, for tests and pictures
-#   make test       a bot through every level made by hand, random keys, saves (with the sanitizers), then
-#                   the physics frame by frame against the web game's own code (tests/oracle.cjs, Node)
+#   make test       a bot through every level made by hand, random keys, saves (with the sanitizers); with
+#                   ORIGINAL=FILE (the web game's physics functions, kept with the reference), the physics frame by
+#                   frame against them too (tests/oracle.cjs, Node)
 #   make data WEB=DIR   src/levels.c, src/art.c and src/art.h again, from the web build in DIR (tools/data.py:
 #                       Python + Pillow; the build is only read)
 Q ?= @
@@ -57,7 +58,7 @@ build/bot: $(HOST_SRC) src/main.c $(wildcard src/*.h)
 test: build/play build/bot
 	build/bot bot build
 	build/play test build
-	node tests/oracle.cjs build/cases.json
+	$(if $(ORIGINAL),ORIGINAL=$(ORIGINAL) node tests/oracle.cjs build/cases.json)
 
 data:
 	python3 -I tools/data.py $(WEB)
