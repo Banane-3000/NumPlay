@@ -30,8 +30,8 @@ APP_SPACE = 2031616
 # Upsilon, the N0110 and N0115's custom software, gives .nwa apps less RAM: NumPlay-Upsilon.nwa has
 # the games that fit it (NumPlay draws their text there: see launcher/src/compat.c)
 UPSILON_RAM = 107674
-UPSILON_GAMES = crossyroad blockblast suika portal tetris dinorun doodlejump chess flappybird flappydunk towerblock pacman snake connectfour \
-  solitaire g2048 minesweeper breakout twoplayer invaders sudoku uttt sokoban
+UPSILON_GAMES = crossyroad blockblast suika portal tetris dinorun doodlejump chess flappybird flappydunk towerblock coreball pacman \
+  snake connectfour solitaire g2048 minesweeper breakout twoplayer invaders sudoku uttt sokoban
 
 # NumPlay and its discreet versions: the same app, with another name and icon
 # on the calculator's home screen. Each one is a release file.

@@ -80,6 +80,7 @@ jobs:
           make -C games/towerblock host test
           make -C games/suika host test
           make -C games/doodlejump host test
+          make -C games/coreball host test
 
 
 
