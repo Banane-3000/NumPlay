@@ -99,6 +99,13 @@
 #include <string.h>
 
 #include "blocks.h"
+#if NB_DIMS
+#include "dims.h"
+static int dims_slab(int cx, int cz, int y0, int h, uint8_t *out);   /* (gen_dims.h: the Nether, the End) */
+static int gd_dim;
+static void stronghold_slab(int cx, int cz, int y0, int h, uint8_t *out);   /* (gen_stronghold.h) */
+static int stronghold_prepare(int cx, int cz);
+#endif
 
 /* The float arithmetic here must be done as written (IEEE single precision, each operation
  * rounded): the game builds with -ffast-math, which would fuse multiply-adds, reassociate sums
@@ -5411,6 +5418,9 @@ void gen_init(int64_t seed) {
     jr_seed(&r, seed);
     cave_mul_x = jr_long(&r);
     cave_mul_z = jr_long(&r);
+#if NB_DIMS
+    gd_dim = DIM_OVERWORLD;
+#endif
     /* caches */
     memset(sumc, 0, NSUM * sizeof *sumc);
     memset(pmemo, 0, sizeof pmemo);
@@ -5465,12 +5475,18 @@ static int flat_block(int y) { return y == 0 ? B_BEDROCK : y < 3 ? B_DIRT : y ==
 
 int gen_prepare(int cx, int cz) {
     if (g_flat) return 0;
+#if NB_DIMS
+    if (gd_dim) return 0;
+#endif
     for (int dz = -1; dz <= 1; dz++)
         for (int dx = -1; dx <= 1; dx++)
             if ((dx || dz) && !sum_find(cx + dx, cz + dz)) {
                 sum_get(cx + dx, cz + dz);
                 return 1;
             }
+#if NB_DIMS
+    if (stronghold_prepare(cx, cz)) return 1;
+#endif
     return 0;
 }
 
@@ -5481,6 +5497,9 @@ void gen_slab(int cx, int cz, int y0, int h, uint8_t *out) {
     }
     if (y0 + h > 128) h = 128 - y0;
     if (h <= 0) return;
+#if NB_DIMS
+    if (dims_slab(cx, cz, y0, h, out)) return;
+#endif
     if (g_flat) {
         for (int y = 0; y < h; y++) memset(out + y * 256, flat_block(y0 + y), 256);
         return;
@@ -5522,12 +5541,18 @@ void gen_slab(int cx, int cz, int y0, int h, uint8_t *out) {
     populate(cx, cz - 1, pb[1]);
     populate(cx - 1, cz, pb[2]);
     populate(cx, cz, pb[3]);
+#if NB_DIMS
+    stronghold_slab(cx, cz, y0, h, out);
+#endif
     memset(sum_pin, 0, sizeof sum_pin);
     last_cx = cx;
     last_cz = cz;
 }
 
 int gen_biome(int x, int z) {
+#if NB_DIMS
+    if (gd_dim) return gd_dim == DIM_NETHER ? 8 : 9;   /* (BiomeGenHell, BiomeGenEnd) */
+#endif
     if (g_flat) return BI_PLAINS;
     int cx = x >> 4, cz = z >> 4, i = (x & 15) + (z & 15) * 16;
     if (cx == last_cx && cz == last_cz) return c_b16[i];
@@ -5536,6 +5561,9 @@ int gen_biome(int x, int z) {
 }
 
 int gen_top(int x, int z) {
+#if NB_DIMS
+    if (gd_dim) return 127;
+#endif
     if (g_flat) return 3;
     int cx = x >> 4, cz = z >> 4, i = (x & 15) + (z & 15) * 16;
     if (cx != last_cx || cz != last_cz) gen_slab(cx, cz, 127, 1, col_tmp);
@@ -5625,3 +5653,7 @@ unsigned gen_ram_bytes(void) {
                       sizeof bgrid + sizeof lay_wseed + sizeof bflags + sizeof tov + sizeof crec + sizeof U +
                       NSUM * sizeof *sumc);
 }
+
+#if NB_DIMS
+#include "gen_dims.h"   /* NumBlocks.nwa: the Nether and the End */
+#endif

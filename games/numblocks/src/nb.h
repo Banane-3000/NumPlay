@@ -47,6 +47,8 @@ uint32_t plat_storage_free(void);
 bool plat_record(int i, char *name, int max);   /* the i-th record's name; false past the last */
 uint8_t *plat_save_open(const char *name, uint32_t len);   /* a record of len bytes to fill (NULL: no room, nothing changed) */
 void plat_save_close(const char *name);         /* (done filling it) */
+uint8_t *plat_save_grow(const char *name, uint32_t len);   /* the record made len bytes long, keeping what it holds */
+void plat_save_done(const char *name, uint32_t len);       /* (done with it: len bytes long, at most as grown) */
 bool plat_in_launcher(void);                    /* running inside NumPlay (which keeps its own copy of the saves) */
 void plat_begin(void);
 int plat_end(void);
@@ -61,7 +63,14 @@ static inline bool is_water(int b) {
 static inline bool is_door_lower(int b) {
   return b == B_DOOR_OAK_LOWER || (b >= B_DOOR_OAK_LOWER_S && b <= B_DOOR_OAK_LOWER_N_OPEN);
 }
+#if NB_DIMS
+static inline bool is_lava(int b) {
+  return b == B_LAVA || b == B_FLOWING_LAVA || (b >= B_FLOWING_LAVA_4 && b <= B_FALLING_LAVA) ||
+         (b >= B_FLOWING_LAVA_1 && b <= B_FLOWING_LAVA_7);
+}
+#else
 static inline bool is_lava(int b) { return b == B_LAVA || b == B_FLOWING_LAVA || (b >= B_FLOWING_LAVA_4 && b <= B_FALLING_LAVA); }
+#endif
 
 /* ---------------------------------------------------------------- the generator (gen.c) */
 void gen_init(int64_t seed);
@@ -92,6 +101,19 @@ extern uint8_t vmac[MCY * MCZ * MCX];
 #define MC_I(x, y, z) ((((y) >> 2) * MCZ + ((z) >> 2)) * MCX + ((x) >> 2))
 static inline int light_at(int i) { return vl[i] & 15; }          /* sky light */
 static inline int block_light_at(int i) { return vl[i] >> 4; }   /* torches, lava, glowstone... */
+#if NB_DIMS
+/* NumBlocks.nwa: a block is 9 bits (the Nether's and the End's are 257 and up): vc holds the low 8, vhi
+ * the ninth, a bit a cell. None of those blocks has the low byte of air (256 is none). */
+extern uint8_t vhi[(VCY * VCZ * VCX + 7) / 8];
+static inline int VB(int i) { return vc[i] | (vhi[i >> 3] >> (i & 7) & 1) << 8; }
+static inline void VSET(int i, int b) {
+  vc[i] = (uint8_t)b;
+  vhi[i >> 3] = (uint8_t)((vhi[i >> 3] & ~(1 << (i & 7))) | (b >> 8 & 1) << (i & 7));
+}
+#else
+#define VB(i) (vc[i])
+#define VSET(i, b) (vc[i] = (uint8_t)(b))
+#endif
 
 void world_new(int64_t seed, const char *name);   /* name: the save's record prefix */
 void world_follow(float x, float y, float z);   /* keeps the cache around (x, y, z) */
@@ -102,6 +124,17 @@ bool world_loaded(int x, int y, int z);
 bool world_pending(void);                       /* chunks still being made after a move */
 int world_rain_top(int x, int z);               /* the first y above what rain lands on, 255 if unknown */
 void *world_scratch(uint32_t n);                /* n bytes free while a frame is drawn, or NULL */
+#if NB_DIMS
+/* ---------------------------------------------------------------- the dimensions (dims.c): NumBlocks.nwa only */
+#include "dims.h"
+extern int dim;   /* where the player is (DIM_*) */
+bool world_dim(int d);   /* (world.c) there: false if the changes made here could not be kept */
+void world_finish(float x, float y, float z);   /* the cache around there, all of it made now */
+void tick_forget(void);  /* (tick.c) the liquids' and fires' waiting updates dropped */
+#define dims_slab gen_slab   /* (gen.c runs the dimension's generator: gen_dim) */
+#define dims_biome gen_biome
+#define dims_top gen_top
+#endif
 
 /* ---------------------------------------------------------------- items (inv.c) */
 typedef struct { uint16_t id, aux; } Stack;   /* aux: how many; for tools and armour, their damage (one) */
@@ -176,6 +209,18 @@ void gui_message(const char *s);   /* a line at the bottom left, as Minecraft's 
 /* ---------------------------------------------------------------- entities (entity.c) */
 enum { E_NONE, E_ITEM, E_ZOMBIE, E_SKELETON, E_CREEPER, E_SPIDER, E_PIG, E_COW, E_SHEEP, E_CHICKEN, E_ARROW, E_TNT,
        E_BOBBER };
+#if NB_DIMS
+/* NumBlocks.nwa's: the Nether's and the End's creatures (the ender crystal and the dragon count as mobs: they
+ * are hit), then what flies (fireballs, eyes of ender: their item in item) */
+enum { E_PIGMAN = E_BOBBER + 1, E_GHAST, E_BLAZE, E_MAGMA, E_WSKELETON, E_ENDERMAN, E_CRYSTAL, E_DRAGON, E_FIREBALL, E_EYE };
+#define IS_MOB(t) (((t) >= E_ZOMBIE && (t) <= E_CHICKEN) || ((t) >= E_PIGMAN && (t) <= E_DRAGON))
+#define NOT_MOB(t) (!IS_MOB(t))
+#define IS_MONSTER(t) (((t) >= E_ZOMBIE && (t) <= E_SPIDER) || ((t) >= E_PIGMAN && (t) <= E_ENDERMAN))
+#else
+#define IS_MOB(t) ((t) >= E_ZOMBIE && (t) <= E_CHICKEN)
+#define NOT_MOB(t) ((t) < E_ZOMBIE || (t) > E_CHICKEN)
+#define IS_MONSTER(t) ((t) >= E_ZOMBIE && (t) <= E_SPIDER)
+#endif
 typedef struct {
   uint8_t type, on_ground, hurt, state;   /* hurt: ticks of red; state 255: dying (timer counts) */
   int16_t age, health, timer, delay;   /* delay: an item's pickup delay, a mob's attack wait, a creeper's fuse */
@@ -256,7 +301,11 @@ void break_block_at(int x, int y, int z, bool drops);
 /* ---------------------------------------------------------------- screens (gui.c) */
 enum { GUI_NONE, GUI_INVENTORY, GUI_CRAFTING, GUI_FURNACE, GUI_CHEST, GUI_CREATIVE, GUI_CHAT,
        GUI_PAUSE, GUI_DEATH, GUI_OPTIONS, GUI_TITLE, GUI_WORLDS, GUI_CREATE, GUI_CONFIRM, GUI_LOADING, GUI_CONTROLS,
-       GUI_RENAME, GUI_LAN, GUI_KEYS };
+       GUI_RENAME, GUI_LAN, GUI_KEYS
+#if NB_DIMS
+       , GUI_CREDITS   /* the End poem and the credits (gui.c) */
+#endif
+};
 extern int gui;            /* the screen open */
 void gui_open(int screen, int x, int y, int z);
 void gui_close(void);

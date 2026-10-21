@@ -38,7 +38,11 @@ typedef struct Ev {
 #define CHOOSE(opts, n) do { text_open_menu(opts, n); WAIT_UNTIL(!text_active()); } while (0)
 #define CHOSEN() text_choice()
 /* an object walks to (x, y) at sp pixels a frame; WALK waits for it */
-#define WALK_TO(o, X, Y, SP) do { (o)->tx = (int16_t)(X), (o)->ty = (int16_t)(Y), (o)->speed = (uint8_t)(SP), (o)->walking = 1; } while (0)
+#define WALK_TO(o, X, Y, SP) do { obj_walk_cancel(o); (o)->tx = (int16_t)(X), (o)->ty = (int16_t)(Y), (o)->speed = (uint8_t)(SP), (o)->walking = 1; } while (0)
+/* it walks off through (x, y) points on its own and is gone at the last: the cutscene doesn't wait (Frisk walks) */
+#define LEAVE(o, SP, ...) obj_walk_off(o, SP, -1, (int)(sizeof((int[]){__VA_ARGS__}) / sizeof(int) / 2), __VA_ARGS__)
+/* the same, staying at the last point, facing DIR */
+#define WALK_ON(o, SP, DIR, ...) obj_walk_off(o, SP, DIR, (int)(sizeof((int[]){__VA_ARGS__}) / sizeof(int) / 2), __VA_ARGS__)
 #define WALK(o, X, Y, SP) do { WALK_TO(o, X, Y, SP); WAIT_UNTIL(!(o)->walking); } while (0)
 /* Frisk walks to (x, y), as a cutscene moves him */
 #define PL_WALK(X, Y, SP) do { pl_walk_to(X, Y, SP); WAIT_UNTIL(!pl_walking()); } while (0)

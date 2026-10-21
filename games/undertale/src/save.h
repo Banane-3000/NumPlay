@@ -11,4 +11,6 @@ bool save_load(void);
 bool save_peek(Save *s);   /* the SAVE's facts, without loading it */
 void save_resume_write(void);
 bool save_resume_load(void);
+void config_load(void);   /* the settings (g_walk_fast) */
+void config_save(void);
 #endif

@@ -262,4 +262,68 @@ enum {
 enum { M_NONE, M_CUBE, M_CROSS, M_LIQUID, M_TORCH, M_SLAB, M_LAYER, M_CACTUS, M_LEAVES, M_GLASS, M_FLAT, M_VINE, M_PANE, M_FENCE, M_DOOR, M_LADDER, M_STAIRS, M_CHEST, M_BED };
 enum { T_NONE, T_PICKAXE, T_AXE, T_SHOVEL, T_SHEARS, T_SWORD };
 
+/* the Nether and the End (NumBlocks.nwa only) */
+#if NB_DIMS
+enum {
+  B_NETHERRACK = 257,   /* 87:0 */
+  B_SOUL_SAND = 258,   /* 88:0 */
+  B_PORTAL_X = 259,   /* 90:1 */
+  B_PORTAL_Z = 260,   /* 90:2 */
+  B_NETHER_BRICK = 261,   /* 112:0 */
+  B_NETHER_BRICK_FENCE = 262,   /* 113:0 */
+  B_NETHER_BRICK_STAIRS_E = 263,   /* 114:0 */
+  B_NETHER_BRICK_STAIRS_W = 264,   /* 114:1 */
+  B_NETHER_BRICK_STAIRS_S = 265,   /* 114:2 */
+  B_NETHER_BRICK_STAIRS_N = 266,   /* 114:3 */
+  B_NETHER_WART_0 = 267,   /* 115:0 */
+  B_NETHER_WART_1 = 268,   /* 115:1 */
+  B_NETHER_WART_2 = 269,   /* 115:2 */
+  B_NETHER_WART_3 = 270,   /* 115:3 */
+  B_END_PORTAL = 271,   /* 119:0 */
+  B_END_PORTAL_FRAME = 272,   /* 120:0 */
+  B_END_PORTAL_FRAME_EYE = 273,   /* 120:4 */
+  B_END_STONE = 274,   /* 121:0 */
+  B_DRAGON_EGG = 275,   /* 122:0 */
+  B_QUARTZ_ORE = 276,   /* 153:0 */
+  B_QUARTZ_BLOCK = 277,   /* 155:0 */
+  B_CHISELED_QUARTZ = 278,   /* 155:1 */
+  B_PILLAR_QUARTZ = 279,   /* 155:2 */
+  B_PILLAR_QUARTZ_X = 280,   /* 155:3 */
+  B_PILLAR_QUARTZ_Z = 281,   /* 155:4 */
+  B_QUARTZ_STAIRS_E = 282,   /* 156:0 */
+  B_QUARTZ_STAIRS_W = 283,   /* 156:1 */
+  B_QUARTZ_STAIRS_S = 284,   /* 156:2 */
+  B_QUARTZ_STAIRS_N = 285,   /* 156:3 */
+  B_NETHER_BRICK_SLAB = 286,   /* 44:6 */
+  B_QUARTZ_SLAB = 287,   /* 44:7 */
+  B_IRON_BARS = 288,   /* 101:0 */
+  B_STONE_BRICK_STAIRS_E = 289,   /* 109:0 */
+  B_STONE_BRICK_STAIRS_W = 290,   /* 109:1 */
+  B_STONE_BRICK_STAIRS_S = 291,   /* 109:2 */
+  B_STONE_BRICK_STAIRS_N = 292,   /* 109:3 */
+  B_IRON_DOOR_LOWER_E = 293,   /* 71:0 */
+  B_IRON_DOOR_LOWER_S = 294,   /* 71:1 */
+  B_IRON_DOOR_LOWER_W = 295,   /* 71:2 */
+  B_IRON_DOOR_LOWER_N = 296,   /* 71:3 */
+  B_IRON_DOOR_LOWER_E_OPEN = 297,   /* 71:4 */
+  B_IRON_DOOR_LOWER_S_OPEN = 298,   /* 71:5 */
+  B_IRON_DOOR_LOWER_W_OPEN = 299,   /* 71:6 */
+  B_IRON_DOOR_LOWER_N_OPEN = 300,   /* 71:7 */
+  B_IRON_DOOR_UPPER = 301,   /* 71:8 */
+  B_STONE_BUTTON_E = 302,   /* 77:1 */
+  B_STONE_BUTTON_W = 303,   /* 77:2 */
+  B_STONE_BUTTON_S = 304,   /* 77:3 */
+  B_STONE_BUTTON_N = 305,   /* 77:4 */
+  B_FLOWING_LAVA_1 = 306,   /* 10:1 */
+  B_FLOWING_LAVA_3 = 307,   /* 10:3 */
+  B_FLOWING_LAVA_5 = 308,   /* 10:5 */
+  B_FLOWING_LAVA_7 = 309,   /* 10:7 */
+  B_ALL = 310
+};
+enum { M_PORTAL = 19, M_FRAME = 20, M_ENDPORTAL = 21, M_EGG = 22, M_BUTTON = 23 };
+#define B_N B_ALL
+#else
+#define B_N B_COUNT
+#endif
+
 #endif

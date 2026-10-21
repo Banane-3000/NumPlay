@@ -81,6 +81,8 @@ void np_session_begin(void) {
 }
 
 int np_session_end(void) {
+  /* a key still held (OK, EXE) would reach the home screen, which would open NumPlay again */
+  np_wait_release();
   bool unlock = session_locked;
   for (volatile uint32_t *p = (volatile uint32_t *)(void *)_data_section_start_ram; p < (volatile uint32_t *)(void *)_heap_end; p++)
     *p = 0;

@@ -67,6 +67,8 @@ void room_info(int room, RoomInfo *r) {
   r->area = p[28], r->flags = p[29];
   r->name = rd16(p + 30);
   r->ice = (r->flags & ROOM_ICE) ? r->coll + ((r->cw + 7) >> 3) * r->ch : NULL;
+  const uint8_t *v = section(SEC_VIEWS) + 8 * room;
+  r->vx = rds16(v), r->vy = rds16(v + 2), r->vw = rds16(v + 4), r->vh = rds16(v + 6);
 }
 
 const char *str(uint16_t id) {

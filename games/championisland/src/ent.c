@@ -225,24 +225,51 @@ void ent_set_pos(NodeId e, float x, float y) {
   ent_set_local_pos(e, (t.d * dx - t.c * dy) / det, (-t.b * dx + t.a * dy) / det);
 }
 
-static NodeId find_bounds_child(NodeId n) {
-  if (nodes[n].T != NONE16 && comp_has(nodes[n].T, C_bounds)) return n;
-  for (NodeId c = nodes[n].first; c; c = nodes[c].next) {
-    NodeId r = find_bounds_child(c);
-    if (r) return r;
-  }
-  return 0;
+/* ui(e, bounds): kitsune walks the tree from the bottom child up (qi), not
+ * into a match nor into what is untraversable, and keeps the last match: an
+ * entity's own bounds win over those of an entity inside it (the gym's door
+ * has the crab building in it, whose bounds come first) */
+static void find_bounds_rec(NodeId n, NodeId *found) {
+  if (nodes[n].T != NONE16 && comp_has(nodes[n].T, C_bounds)) { *found = n; return; }
+  if (nodes[n].T != NONE16 && comp_has(nodes[n].T, C_untraversable)) return;
+  for (NodeId c = nodes[n].first; c; c = nodes[c].next) find_bounds_rec(c, found);
 }
+static NodeId find_bounds_child(NodeId n) {
+  NodeId found = 0;
+  find_bounds_rec(n, &found);
+  return found;
+}
+
+/* Doors whose bounds child is not in data.bin: tools/pack.py took the
+ * invisible box (the doodle's Ta, alpha 0) for a picture that never changes
+ * and baked it into the island's layer with the house under the door, so
+ * the dango shops, the train station, the bakery, the banyan tree and the
+ * two red pagodas by the artistic swimming castle had no body and could be
+ * walked through (Mason363/NumPlay#90). Their bounds in the door's space,
+ * from the doodle (Ta's 72 x 72 box by the door's transform of it): */
+static const struct { uint16_t sym; float x, y, w, h; } door_bounds[] = {
+  {S_overworld_Wf, -47.99f, -57.93f, 96.00f, 55.92f},    /* interior:convenienceStore1 (the dango shops) */
+  {S_overworld_r6a, -47.99f, -57.93f, 96.00f, 55.92f},   /* interior:trainStation */
+  {S_overworld_TY, -16.04f, -57.93f, 52.03f, 55.92f},    /* interior:bakery */
+  {S_overworld_cta, -25.98f, -22.01f, 50.00f, 22.95f},   /* interior:banyantree, both doors */
+  {S_overworld_dta, -25.98f, -22.01f, 50.00f, 22.95f},
+  {S_overworld_jWa, -36.65f, -53.95f, 72.00f, 51.50f},   /* interior:gazebo, the red pagodas */
+  {S_overworld_fEa, -36.65f, -53.95f, 72.00f, 51.50f},   /* interior:ghostGazebo */
+};
 
 bool ent_bounds(NodeId e, Rect *r) {
   Ent *s = ent_peek(e);
   if (s && s->bounds_valid) { *r = s->bounds; return true; }
   if (!comp_has(nodes[e].T, C_boundable)) return false;
   NodeId b = find_bounds_child(e);
-  if (!b) return false;
   /* the bounds child's transformed bounds, taken as a rectangle of e's space */
   float x, y, w, h;
-  if (!node_bounds_in(b, nodes[b].parent, &x, &y, &w, &h)) return false;
+  if (!b) {
+    unsigned i = 0;
+    while (i < sizeof door_bounds / sizeof door_bounds[0] && door_bounds[i].sym != nodes[e].sym) i++;
+    if (i == sizeof door_bounds / sizeof door_bounds[0]) return false;
+    x = door_bounds[i].x; y = door_bounds[i].y; w = door_bounds[i].w; h = door_bounds[i].h;
+  } else if (!node_bounds_in(b, nodes[b].parent, &x, &y, &w, &h)) return false;
   NodeId m = map_of(e);
   Mat t = node_to(e, m);
   float x0 = t.a * x + t.c * y + t.tx, y0 = t.b * x + t.d * y + t.ty;

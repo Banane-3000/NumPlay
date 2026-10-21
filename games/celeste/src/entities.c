@@ -1395,9 +1395,9 @@ bool trig_create(const EData *d) {
     case TT_changeRespawnTrigger: {
       e = new_trigger(&RESPAWN, d, EA(d, changeRespawnTrigger, width), EA(d, changeRespawnTrigger, height));
       if (!e) return true;
+      /* the node, or the middle; Added: the spawn point closest to it (Level.GetSpawnPoint), node or not */
       V2 target = d->nnodes ? ed_node(d, 0) : e_center(e);
       ST(e, Trig)->a = level_closest_spawn(target);
-      if (d->nnodes) ST(e, Trig)->a = target;
       return true;
     }
   }

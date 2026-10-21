@@ -130,6 +130,32 @@ void world_unique_name(const char *base, char *out) {
   }
 }
 
+#if NB_DIMS
+/* NumBlocks.nwa: NumPlay's NumBlocks reads the same world record, so the record holds what it knows: the
+ * player in the Overworld (where they last were there), with none of the Nether's and the End's items,
+ * the Overworld's chests and furnaces. The rest is in "nb3rdim.nbx" by it: the dimension the player is
+ * in, the player as they are, every chest and furnace, the dimensions' state. If NumPlay's NumBlocks
+ * saved the world after (the record is not the one the copy goes with), the record wins, the player in
+ * the Overworld, and the Nether's and the End's chests and the dimensions' state come back from the copy */
+typedef struct {
+  char magic[4];
+  uint32_t time, played;   /* the record's: the copy goes with it */
+  int32_t dim;
+  Player pl;
+  DimsState dst;
+} Side;   /* then the tiles */
+static void side_of(int s, char *out) {
+  prefix_of(s, out);
+  memcpy(out + 3, "rdim.nbx", 9);
+}
+static void known(Stack *s, int n) {
+  for (int i = 0; i < n; i++)
+    if (s[i].id >= I_END) s[i].id = 0, s[i].aux = 0;
+}
+void tiles_for_numplay(void *t);
+void tiles_merge(const void *t);
+#endif
+
 bool save_world(void) {
   bool ok = edits_flush();
   uint32_t tl;
@@ -145,12 +171,43 @@ bool save_world(void) {
   uint8_t *b = (uint8_t *)edits_scratch(n);
   if (!b) return false;
   memcpy(b, &h, sizeof h);
+#if NB_DIMS
+  {
+    Player p = pl;
+    if (dim != DIM_OVERWORLD) {
+      p.x = dst.ow_x, p.y = dst.ow_y, p.z = dst.ow_z;
+      p.vx = p.vy = p.vz = 0, p.fall = 0, p.fire = 0;
+    }
+    known(p.inv, 36), known(p.armor, 4), known(p.craft, 4), known(&p.cursor, 1);
+    memcpy(b + sizeof h, &p, sizeof p);
+  }
+  memcpy(b + sizeof h + sizeof pl, t, tl);
+  tiles_for_numplay(b + sizeof h + sizeof pl);
+#else
   memcpy(b + sizeof h, &pl, sizeof pl);
   memcpy(b + sizeof h + sizeof pl, t, tl);
+#endif
   char rec[8];
   record_of(slot, rec);
   ok = plat_save(rec, b, n) && ok;
   edits_forget();
+#if NB_DIMS
+  {
+    Side sd;
+    memset(&sd, 0, sizeof sd);
+    memcpy(sd.magic, "NBD1", 4);
+    sd.time = game_time, sd.played = cur_played, sd.dim = dim, sd.pl = pl, sd.dst = dst;
+    char rn[16];
+    side_of(slot, rn);
+    uint8_t *c = (uint8_t *)edits_scratch(sizeof sd + tl);
+    if (c) {
+      memcpy(c, &sd, sizeof sd);
+      memcpy(c + sizeof sd, t, tl);
+      ok = plat_save(rn, c, sizeof sd + tl) && ok;
+      edits_forget();
+    }
+  }
+#endif
   copy_write();
   return ok;
 }
@@ -181,6 +238,26 @@ bool load_world(int s) {
   memcpy(&pl, d + hl, sizeof pl);
   memcpy(t, d + hl + sizeof pl, tl);
   memset(ents, 0, sizeof ents);
+#if NB_DIMS
+  {
+    dim = DIM_OVERWORLD;
+    memset(&dst, 0, sizeof dst);
+    char rn[16];
+    side_of(s, rn);
+    uint32_t sl;
+    const uint8_t *c = plat_load(rn, &sl);
+    Side sd;
+    if (c && sl == sizeof sd + tl && !memcmp(c, "NBD1", 4)) {
+      memcpy(&sd, c, sizeof sd);
+      dst = sd.dst;
+      if (sd.time == h.h2.h.time && sd.played == h.h2.played && sd.dim >= 0 && sd.dim <= DIM_END) {
+        dim = sd.dim, pl = sd.pl;
+        memcpy(t, c + sizeof sd, tl);
+      } else
+        tiles_merge(c + sizeof sd);
+    }
+  }
+#endif
   char pre[4];
   prefix_of(s, pre);
   world_new(world_seed, pre);
@@ -203,6 +280,10 @@ void new_world(int s, int64_t seed, int mode, bool cheats, int type, const char 
   world_cheats = cheats, lan_open = lan_cheats = false, game_rules = GR_DEFAULT, world_type = (uint8_t)type;
   memset(&weather, 0, sizeof weather);
   rain_str = thunder_str = 0;
+#if NB_DIMS
+  dim = DIM_OVERWORLD;
+  memset(&dst, 0, sizeof dst);
+#endif
   world_new(seed, pre);
   player_spawn();
   pl.mode = (uint8_t)mode;

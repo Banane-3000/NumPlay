@@ -4,7 +4,8 @@ An area is one map: every room of the area, one pixel for one, laid out as in th
 rectangle of it (rect: x, y, w, h on the map); its rooms touch where their doors are, so walking out of one
 walks into the next (world.c). Walkable: the area's floor colours (and the room's floor_colors), inside the
 room's floor_rects if it has some (walls of the floor's colour are left out that way), then its fixes
-("walk" or "wall" rectangles). Patches change the map first (objects drawn into it, like the rocks, are
+("walk" or "wall" rectangles). Where a room's rectangle is less than the game's own room, its "view" is the
+game's room: the camera keeps to it, so the screen shows what the game's does. Patches change the map first (objects drawn into it, like the rocks, are
 taken out: the game draws them).
 
 Rooms are named as the game names them (room_ruins1 is ruins1)."""
@@ -45,16 +46,18 @@ AREAS = [
         (8960, 4140), (8980, 4140), (8760, 4340), (8760, 4360), (8660, 4340), (8660, 4360),
         (8440, 4140), (8460, 4140), (8440, 3960), (8460, 3960), (8660, 3740), (8660, 3760)]] + [
         # the rocks, the Froggits, the candy, what lies in the one switch puzzle's rooms, the Toy Knife
-        ("erase", 5620, 4735, 20, 20, RUINS_PLAIN), ("erase", 6700, 4795, 20, 20, RUINS_PLAIN),
-        ("erase", 6680, 4835, 20, 20, RUINS_PLAIN), ("erase", 6720, 4875, 20, 20, RUINS_PLAIN),
+        # (a rock starts at the end of its track: the track goes on under it)
+        ("copy", 5640, 4735, 20, 20, 5620, 4735), ("copy", 6720, 4795, 20, 20, 6700, 4795),
+        ("copy", 6700, 4835, 20, 20, 6680, 4835), ("copy", 6740, 4875, 20, 20, 6720, 4875),
         ("erase", 9400, 3700, 20, 20, RUINS_PLAIN), ("erase", 7660, 4540, 20, 20, RUINS_PLAIN),
         ("erase", 7780, 4540, 20, 20, RUINS_PLAIN), ("erase", 7900, 4540, 20, 20, RUINS_PLAIN),
         ("erase", 4950, 4215, 40, 29, RUINS_PLAIN), ("erase", 8300, 4980, 20, 20, RUINS_PLAIN),
         ("erase", 8660, 5117, 20, 20, RUINS_PLAIN), ("erase", 8260, 5120, 15, 15, RUINS_PLAIN),
         ("erase", 8493, 5115, 35, 19, RUINS_PLAIN), ("erase", 9364, 3566, 15, 15, RUINS_PLAIN),
         # Napstablook on the leaves; Toriel at the door; Flowey in the last room's light
-        ("erase", 7524, 4832, 34, 19, LEAVES), ("erase", 10003, 2011, 28, 53, BASEMENT_FLOOR + [(97, 44, 97)]),
-        ("erase", 10007, 204, 27, 27, [(0, 0, 0), (200, 194, 226), (95, 94, 119), (58, 57, 72), (34, 177, 76)]),
+        ("erase", 7524, 4832, 34, 19, LEAVES), ("heal", 8646, 2728, 52, 56), ("mirror", 8712, 2728, 32, 40, 8672, 2728), ("erase", 10003, 2011, 28, 53, BASEMENT_FLOOR + [(97, 44, 97)]),
+        ("fill", 10007, 204, 27, 16, (0, 0, 0)), ("fill", 10013, 220, 15, 1, (200, 194, 226)),
+        ("fill", 10012, 221, 19, 9, (34, 177, 76)),
     ]),
 ]
 
@@ -86,6 +89,10 @@ AREAS.append(dict(name="snowdin", map="Snowdin_map.png", floor=SNOW + ICE + WOOD
     ("erase", 11772, 1176, 38, 48, "ring"), ("erase", 10182, 2274, 38, 46, "ring"),
     ("erase", 10328, 2255, 69, 58, "ring"), ("erase", 10532, 2274, 38, 46, "ring"),
     ("erase", 7026, 576, 58, 50, "ring"), ("erase", 5948, 258, 54, 52, "ring"),
+    # Doggo in his sentry station (he pops out of it, then he's gone): its dark inside, the sign on its wall
+    ("fill", 4338, 357, 21, 25, (47, 32, 26)), ("fill", 4356, 357, 3, 1, (0, 0, 0)), ("fill", 4356, 357, 1, 15, (0, 0, 0)),
+    ("fill", 4356, 371, 3, 1, (0, 0, 0)), ("fill", 4357, 358, 2, 13, (103, 65, 35)),
+    ("fill", 4359, 372, 2, 10, (47, 32, 26)),
     # Snowdrake and his parents by Papyrus' sentry station: the trees and the path there from beside (the trees
     # repeat every 40 pixels)
     ("copy", 3620, 316, 80, 72, 3700, 316), ("copy", 3620, 316, 80, 72, 3780, 316), ("copy", 3620, 316, 30, 72, 3860, 316),
@@ -96,11 +103,13 @@ AREAS[-1]["patches"][:0] = [("erase", x, y, 20, 20, "ring", BLUE) for x, y in XO
 AREAS.append(dict(name="snowtown", map="Snowdin_Town_map.png", floor=SNOW, margin=2, lines=SNOW_LINES, patches=[
     # the SAVE star; Papyrus and Undyne by the house, the dogs at the library, Papyrus in the fog and at home
     # (they come later)
-    ("erase", 518, 1076, 22, 22, "ring"),
-    ("erase", 1860, 1008, 34, 82, "ring"), ("erase", 1898, 1010, 56, 78, "ring"), ("erase", 1952, 1004, 44, 86, "ring"),
-    ("erase", 1998, 1012, 40, 78, "ring"), ("erase", 2038, 1018, 40, 72, "ring"),
-    ("erase", 2132, 1026, 32, 84, "ring"), ("erase", 2163, 1040, 32, 72, "ring"),
-    ("erase", 3376, 1036, 30, 66, "ring"), ("erase", 2212, 854, 32, 50, "ring"), ("erase", 2262, 580, 36, 52, "ring"),
+    # (the game's screenshots of those places, where they're in them: no one stands there)
+    ("heal", 514, 1072, 30, 30),
+    ("shot", "Snowdin_Library_location_exterior.png", 1736, 960, 1856, 1000, 200, 92), ("erase", 2056, 1046, 10, 46, "ring"),
+    ("shot", "Papyrus_and_Sans's_House_location.png", 2088, 960, 2128, 1020, 72, 92),
+    ("erase", 3383, 1070, 22, 46, [(114, 129, 177)]),
+    ("shot", "Papyrus_and_Sans's_House_location_interior.png", 2200, 720, 2206, 846, 44, 62),
+    ("shot", "Papyrus_and_Sans's_House_location_Papyrus's_room.png", 2120, 480, 2256, 574, 48, 64),
 ]))
 
 # Waterfall: dark blue floors whose colours its walls share too, so a room's floor is its rectangles
@@ -129,7 +138,8 @@ AREAS.append(dict(name="waterfall", map="Waterfall_map.png", floor=WF_FLOOR, mar
     ("copy", 19276, 2090, 26, 52, 19316, 2090), ("erase", 18969, 1810, 26, 40, "ring"),
     # by the chasm: Undyne on the bridge, Monster Kid hanging off it, the old monster beyond; Undyne on her crag
     ("erase", 22494, 2006, 24, 52, "ring", []), ("erase", 22628, 2050, 24, 34, "ring"), ("erase", 23054, 2000, 32, 36, "ring"),
-    ("erase", 23436, 1510, 38, 62, "ring", []),
+    # (Undyne on her crag is the game's object here: the sky behind her)
+    ("fill", 23441, 1512, 32, 5, (111, 40, 43)), ("fill", 23441, 1517, 32, 51, (133, 18, 18)),
     # the lantern maze, as the map draws it, has no way through for Frisk: two tufts of one wall left out
     ("erase", 21618, 2654, 26, 44, [(0, 0, 0)]),
     # the bird (it waits across the gap), the tutu and the artifact (objects, gone once taken)
@@ -207,7 +217,7 @@ CORE_FLOOR = [(33, 81, 164), (31, 130, 228), (34, 105, 164), (36, 62, 141), (71,
               (59, 58, 138)]
 AREAS.append(dict(name="core", map="CORE_map.png", floor=CORE_FLOOR, margin=0, close=True, patches=[
     ("erase", 117, 1653, 30, 50, "ring"), ("erase", 462, 1759, 32, 50, "ring"), ("erase", 826, 1088, 28, 54, "ring"),
-    ("erase", 2096, 832, 28, 50, "ring"), ("erase", 2646, 164, 34, 48, "ring"), ("erase", 3344, 466, 34, 36, "ring", []),
+    ("erase", 2096, 832, 28, 50, "ring"), ("erase", 2646, 164, 34, 48, "ring"), ("erase", 3344, 466, 34, 44, "ring", []),
     ("copy", 3624, 112, 36, 52, 3560, 112),   # (Alphys, in the last hallway: the hallway further on, over her)
     # the force field before The End (an object here, drawn while it's up): the bridge 32 pixels on, over it
     ("copy", 2551, 836, 22, 84, 2519, 836),
@@ -254,7 +264,7 @@ ROOMS = [
     # the long hallway: the independence test
     dict(name="ruins6", area="ruins", rect=(2280, 4340, 2520, 240), title="Ruins"),
     # the leaf pile, its SAVE Point, the first Froggit to talk
-    dict(name="ruins7", area="ruins", rect=(4800, 4360, 280, 440), title="Ruins - Leaf Pile"),
+    dict(name="ruins7", area="ruins", rect=(4800, 4360, 280, 440), view=(4800, 4360, 320, 440), title="Ruins - Leaf Pile"),
     # the Monster Candy
     dict(name="ruins7a", area="ruins", rect=(4860, 4100, 200, 260), title="Ruins"),
     # the cracked floor and the room under it
@@ -277,7 +287,7 @@ ROOMS = [
     # Napstablook, pretending to sleep
     dict(name="ruins13", area="ruins", rect=(7430, 4700, 260, 220), title="Ruins"),
     # the Spider Bake Sale
-    dict(name="ruins14", area="ruins", rect=(7690, 4700, 340, 220), title="Ruins"),
+    dict(name="ruins14", area="ruins", rect=(7690, 4700, 340, 220), view=(7690, 4700, 340, 240), title="Ruins"),
     # the Froggits' hall
     dict(name="ruins15", area="ruins", rect=(7520, 4400, 540, 300), title="Ruins"),
     # the one switch puzzle, and its six rooms under it
@@ -307,7 +317,8 @@ ROOMS = [
     dict(name="ruins19", area="ruins", rect=(9290, 3620, 250, 200), title="Ruins"),
     dict(name="ruins20", area="ruins", rect=(9300, 3360, 360, 260), title="Ruins"),
     # Toriel's tree and her door
-    dict(name="ruins21", area="ruins", rect=(8860, 2920, 320, 540), title="Ruins - Home"),
+    dict(name="ruins21", area="ruins", rect=(8860, 2920, 320, 540), title="Ruins - Home",
+         fix=[("wall", 9004, 3300, 38, 40)]),   # the tree's trunk (its leaves are walked on)
     # Toriel's home
     dict(name="torhouse1", area="ruins", floor_colors=HOUSE_FLOOR, margin=0, rect=(8860, 2660, 320, 260), title="Home",
          floor_rects=[(8860, 2815, 320, 75), (8900, 2760, 25, 60), (9085, 2740, 80, 80), (8995, 2890, 45, 30)],
@@ -326,7 +337,7 @@ ROOMS = [
          floor_rects=[(9240, 2540, 180, 120), (9366, 2655, 42, 30)],
          fix=[("wall", 9368, 2536, 40, 46), ("wall", 9405, 2540, 16, 40), ("wall", 9394, 2578, 24, 14)],
          doors=[((9366, 2676, 42, 8), "torhouse3", (9330, 2826), "down")]),
-    dict(name="torielroom", area="ruins", floor_colors=HOUSE_FLOOR, margin=0, rect=(9510, 2430, 280, 260), title="Home",
+    dict(name="torielroom", area="ruins", floor_colors=HOUSE_FLOOR, margin=0, rect=(9510, 2430, 280, 260), view=(9500, 2440, 320, 240), title="Home",
          floor_rects=[(9530, 2540, 240, 120), (9597, 2655, 42, 35)],
          fix=[("wall", 9530, 2536, 66, 56), ("wall", 9540, 2592, 48, 44), ("wall", 9575, 2580, 26, 30),
               ("wall", 9695, 2605, 28, 36)],
@@ -362,8 +373,8 @@ ROOMS = [
     dict(name="ballgame", area="snowdin", rect=(5500, 240, 800, 580), ice=True, title="Snowdin Forest",
          fix=[("walk", 5716, 318, 68, 22)]),   # the plank bridge over the chasm
     dict(name="dogi", area="snowdin", rect=(6300, 240, 300, 220), title="Snowdin Forest"),
-    dict(name="wordsearch", area="snowdin", rect=(6300, 520, 320, 300), title="Snowdin Forest"),
-    dict(name="spaghetti", area="snowdin", rect=(6620, 520, 300, 300), title="Snowdin - Spaghetti"),
+    dict(name="wordsearch", area="snowdin", rect=(6300, 520, 320, 300), view=(6280, 520, 320, 300), title="Snowdin Forest"),
+    dict(name="spaghetti", area="snowdin", rect=(6620, 520, 300, 300), view=(6600, 520, 320, 300), title="Snowdin - Spaghetti"),
     dict(name="snowpuzzle", area="snowdin", rect=(6920, 540, 620, 580), title="Snowdin Forest",
          fix=[("walk", 7254, 958, 50, 22)]),   # the plank bridge
     dict(name="xoxo1", area="snowdin", rect=(7260, 1120, 440, 240), title="Snowdin Forest"),
@@ -372,7 +383,7 @@ ROOMS = [
          floor_colors=[(255, 192, 192)], fix=[("walk", 8614, 1238, 52, 22)]),   # the plank bridge
     dict(name="doghouse", area="snowdin", rect=(8900, 1120, 540, 240), title="Snowdin - Dog House"),
     # the ice puzzle: once solved, a bridge to the trees Frisk slides through (an object blocks it until then)
-    dict(name="xoxo3", area="snowdin", rect=(9440, 1120, 400, 220), ice=True, title="Snowdin Forest",
+    dict(name="xoxo3", area="snowdin", rect=(9440, 1120, 400, 220), view=(9440, 1120, 400, 240), ice=True, title="Snowdin Forest",
          fix=[("walk", 9780, 1204, 60, 36), ("walk", 9520, 1320, 264, 20)], doors=[((9836, 1205, 4, 40), "poffzone", (10196, 1200), "right")]),
     dict(name="xoxofail", area="snowdin", rect=(9440, 1340, 340, 260), title="Snowdin Forest"),
     dict(name="poffzone", area="snowdin", rect=(10140, 1120, 820, 240), title="Snowdin Forest",
@@ -391,46 +402,50 @@ ROOMS = [
     dict(name="snowtown", area="snowtown", rect=(0, 960, 3260, 240), title="Snowdin Town",
          fix=[("walk", 0, 1080, 8, 50, "floor")],
          doors=[((0, 1080, 4, 50), "dangerbridge", (11968, 1232), "left"),
-                ((624, 1066, 28, 24), "inn1", (628, 918), "up"), ((1312, 1070, 26, 20), "grillbys", (1236, 914), "up"),
-                ((1840, 1066, 26, 24), "library", (2026, 664), "up"),
+                ((624, 1066, 28, 24), "inn1", (628, 918), "up"), ((1312, 1070, 26, 20), "grillbys", (1250, 916), "up"),
+                ((1840, 1066, 26, 24), "library", (1950, 668), "up"),
                 # the undersnow tunnels: an igloo each end of the town
                 ((726, 1066, 24, 24), "snowtown", (2336, 1094), "down"), ((2336, 1084, 26, 16), "snowtown", (728, 1078), "down")]),
     dict(name="townnorth", area="snowtown", rect=(1400, 700, 640, 260), title="Snowdin Town"),
-    dict(name="towndock", area="snowtown", rect=(1400, 480, 410, 220), title="Snowdin Town"),
+    dict(name="towndock", area="snowtown", rect=(1400, 480, 410, 220), view=(1400, 480, 410, 240), title="Snowdin Town"),
     dict(name="fogroom", area="snowtown", rect=(3260, 960, 360, 240), title="Snowdin Town",
          fix=[("walk", 3440, 1084, 180, 48)],   # the way on: Waterfall's blue ground
          doors=[((3612, 1080, 8, 56), "wf1", (4, 1480), "right")]),
     # the interiors: their floors are many colours, so their floor and furniture are rectangles
-    dict(name="inn1", area="snowtown", rect=(500, 740, 260, 220), title="Snowed Inn", open=True, margin=0,
-         floor_rects=[(520, 800, 222, 100), (600, 900, 80, 60), (536, 756, 44, 48)],
-         fix=[("wall", 705, 850, 37, 50)],
-         doors=[((604, 952, 72, 8), "snowtown", (626, 1078), "down"), ((536, 756, 44, 6), "inn2", (512, 676), "right")]),
+    # (an interior's rectangle is the game's room, 320 x 240: the view is where the game has it)
+    dict(name="inn1", area="snowtown", rect=(500, 720, 320, 240), title="Snowed Inn", open=True, margin=0,
+         floor_rects=[(540, 800, 180, 80), (600, 880, 120, 40), (620, 918, 37, 42), (540, 756, 38, 44)],
+         fix=[("wall", 578, 800, 144, 40), ("wall", 700, 846, 22, 74)],
+         doors=[((620, 952, 37, 8), "snowtown", (626, 1078), "down"), ((540, 756, 38, 6), "inn2", (512, 676), "right")]),
     dict(name="inn2", area="snowtown", rect=(500, 480, 320, 230), title="Snowed Inn", open=True, margin=0,
-         floor_rects=[(522, 600, 116, 76), (662, 600, 136, 76), (504, 684, 312, 22), (566, 670, 32, 16), (706, 670, 32, 16)],
+         floor_rects=[(540, 600, 100, 62), (660, 626, 122, 36), (504, 684, 312, 22), (566, 660, 32, 26), (706, 660, 32, 26)],
          doors=[((504, 684, 4, 22), "inn1", (548, 790), "down")]),
-    dict(name="grillbys", area="snowtown", rect=(1080, 710, 320, 250), title="Grillby's", open=True, margin=0,
-         floor_rects=[(1090, 800, 300, 150)],
-         fix=[("wall", 1092, 826, 64, 44), ("wall", 1140, 884, 104, 48), ("wall", 1300, 820, 90, 130),
-              ("wall", 1098, 924, 44, 26)],
-         doors=[((1220, 944, 50, 6), "snowtown", (1314, 1080), "down")]),
-    dict(name="library", area="snowtown", rect=(1810, 480, 300, 225), title="Librarby", open=True, margin=0,
-         floor_rects=[(1822, 566, 276, 132)], fix=[("wall", 1822, 620, 88, 80), ("wall", 1976, 616, 88, 66)],
-         doors=[((2000, 694, 70, 6), "snowtown", (1842, 1078), "down")]),
-    dict(name="pshouse", area="snowtown", rect=(2210, 710, 300, 245), title="Snowdin Town", open=True, margin=0,
-         floor_rects=[(2220, 848, 280, 100), (2220, 768, 280, 34), (2222, 800, 56, 52)],
-         fix=[("wall", 2300, 892, 82, 40), ("wall", 2318, 836, 52, 30), ("wall", 2462, 868, 40, 64)],
-         doors=[((2420, 944, 50, 8), "snowtown", (2240, 1096), "down"), ((2228, 766, 34, 4), "paproom", (2296, 660), "up"), ((2440, 766, 30, 4), "sansroom", (2560, 660), "up")]),
-    dict(name="paproom", area="snowtown", rect=(2150, 500, 260, 200), title="Snowdin Town", open=True, margin=0,
-         floor_rects=[(2160, 574, 240, 120)],
-         fix=[("wall", 2160, 636, 92, 56), ("wall", 2338, 556, 64, 44), ("wall", 2160, 556, 40, 64),
-              ("wall", 2358, 648, 44, 44)],
-         doors=[((2286, 690, 40, 8), "pshouse", (2234, 774), "down")]),
-    dict(name="sansroom", area="snowtown", rect=(2470, 510, 180, 190), title="Snowdin Town", open=True, margin=0,
-         floor_rects=[(2480, 566, 160, 126)], fix=[("wall", 2480, 560, 52, 32), ("wall", 2598, 556, 42, 56)],
-         doors=[((2550, 690, 40, 8), "pshouse", (2444, 774), "down")]),
-    dict(name="shed", area="snowtown", rect=(2550, 710, 290, 245), title="Snowdin Town", open=True, margin=0,
-         floor_rects=[(2580, 770, 180, 120), (2560, 886, 80, 64)], fix=[("wall", 2580, 730, 56, 100)],
-         doors=[((2560, 945, 80, 8), "snowtown", (2400, 1096), "down")]),
+    dict(name="grillbys", area="snowtown", rect=(1080, 720, 320, 240), title="Grillby's", open=True, margin=0,
+         floor_rects=[(1092, 790, 293, 160), (1240, 948, 40, 12)],
+         fix=[("wall", 1175, 785, 145, 30), ("wall", 1100, 795, 60, 40), ("wall", 1118, 830, 140, 75),
+              ("wall", 1118, 916, 44, 30), ("wall", 1300, 828, 90, 132)],
+         doors=[((1240, 954, 40, 6), "snowtown", (1314, 1080), "down")]),
+    dict(name="library", area="snowtown", rect=(1800, 480, 320, 240), title="Librarby", open=True, margin=0,
+         floor_rects=[(1840, 560, 240, 120), (1940, 680, 40, 30)],
+         fix=[("wall", 1840, 600, 80, 80), ("wall", 1968, 588, 94, 72)],   # the counter; the table and the readers
+         doors=[((1940, 702, 40, 8), "snowtown", (1842, 1078), "down")]),
+    dict(name="pshouse", area="snowtown", rect=(2200, 720, 320, 240), title="Snowdin Town", open=True, margin=0,
+         floor_rects=[(2220, 848, 280, 100), (2220, 768, 280, 34), (2222, 800, 56, 52), (2420, 940, 40, 20)],
+         fix=[("wall", 2300, 892, 82, 40), ("wall", 2318, 836, 52, 30), ("wall", 2462, 868, 40, 64),
+              ("wall", 2228, 904, 30, 28)],
+         doors=[((2420, 950, 40, 8), "snowtown", (2240, 1096), "down"), ((2228, 766, 34, 4), "paproom", (2328, 666), "up"), ((2440, 766, 30, 4), "sansroom", (2514, 662), "up")]),
+    dict(name="paproom", area="snowtown", rect=(2120, 480, 320, 240), title="Snowdin Town", open=True, margin=0,
+         floor_rects=[(2160, 562, 240, 122), (2318, 684, 40, 30)],
+         fix=[("wall", 2160, 620, 90, 60), ("wall", 2338, 556, 64, 24), ("wall", 2160, 556, 40, 64),
+              ("wall", 2358, 648, 44, 34)],
+         doors=[((2318, 706, 40, 8), "pshouse", (2234, 774), "down")]),
+    dict(name="sansroom", area="snowtown", rect=(2440, 480, 320, 240), title="Snowdin Town", open=True, margin=0,
+         floor_rects=[(2480, 566, 158, 118), (2502, 684, 46, 30)],
+         fix=[("wall", 2480, 560, 52, 32), ("wall", 2598, 556, 42, 56)],
+         doors=[((2502, 706, 46, 8), "pshouse", (2444, 774), "down")]),
+    dict(name="shed", area="snowtown", rect=(2520, 720, 320, 240), title="Snowdin Town", open=True, margin=0,
+         floor_rects=[(2580, 770, 180, 120), (2580, 886, 40, 74)], fix=[("wall", 2580, 730, 56, 100)],
+         doors=[((2580, 945, 40, 8), "snowtown", (2400, 1096), "down")]),
     # Waterfall, the west: from Snowdin to the bridge Undyne cuts
     dict(name="wf1", area="waterfall", rect=(0, 1330, 1170, 310), title="Waterfall",
          fix=[("walk", 1040, 1505, 20, 135), ("walk", 1150, 1452, 20, 56)],
@@ -494,18 +509,18 @@ ROOMS = [
     # Mad Dummy
     dict(name="wf_dump", area="waterfall", rect=(17580, 3120, 740, 260), title="Waterfall", floor_colors=WF_DUMP,
          fix=[("walk", 17666, 3226, 64, 40)]),   # (the golden flowers Frisk wakes up on)
-    dict(name="wf_trash", area="waterfall", rect=(18320, 3120, 500, 240), title="Waterfall", floor_colors=WF_DUMP),
+    dict(name="wf_trash", area="waterfall", rect=(18320, 3120, 500, 240), view=(18320, 3140, 500, 240), title="Waterfall", floor_colors=WF_DUMP),
     dict(name="wf_walkway", area="waterfall", rect=(18820, 2420, 160, 920), title="Waterfall", floor_colors=WF_DUMP),
     # the Quiet Area and its pond, the small bird's side of the gap, Blook Acres (Undyne's, Napstablook's and
     # Mettaton's houses, the snail farm), Napstablook's room, Gerson's crossroads
-    dict(name="wf_quiet", area="waterfall", rect=(18660, 2200, 480, 220), title="Waterfall", floor_colors=WF_WATER,
+    dict(name="wf_quiet", area="waterfall", rect=(18660, 2200, 480, 220), view=(18660, 2220, 480, 240), title="Waterfall", floor_colors=WF_WATER,
          fix=[("walk", 18650, 2296, 50, 44)]),
     dict(name="wf_bird2", area="waterfall", rect=(18250, 2200, 410, 240), title="Waterfall",
          floor_colors=WF_WATER + [(23, 13, 43), (0, 0, 0)]),
-    dict(name="wf_acres", area="waterfall", rect=(18420, 1960, 1000, 240), title="Waterfall", floor_colors=WF_WATER,
+    dict(name="wf_acres", area="waterfall", rect=(18420, 1960, 1000, 240), view=(18420, 1980, 1000, 240), title="Waterfall", floor_colors=WF_WATER,
          fix=[("walk", 18876, 2088, 24, 30)],   # (Napstablook's doorway)
          doors=[((18876, 2098, 24, 10), "wf_napsta_in", (18826, 1906), "up")]),
-    dict(name="wf_napsta_in", area="waterfall", rect=(18780, 1720, 260, 240), title="Napstablook's house",
+    dict(name="wf_napsta_in", area="waterfall", rect=(18780, 1720, 260, 240), view=(18760, 1740, 320, 240), title="Napstablook's house",
          floor_colors=NAPSTA_FLOOR, fix=[("walk", 18820, 1920, 40, 40)],
          doors=[((18820, 1954, 40, 6), "wf_acres", (18877, 2116), "down")]),
     dict(name="wf_gerson", area="waterfall", rect=(19140, 2200, 710, 280), title="Waterfall", floor_colors=WF_WATER),
@@ -518,8 +533,11 @@ ROOMS = [
          fix=[("walk", 20550, 2310, 214, 40), ("walk", 20556, 2346, 212, 16), ("walk", 20764, 2320, 24, 40),
               ("walk", 21020, 2372, 140, 26), ("walk", 21056, 2850, 44, 30)]),
     # (the way in, into the maze; out at its top right; the hidden way down to the village)
-    dict(name="wf_temmie", area="waterfall", rect=(21040, 2880, 380, 280), title="Temmie Village", floor_colors=WF_WATER,
-         fix=[("walk", 21056, 2880, 44, 24)]),
+    dict(name="wf_temmie", area="waterfall", rect=(21020, 2880, 660, 320), title="Temmie Village", floor_colors=WF_WATER,
+         floor_rects=[(21040, 3058, 582, 84), (21056, 2880, 44, 180)],
+         # (the statue, the mushroom and the Temmies east of the shop: they stand there)
+         fix=[("walk", 21056, 2880, 44, 24), ("wall", 21468, 3058, 50, 20), ("wall", 21418, 3078, 22, 12),
+              ("wall", 21474, 3122, 22, 12), ("wall", 21582, 3120, 22, 12), ("wall", 21540, 3086, 16, 14)]),
     # the crystal maze of lanterns, the dark dead end where Undyne finds Frisk, the echo flowers' path north, the chasm's
     # bridge (Monster Kid), Undyne's crag, the way north and the gate to Hotland
     dict(name="wf_lantern", area="waterfall", rect=(21160, 2340, 640, 560), title="Waterfall", floor_colors=[(0, 0, 0)],
@@ -534,7 +552,7 @@ ROOMS = [
     dict(name="wf_chasm", area="waterfall", rect=(22160, 1940, 1090, 160), title="Waterfall",
          floor_colors=WF_WATER + WF_DUMP + [(23, 13, 43)],
          fix=[("walk", 22416, 2040, 238, 20), ("walk", 23096, 2040, 70, 20)]),
-    dict(name="wf_arena", area="waterfall", rect=(23250, 1440, 370, 640), title="Waterfall",
+    dict(name="wf_arena", area="waterfall", rect=(23250, 1440, 370, 640), view=(23250, 1440, 370, 680), title="Waterfall",
          floor_colors=WF_WATER + WF_DUMP + [(23, 13, 43)], floor_rects=[(23250, 1980, 370, 100), (23418, 1940, 80, 40)],
          doors=[((23418, 1940, 80, 8), "wf_north", (23449, 1340), "up")]),
     # the river under the crag, the neon sign's hall
@@ -589,7 +607,7 @@ ROOMS = [
     dict(name="ht_hotdog", area="hotland", rect=(6040, 2260, 1060, 220), title="Hotland"),
     dict(name="ht_cross2", area="hotland", rect=(5700, 2200, 340, 380), title="Hotland",
          fix=[("walk", 5898, 2276, 22, 116)]),
-    dict(name="ht_artclub", area="hotland", rect=(5800, 1990, 240, 210), title="Hotland"),
+    dict(name="ht_artclub", area="hotland", rect=(5800, 1990, 240, 210), view=(5740, 2040, 320, 240), title="Hotland"),
     dict(name="ht_apron", area="hotland", rect=(5780, 2580, 260, 160), title="Hotland"),
     dict(name="ht_beltpuz", area="hotland", rect=(5060, 2280, 640, 240), title="Hotland", floor_colors=HT_BELT),
     dict(name="ht_ventpuz", area="hotland", rect=(4400, 2100, 660, 560), title="Hotland", floor_colors=HT_STRIPE + HT_BELT,
@@ -604,7 +622,7 @@ ROOMS = [
     # north to the Diamond Boys and a shooting puzzle; south over the belts, past the laser drones, to the other;
     # through the door, the spider entrance and Muffet's lair; Mettaton's musical, the tile puzzle below its stage;
     # the crossroads by the elevator R3, the MTT Resort north
-    dict(name="ht_l3", area="hotland", rect=(3660, 740, 900, 240), title="Hotland", floor_colors=HT_HUB,
+    dict(name="ht_l3", area="hotland", rect=(3660, 740, 900, 240), view=(3660, 760, 900, 240), title="Hotland", floor_colors=HT_HUB,
          fix=[("walk", 4556, 876, 28, 28)]),
     dict(name="ht_hub3", area="hotland", rect=(4560, 620, 740, 500), title="Hotland", floor_colors=HT_HUB,
          fix=[("walk", x, y, 60, 60) for x, y in HT3_ISLES] + [("walk", x - 4, y - 4, 28, 28) for x, y in HT3_GRATES],
@@ -612,9 +630,9 @@ ROOMS = [
     dict(name="ht_north3", area="hotland", rect=(4700, 140, 300, 480), title="Hotland", floor_colors=HT_HUB,
          fix=[("walk", 4808, 236, 44, 108)]),
     dict(name="ht_belts3", area="hotland", rect=(4780, 1120, 680, 500), title="Hotland", floor_colors=HT_HUB + HT_BELT),
-    dict(name="ht_south3", area="hotland", rect=(5460, 940, 200, 680), title="Hotland", floor_colors=HT_HUB + HT_BELT,
+    dict(name="ht_south3", area="hotland", rect=(5460, 940, 200, 680), view=(5360, 940, 320, 680), title="Hotland", floor_colors=HT_HUB + HT_BELT,
          fix=[("walk", 5518, 1216, 44, 104)]),
-    dict(name="ht_spiderent", area="hotland", rect=(5180, 400, 240, 170), title="Hotland", floor_colors=HT_HUB,
+    dict(name="ht_spiderent", area="hotland", rect=(5180, 400, 240, 170), view=(5120, 300, 410, 300), title="Hotland", floor_colors=HT_HUB,
          doors=[((5205, 560, 50, 6), "ht_hub3", (5220, 704), "down")]),
     dict(name="ht_lair", area="hotland", rect=(5420, 300, 1220, 240), title="Hotland", open=True,
          floor_rects=[(5420, 461, 1220, 38)]),
@@ -632,7 +650,7 @@ ROOMS = [
          floor_rects=[(990, 842, 470, 158), (1190, 1000, 70, 20), (1188, 826, 64, 20), (1384, 648, 34, 200)],
          fix=[("wall", 1084, 932, 112, 22), ("wall", 1244, 932, 112, 22)],   # the velvet ropes
          doors=[((1190, 832, 60, 6), "res_lobby", (1205, 568), "up"), ((1197, 1012, 56, 8), "ht_cross3", (7536, 300), "down")]),
-    dict(name="res_lobby", area="resort", rect=(1060, 60, 420, 550), title="MTT Resort",
+    dict(name="res_lobby", area="resort", rect=(1060, 60, 420, 550), view=(1060, 60, 420, 560), title="MTT Resort",
          floor_rects=[(1080, 278, 380, 162), (1080, 440, 280, 98), (1060, 380, 20, 60), (1460, 380, 20, 60),
                       (1200, 136, 40, 142), (1200, 538, 40, 72)],
          doors=[((1195, 600, 50, 6), "res_outside", (1205, 840), "down"), ((1060, 380, 6, 60), "res_diner", (1030, 396), "left"),
@@ -655,7 +673,7 @@ ROOMS = [
          floor_rects=[(177, 2040, 305, 75), (177, 1977, 63, 63), (402, 1977, 59, 63), (298, 2115, 42, 25)],
          doors=[((300, 2134, 40, 6), "core_approach", (310, 2302), "down"), ((180, 1972, 40, 6), "core_doorway", (150, 1860), "up"),
                 ((420, 1972, 44, 6), "core_pit", (470, 1860), "up")]),
-    dict(name="core_doorway", area="core", rect=(95, 1490, 130, 410), title="CORE",
+    dict(name="core_doorway", area="core", rect=(95, 1490, 130, 410), view=(95, 1480, 130, 420), title="CORE",
          floor_rects=[(100, 1582, 120, 238), (140, 1819, 40, 80), (142, 1492, 38, 92)],
          fix=[("walk", 142, 1492, 38, 92)],   # (its doorway, north)
          doors=[((140, 1892, 40, 8), "core_lobby", (190, 1985), "down"), ((142, 1492, 38, 8), "core_west", (150, 1460), "up")]),
@@ -712,7 +730,7 @@ ROOMS = [
          floor_rects=[(4585, 2335, 1300, 75), (4683, 2222, 117, 113), (5797, 2222, 88, 113)],
          doors=[((4683, 2216, 117, 8), "nh_basement", (4720, 2180), "up"), ((5797, 2216, 88, 8), "nh_thall", (5790, 2180), "up")]),
     # the throne room's entrance (its SAVE), the throne room, the stairs down to the coffins
-    dict(name="nh_thall", area="newhome", rect=(5640, 1700, 830, 530), title="Throne Entrance", open=True,
+    dict(name="nh_thall", area="newhome", rect=(5640, 1700, 830, 530), view=(5640, 1680, 830, 550), title="Throne Entrance", open=True,
          floor_rects=[(5760, 1797, 588, 75), (5760, 1872, 88, 350), (6260, 1872, 88, 350), (6005, 1785, 50, 12)],
          doors=[((5760, 2216, 88, 8), "nh_last", (5820, 2240), "down"), ((6005, 1786, 50, 8), "nh_throne", (6010, 1600), "up"),
                 ((6260, 2216, 88, 8), "nh_coffins", (6300, 2240), "down")]),
@@ -723,7 +741,7 @@ ROOMS = [
          floor_rects=[(6280, 2222, 60, 610), (6230, 2830, 460, 115)],
          doors=[((6280, 2222, 60, 8), "nh_thall", (6290, 2180), "up")]),
     # the room before the barrier ("The End"), and the barrier
-    dict(name="nh_barrier", area="newhome", rect=(5820, 850, 700, 240), title="The End", open=True,
+    dict(name="nh_barrier", area="newhome", rect=(5820, 850, 700, 240), view=(5820, 840, 700, 240), title="The End", open=True,
          floor_rects=[(5839, 977, 640, 44), (5839, 880, 262, 116), (5939, 1021, 62, 56), (6400, 960, 56, 20)],
          doors=[((5939, 1070, 62, 8), "nh_throne", (5955, 1120), "down"), ((6400, 960, 56, 8), "nh_wall", (6330, 780), "up")]),
     dict(name="nh_wall", area="newhome", rect=(6170, 560, 350, 270), title="The Barrier", open=True,

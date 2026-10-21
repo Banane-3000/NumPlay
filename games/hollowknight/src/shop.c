@@ -42,6 +42,9 @@ static const uint8_t first[SHOP_N + 1] = SHOP_FIRST, active_rgb[3] = SHOP_ACTIVE
 static const char *const rooms[SHOP_N] = SHOP_ROOMS;
 static const int16_t nostock[SHOP_N] = SHOP_NOSTOCK, titles[SHOP_N] = SHOP_TITLES;
 #define MAX_ROWS 16
+#define SHOP_KEY_GAP 0.25f   /* (between a key and its action) */
+#define SHOP_KEY_OUT 0.3f    /* (the keys a little further out than the game's: their actions' text is bigger) */
+#define SHOP_PEG_BELOW 0.09f /* (a peg's center under the bottom of Notch Cost's text) */
 
 enum {
   SH_CLOSED, SH_TALK_UP, SH_TALK, SH_TALK_DOWN,           /* (nothing left: Box Up, its conversation, Box Down) */
@@ -379,8 +382,24 @@ static void anim_piece(const AnimPiece *p, const Anim *an, uint8_t tint) {
   gfx_overlay(&in);
 }
 
-/* an action's key (ActionButtonIcon: the calculator's, by name) */
-static void key_at(const float *at, int name, float a, uint8_t white) { ui_key(name, at[0], at[1], white, a); }
+/* an action's key (ActionButtonIcon: the calculator's, by name) -> its half width */
+static float key_at(const float *at, int name, float a, uint8_t white) { return ui_key(name, at[0], at[1], white, a); }
+
+/* the selected item's description: on the window's left, over a dark panel (in the window, at a size that reads, it
+ * would not fit the calculator's screen); the message's size, smaller where that runs out of the panel (text_fit) */
+#define DESC_X0 (-13.35f)   /* (its text's left, right, top; the panel's bottom: HUD units) */
+#define DESC_X1 (-1.35f)
+#define DESC_TOP 5.05f
+#define DESC_BOTTOM (-8.4f)
+#define DESC_PAD 0.4f
+static void desc_draw(const Item *it, float bob, float a) {
+  float w = DESC_X1 - DESC_X0;
+  int style = text_fit(it->desc, w, DESC_TOP - DESC_BOTTOM);
+  float h = text_box(it->desc, style, 0, 0, w, 0, 0);
+  gfx_overlay_fill(DESC_X0 - DESC_PAD, DESC_TOP - h - DESC_PAD + bob, DESC_X1 + DESC_PAD, DESC_TOP + DESC_PAD + bob,
+                   gfx_dyn_tint(27, 0, 0, 0, (uint8_t)(a * SHOP_BACKBOARD_A * 255 + 0.5f)));
+  text_box(it->desc, style, DESC_X0, DESC_TOP + bob, w, 0, a);
+}
 
 static void shop_draw(void) {
   float bob = sh.bob_t > 0 ? (sh.bob_t > 0.2f ? (0.4f - sh.bob_t) / 0.2f : sinf(sh.bob_t / 0.2f * 1.5707964f)) * 0.5f : 0;
@@ -426,17 +445,18 @@ static void shop_draw(void) {
     if (sh.cur > 0) ui_piece(&arrow_u, 0, bu + bob, 1, root);
     if (sh.cur + 1 < sh.n) ui_piece(&arrow_d, 0, -bd + bob, 1, root);
     ui_piece(&selector, 0, (sh.jitter > 0 ? rand_range(-0.11f, 0.11f) : 0) + bob, 1, root);
-    ui_text_at(it->name, STYLE_TUTE, &t_name, 0, bob, 1, sh.root_a);
+    /* (its name over its column, on two lines where it is too long for one; what comes under it, lower by as much) */
+    float down = text_box(it->name, STYLE_TUTE, t_name.x, t_name.top + bob, t_name.w, 1, sh.root_a) -
+                 font_line(font_style(STYLE_TUTE)) / HUD_PX;
     int notch = it->type == ST_CHARM ? charm_cost(it->charm) : 0;
     if (notch > 0) {
-      /* (Notch Cost: its pegs, centred as Centre Pegs has them) */
-      ui_text_at(TXT_SHOP_CHARM_TXT_NOTCHCOST, STYLE_MSG, &t_notch, 0, bob, 1, sh.root_a);
-      for (int i = 0; i < notch && i < 6; i++) ui_piece(&peg, pegs_x[notch - 1] + i * SHOP_PEG_DX, bob, 1, root);
+      /* (Notch Cost: its pegs, centred as Centre Pegs has them, as far under its text as the game has them) */
+      const uint8_t *st = font_style(STYLE_MSG);
+      float pegs = peg.y - (t_notch.top - (font_asc(st) + font_desc(st)) / HUD_PX - SHOP_PEG_BELOW);
+      ui_text_at(TXT_SHOP_CHARM_TXT_NOTCHCOST, STYLE_MSG, &t_notch, 0, bob - down, 1, sh.root_a);
+      for (int i = 0; i < notch && i < 6; i++) ui_piece(&peg, pegs_x[notch - 1] + i * SHOP_PEG_DX, bob - down - pegs, 1, root);
     }
-    /* (its size: the message's, smaller where that runs out of the window) */
-    float top = t_desc.top + (notch > 0 ? 0 : SHOP_DESC_DY);
-    int style = top - text_box(it->desc, STYLE_MSG, 0, 0, t_desc.w, 0, 0) < SHOP_DESC_BOTTOM ? STYLE_MSG_S : STYLE_MSG;
-    text_box(it->desc, style, t_desc.x, top + bob, t_desc.w, 0, sh.root_a);
+    desc_draw(it, bob, sh.root_a);
   }
   /* the confirmation: the item, its cost, the question, Yes and No (the pointers at the one chosen) */
   if (sh.conf_a > 0) {
@@ -458,10 +478,13 @@ static void shop_draw(void) {
   if (sh.thanks_a > 0) ui_text_at(TXT_SHOP_SHOP_PURCHASE_COMPLETE, STYLE_NOTICE, &t_thanks, 0, 0, 1, sh.thanks_a);
   /* the actions: Buy and Exit, by their keys (Confirm and Cancel in the confirmation) */
   if (sh.st == SH_LIST || sh.st == SH_CONFIRM) {
+    /* (each by its key, as far from it as the game has them) */
     bool c = sh.st == SH_CONFIRM;
-    ui_text_at(c ? TXT_SHOP_CTRL_CONFIRM : TXT_SHOP_CTRL_BUY, STYLE_MSG, &t_act_confirm, 0, 0, 2, 1);
-    ui_text_at(c ? TXT_SHOP_CTRL_CANCEL : TXT_SHOP_CTRL_EXIT, STYLE_MSG, &t_act_cancel, 0, 0, 0, 1);
-    key_at(key_confirm, TXT_KEY_OK, 1, white);
-    key_at(key_cancel, TXT_KEY_BACK, 1, white);
+    const float kc[2] = {key_confirm[0] + SHOP_KEY_OUT, key_confirm[1]}, kb[2] = {key_cancel[0] - SHOP_KEY_OUT, key_cancel[1]};
+    float ok = key_at(kc, TXT_KEY_OK, 1, white), back = key_at(kb, TXT_KEY_BACK, 1, white);
+    ui_text_at(c ? TXT_SHOP_CTRL_CONFIRM : TXT_SHOP_CTRL_BUY, STYLE_MSG_S, &t_act_confirm, kc[0] - ok - SHOP_KEY_GAP -
+               t_act_confirm.x, 0, 2, 1);
+    ui_text_at(c ? TXT_SHOP_CTRL_CANCEL : TXT_SHOP_CTRL_EXIT, STYLE_MSG_S, &t_act_cancel, kb[0] + back + SHOP_KEY_GAP -
+               t_act_cancel.x, 0, 0, 1);
   }
 }

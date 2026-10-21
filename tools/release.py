@@ -20,22 +20,25 @@ import re
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 REPO = "https://github.com/Mason363/NumPlay"
 # in games.json, but not games
-EXTRAS = {"numvisuals"}
+EXTRAS = set()
 # games too big to fit next to NumPlay on the calculator: only on their own, in a section of their own
 ALONE = {
-    "celeste": ("Celeste", "the whole climb up Celeste Mountain. Too big to share the calculator with NumPlay: install it "
-                "on its own"),
-    "hollowknight": ("Hollow Knight", "from King's Pass to Hornet in Greenpath. Too big to share the calculator with "
-                     "NumPlay: install it on its own"),
-    "undertale": ("Undertale", "the whole Underground, from the bed of golden flowers to the barrier and the neutral "
-                  "ending: the Ruins, Snowdin, Waterfall, Hotland, the CORE and New Home. Too big to share the calculator "
-                  "with NumPlay: install it on its own"),
-    "championisland": ("Champion Island", "the Doodle Champion Island Games. Too big to share the calculator with "
-                       "NumPlay: install it on its own"),
-    "numpowder": ("NumPowder", "The Powder Toy on the calculator: sand, water, fire, acid, electricity and nearly 200 "
-                  "elements. Too big to share the calculator with NumPlay: install it on its own"),
-    "finalearth2": ("The Final Earth 2", "build a city on floating islands in space, every scenario and free play map. "
-                    "Too big to share the calculator with NumPlay: install it on its own"),
+    "celeste": ("Celeste", "the whole climb up Celeste Mountain"),
+    "hollowknight": ("Hollow Knight", "from King's Pass to Hornet in Greenpath"),
+    "undertale": ("Undertale", "the whole Underground, to the barrier and the neutral ending"),
+    "subway": ("Subway Surfers", "the endless run down the subway's tracks, in 3D"),
+    "fnaf": ("Five Nights at Freddy's", "five nights at Freddy Fazbear's Pizza, the 6th and the Custom Night"),
+    "hillclimb": ("Hill Climb Racing", "Newton Bill's ride up the hills: ten stages, eight vehicles"),
+    "championisland": ("Champion Island", "the Doodle Champion Island Games"),
+    "numpowder": ("NumPowder", "The Powder Toy on the calculator, with nearly 200 elements"),
+    "finalearth2": ("The Final Earth 2", "build a city on floating islands in space"),
+    "doom": ("Doom", "Knee-Deep in the Dead, all nine levels"),
+    "isaac": ("The Binding of Isaac", "a whole run, from the Basement to Sheol and the Cathedral"),
+    "pvz": ("Plants vs. Zombies", "the whole Adventure, from the front lawn to Dr. Zomboss"),
+    "leveldevil": ("Level Devil", "Unept's troll platformer, all sixteen worlds"),
+    "sonic": ("Sonic the Hedgehog", "the whole 1991 game, Green Hill to the Final Zone"),
+    "numvisuals": ("NumVisuals", "moving backgrounds with a clock, a stopwatch, a timer, a counter or your own words"),
+    "cookieclicker": ("Cookie Clicker", "the whole game, to the grandmapocalypse, ascension and the dragon"),
 }
 VARIANTS = [
     ("NumPlay-Invisible.nwa", "The same app, hidden: a blank icon with no name"),
@@ -46,7 +49,7 @@ LANGUAGES = [
     ("NumPlay-French.nwa", "NumPlay en français : tous les jeux, en français"),
     ("NumPlay-Chinese.nwa", "NumPlay 中文版：所有游戏，简体中文"),
 ]
-UPSILON = ("NumPlay-Upsilon.nwa", "For calculators running Upsilon (N0110, N0115): the 15 games that fit in the memory "
+UPSILON = ("NumPlay-Upsilon.nwa", "For calculators running Upsilon (N0110, N0115): the 19 games that fit in the memory "
            "Upsilon gives apps. Install it with nwlink, see the README")
 
 
@@ -116,6 +119,8 @@ def main():
     for path, label in files:
         if not os.path.exists(path):
             raise SystemExit(f"release: missing {path}")
+        if len(label) > 255:  # (GitHub refuses longer labels, and the release with them)
+            raise SystemExit(f"release: {os.path.basename(path)}'s label is {len(label)} characters, 255 at most")
         print(f"{path}#{label}")
 
 

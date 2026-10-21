@@ -317,6 +317,8 @@ static void controller_late_update(void) {
     c.cx = nx, c.cy = ny;
   }
   keep_in_scene(&c.cx, &c.cy);
+  /* (only the first half second in a room does a lock area take the view at once) */
+  if (c.start_locked_timer > 0) c.start_locked_timer -= DT;
 }
 
 void cam_tick(void) {

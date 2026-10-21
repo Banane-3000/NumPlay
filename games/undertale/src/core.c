@@ -526,8 +526,7 @@ static int ev_hall(Ev *c) {
   SAY(FACE_ALPHYS, "* ...one of you won't come\n  back.|* I'm sorry. I made it all up,\n  so I'd seem like a hero.|* Good luck. You deserve a\n  better friend than me.");
   set_flag(F_CORE_HALL, 1);
   a = obj_get(ACTOR_ALPHYS);
-  WALK(a, 3360, a->y, 3);
-  gone(obj_get(ACTOR_ALPHYS));
+  LEAVE(a, 3, 3360, a->y);
   EV_END;
 }
 

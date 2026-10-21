@@ -38,7 +38,8 @@ int main(int argc, char **argv) {
   const char *out = "build/play", *shots = "";
   int give = 0, showcase = 0, title_screen = 0, mobs = 0, animals = 0, start_time = -1, torches = 0, water = 0, creative = 0, build = 0, rain = 0;
   float hurt = 0;
-  int frames = 60, mspf = 50;
+  int frames = 60, mspf = 50, go_dim = 0, portal = 0, at = 0, fortress = 0, hold = -1, credits = 0;
+  float at_v[5] = {0};
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "--frames") && i + 1 < argc) frames = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--ms-per-frame") && i + 1 < argc) mspf = atoi(argv[++i]);
@@ -54,6 +55,14 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--creative")) creative = 1;
     else if (!strcmp(argv[i], "--build")) build = 1;
     else if (!strcmp(argv[i], "--rain")) rain = 1;
+    else if (!strcmp(argv[i], "--nether")) go_dim = 1;
+    else if (!strcmp(argv[i], "--end")) go_dim = 2;
+    else if (!strcmp(argv[i], "--portal")) portal = 1;
+    else if (!strcmp(argv[i], "--fortress")) go_dim = 1, fortress = 1;
+    else if (!strcmp(argv[i], "--stronghold") && i + 1 < argc) hold = atoi(argv[++i]);   /* 0-2: in its portal room */
+    else if (!strcmp(argv[i], "--credits")) credits = 1;   /* the End poem and the credits, as after the End */
+    else if (!strcmp(argv[i], "--at") && i + 1 < argc)   /* x,y,z,yaw,pitch: there, flying (Creative) */
+      at = sscanf(argv[++i], "%f,%f,%f,%f,%f", &at_v[0], &at_v[1], &at_v[2], &at_v[3], &at_v[4]) >= 3;
     else if (!strcmp(argv[i], "--storm")) rain = 2;
     else if (!strcmp(argv[i], "--time") && i + 1 < argc) start_time = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--seed") && i + 1 < argc) {
@@ -72,6 +81,14 @@ int main(int argc, char **argv) {
     }
   }
   mkdir(out, 0755);
+  {
+    /* the saves (the edit records portals are looked for in) next to the pictures */
+    extern void host_save_dir(const char *d);
+    static char sd[600];
+    snprintf(sd, sizeof sd, "%s/saves", out);
+    mkdir(sd, 0755);
+    host_save_dir(sd);
+  }
   clock_t c0 = clock();
   extern bool start_in_world;
   start_in_world = !title_screen;
@@ -102,6 +119,49 @@ int main(int argc, char **argv) {
     game_time = (uint32_t)start_time;
   }
   if (creative) pl.mode = 1;
+  if (portal) {
+    /* an obsidian frame ahead (along x), lit with flint and steel; the player walks in with --keys */
+    int fy = (int)pl.y, px = (int)floorf(pl.x), pz = (int)floorf(pl.z) + 3;
+    for (int z = pz - 2; z <= pz + 2; z++)
+      for (int x = px - 3; x <= px + 3; x++)
+        for (int y = fy - 1; y < fy + 6; y++) world_set(x, y, z, y == fy - 1 ? B_STONE : B_AIR);
+    for (int x = px - 1; x <= px + 2; x++)
+      for (int y = fy - 1; y <= fy + 3; y++)
+        if (x == px - 1 || x == px + 2 || y == fy - 1 || y == fy + 3) world_set(x, y, pz, B_OBSIDIAN);
+    fire_set(px, fy, pz, 0);
+  }
+  if (go_dim) dims_go(go_dim);
+  if (fortress) {
+    /* to the nearest fortress, flying over its first crossing */
+    int f[4];
+    if (gen_fortress_find((int)pl.x, (int)pl.z, f)) {
+      printf("fortress at %d %d %d, %d pieces\n", f[0], f[1], f[2], f[3]);
+      at = 1, at_v[0] = f[0] + 0.5f, at_v[1] = (float)f[1], at_v[2] = f[2] + 0.5f, at_v[3] = pl.yaw, at_v[4] = 20;
+    }
+  }
+  if (hold >= 0) {
+    /* stronghold n: in its portal room, looking at the frame (and where an eye of ender would fly) */
+    int f[6], e[3] = {0};
+    if (gen_stronghold_find(hold, f)) {
+      bool ok = gen_stronghold_near(f[0], f[1], e);
+      printf("stronghold %d: start %d %d, portal %d %d %d, %d pieces; an eye flies to %d %d %d (%d)\n", hold, f[0], f[1],
+             f[2], f[3], f[4], f[5], e[0], e[1], e[2], ok);
+      if (!at) at = 1, at_v[0] = f[2] + 0.5f, at_v[1] = f[3] + 0.5f, at_v[2] = f[4] + 0.5f, at_v[3] = pl.yaw, at_v[4] = 50;
+    }
+  }
+  if (at) {
+    pl.x = at_v[0], pl.y = at_v[1], pl.z = at_v[2], pl.yaw = at_v[3], pl.pitch = at_v[4];
+    pl.mode = 1, pl.flying = true;
+    world_finish(pl.x, pl.y, pl.z);
+    camera_reset();
+  }
+  if (hold >= 0) {
+    printf("column under the player:");
+    for (int y = (int)pl.y + 2; y > (int)pl.y - 12; y--) printf(" %d", world_get((int)floorf(pl.x), y, (int)floorf(pl.z)));
+    printf("\n");
+  }
+  if (go_dim) printf("at %.2f %.2f %.2f: feet %d head %d below %d (cache y %d)\n", pl.x, pl.y, pl.z, world_get((int)floorf(pl.x), (int)floorf(pl.y), (int)floorf(pl.z)), world_get((int)floorf(pl.x), (int)floorf(pl.y) + 1, (int)floorf(pl.z)), world_get((int)floorf(pl.x), (int)floorf(pl.y) - 1, (int)floorf(pl.z)), vc_y0);
+  if (credits) credits_open();
   if (rain) {
     /* raining (and storming) from the start, for long enough */
     weather.raining = 1, weather.rain_time = 24000, rain_str = 1;
@@ -149,6 +209,17 @@ int main(int argc, char **argv) {
       float x = pl.x - 5.6f + k * 1.6f, z = pl.z + 4.5f;
       Entity *e = ent_new(E_ZOMBIE + k, x, (float)fy, z);
       if (e) e->health = 20, e->yaw = 180, e->gx = e->x, e->gz = e->z;
+    }
+    if (dim) {
+      /* the Nether's and the End's instead */
+      memset(ents, 0, sizeof ents);
+      static const int8_t t[6] = {E_PIGMAN, E_WSKELETON, E_BLAZE, E_MAGMA, E_ENDERMAN, E_CRYSTAL};
+      for (int k = 0; k < 6; k++) {
+        Entity *e = ent_new(t[k], pl.x - 5.0f + k * 2.0f, (float)fy, pl.z + 5.5f);
+        if (e) e->health = 20, e->yaw = 180, e->gx = e->x, e->gz = e->z, e->sheared = 2;
+      }
+      Entity *g = ent_new(E_GHAST, pl.x, (float)fy + 2, pl.z + 14);
+      if (g) g->health = 10, g->yaw = 180, g->delay = 1000;
     }
   }
   if (animals) {
@@ -199,6 +270,9 @@ int main(int argc, char **argv) {
       s = c + 1;
     }
   }
+  for (int i = 0; i < N_ENT; i++)
+    if (ents[i].type > E_BOBBER)
+      printf("entity %d at %.1f %.1f %.1f health %d\n", ents[i].type, ents[i].x, ents[i].y, ents[i].z, ents[i].health);
   extern unsigned long st_steps, st_texels, st_jumps, st_pixels;
   printf("per frame: %.0f traces, %.0f steps\n", (double)st_pixels / frames, (double)st_steps / frames);
   extern unsigned long st_dis, st_k0, st_fpfail, st_fpok, st_sky;

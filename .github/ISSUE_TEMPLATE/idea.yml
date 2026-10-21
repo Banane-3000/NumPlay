@@ -1,7 +1,6 @@
 name: Idea for NumPlay
 description: A feature or a change to a game that's already here
 labels: ["enhancement"]
-assignees: ["Mason363"]
 body:
   - type: markdown
     attributes:

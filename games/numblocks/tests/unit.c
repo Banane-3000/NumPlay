@@ -98,6 +98,25 @@ int main(void) {
     world_follow(8, 70, 8);
     CHECK(world_get(5, 62, 5) == base);
   }
+  /* a region with thousands of changes (TNT craters) still saves: its record grows where it is */
+  {
+    remove("build/unit-saves/ut4r0_0.nbe");
+    world_new(0, "ut4");
+    world_follow(8, 70, 8);
+    for (int y = 66; y < 74; y++)
+      for (int z = 0; z < 20; z++)
+        for (int x = 0; x < 20; x++) world_set(x, y, z, (x + z + y) & 1 ? B_GLASS : B_GOLD_BLOCK);
+    CHECK(edits_flush());
+    world_set(3, 70, 4, B_DIAMOND_BLOCK);
+    CHECK(edits_flush());
+    world_new(0, "ut4");
+    world_follow(8, 70, 8);
+    CHECK(world_get(0, 66, 0) == B_GOLD_BLOCK && world_get(19, 73, 19) == B_GLASS);
+    CHECK(world_get(3, 70, 4) == B_DIAMOND_BLOCK && world_get(4, 70, 4) == B_GOLD_BLOCK);
+    uint32_t len = 0;
+    CHECK(plat_load("ut4r0_0.nbe", &len) && len == 20 * 20 * 8 * 4);
+    plat_remove_prefix("ut4");
+  }
   /* water: 7 blocks out on a flat floor, then dry when the source is gone; lava meets water */
   {
     world_new(0, "ut2");
@@ -126,6 +145,23 @@ int main(void) {
     for (int t = 0; t < 60; t++) ticks_run++, world_tick();
     CHECK(world_get(5, y, 4) == B_OBSIDIAN);
     plat_remove_prefix("ut2");
+  }
+  /* lava that has flowed sets fire by it, and the fire lights TNT (BlockStaticLiquid, BlockFire) */
+  {
+    world_new(0, "ut5");
+    world_follow(8, 70, 8);
+    int y = 70;
+    for (int z = 4; z <= 12; z++)
+      for (int x = 4; x <= 12; x++) {
+        world_set(x, y - 1, z, B_STONE);
+        for (int k = 0; k < 3; k++) world_set(x, y + k, z, B_AIR);
+      }
+    world_set(8, y, 8, B_FLOWING_LAVA);
+    world_set(9, y, 8, B_TNT);
+    int t = 0;
+    while (t < 400000 && world_get(9, y, 8) == B_TNT) ticks_run++, world_tick(), t++;
+    CHECK(world_get(9, y, 8) != B_TNT);
+    plat_remove_prefix("ut5");
   }
   /* two cows fed wheat make a calf (EntityAIMate) */
   {
