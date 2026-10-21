@@ -24,7 +24,7 @@ RAM_LIMIT = 148928
 # custom builds of Epsilon 25.2's source give apps less: 133652 bytes; every game fits there too, in NumPlay and on
 # its own (their big buffers are on the stack, 32 KB apart from that RAM, or in the RAM the software has left)
 CUSTOM_RAM = 133652
-BIG_APPS = StickmanHook Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride
+BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook
 # the calculator's space for installed apps (0x90200000 to 0x903F0000 in its flash)
 APP_SPACE = 2031616
 # Upsilon, the N0110 and N0115's custom software, gives .nwa apps less RAM: NumPlay-Upsilon.nwa has
@@ -249,6 +249,7 @@ apps: | $(B)
 	$(MAKE) -C games/cookieclicker build NWLINK="$(NWLINK)"
 	$(MAKE) -C games/leveldevil build NWLINK="$(NWLINK)"
 	$(MAKE) -C games/jetpackjoyride build NWLINK="$(NWLINK)"
+	$(MAKE) -C games/stickmanhook build NWLINK="$(NWLINK)"
 	cd games/tetris/tetris && NWLINK="$(NWLINK)" $(CARGO) build --release --quiet
 	cp $(word 1,$(subst :, ,$(APP_numdash))) $(B)/apps/$(word 2,$(subst :, ,$(APP_numdash)))
 	cp $(word 1,$(subst :, ,$(APP_crossyroad))) $(B)/apps/$(word 2,$(subst :, ,$(APP_crossyroad)))
@@ -275,14 +276,8 @@ apps: | $(B)
 	cp $(word 1,$(subst :, ,$(APP_cookieclicker))) $(B)/apps/$(word 2,$(subst :, ,$(APP_cookieclicker)))
 	cp $(word 1,$(subst :, ,$(APP_leveldevil))) $(B)/apps/$(word 2,$(subst :, ,$(APP_leveldevil)))
 	cp $(word 1,$(subst :, ,$(APP_jetpackjoyride))) $(B)/apps/$(word 2,$(subst :, ,$(APP_jetpackjoyride)))
+	cp $(word 1,$(subst :, ,$(APP_stickmanhook))) $(B)/apps/$(word 2,$(subst :, ,$(APP_stickmanhook)))
 	arm-none-eabi-strip --strip-unneeded $(B)/apps/Tetris.nwa
-
-# Stickman Hook is published as its own app, with no launcher module.
-apps: $(B)/apps/StickmanHook.nwa
-$(B)/apps/StickmanHook.nwa: FORCE | $(B)
-	$(MAKE) --no-print-directory -C games/stickmanhook build NWLINK="$(NWLINK)"
-	mkdir -p $(B)/apps
-	cp games/stickmanhook/output/stickmanhook.nwa $@
 
 STD_APPS = $(foreach g,$(STD_GAMES),$(B)/apps/$(NWA_$(g)))
 apps: $(STD_APPS)

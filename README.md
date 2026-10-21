@@ -81,8 +81,6 @@ Want just one game? Each one also comes as its own file on the [downloads page](
 
 **NumVisuals**, moving backgrounds with a clock, a stopwatch, a timer or a counter on top, comes on its own: [download NumVisuals.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumVisuals.nwa). Its backgrounds are also in NumPlay: press ⌫ on the home screen.
 
-**[Stickman Hook](games/stickmanhook/README.md)** also comes as its own app: 50 levels, 23 characters and an English interface, adapted by **Bobydeluxe**. [Download StickmanHook.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/StickmanHook.nwa) once it is included in a release.
-
 ## Big games, installed on their own
 
 These are too big to fit next to NumPlay, so each one is its own app. Install it without NumPlay.
@@ -259,8 +257,6 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Rocket League
 
 ## Credits
-
-- **[Bobydeluxe](https://github.com/Bobydeluxe)** made the **[Stickman Hook](games/stickmanhook/README.md)** NumWorks adaptation. **Madbox** made the original game; its artwork, lettering, course data and physics are credited in the game README. Not affiliated with Madbox.
 
 NumPlay is a fan project, made out of love for these games and for the NumWorks calculator. If you enjoy a game here, go play the original and support the people who made it. NumWorks also has a great community of people making games by hand: try [Numcraft](https://github.com/yannis300307/NumcraftRust), [Celeste Classic](https://github.com/BenchatonDev/Celeste-Numworks), [Tatone26's All the Apps](https://github.com/Tatone26/Numworks-games), the apps on [Nwagyu](https://nwagyu.org/guide/) and [yannis300307's list](https://gist.github.com/yannis300307/9123136f90877107ec0d49ba96b303e5).
 
