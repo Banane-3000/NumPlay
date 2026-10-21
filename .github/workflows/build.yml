@@ -79,6 +79,8 @@ jobs:
           make -C games/flappydunk host test
           make -C games/towerblock host test
           make -C games/doodlejump host test
+          make -C games/donkeykong check test NWLINK=nwlink
+          python3 games/donkeykong/tests/test_arm.py --nwlink nwlink
 
 
 
