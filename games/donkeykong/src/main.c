@@ -1,114 +1,200 @@
-/* SPDX-License-Identifier: GPL-3.0-only */
-#include <eadk.h>
-#include "render.h"
-#include "../../common/epsilon_app.h"
-#include "../../common/epsilon_files.h"
-#ifdef __ELF__
-const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name")))="Donkey Kong";
-const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level")))=0;
+/* Donkey Kong (Nintendo, 1981) on the NumWorks calculator.
+ *
+ * Kong has taken Pauline to the top of a building site: Mario (Jumpman) climbs after her over the 25m
+ * girders and their barrels, the 50m conveyor belts and pies, the 75m elevators and springs, and the 100m
+ * rivets that bring Kong down. The arcade's program is ported routine by routine (sim.c) and runs 60 times a
+ * second, as the arcade did; the pictures are new (art.h).
+ *
+ * Keys: the arrows walk and climb, OK or EXE jump, Back pauses, Home saves and quits. */
+#include <string.h>
+#include "../../../launcher/src/gfx.h"
+#include "dk.h"
+#include "draw.h"
+#include "plat.h"
+#include "save.h"
+
+static dk_state run;
+static dk_profile prof;
+static dk_view view;
+static uint32_t rng;
+static uint8_t back_to, last_dir, shown_mode;
+static color_t strip[SCREEN_W * STRIP_H];
+/* frames drawn, the slowest (ms), those over 33 ms (read by tools/emu.py), and the game's 60 Hz steps */
+#ifndef HOST
+__attribute__((used, externally_visible))
 #endif
-#define KEY(k) (UINT64_C(1)<<(k))
-static dk_game game;
-static dk_stats stats;
-static uint8_t save_data[DK_SAVE_BYTES];
-static bool have_save,save_failed;
-static uint32_t last_checksum;
-uint32_t perf_frames,perf_max,perf_slow;
-static void push(int x,int y,int w,int h,const uint16_t *p) {
-  eadk_display_push_rect((eadk_rect_t){x,y,w,h},p);
+uint32_t perf_frames, perf_max, perf_slow, perf_ticks;
+
+static uint32_t next_rng(void) {
+  rng ^= rng << 13, rng ^= rng >> 17, rng ^= rng << 5;
+  return rng;
 }
-static bool save(void) {
-  dk_encode_stats(&stats,save_data);
-  uint32_t hash=save_data[28]|(uint32_t)save_data[29]<<8|(uint32_t)save_data[30]<<16|(uint32_t)save_data[31]<<24;
-  if(have_save&&hash==last_checksum&&!save_failed)return true;
-  save_failed=!ef_write("donkeykong.sav",save_data,DK_SAVE_BYTES);
-  if(!save_failed)have_save=true,last_checksum=hash;
-  return !save_failed;
+
+static void best_of_run(void) {
+  uint32_t s = dk_score(&run);
+  view.new_best = s > prof.best;
+  if (s > prof.best) prof.best = s;
 }
-static void fresh(uint32_t seed) {
-  if(stats.runs<UINT32_MAX)++stats.runs;
-  dk_new(&game,seed^(stats.runs*0x9E3779B9u));
+
+static void new_game(void) {
+  dk_new_game(&run, next_rng());
+  uint32_t b = prof.best > 7650 ? prof.best : 7650; /* the arcade's table starts at 7650 */
+  for (int i = 0; i < 3; i++, b /= 100) DK_RAM(&run, 0x60B8 + i) = (uint8_t)((b % 100 / 10) << 4 | b % 10);
+  prof.has_run = 1;
+  if (prof.games < 0xFFFFFFFFu) prof.games++;
+  view.screen = DK_SCREEN_PLAY;
+  shown_mode = 0;
 }
-int main(void) {
-  np_app_begin();
-  uint32_t length=0;const uint8_t *data=ef_read("donkeykong.sav",&length);
-  dk_decode_stats(&stats,data,length);dk_new(&game,1981);
-  bool ongoing=false;
-  unsigned view=DK_TITLE,selected=0,error_return=DK_TITLE,error_selection=0;
-  uint64_t previous=eadk_keyboard_scan(),stale=previous;
-  uint32_t now=(uint32_t)eadk_timing_millis(),last=now,draw_at=now,save_at=now,accum=0;
-  dk_invalidate();
-  for(;;) {
-    now=(uint32_t)eadk_timing_millis();uint32_t elapsed=now-last;last=now;
-    uint64_t keys=eadk_keyboard_scan();stale&=keys;
-    uint64_t active=keys&~stale,hit=active&~previous;previous=active;
-    bool ok=(hit&(KEY(eadk_key_ok)|KEY(eadk_key_exe)))!=0;
-    bool back=(hit&KEY(eadk_key_back))!=0;
-    bool next=(hit&(KEY(eadk_key_down)|KEY(eadk_key_right)))!=0;
-    bool prev=(hit&(KEY(eadk_key_up)|KEY(eadk_key_left)))!=0;
-    if(view!=DK_SAVE_ERROR&&(keys&(KEY(eadk_key_home)|KEY(eadk_key_on_off)))) {
-      if(save())break;
-      error_return=view==DK_PLAY?DK_PAUSE:view;error_selection=selected;
-      view=DK_SAVE_ERROR;ok=back=next=prev=false;stale=keys;
-    }
-    if(view==DK_PLAY) {
-      if(back)view=DK_PAUSE,selected=0,accum=0,save();
-      else {
-        unsigned input=0;
-        if(active&(KEY(eadk_key_left)|KEY(eadk_key_four)))input|=DK_LEFT;
-        if(active&(KEY(eadk_key_right)|KEY(eadk_key_six)))input|=DK_RIGHT;
-        if(active&(KEY(eadk_key_up)|KEY(eadk_key_eight)))input|=DK_UP;
-        if(active&(KEY(eadk_key_down)|KEY(eadk_key_two)))input|=DK_DOWN;
-        if(active&(KEY(eadk_key_ok)|KEY(eadk_key_exe)|KEY(eadk_key_shift)))input|=DK_JUMP;
-        if(elapsed>66)elapsed=66;
-        accum+=elapsed*60;
-        while(accum>=1000)dk_step(&game,&stats,(uint8_t)input),accum-=1000;
-        if(game.phase==DK_OVER)view=DK_RESULT,selected=0,ongoing=false,save();
-        if(now-save_at>=5000)save(),save_at=now;
-      }
-    } else {
-      accum=0;
-      if(view==DK_TITLE) {
-        if(next)selected=(selected+1)%3;
-        if(prev)selected=(selected+2)%3;
-        if(back||(ok&&selected==2)) {
-          if(save())break;
-          error_return=DK_TITLE;error_selection=selected;view=DK_SAVE_ERROR;
-        } else if(ok&&selected==0) {
-          if(!ongoing)fresh(now),ongoing=true;
-          game.previous_input=DK_JUMP;stale|=keys;view=DK_PLAY;
-        } else if(ok&&selected==1)view=DK_HELP;
-      } else if(view==DK_HELP) {
-        if(ok||back)view=DK_TITLE,selected=1;
-      } else if(view==DK_PAUSE) {
-        if(next)selected=(selected+1)%3;
-        if(prev)selected=(selected+2)%3;
-        if(back||(ok&&selected==0))view=DK_PLAY,stale|=keys;
-        else if(ok&&selected==1)view=DK_CONFIRM,selected=0;
-        else if(ok&&selected==2)view=DK_TITLE,selected=0;
-      } else if(view==DK_CONFIRM) {
-        if(next||prev)selected=!selected;
-        if(back||(ok&&selected==0))view=DK_PAUSE,selected=1;
-        else if(ok)fresh(now),view=DK_PLAY,selected=0,stale|=keys;
-      } else if(view==DK_RESULT) {
-        if(next||prev)selected=!selected;
-        if(back||(ok&&selected))view=DK_TITLE,selected=0;
-        else if(ok)fresh(now),view=DK_PLAY,selected=0,ongoing=true,stale|=keys;
-      } else if(view==DK_SAVE_ERROR) {
-        if(back)break;
-        if(ok&&save())break;
-        if(hit&KEY(eadk_key_one))view=error_return,selected=error_selection;
-      }
-    }
-    if(now-draw_at>=16||hit||!perf_frames) {
-      uint32_t start=(uint32_t)eadk_timing_millis();
-      dk_render(&game,&stats,view,selected,ongoing,save_failed,now,push);
-      uint32_t spent=(uint32_t)eadk_timing_millis()-start;
-      if(spent>perf_max)perf_max=spent;
-      if(spent>17)++perf_slow;
-      ++perf_frames;draw_at=now;
-    }
-    eadk_timing_msleep(2);
+
+static void end_game(void) {
+  best_of_run();
+  prof.has_run = 0;
+  save_write(&prof, 0);
+}
+
+/* the joystick: four ways like the arcade's, the latest arrow pressed winning */
+static uint8_t joystick(uint32_t live, uint32_t hit) {
+  static const uint32_t keys[4] = {JK_RIGHT, JK_LEFT, JK_UP, JK_DOWN};
+  for (int i = 0; i < 4; i++)
+    if (hit & keys[i]) last_dir = (uint8_t)(1 << i);
+  bool held = false;
+  for (int i = 0; i < 4; i++)
+    if (last_dir == 1 << i && (live & keys[i])) held = true;
+  if (!held) {
+    last_dir = 0;
+    for (int i = 0; i < 4 && !last_dir; i++)
+      if (live & keys[i]) last_dir = (uint8_t)(1 << i);
   }
-  return np_app_end();
+  return (uint8_t)(last_dir | ((live & JK_OK) ? DK_JUMP : 0));
+}
+
+static void track(void) { /* totals: boards cleared, the highest level */
+  int m = dk_mode(&run);
+  if (m == DK_MODE_CLEAR && shown_mode != DK_MODE_CLEAR && prof.boards < 0xFFFFFFFFu) prof.boards++;
+  shown_mode = (uint8_t)m;
+  if (dk_level(&run) > prof.best_level) prof.best_level = (uint16_t)dk_level(&run);
+}
+
+static void sync_view(void) {
+  view.best = prof.best, view.games = prof.games, view.best_level = prof.best_level, view.has_run = prof.has_run;
+}
+
+int main(void) {
+  plat_begin();
+  gfx_buf = strip;
+  save_load(&prof, &run);
+  rng = plat_random() ^ prof.games * 0x9E3779B9u;
+  if (!rng) rng = 1;
+  view.screen = prof.has_run ? DK_SCREEN_PAUSE : DK_SCREEN_TITLE;
+  uint32_t stale = plat_keys(), prev = stale, last = plat_millis(), acc = 0, saved_at = last;
+  uint8_t shown = 0xff;
+  bool redraw = true;
+  dk_draw_invalidate();
+  for (;;) {
+    uint32_t now = plat_millis(), keys = plat_keys();
+    stale &= keys; /* keys still down from the screen before don't count */
+    uint32_t live = keys & ~stale, hit = live & ~prev;
+    prev = live;
+    if (keys & JK_HOME) {
+      if (view.screen == DK_SCREEN_OVER || !prof.has_run) save_write(&prof, 0);
+      else save_write(&prof, &run);
+      break;
+    }
+    uint32_t dt = now - last;
+    last = now;
+    if (dt > 100) dt = 100;
+    /* 60ths of a second gone by: the game steps that many times, 4 at most (slower rather than skipping) */
+    acc += dt * 60;
+    int ticks = 0;
+    while (acc >= 1000 && ticks < 4) acc -= 1000, ticks++;
+    if (acc >= 1000) acc = 0;
+    int steps = 0;
+    switch (view.screen) {
+    case DK_SCREEN_TITLE:
+      view.clock += (uint32_t)ticks;
+      redraw |= ticks > 0;
+      if (hit & JK_BACK) {
+        save_write(&prof, 0);
+        return plat_end();
+      }
+      if (hit & JK_OK) {
+        if (!prof.guide_seen) back_to = DK_SCREEN_PLAY, view.screen = DK_SCREEN_GUIDE;
+        else new_game();
+      }
+      break;
+    case DK_SCREEN_GUIDE:
+      if (hit & (JK_OK | JK_BACK)) {
+        prof.guide_seen = 1;
+        if (back_to == DK_SCREEN_PLAY) new_game();
+        else view.screen = back_to, view.sel = 2;
+      }
+      break;
+    case DK_SCREEN_PLAY:
+      if (hit & JK_BACK) {
+        view.screen = DK_SCREEN_PAUSE, view.sel = 0;
+        save_write(&prof, &run), saved_at = now;
+        break;
+      }
+      for (; steps < ticks; steps++) {
+        dk_tick(&run, joystick(live, steps ? 0 : hit));
+        perf_ticks++;
+        track();
+      }
+      if (run.over) {
+        end_game();
+        view.screen = DK_SCREEN_OVER, view.sel = 0;
+      } else if (now - saved_at > 10000) {
+        save_write(&prof, &run), saved_at = now;
+      }
+      break;
+    case DK_SCREEN_PAUSE:
+      if (hit & JK_UP) view.sel = (uint8_t)((view.sel + 3) % 4);
+      if (hit & JK_DOWN) view.sel = (uint8_t)((view.sel + 1) % 4);
+      if (hit & JK_BACK) view.screen = DK_SCREEN_PLAY, acc = 0;
+      else if (hit & JK_OK) {
+        if (view.sel == 0) view.screen = DK_SCREEN_PLAY, acc = 0;
+        else if (view.sel == 2) back_to = DK_SCREEN_PAUSE, view.screen = DK_SCREEN_GUIDE;
+        else view.confirm = view.sel == 3, view.screen = DK_SCREEN_CONFIRM, view.sel = 0;
+      }
+      break;
+    case DK_SCREEN_CONFIRM:
+      if (hit & (JK_UP | JK_DOWN)) view.sel ^= 1;
+      if ((hit & JK_BACK) || ((hit & JK_OK) && view.sel == 0)) {
+        view.sel = view.confirm ? 3 : 1, view.screen = DK_SCREEN_PAUSE;
+      } else if (hit & JK_OK) {
+        end_game();
+        if (view.confirm) view.screen = DK_SCREEN_TITLE, view.sel = 0;
+        else new_game();
+      }
+      break;
+    case DK_SCREEN_OVER:
+      if (hit & (JK_UP | JK_DOWN)) view.sel ^= 1;
+      if (hit & JK_BACK) view.screen = DK_SCREEN_TITLE;
+      else if (hit & JK_OK) {
+        if (view.sel == 0) new_game();
+        else view.screen = DK_SCREEN_TITLE;
+      }
+      break;
+    }
+    if (view.screen != shown) {
+      stale = keys, prev = 0; /* a new screen starts with all keys up */
+      shown = view.screen, redraw = true;
+      last_dir = 0;
+    }
+    if (steps || redraw || hit) {
+      sync_view();
+      uint32_t t0 = plat_millis();
+      dk_draw(&run, &view);
+      uint32_t spent = plat_millis() - t0;
+      if (view.screen == DK_SCREEN_PLAY) {
+        perf_frames++;
+        if (spent > perf_max) perf_max = spent;
+        if (spent > 33) perf_slow++;
+      }
+      redraw = false;
+    } else {
+      plat_sleep(2);
+    }
+  }
+  return plat_end();
 }
