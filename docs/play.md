@@ -639,6 +639,19 @@ Each block slides in from one side, along one edge of the tower and then the oth
 
 <br clear="right">
 
+## Core Ball
+
+<img src="../games/coreball/docs/shot.png" width="320" align="right" alt="Core Ball">
+
+| Key | What it does |
+| --- | --- |
+| **OK** (or **EXE**) | Shoot a ball |
+| **Back** | Menu (with Restart, Levels, How to play and Quit) |
+
+Shoot every ball onto the spinning core without touching the balls already on it. The core turns faster, slower and back the other way as the levels go on, through 60 levels. The screen turns green when the level is cleared and red when two balls touch. Your level is saved.
+
+<br clear="right">
+
 ## Pac-Man
 
 <img src="../games/pacman/docs/shot.png" width="320" align="right" alt="Pac-Man">

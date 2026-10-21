@@ -5,7 +5,8 @@
  *                      clear with a ball still flying, the miss, the screens' timings; a bot clears all 60
  *                      levels; 300 random sessions through the menus and play (quitting and opening again)
  *                      never break a rule; saves come back, damaged ones reset
- *   play shot DIR      pictures (DIR/NAME.ppm): start, play, clear, miss, levels, menu, help, end */
+ *   play shot DIR      pictures (DIR/NAME.ppm): start, play, clear, miss, levels, menu, help, end
+ *   play film DIR N    N pictures of the bot playing on from level 3, one every 2 frames (DIR/f_NNNN.ppm) */
 #define NP_MODULE 1 /* (its drawing pushed to fb, its saves kept in disk, below) */
 #define main cb_main
 #include "../src/main.c"
@@ -317,7 +318,26 @@ static void shots(const char *dir) {
   picture(dir, "end");
 }
 
+static void film(const char *dir, int n) {
+  char name[32];
+  sv = (typeof(sv)){0}, sv.level = sv.best = 3, sv.flags = SEEN;
+  seed = 5;
+  start(3);
+  for (int f = 0, k = 0, wait = 0; k < n; f++) {
+    if (g.state == ST_RUN && g.landed == g.popped && rnd() % 6 == 0 && safe_now()) g.pending++;
+    if (g.state == ST_START && ++wait == 30) wait = 0, start(sv.level);
+    tick();
+    if (f % 2) continue;
+    snprintf(name, sizeof name, "f_%04d", k++);
+    picture(dir, name);
+  }
+}
+
 int main(int argc, char **argv) {
+  if (argc >= 4 && !strcmp(argv[1], "film")) {
+    film(argv[2], atoi(argv[3]));
+    return 0;
+  }
   if (argc >= 3 && !strcmp(argv[1], "shot")) {
     shots(argv[2]);
     return 0;
