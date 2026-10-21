@@ -948,7 +948,7 @@ static void shop(void) {
       rect(x, y, CARD_W, CARD_H, C(0x425367), 204);
       round_rect(x, y, CARD_W, CARD_H, 0, 1, C(0x2D3738), 256);
       if (own) raw_scaled(b, cx - 14, cy - 5 - 14, 28, 28, 256);
-      else mask(&art_lock, cx - 8, cy - 11, WHITE, 256), price_tag(cx, cy + 30, art_ball_info_[i].price);
+      else if (x >= 52 && x + CARD_W <= W) mask(&art_lock, cx - 8, cy - 11, WHITE, 256), price_tag(cx, cy + 30, art_ball_info_[i].price);
       if (i == V->ball) round_rect(x - 1, y - 1, CARD_W + 2, CARD_H + 2, 0, 2, WHITE, 256);
       if (!V->shop_side && i == V->shop_sel) focus(x - 1, y - 1, CARD_W + 2, CARD_H + 2, 2);
     }
