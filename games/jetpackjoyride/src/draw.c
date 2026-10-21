@@ -16,6 +16,7 @@
 /* ---------------------------------------------------------------- pictures */
 enum { FLIP_X = 1, FLIP_Y = 2, WHITEN = 4 };
 
+static int from_row; /* (blit draws only from this row down: the band under the key line, drawn again) */
 static void blit(const jj_sheet *s, int f, int ax, int ay, int flags) {
   const jj_frame *fr = &s->f[f];
   int w = fr->w, h = fr->h;
@@ -24,6 +25,7 @@ static void blit(const jj_sheet *s, int f, int ax, int ay, int flags) {
   if (y >= gfx_y1 || y + h <= gfx_y0 || x >= SCREEN_W || x + w <= 0) return;
   const uint8_t *base = s->data + fr->data;
   int r0 = y < gfx_y0 ? gfx_y0 - y : 0, r1 = y + h > gfx_y1 ? gfx_y1 - y : h;
+  if (r0 < from_row - y) r0 = from_row - y;
   for (int r = r0; r < r1; r++) {
     int src = flags & FLIP_Y ? h - 1 - r : r;
     const uint8_t *p = base + (base[2 * src] | base[2 * src + 1] << 8);
@@ -304,6 +306,7 @@ static void hud(bool keys) {
     outlined(&np_font_body, 25, 58, s, WHITE, false);
   }
   if (keys) {
+    from_row = 222, lab((int)(R->dist / 24)), from_row = 0; /* (nothing of the run over the key line) */
     static const char *const k[JJ_RIDES] = {"Hold OK to fly   Back pause", "Hold OK to jump and glide   Back pause",
                                             "OK jump   Back pause", "OK flap   Back pause", "OK flip gravity   Back pause",
                                             "OK teleport to the arrow   Back pause"};
