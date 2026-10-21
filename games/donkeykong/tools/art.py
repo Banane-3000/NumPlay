@@ -389,18 +389,20 @@ S[0x13] = ("paul_low", grid([
     "...BBBB..BBBB...",
     "...BB......BB...",
 ], P_LOW))
-S[0x14] = ("paul_low", grid([
-    "................",
-    "................",
-    "..PPPPP.........",
-    ".PPPPPPPW.......",
-    ".PPPPPPPPW......",
-    "..PPPPPPPPWW....",
-    "...PPPPPPP.WW...",
-    "....PP..WW..WWB.",
-    "...WW....WW..BBB",
-    "..BB......WWBB..",
-    ".BBB.......BB...",
+S[0x14] = ("paul_low", grid([  # carried under Kong's arm
+    "......PPPPP.....",
+    ".....PPPPPPP....",
+    ".....PPPPPPP....",
+    "....PPPPPPPPP...",
+    "...PPPPPPPPPPP..",
+    "...PPPWPPPPWPP..",
+    "..PPPPWWPPWWPPP.",
+    "..PPPPPPWWPPPPP.",
+    "...PPPPPPPPPPP..",
+    ".....WW...WW....",
+    ".....WW....WW...",
+    "....BBB.....BB..",
+    "....BB......BBB.",
 ], P_LOW))
 
 # barrels: rolling (turned a quarter at a time by flips), falling down a ladder (seen from the side),
@@ -616,19 +618,19 @@ DR = "LCW"
 S[0x49] = ("blue", grid([
     "................",
     "LLLLLLLLLLLLLLLL",
-    "LWLLLLLLLLLLLLLL",
-    "LWCCCCCCCCCCCCCL",
-    "LWLLLLLLLLLLLLLL",
-    "LWLCCCLCCLCLLLLL",
-    "LWLCLCLLCLLCLLLL",
-    "LWLCLCLLCLLCLLLL",
-    "LWLCCCLCCCLCCCLL",
-    "LWLLLLLLLLLLLLLL",
-    "LWCCCCCCCCCCCCCL",
-    "LWLLLLLLLLLLLLLL",
-    "LWLLWWLWWLWWLWWL",
-    "LWLLLLLLLLLLLLLL",
-    "LWLLLLLLLLLLLLLL",
+    "LCCCCCCCCCCCCCCL",
+    "LCLLLLLLLLLLLLLL",
+    "LCLLLLLLLLLLLLLL",
+    "LCWWWLWWWLWLLLLL",
+    "LCWLWLLWLLWLLLLL",
+    "LCWLWLLWLLWLLLLL",
+    "LCWLWLLWLLWLLLLL",
+    "LCWWWLWWWLWWWLLL",
+    "LCLLLLLLLLLLLLLL",
+    "LCLLLLLLLLLLLLLL",
+    "LCCCCCCCCCCCCCCL",
+    "LCLLLLLLLLLLLLLL",
+    "LCLLLLLLLLLLLLLL",
     "LLLLLLLLLLLLLLLL",
 ], DR))
 FL = "RYW"
@@ -971,17 +973,16 @@ heart = [
     ".......PP.......",
 ]
 S[0x76] = ("heart", grid(heart, HE))
-broken = [list(r) for r in grid(heart, HE)]
-for y in range(16):  # a crack down the middle, the halves apart
+broken = [[0] * 16 for _ in range(16)]
+whole = grid(heart, HE)
+crack = [7, 7, 8, 8, 7, 6, 7, 8, 9, 8, 7, 7, 8, 8, 7, 7]   # a jagged line down the middle
+for y in range(16):
     for x in range(16):
-        if x in (7, 8):
-            broken[y][x] = 0
-    for x in range(7, 0, -1):
-        broken[y][x] = broken[y][x - 1]
-    broken[y][0] = 0
-    for x in range(8, 15):
-        broken[y][x] = broken[y][x + 1]
-    broken[y][15] = 0
+        if not whole[y][x] or x == crack[y]:
+            continue
+        nx = x - 1 if x < crack[y] else x + 1               # the two halves apart
+        if 0 <= nx < 16:
+            broken[y][nx] = whole[y][x]
 S[0x77] = ("heart", broken)
 
 # the points: 100, 200, 300, 500, 800 (in Kong's face colours, white digits)
@@ -1187,128 +1188,88 @@ KONG_PARTS = {
         "................",
     ], K),
 }
-# side view, facing left, taking a barrel from the pile (0x3982): a 3x2 block of parts
-SIDE_ROWS = [
-    ".....BBBBBB.....  ..BBBBBBBBBBB...  ................",
-    "...BBBBBBBBBB...  .BBBBBBBBBBBBBB.  ................",
-    "..BBBBBBBBBBBB..  BBBBBBBBBBBBBBBB  B...............",
-    ".BBBBBPPPPPBBBB.  BBBBBBBBBBBBBBBB  BB..............",
-    ".BBBBPPPPPPPBBB.  BBBBBBBBBBBBBBBB  BBB.............",
-    "BBBBPPWWPPPPPBBB  BBBBBBBBBBBBBBBB  BBBB............",
-    "BBBPPPBWPPPPPBBB  BBBBBBBBBBBBBBBB  BBBBB...........",
-    "PPPPPPPPPPPPPBBB  BBBBBBBBBBBBBBBB  BBBBB...........",
-    "PPPPPPPPPPPPPBBB  BBBBBBBBBBBBBBBB  BBBBBB..........",
-    "PPPPPPPPPPPPBBBB  BBBBBBBBBBBBBBBB  BBBBBB..........",
-    "PBBBBBBBBBPPBBBB  BBBBBBBBBBBBBBBB  BBBBBBB.........",
-    "PPPPPPPPPPPPBBBB  BBBBBBBBBBBBBBBB  BBBBBBB.........",
-    ".PPPPPPPPPPBBBBB  BBBBBBBBBBBBBBBB  BBBBBBBB........",
-    "..BBBBBBBBBBBBBB  BBBBBBBBBBBBBBBB  BBBBBBBB........",
-    "...BBBBBBBBBBBBB  BBBBBBBBBBBBBBBB  BBBBBBBBB.......",
-    ".....BBBBBBBBBBB  BBBBBBBBBBBBBBBB  BBBBBBBBB.......",
-    "........BBBBBBBB  BBBBBBBBBBBBBBBB  BBBBBBBBBB......",
-    ".......BBBBBBBBB  BBBBBBBBBBBBBBBB  BBBBBBBBBB......",
-    "......BBBBBBBBBB  BBBBBBBBBBBBBBBB  BBBBBBBBBBB.....",
-    ".....BBBBBBBBBBB  BBBBBBBBBBBBBBBB  BBBBBBBBBBB.....",
-    "....BBBBBBBBBB.B  BBBBBBBBBBBBBBBB  BBBBBBBBBBB.....",
-    "...BBBBBBBBBB..B  BBBBBBBBBBBBBBBB  BBBBBBBBBBB.....",
-    "..BBBBBBBBBB...B  BBBBBBBBBBBBBBBB  BBBBBBBBBBB.....",
-    ".BBBBBBBBBB....B  BBBBBBBBBBBBBBBB  BBBBBBBBBBBB....",
-    ".BBBBBBBBB.....B  BBBBBBBBBBBBBBBB  BBBBBBBBBBBB....",
-    "BBBBBBBBB......B  BBBBBBBBBBBBBBBB  BBBBBBBBBBBB....",
-    "OBBBBBBO.......B  BBBBBBBBBBBBBBB.  BBBBBBBBBBBB....",
-    "PPPPPPPP.......B  BBBBBBBBBBBBBB..  .BBBBBBBBBBO....",
-    "PPPPPPPPP.......  .BBBBBBBBBBBB...  .PPPPPPPPPPPP...",
-    "PP.PPP.PP.......  ..BBBBBBBBBB....  .PPPPPPPPPPPPP..",
-    "................  ................  PPP.PPP.PP.PPP..",
-    "................  ................  ................",
-]
-side = [r.split("  ") for r in SIDE_ROWS]
+# side view, facing left, taking a barrel from the pile (0x3982): a 3x2 block of parts, cut from one picture
+def side_kong():
+    g = [["."] * 48 for _ in range(32)]
+    def run(y, x0, x1, ch="B"):
+        for x in range(x0, x1 + 1):
+            g[y][x] = ch
+    head = {0: (6, 10), 1: (4, 12), 2: (3, 13), 3: (2, 14), 4: (2, 14), 5: (1, 14), 6: (1, 14), 7: (0, 14), 8: (0, 14),
+            9: (0, 14), 10: (0, 14), 11: (0, 14), 12: (1, 14), 13: (2, 14), 14: (3, 14), 15: (5, 14)}
+    back = {0: (23, 28), 1: (20, 30), 2: (18, 31), 3: (16, 31), 22: (15, 30), 23: (17, 29)}
+    for y in range(4, 16):
+        back[y] = (14, 31)
+    for y in range(16, 22):
+        back[y] = (11, 31)
+    rump = {16: (28, 38), 17: (27, 41), 18: (27, 43), 19: (27, 44), 20: (27, 45), 21: (28, 45), 22: (29, 45),
+            23: (30, 45), 24: (32, 45), 25: (34, 45), 26: (36, 45), 27: (37, 45)}
+    arm = {13: (9, 16), 14: (8, 16), 15: (7, 15), 16: (6, 14), 17: (5, 13), 18: (4, 12), 19: (3, 11), 20: (2, 10),
+           21: (2, 9), 22: (1, 8), 23: (1, 8)}
+    for part in (back, rump, arm, head):
+        for y, (x0, x1) in part.items():
+            run(y, x0, x1)
+    for y, (x0, x1) in {6: (1, 6), 7: (0, 7), 8: (0, 8), 9: (0, 8), 10: (0, 8), 11: (0, 8), 12: (1, 7)}.items():
+        run(y, x0, x1, "P")   # his muzzle
+    run(10, 1, 7)             # the mouth
+    g[4][4] = g[4][5] = g[5][4] = "W"
+    for y, (x0, x1) in {24: (0, 8), 25: (0, 9), 26: (0, 9), 27: (0, 8)}.items():
+        run(y, x0, x1, "P")   # his hand on the barrel
+    for x in (0, 2, 3, 5, 6):
+        g[28][x] = "P"
+    g[23][1] = g[23][8] = "O"
+    for y, (x0, x1) in {28: (36, 46), 29: (35, 47), 30: (34, 47)}.items():
+        run(y, x0, x1, "P")   # his foot
+    for x in (34, 36, 37, 39, 40, 42, 43, 45, 46):
+        g[31][x] = "P"
+    g[27][37] = g[27][45] = "O"
+    for (y, x0, x1) in ((3, 19, 26), (4, 17, 18), (4, 27, 28), (5, 16, 16), (5, 29, 29), (18, 33, 38), (19, 31, 32),
+                        (19, 39, 40), (16, 9, 9), (17, 8, 8), (18, 7, 7), (19, 6, 6)):
+        run(y, x0, x1, "O")   # his fur catching the light
+    return ["".join(r) for r in g]
+
+
+SIDE_ROWS = side_kong()
+side = [[r[0:16], r[16:32], r[32:48]] for r in SIDE_ROWS]
 SIDE_CODES = {0x30: (0, 0, "kface"), 0x2F: (1, 0, "kong"), 0x2D: (0, 1, "kong"), 0x2E: (1, 1, "kong"),
               0x2C: (2, 1, "kong")}
-# climbing his ladders, seen from behind (0x388C)
+# climbing his ladders, seen from behind (0x388C): both halves of his back, an arm up and one down (mirrored in
+# turn by the game), his feet, and his right arm round Pauline
+BACK = [
+    "...........BBBBBBBBBB...........",
+    ".........BBBBBBBBBBBBBB.........",
+    "........BBBBBBBBBBBBBBBB........",
+    "........BBBBBBBBBBBBBBBB........",
+    "...BBBBBBBBBBBBBBBBBBBBBBBBBB...",
+    ".BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.",
+    "BBBBBOOBBBBBBBBBBBBBBBBBBOOBBBBB",
+    "BBBBOBBBBBBBBBBBBBBBBBBBBBBOBBBB",
+    "BBBBBBBBBBBBBBBOOBBBBBBBBBBBBBBB",
+    ".BBBBBBBBBBBBBBOOBBBBBBBBBBBBBB.",
+    "..BBBBBBBBBBBBBOOBBBBBBBBBBBBB..",
+    "...BBBBBBBBBBBBBBBBBBBBBBBBBB...",
+    "....BBBBBBBBBBBBBBBBBBBBBBBB....",
+    "....BBBBBBBBBBBBBBBBBBBBBBBB....",
+    ".....BBBBBBBBBBBBBBBBBBBBBB.....",
+    "......BBBBBBBBBBBBBBBBBBBB......",
+]
 CLIMB = {
-    0x32: [  # his back, left
-        "................",
-        "................",
-        "................",
-        "................",
-        "........BBBBBBBB",
-        "......BBBBBBBBBB",
-        ".....BBBBBBBBBBB",
-        "....BBBBBBBBBBBB",
-        "....BBBBBBBBBBBB",
-        "...BBBBBBBBBBBBB",
-        "...BBBBBBBBBBBBB",
-        "...BBBBBBBBBBBBB",
-        "...BBBBBBBBBBBBB",
-        "....BBBBBBBBBBBB",
-        "....BBBBBBBBBBBB",
-        ".....BBBBBBBBBBB",
-    ],
-    0x34: [  # left arm up, reaching for a rung
-        ".PPPPPP.........",
-        ".PPPPPPP........",
-        "..PPPPPP........",
-        "...OBBO.........",
-        "...BBBB.........",
-        "...BBBBB........",
-        "...BBBBBB.......",
-        "....BBBBBB......",
-        ".....BBBBBB.....",
-        "......BBBBBB....",
-        ".......BBBBBB...",
-        "........BBBBB...",
-        "................",
-        "................",
-        "................",
-        "................",
-    ],
-    0x35: [  # right arm down, holding on
-        "................",
-        "................",
-        "................",
-        "................",
-        "................",
-        "................",
-        "BBBB............",
-        "BBBBBB..........",
-        ".BBBBBB.........",
-        "..BBBBBB........",
-        "...BBBBBO.......",
-        "....BBPPPP......",
+    0x32: [r[:16] for r in BACK],
+    0x33: [r[16:] for r in BACK],
+    0x34: [  # left arm up, on a rung
         ".....PPPPPP.....",
-        ".....PPPPPP.....",
-        "......PPPP......",
-        "................",
-    ],
-    0x36: [  # left foot, on a rung
-        "....BBBBBBBBBBBB",
-        "....BBBBBBBBBBBB",
-        ".....BBBBBBBBBBB",
-        ".....BBBBBB.BBBB",
-        ".....BBBBBB.....",
-        ".....BBBBBB.....",
-        ".....BBBBBB.....",
-        ".....BBBBBB.....",
-        ".....BBBBBB.....",
+        "....PPPPPPPP....",
+        "....PPPPPPPP....",
         ".....OBBBBO.....",
-        "....PPPPPPPP....",
-        "....PPPPPPPP....",
-        "................",
-        "................",
-        "................",
-        "................",
+        ".....BBBBBB.....",
+        ".....BBBBBB.....",
+        ".....BBBBBBB....",
+        "....BBBBBBBB....",
+        "....BBBBBBBBB...",
+        "....BBBBBBBBB...",
+        "....BBBBBBBB....",
+        ".....BBBBBB.....",
     ],
-    0x37: [  # right foot, stepping up
-        "BBBBBBBBBBBB....",
-        "BBBBBBBBBBBB....",
-        "BBBBBBBBBBB.....",
-        "BBBBBBBBBBB.....",
-        "BBBBBBBBBB......",
-        "..BBBBBBB.......",
-        "..OBBBBO........",
-        ".PPPPPPPP.......",
-        ".PPPPPPPP.......",
+    0x35: [  # right arm down, on a lower rung
         "................",
         "................",
         "................",
@@ -1316,24 +1277,52 @@ CLIMB = {
         "................",
         "................",
         "................",
+        ".....BBBBBB.....",
+        ".....BBBBBBB....",
+        "....BBBBBBBB....",
+        "....BBBBBBBB....",
+        "....OBBBBBBO....",
+        "...PPPPPPPP.....",
+        "...PPPPPPPP.....",
+        "....PPPPPP......",
+    ],
+    0x36: [  # left foot, down on a rung
+        ".....BBBBBBBBB..",
+        ".....BBBBBBBBB..",
+        "....BBBBBBBBB...",
+        "....BBBBBBBB....",
+        "....BBBBBBB.....",
+        "...BBBBBBB......",
+        "...BBBBBB.......",
+        "...BBBBBB.......",
+        "...OBBBBO.......",
+        "..PPPPPPPP......",
+        "..PPPPPPPPP.....",
+        "..PP.PP.PP......",
+    ],
+    0x37: [  # right foot, up on the next rung
+        "..BBBBBBBBB.....",
+        "..BBBBBBBBBB....",
+        "...BBBBBBBBBB...",
+        "....BBBBBBBBB...",
+        ".....OBBBBBBO...",
+        "....PPPPPPPPP...",
+        "....PPPPPPPPP...",
+        ".....PP.PP.PP...",
     ],
     0x31: [  # his right arm round Pauline
         "................",
         "................",
         "................",
-        "BBBBB...........",
-        "BBBBBBB.........",
-        ".BBBBBBBB.......",
-        "...BBBBBBB......",
-        ".....BBBBBO.....",
-        "......PPPPPP....",
-        ".....PPPPPPPP...",
-        ".....PPPPPPPP...",
-        "......PPPPPP....",
-        "................",
-        "................",
-        "................",
-        "................",
+        "..BBBBB.........",
+        "..BBBBBBB.......",
+        "..BBBBBBBBB.....",
+        "...BBBBBBBBB....",
+        "....BBBBBBBOO...",
+        "......BBBBPPPP..",
+        "........PPPPPPP.",
+        "........PPPPPPP.",
+        ".........PPPPP..",
     ],
 }
 for code, (pal, rows, keys) in {c: (v[0], v[1], v[2]) for c, v in KONG_PARTS.items()}.items():
@@ -1343,7 +1332,6 @@ for code, (cx, cy, pal) in SIDE_CODES.items():
     S[code] = (pal, grid(rows, KF if pal == "kface" else K))
 for code, rows in CLIMB.items():
     S[code] = ("kong", grid(rows, K))
-S[0x33] = ("kong", mirror(grid(CLIMB[0x32], K)))
 # dizzy faces after his fall (shown upside down by the game)
 for i, code in enumerate((0x20, 0x21, 0x22)):
     face = [list(r) for r in grid(KONG_PARTS[0x24][1], KF)]
@@ -1461,6 +1449,8 @@ def glyph(ch):
 
 def bold_rows(ch):
     """8 rows of 8 bits: the 5x7 glyph, each column doubled to the right (6 wide), one pixel in."""
+    if ch == "m":   # (metres: too thin to double)
+        return [0, 0, 0b01101100, 0b01111110, 0b01011010, 0b01011010, 0b01011010, 0]
     cols = glyph(ch)
     rows = []
     for y in range(8):

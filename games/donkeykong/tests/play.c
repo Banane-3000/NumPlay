@@ -627,8 +627,16 @@ static void picture(const dk_state *s, const char *dir, const char *name) {
 
 /* the bot's game, a picture of each board a while into it */
 static const char *shots_dir;
-static int shot_marks, board_frames, last_board;
+static int shot_marks, board_frames, last_board, scene_frames;
 static void shot_each(const dk_state *s) {
+  if (dk_mode(s) == DK_MODE_CLEAR) { /* the scenes after 25m and 100m */
+    scene_frames++;
+    if (game_boards == 1 && scene_frames == 150 && !(shot_marks & 64)) picture(s, shots_dir, "clear25"), shot_marks |= 64;
+    if (game_boards == 2 && M(s, 0x6388) == 5 && M(s, 0x62AF) == 0xB0 && !(shot_marks & 128))
+      picture(s, shots_dir, "clear100"), shot_marks |= 128;
+  } else {
+    scene_frames = 0;
+  }
   static const struct { int board, frames; const char *name; } when[] = {
       {1, 420, "25m"}, {2, 600, "100m"}, {4, 300, "75m"}, {7, 420, "50m"}, {6, 700, "shot"}};
   if (game_boards != last_board) last_board = game_boards, board_frames = 0;
@@ -659,6 +667,13 @@ static void shots(const char *dir) {
   picture(&s, dir, "howhigh");
   shots_dir = dir, shot_marks = 0, last_board = -1;
   bot_game(&s, 4242, 9, shot_each);
+  play_on(&s, 9, 1, 1); /* a barrel, and Mario's death */
+  for (int f = 0; f < 3000 && dk_mode(&s) != DK_MODE_DEAD; f++) dk_tick(&s, 0);
+  for (int f = 0; f < 0x40 + 8 * 5; f++) dk_tick(&s, 0);
+  picture(&s, dir, "death");
+  for (int f = 0; f < 20000 && !s.over; f++) dk_tick(&s, 0); /* the other lives, and GAME OVER */
+  view.screen = DK_SCREEN_OVER, view.sel = 0, view.new_best = 0;
+  picture(&s, dir, "over");
   view.screen = DK_SCREEN_PAUSE, view.sel = 0;
   picture(&s, dir, "pause");
 }
