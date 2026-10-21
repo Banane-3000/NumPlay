@@ -85,6 +85,17 @@ def icon_of(gid):
     return None
 
 
+def rounded(src, dst):
+    """An app icon as the website shows it: the calculator's white outside its corners made transparent, with
+    the corners every game icon has (make_icon.corner_mask), so it sits on the page as they do."""
+    from PIL import Image, ImageChops
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from make_icon import corner_mask
+    im = Image.open(src).convert("RGBA")
+    im.putalpha(ImageChops.darker(im.getchannel("A"), corner_mask(*im.size)))
+    im.save(dst, optimize=True)
+
+
 def gz(src, dst):
     with open(src, "rb") as f, open(dst, "wb") as g:
         g.write(gzip.compress(f.read(), 9, mtime=0))
@@ -132,7 +143,7 @@ def main():
         for part in ("name", "icon"):
             local[f"{v}-{part}.o"] = put(os.path.join(B, "variant", f"{v}-{part}.o"), f"variants/{v}-{part}.o")
         png = "icon.png" if v == "NumPlay" else "icon-" + v.split("-", 1)[1].lower() + ".png"
-        shutil.copy(os.path.join(ROOT, "launcher", "assets", png), os.path.join(O, "variants", v + ".png"))
+        rounded(os.path.join(ROOT, "launcher", "assets", png), os.path.join(O, "variants", v + ".png"))
         variants.append(v)
 
     games = []
@@ -160,7 +171,7 @@ def main():
         if os.path.exists(thumb):
             shutil.copy(thumb, os.path.join(O, "thumbs", i + ".png"))
         games.append({
-            "id": i, "index": n, "title": g["title"], "tagline": g["tagline"], "credit": g.get("credit"),
+            "id": i, "index": n, "rank": g.get("rank", 99), "title": g["title"], "tagline": g["tagline"], "credit": g.get("credit"),
             "top": g["top"], "bottom": g["bottom"], "accent": g["accent"],
             "flash": flash, "ram": ram, "heap": g.get("heap", 0), "default": i in default, "upsilon": i in upsilon,
             "roms": bool(g.get("roms")), "systems": g.get("systems"), "xl": bool(g.get("xl")),

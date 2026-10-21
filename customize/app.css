@@ -1,22 +1,19 @@
 :root {
   --bg: #f2f1ef;
   --ink: #1d1d1f;
-  --mute: #6e737a;
+  --text: #5f5c56;    /* (body text on --bg: 5.7 to 1) */
+  --mute: #6b6862;
   --track: #e3e1dd;
   --card: #ffffff;
   --btn: #1d1d1f;
   --btn-ink: #ffffff;
   --line: #b9b6b0;
   --blue: #0a84ff;
-  --shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+  --lift: drop-shadow(0 6px 9px rgba(0, 0, 0, 0.18));
   --ease: cubic-bezier(0.2, 0.9, 0.25, 1);
-  --spring: cubic-bezier(0.3, 1.5, 0.5, 1);
-  --t: 210ms;
+  --t: 160ms;
   /* the calculator, up close: wide enough that its screen and OK key fill the height of the window */
   --cw: clamp(420px, min(calc((100vh - 24px) * 0.925), calc(60vw - 80px)), 880px);
-  --plate-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1018 2000' preserveAspectRatio='none'%3E%3Cpath fill-rule='evenodd' d='M0 0H1018V2000H0Z M140 107H879A36 36 0 0 1 915 143V707A36 36 0 0 1 879 743H140A36 36 0 0 1 104 707V143A36 36 0 0 1 140 107Z'/%3E%3C/svg%3E");
-  --star-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M41.68,12.87 L57.12,36.01 L84.64,32.00 L67.40,53.83 L79.73,78.77 L53.64,69.12 L33.73,88.54 L34.84,60.75 L10.22,47.82 L36.99,40.29Z' fill='black' stroke='black' stroke-width='14' stroke-linejoin='round'/%3E%3C/svg%3E");
-  --star-foil: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M41.68,12.87 L57.12,36.01 L84.64,32.00 L67.40,53.83 L79.73,78.77 L53.64,69.12 L33.73,88.54 L34.84,60.75 L10.22,47.82 L36.99,40.29Z' fill='black' stroke='black' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 * { box-sizing: border-box; }
@@ -35,368 +32,269 @@ a { color: inherit; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 [hidden] { display: none !important; }
 
-/* ---- the page: NumPlay, yours, and its games on the left; the calculator, up close, on the right */
+/* ---- the page: what NumPlay is and its games on the left; the calculator, up close, on the right */
 main {
   display: grid; grid-template-columns: minmax(0, 1fr) calc(var(--cw) + 96px);
   grid-template-rows: auto 1fr; grid-template-areas: "head device" "games device";
   min-height: 100vh;
 }
-.head { grid-area: head; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 16px; padding: 40px 32px 0 56px; }
+.head { grid-area: head; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 20px; padding: 40px 32px 0 56px; container-type: inline-size; }
 .games { grid-area: games; display: flex; flex-direction: column; gap: 14px; padding: 30px 32px 28px 56px; max-width: 560px; }
-.title { border: 0; background: none; padding: 0; cursor: pointer; text-align: left; display: flex; flex-direction: column; line-height: 0.95; }
-.title .word { font-size: clamp(52px, 5.4vw, 80px); font-weight: 800; letter-spacing: -0.045em; }
-.title .word { display: flex; }
-.title .word i { font-style: normal; display: inline-block; transition: transform 260ms var(--spring); }
-.title .word i.lift { transform: translateY(-0.12em); }
-.title:focus-visible { border-radius: 16px; }
-.chips { display: flex; gap: 8px; margin: 0 0 6px auto; }
-.lede { flex-basis: 100%; margin: 4px 0 0; min-height: 1.4em; font-size: 16px; font-weight: 550; color: #858279; transition: opacity 200ms var(--ease); }
-.lede.swap { opacity: 0; }
-.row-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; font-size: 13px; font-weight: 650; color: #858279; }
-.row-head .sub { font-weight: 500; }
-.retro .row-head { justify-content: flex-start; }
+.title { margin: 0; font-size: clamp(40px, calc((100cqw - 170px) / 4.3), 76px); font-weight: 800; letter-spacing: -0.045em; line-height: 1; }
+.chips { display: flex; gap: 8px; }
+.lede { grid-column: 1 / -1; margin: 10px 0 0; max-width: 34em; font-size: 18px; line-height: 1.4; font-weight: 550; color: var(--ink); }
+.note { grid-column: 1 / -1; margin: 6px 0 0; font-size: 14px; line-height: 1.45; color: var(--text); }
+.row-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: 16px; }
+.row-head:first-child { margin-top: 0; }
+.row-head h2 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.1px; }
+.row-head .sub { display: block; margin-top: 2px; font-size: 13px; color: var(--text); }
 
-/* ---- the game grids */
-.grid { display: grid; gap: 12px; }
-.grid.small { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px 12px; }
-.grid.big { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 10px; }
-.grid.big:empty { display: none; }
+/* ---- the game grids: the same size for every game, the best first */
+.grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px 12px; }
+.grid:empty { display: none; }
 
 .app {
   position: relative; border: 0; background: transparent; padding: 0; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform var(--t) var(--spring), opacity var(--t) var(--ease), translate 220ms var(--ease);
+  transition: opacity var(--t) var(--ease), translate 200ms var(--ease);
 }
-.app.placeholder { opacity: 0.25 !important; filter: grayscale(1); }
-.app.placeholder .badge { transform: scale(0) !important; }
-.drag-ghost { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; will-change: transform; border-radius: 18%; box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28); }
-.drag-ghost img { display: block; width: 100%; aspect-ratio: 55 / 56; border-radius: 18%; }
-/* while dragging, the other icons only slide aside: no hover, no other transition */
-body.dragging-icon .app { pointer-events: none; transition: translate 200ms cubic-bezier(0.2, 0.9, 0.25, 1) !important; }
-.app.held { outline: 2.5px solid var(--blue); outline-offset: 4px; border-radius: 18%; animation: wiggle 500ms ease-in-out infinite; }
-@keyframes wiggle { 0%, 100% { rotate: -2deg; } 50% { rotate: 2deg; } }
-body.dragging-icon, body.dragging-icon * { cursor: grabbing !important; user-select: none; }
-.app img {
-  display: block; width: 100%; aspect-ratio: 55 / 56; border-radius: 18%;
-  transition: box-shadow var(--t) var(--ease), filter var(--t) var(--ease);
-  pointer-events: none; user-select: none;
-}
+/* (the icons have their own rounded corners, so their shadow follows them, not a box) */
+.app img { display: block; width: 100%; aspect-ratio: 55 / 56; pointer-events: none; user-select: none; transition: filter var(--t) var(--ease); }
 .app .badge {
   position: absolute; right: -5px; top: -5px; width: 22px; height: 22px; border-radius: 11px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--blue); color: #ffffff; box-shadow: 0 0 0 2.5px var(--bg), 0 2px 4px rgba(0, 0, 0, 0.2);
-  transform: scale(0); transition: transform 180ms var(--spring), background 120ms var(--ease);
+  display: none; align-items: center; justify-content: center;
+  background: var(--blue); color: #ffffff; box-shadow: 0 0 0 2.5px var(--bg);
 }
-.app .badge svg { width: 13px; height: 13px; color: #ffffff; }
-.app .badge .b-plus { display: none; }
-/* in: in colour, lifted, a blue tick */
-.app.on img { box-shadow: var(--shadow); }
-.app.on .badge { transform: scale(1); }
-/* out: grey and small; hovering shows a + but keeps it grey, so taking one out always shows */
-.app.off { transform: scale(0.9); opacity: 0.5; }
-.app.off img { filter: grayscale(0.85) contrast(0.9); }
-.app.off:hover { opacity: 0.78; transform: scale(0.93); }
-.app.off:hover .badge { transform: scale(1); background: #8e939a; }
-.app.off .badge .b-tick, .app.nofit .badge .b-tick { display: none; }
-.app.off .badge .b-plus { display: block; }
-.app.nofit { transform: scale(0.86); opacity: 0.22; }
+.app .badge svg { width: 13px; height: 13px; }
+/* in: in colour, a blue tick; out: grey; doesn't fit: fainter */
+.app.on img { filter: var(--lift); }
+.app.on .badge { display: flex; }
+.app.off { opacity: 0.5; }
+.app.off img { filter: grayscale(0.85); }
+.app.off:hover { opacity: 0.75; }
+.app.nofit { opacity: 0.22; }
 .app.nofit img { filter: grayscale(1); }
-.app.on:hover { transform: translateY(-2px); }
-.app:active { transform: scale(0.88); transition-duration: 80ms; }
-.app.bounce { animation: bounce 280ms var(--spring); }
-.app.shake { animation: shake 300ms var(--ease); }
-@keyframes bounce { 0% { transform: scale(0.84); } 55% { transform: scale(1.08); } 100% { transform: scale(1); } }
-@keyframes shake {
-  0%, 100% { transform: translateX(0) scale(0.86); }
-  25% { transform: translateX(-5px) scale(0.86); }
-  50% { transform: translateX(4px) scale(0.86); }
-  75% { transform: translateX(-2px) scale(0.86); }
-}
+.app.placeholder { opacity: 0.25 !important; }
+.app.placeholder .badge { display: none; }
+.drag-ghost { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; will-change: transform; }
+.drag-ghost img { display: block; width: 100%; aspect-ratio: 55 / 56; filter: drop-shadow(0 16px 20px rgba(0, 0, 0, 0.28)); }
+/* while dragging, the other icons only slide aside */
+body.dragging-icon .app { pointer-events: none; }
+body.dragging-icon, body.dragging-icon * { cursor: grabbing !important; user-select: none; }
+.app.held { outline: 2.5px solid var(--blue); outline-offset: 4px; border-radius: 22%; }
 
-/* ---- the calculator, up close: its screen is the space, its OK key installs, a star sticker on it */
-.device { grid-area: device; position: sticky; top: 0; height: 100vh; overflow: hidden; align-self: start; perspective: 2400px; perspective-origin: 92% 30%; }
-/* a real calculator, built in 3D from its photo (--u is one of the photo's pixels): the front, with a hole
-   where the screen is, the screen down in its recess, the recess's walls, rounded edges and sides, and the
-   top (made by app.js, build3d). It turns a little toward the pointer (--rx, --ry) */
+/* ---- the calculator, up close: its screen is the space, OK installs, Back downloads, a star sticker on it */
+.device { grid-area: device; position: sticky; top: 0; height: 100vh; overflow: hidden; align-self: start; perspective: 2400px; perspective-origin: calc(40px + var(--cw) / 2) 30%; }
+/* a real calculator, built in 3D from its photo (--u is one of the photo's pixels): the front, with holes for
+   the screen and the keys; the screen down in its recess with the recess's walls; the keys standing up with
+   their sides; rounded edges, sides and top (app.js, build3d). It faces you, and turns a little toward the
+   pointer when it's over it (--rx, --ry) */
 .calc {
   position: absolute; left: 40px; top: 30px; width: var(--cw); aspect-ratio: 1018 / 2000; --u: calc(var(--cw) / 1018);
-  transform-style: preserve-3d; transform-origin: 50% 24%; transform: rotateX(var(--rx, 2deg)) rotateY(var(--ry, -12deg));
+  transform-style: preserve-3d; transform-origin: 50% 24%; transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
 }
 .plate, .well, .body3d { position: absolute; inset: 0; }
-.plate { container-type: inline-size; pointer-events: none; }
-.plate > button, #screen { pointer-events: auto; }
-.calc, .well, .body3d { pointer-events: none; }  /* (so a click on the sticker, lying on them, is the sticker's) */
-.sticker { pointer-events: auto; }
+.plate { container-type: inline-size; }
+.calc, .plate, .well, .body3d { pointer-events: none; }  /* (so a click on the sticker or a key is theirs) */
+#screen, .sticker { pointer-events: auto; }
 .calc-img, .well-img { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; pointer-events: none; }
-.calc-img {
-  clip-path: inset(0 2.947% 0 2.947%);
-  -webkit-mask: var(--plate-mask) 0 0 / 100% 100% no-repeat; mask: var(--plate-mask) 0 0 / 100% 100% no-repeat;
-}
+.calc-img { clip-path: inset(0 2.947% 0 2.947%); -webkit-mask: var(--plate-mask) 0 0 / 100% 100% no-repeat; mask: var(--plate-mask) 0 0 / 100% 100% no-repeat; }
 .well { transform: translateZ(calc(var(--u) * -14.6)); }  /* (a hair under the sticker, which lies on it at 14) */
 .well-img { clip-path: inset(5.35% 10.118% 62.85% 10.216% round calc(var(--u) * 36)); }
-.body3d, .fold, .sticker { transform-style: preserve-3d; }
+.body3d, .fold, .sticker, .key3d { transform-style: preserve-3d; }
 .fold { position: absolute; top: 0; height: 100%; width: 0; transform-origin: 0 0; }
 .facet { position: absolute; top: 0; height: 100%; display: block; }
 .body3d .top { position: absolute; left: 0; top: 0; width: 100%; transform-origin: 0 0; transform: rotateX(-90deg); display: block; }
-.body3d .rim { position: absolute; transform-origin: 0 0; display: block; }
-.cap { display: flex; gap: 2px; background: var(--track); border-radius: 999px; padding: 2px; }
-.cap button {
-  border: 0; background: transparent; padding: 4px 10px; border-radius: 999px; cursor: pointer;
-  font-size: 12px; font-weight: 650; color: #858279; white-space: nowrap;
-  transition: background var(--t) var(--ease), color var(--t) var(--ease);
+.rim, .kwall { position: absolute; transform-origin: 0 0; display: block; }
+.keybed { position: absolute; display: block; background: #77777a; }  /* (seen only in the gaps round the keys) */
+
+/* the keys: each its top, cut from the photo, standing on its sides (app.js, keys3d). OK and Back go in
+   under the pointer, as keys do */
+.key3d { position: absolute; transition: transform 90ms var(--ease); }
+.ktop { position: absolute; inset: 0; display: block; overflow: hidden; -webkit-mask: var(--key) 0 0 / 100% 100% no-repeat; mask: var(--key) 0 0 / 100% 100% no-repeat; }
+.ktop img { position: absolute; max-width: none; pointer-events: none; user-select: none; }
+.ok-key, .dl {
+  position: absolute; inset: 0; border: 0; padding: 0; border-radius: 50%; background: transparent; cursor: pointer;
+  pointer-events: auto; -webkit-tap-highlight-color: transparent;
 }
-.cap button[aria-checked="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); }
-/* OK, on the keypad (its key, 718,922 r 56 in the picture's pixels), with a tag under it */
-.ok-key {
-  position: absolute; left: 65.03%; top: 43.3%; width: 11%; aspect-ratio: 1; border: 0; padding: 0; border-radius: 50%;
-  background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: background 120ms var(--ease), box-shadow 120ms var(--ease);
-}
-.ok-key::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; animation: okpulse 2.4s ease-out infinite; }
-.ok-key:hover { background: rgba(0, 0, 0, 0.04); }
-.ok-key:hover::after { animation: none; }
-.ok-key:active { background: rgba(0, 0, 0, 0.08); box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.18); }
-.ok-key:focus-visible { outline-offset: 4px; border-radius: 50%; }
-@keyframes okpulse { 0% { box-shadow: 0 0 0 0 rgba(255, 183, 52, 0.7); } 70% { box-shadow: 0 0 0 1.8cqw rgba(255, 183, 52, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 183, 52, 0); } }
-.ok-tag {
-  position: absolute; left: 50%; top: calc(100% + 1.3cqw); transform: translateX(-50%); white-space: nowrap;
-  background: var(--btn); color: var(--btn-ink); font-size: max(13px, 1.75cqw); font-weight: 700; padding: 0.75cqw 1.5cqw; border-radius: 1cqw;
-  transition: transform var(--t) var(--spring);
-}
-.ok-key:hover .ok-tag { transform: translateX(-50%) translateY(-1px) scale(1.04); }
-.ok-key.busy::after { animation: spin 700ms linear infinite; border: 0.35cqw solid #ffb734; border-right-color: transparent; inset: -0.6cqw; }
-.ok-key.busy .ok-tag { opacity: 0.6; }
-/* the .nwa itself: a small tag under Back, beside Install */
-.dl {
-  position: absolute; left: 84.28%; top: calc(48.9% + 1.3cqw); transform: translateX(-50%); white-space: nowrap; cursor: pointer;
-  display: flex; align-items: center; gap: 0.6cqw; border: 1px solid #d6d4cf; background: #ffffff; color: var(--ink);
-  font-size: max(12px, 1.5cqw); font-weight: 650; padding: 0.7cqw 1.2cqw; border-radius: 1cqw;
-  transition: transform var(--t) var(--spring), border-color var(--t) var(--ease);
-}
-.dl::before { content: ""; width: 1.1em; height: 1.1em; background: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v11'/%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3Cpath d='M5 20h14'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v11'/%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3Cpath d='M5 20h14'/%3E%3C/svg%3E") center / contain no-repeat; }
-.dl:hover { transform: translateX(-50%) translateY(-1px); border-color: #b9b6b0; }
-.dl.busy { opacity: 0.5; }
+.key3d:has(> .ok-key:hover), .key3d:has(> .dl:hover) { transform: translateZ(calc(var(--u) * -3)); }
+.key3d:has(> .ok-key:active), .key3d:has(> .dl:active), .key3d.down { transform: translateZ(calc(var(--u) * -9)); }
+.ok-key:focus-visible, .dl:focus-visible { outline-offset: 4px; }
+.ok-key.busy, .dl.busy { cursor: progress; }
+/* what they do, printed on the plastic above them in the calculator's own amber, as its cut, copy and paste are */
+.legend { position: absolute; top: 41.2%; transform: translateX(-50%); font-size: calc(var(--u) * 25); font-weight: 700; color: #a8690a; white-space: nowrap; pointer-events: none; }
+.legend.ok { left: 70.53%; }
+.legend.back { left: 84.23%; }
+
 /* GitHub: a die-cut star sticker of gold foil, stuck on the calculator by its screen: flat on the frame,
    down the step into the screen's recess, and round the edge onto the side (app.js folds it, build3d).
    Each piece shows its own part of one picture (.art, drawn by app.js's stickerRenderer), and the part
-   round the edge peels up under the pointer (--b0 --b1 --b2, app.js) */
+   round the edge lifts off the side under the pointer (--b0 --b1 --b2, app.js) */
 .sticker { position: absolute; text-decoration: none; -webkit-tap-highlight-color: transparent; }
 .sticker:focus-visible { outline-offset: 2px; border-radius: 8px; }
 .leaf { position: absolute; top: 0; height: 100%; overflow: hidden; display: block; transform: translateZ(calc(var(--u) * 0.5)); }  /* (a hair off the plastic, as a sticker is) */
 .art, .shade { position: absolute; top: 0; width: var(--star); height: var(--star); display: block; }
 /* each piece's light, darker as it turns away (app.js, shadeStar): over the sticker's own shape only */
 .shade { -webkit-mask: var(--star-paper) center / 100% 100% no-repeat; mask: var(--star-paper) center / 100% 100% no-repeat; background-repeat: no-repeat; }
+
+/* the screen: the calculator's space, each game a block its size, and a game playing when you point at it */
 .screen {
   position: absolute; left: 14.538%; top: 7.7%; width: 70.923%; height: 27.1%;
   background: #0c0d10; overflow: hidden; container-type: size;
 }
-/* the glass over the screen: a soft reflection that moves as the calculator turns */
-.glass { position: absolute; inset: 0; z-index: 6; pointer-events: none;
-  background: linear-gradient(112deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.02) 50%, rgba(255, 255, 255, 0) 58%) var(--lx, 60%) 0 / 260% 100% no-repeat; }
 .status {
   position: absolute; left: 0; top: 0; right: 0; height: 7.5%;
   background: #ffb734; color: #ffffff;
   display: flex; align-items: center; justify-content: space-between; padding: 0 2.2cqw;
   font-size: 4.6cqh; font-weight: 700; letter-spacing: 0.02em; z-index: 3; white-space: nowrap;
-  transition: background var(--t) var(--ease);
 }
 .over .status { background: #ff453a; }
 .battery { width: 5.6cqw; height: 3.6cqh; border: max(1px, 0.4cqh) solid #ffffff; border-radius: 1px; position: relative; display: block; flex-shrink: 0; }
-.battery i { position: absolute; left: 1px; top: 1px; bottom: 1px; width: 50%; background: #ffffff; display: block; transition: width var(--t) var(--ease); }
+.battery i { position: absolute; left: 1px; top: 1px; bottom: 1px; width: 50%; background: #ffffff; display: block; }
 .map { position: absolute; left: 0; right: 0; top: 7.5%; bottom: 0; }
 .tile {
   position: absolute; display: flex; align-items: center; justify-content: center; overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.45);
-  transition: left var(--t) var(--ease), top var(--t) var(--ease), width var(--t) var(--ease), height var(--t) var(--ease),
-    opacity var(--t) var(--ease), transform var(--t) var(--ease);
+  transition: left var(--t) var(--ease), top var(--t) var(--ease), width var(--t) var(--ease), height var(--t) var(--ease);
 }
-.tile.enter { opacity: 0; transform: scale(0.82); }
-.tile.leave { opacity: 0; transform: scale(0.82); pointer-events: none; }
-.tile img { display: block; height: auto; aspect-ratio: 55 / 56; border-radius: 18%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); transition: width var(--t) var(--ease), opacity var(--t) var(--ease); }
+.tile img { display: block; height: auto; aspect-ratio: 55 / 56; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)); }
 .tile b { color: #ffffff; font-size: 4.4cqh; font-weight: 800; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
 .tile.free { background: repeating-linear-gradient(135deg, #15171c 0 4px, #1b1e24 4px 8px); border-color: rgba(0, 0, 0, 0.6); }
-.preview { position: absolute; left: 0; right: 0; top: 7.5%; bottom: 0; z-index: 2; background: #000000; opacity: 0; transition: opacity 140ms var(--ease); pointer-events: none; }
+.preview { position: absolute; left: 0; right: 0; top: 7.5%; bottom: 0; z-index: 2; background: #000000; display: none; pointer-events: none; }
 .preview img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; display: block; }
-.preview.show { opacity: 1; }
+.preview.show { display: block; }
 .drop-hint {
-  position: absolute; inset: 7.5% 0 0 0; z-index: 4; display: flex; align-items: center; justify-content: center;
+  position: absolute; inset: 7.5% 0 0 0; z-index: 4; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 1.5cqh;
   color: #ffffff; background: rgba(10, 132, 255, 0.42); outline: 2px dashed rgba(255, 255, 255, 0.8); outline-offset: -6px;
-  opacity: 0; pointer-events: none; transition: opacity 120ms var(--ease);
+  font-size: 6cqh; font-weight: 700; pointer-events: none;
 }
-body.dragging .drop-hint { opacity: 1; }
+.drop-hint svg { width: 12cqh; height: 12cqh; }
+body.dragging .drop-hint { display: flex; }
 
+/* ---- your NumPlay's icon, name and language */
 .chip {
-  height: 46px; padding: 0 10px 0 9px; border: 0; border-radius: 23px; background: var(--card); cursor: pointer;
-  display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transition: transform var(--t) var(--spring);
+  height: 46px; padding: 0 12px 0 9px; border: 0; border-radius: 23px; background: var(--card); cursor: pointer;
+  display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); white-space: nowrap;
+  font-size: 14px; font-weight: 650;
 }
-.chip img { width: 28px; height: 28px; border-radius: 18%; outline: 1px solid rgba(0, 0, 0, 0.08); outline-offset: -1px; display: block; }
-.chip.lang span { font-size: 13px; font-weight: 750; min-width: 22px; text-align: center; }
-.chip .caret { color: var(--mute); transition: transform var(--t) var(--ease); }
-.chip[aria-expanded="true"] .caret { transform: rotate(180deg); }
+.chip img { width: 28px; height: 28px; display: block; }
+.chip img.custom { clip-path: inset(0 round 22%); }  /* (a picture of your own: the corners every icon has) */
+.chip.lang { padding: 0 12px 0 14px; font-size: 13px; font-weight: 750; }
+.chip .caret { color: var(--mute); flex-shrink: 0; }
+.chip:hover { background: #fafafa; }
 .chip:disabled { opacity: 0.35; cursor: default; box-shadow: none; }  /* (a game on its own: its own icon and language) */
-.chip:hover { transform: translateY(-2px); }
 .install {
   position: relative; border: 0; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
   background: var(--btn); color: var(--btn-ink); padding: 13px 30px; border-radius: 999px; font-size: 15px; font-weight: 600;
-  transition: transform var(--t) var(--spring), opacity var(--t) var(--ease);
 }
-.install:hover { transform: scale(1.04); }
-.install:active { transform: scale(0.95); transition-duration: 80ms; }
-.install.busy span { opacity: 0; }
-.install.busy::after {
-  content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px;
-  border: 2.4px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 600ms linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-/* ---- the app's own settings: two small panels over the chips */
+.install:hover { background: #000000; }
 .pop {
   position: fixed; z-index: 25; width: 330px; background: var(--card); border-radius: 18px; padding: 16px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.04);
-  display: flex; flex-direction: column; gap: 14px; animation: rise 200ms var(--spring);
+  display: flex; flex-direction: column; gap: 14px;
 }
 .pop.narrow { width: 170px; padding: 8px; }
 .pop-row { display: flex; align-items: center; gap: 10px; }
 .pop-label { width: 66px; flex-shrink: 0; font-size: 12px; font-weight: 650; color: var(--mute); }
 .icon-pick { display: flex; gap: 8px; }
-.icon-pick button { width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; background: transparent; cursor: pointer; position: relative; transition: transform var(--t) var(--spring); }
-.icon-pick button img { width: 100%; height: 100%; border-radius: 18%; display: block; outline: 1px solid rgba(0, 0, 0, 0.1); outline-offset: -1px; }
+.icon-pick button { width: 44px; height: 44px; padding: 0; border: 0; border-radius: 22%; background: transparent; cursor: pointer; position: relative; }
+.icon-pick button img { width: 100%; height: 100%; display: block; }
 .icon-pick button[aria-checked="true"] { box-shadow: 0 0 0 2.5px var(--card), 0 0 0 4.5px var(--blue); }
-.icon-pick button:hover { transform: translateY(-2px); }
 .icon-pick .upload { border: 2px dashed var(--line); color: var(--mute); display: flex; align-items: center; justify-content: center; }
+.icon-pick .custom img { clip-path: inset(0 round 22%); }
 .field { flex: 1; min-width: 0; height: 36px; border: 1px solid #d5d8dc; border-radius: 10px; padding: 0 10px; background: #f6f7f8; font-size: 14px; }
 .field:focus { outline: 2px solid var(--blue); outline-offset: -1px; background: #ffffff; }
 .segctl { display: flex; background: #eceef1; border-radius: 10px; padding: 3px; gap: 3px; }
-.segctl button { border: 0; background: transparent; border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 650; color: var(--mute); cursor: pointer; transition: background var(--t) var(--ease), color var(--t) var(--ease); }
+.segctl button { border: 0; background: transparent; border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 650; color: var(--mute); cursor: pointer; }
 .segctl button[aria-checked="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
 .segctl.col { flex-direction: column; background: transparent; padding: 0; }
 .segctl.col button { text-align: left; padding: 10px 12px; font-size: 14px; color: var(--ink); }
 .segctl.col button[aria-checked="true"] { background: #eceef1; box-shadow: none; }
 .tick { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--mute); white-space: nowrap; }
 
+/* ---- 1.94 MB or 6 MB */
+.cap { display: flex; gap: 2px; background: var(--track); border-radius: 999px; padding: 2px; flex-shrink: 0; }
+.cap button { border: 0; background: transparent; padding: 4px 10px; border-radius: 999px; cursor: pointer; font-size: 12px; font-weight: 650; color: var(--mute); white-space: nowrap; }
+.cap button[aria-checked="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); }
 #xl-pop { width: 360px; gap: 10px; }
 .xl-title { font-size: 16px; }
 .xl-text, .xl-warn { margin: 0; font-size: 13px; line-height: 1.45; color: #3a3d42; }
-.xl-warn { color: #a05a00; background: #fff4e0; border-radius: 10px; padding: 8px 10px; }
+.xl-warn { color: #8a4b00; background: #fff4e0; border-radius: 10px; padding: 8px 10px; }
 .xl-steps { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; color: #3a3d42; }
 .xl-buttons { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
-.xl-guide { font-size: 13px; font-weight: 650; color: var(--blue); text-decoration: none; }
+.xl-guide { font-size: 13px; font-weight: 650; color: #0060c0; text-decoration: none; }
 .xl-ok { padding: 10px 20px; font-size: 14px; }
 
-/* ---- Retro-Go: your games come in as cartridges, after a + cartridge */
+/* ---- Retro-Go: your own games, as cartridges */
 .retro { display: flex; flex-direction: column; gap: 10px; }
-.carts-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.retro .sub { margin: 0; font-size: 13px; line-height: 1.45; color: var(--text); }
+.carts-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .retro input[type=file] { position: absolute; left: -9999px; }
 .add-cart {
-  width: 52px; height: 62px; border-radius: 5px 13px 5px 5px; border: 2px dashed var(--line); color: #858279; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: border-color var(--t) var(--ease), background var(--t) var(--ease), transform var(--t) var(--spring), color var(--t) var(--ease);
+  height: 40px; padding: 0 16px 0 12px; border-radius: 20px; border: 1.5px dashed var(--line); color: var(--ink); cursor: pointer;
+  display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 650;
 }
-.add-cart:hover, body.dragging .add-cart { border-color: var(--ink); color: var(--ink); transform: translateY(-3px); }
-.add-cart:active { transform: scale(0.94); }
-.add-cart.shake { animation: shake 300ms var(--ease); }
+.add-cart svg { color: var(--mute); }
+.add-cart:hover, body.dragging .add-cart { border-color: var(--ink); background: rgba(0, 0, 0, 0.03); }
 .carts { display: contents; }
 .cart {
   position: relative; width: 52px; height: 62px; border: 0; padding: 0; cursor: pointer;
   border-radius: 5px 13px 5px 5px; display: flex; flex-direction: column; justify-content: flex-end;
   box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.12);
-  transition: transform var(--t) var(--spring), opacity var(--t) var(--ease);
 }
 .cart .label { margin: 0 6px 10px; height: 26px; border-radius: 3px; color: #ffffff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 .cart .x {
   position: absolute; right: -6px; top: -6px; width: 20px; height: 20px; border-radius: 10px;
-  background: var(--btn); color: var(--btn-ink); display: flex; align-items: center; justify-content: center;
-  opacity: 0; transform: scale(0.6); transition: opacity 120ms var(--ease), transform 160ms var(--spring);
+  background: var(--btn); color: var(--btn-ink); display: none; align-items: center; justify-content: center;
 }
-.cart:hover .x, .cart:focus-visible .x { opacity: 1; transform: scale(1); }
-.cart:hover { transform: translateY(-3px) rotate(-2deg); }
-.cart:active { transform: scale(0.92); transition-duration: 80ms; }
-.cart.enter { animation: slot 320ms var(--spring); }
-@keyframes slot { 0% { transform: translateY(-18px) scale(0.8); opacity: 0; } 100% { transform: none; opacity: 1; } }
-
-/* ---- the intro: a few words, the calculator filling up, then the studio */
-.intro-skip {
-  position: fixed; left: 50%; bottom: 28px; z-index: 30; transform: translateX(-50%); border: 0; cursor: pointer;
-  background: rgba(29, 29, 31, 0.08); color: var(--mute); font-size: 13px; font-weight: 650; padding: 8px 16px; border-radius: 999px;
-}
-.ih { opacity: 0 !important; }
-body.intro { overflow: hidden; }
-body.intro .calc { z-index: 2; }
-.boot { position: absolute; inset: 7.5% 0 0 0; z-index: 4; background: #0c0d10; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.boot .crt { position: absolute; left: 0; right: 0; top: 50%; height: 1.2%; margin-top: -0.6%; background: #ffffff; transform: scaleX(0); box-shadow: 0 0 12px #ffffff; }
-.boot .splash { display: flex; flex-direction: column; align-items: center; gap: 2cqh; opacity: 0; }
-.boot .splash img { width: 24cqw; border-radius: 18%; box-shadow: 0 0 0 0.8cqw rgba(255, 255, 255, 0.08), 0 2cqh 5cqh rgba(0, 0, 0, 0.6); }
-.boot .splash b { color: #ffffff; font-size: 11cqh; font-weight: 800; letter-spacing: -0.03em; }
-.boot .splash span { color: #ffb734; font-size: 5cqh; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
-.drop-cart { position: fixed; z-index: 35; width: 52px; height: 62px; border-radius: 5px 13px 5px 5px; pointer-events: none; box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.12); }
-.drop-cart::after { content: ""; position: absolute; left: 6px; right: 6px; bottom: 10px; height: 26px; border-radius: 3px; background: var(--c); }
-.ghost-icon { position: fixed; z-index: 35; border-radius: 18%; pointer-events: none; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25); }
-.press-ring { position: absolute; inset: 0; border-radius: 50%; border: 0.4cqw solid #ffb734; pointer-events: none; }
+.cart:hover .x, .cart:focus-visible .x { display: flex; }
 
 /* ---- tooltip, toast and the install sheet */
 .tip {
   position: fixed; left: 0; top: 0; z-index: 40; pointer-events: none;
   background: rgba(29, 29, 31, 0.92); color: #ffffff; font-size: 12px; font-weight: 600; white-space: nowrap;
-  padding: 6px 10px; border-radius: 8px; opacity: 0; transform: translateY(4px);
-  transition: opacity 110ms var(--ease), transform 110ms var(--ease);
+  padding: 6px 10px; border-radius: 8px; display: none;
 }
-.tip.show { opacity: 1; transform: none; }
-.tip small { font-weight: 500; opacity: 0.7; margin-left: 6px; }
+.tip.show { display: block; }
+.tip small { font-weight: 500; opacity: 0.75; margin-left: 6px; }
 .toast {
-  position: fixed; left: 50%; bottom: 28px; z-index: 45; transform: translate(-50%, 20px);
+  position: fixed; left: 50%; bottom: 28px; z-index: 45; transform: translateX(-50%);
   background: var(--btn); color: var(--btn-ink); font-size: 14px; font-weight: 600; padding: 11px 18px; border-radius: 999px;
-  opacity: 0; pointer-events: none; transition: opacity 160ms var(--ease), transform 220ms var(--spring);
-  max-width: calc(100vw - 32px); text-align: center;
+  display: none; pointer-events: none; max-width: calc(100vw - 32px); text-align: center;
 }
-.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.show { display: block; }
 .sheet {
   position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px;
-  background: rgba(0, 0, 0, 0.32); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-  animation: fade 160ms var(--ease);
+  background: rgba(0, 0, 0, 0.32);
 }
-.sheet-card {
-  position: relative; width: min(390px, 100%); background: var(--card); color: var(--ink); border-radius: 22px; padding: 26px 26px 18px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3); animation: rise 260ms var(--spring);
-}
-.sheet-card h2 { margin: 0 0 18px; font-size: 19px; letter-spacing: -0.3px; }
+.sheet-card { position: relative; width: min(400px, 100%); background: var(--card); color: var(--ink); border-radius: 22px; padding: 26px 26px 18px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3); }
+.sheet-card h2 { margin: 0 0 18px; font-size: 19px; letter-spacing: -0.3px; padding-right: 30px; }
 .sheet-close { position: absolute; right: 14px; top: 14px; width: 30px; height: 30px; border: 0; border-radius: 15px; background: var(--track); cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .steps { list-style: none; margin: 0 0 22px; padding: 0; display: flex; flex-direction: column; gap: 14px; }
-.steps li { display: flex; align-items: center; gap: 14px; font-size: 15px; font-weight: 550; }
+.steps li { display: flex; align-items: center; gap: 14px; font-size: 15px; font-weight: 550; line-height: 1.35; }
 .step-icon { width: 42px; height: 42px; border-radius: 12px; background: var(--track); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .install.wide { width: 100%; }
-.star-ask { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: #fff7e0; text-decoration: none; font-size: 14px; font-weight: 600; transition: transform var(--t) var(--spring); }
-.star-ask:hover { transform: translateY(-1px); }
-@keyframes fade { from { opacity: 0; } }
-@keyframes rise { from { transform: translateY(14px) scale(0.97); opacity: 0; } }
+.star-ask { display: block; margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: #fff7e0; text-decoration: none; font-size: 14px; font-weight: 600; line-height: 1.4; }
+.star-ask:hover { background: #ffefc2; }
 
 .foot { margin-top: auto; padding-top: 22px; font-size: 12px; color: var(--mute); display: flex; gap: 8px; }
 .foot a { color: var(--mute); text-decoration: none; }
 .foot a:hover { color: var(--ink); }
 .noscript { text-align: center; padding: 0 16px; }
 
-/* ---- narrow screens: NumPlay, yours, then the calculator, then the games */
+/* ---- narrow screens: what it is, then the calculator, then the games */
 @media (max-width: 900px) {
   :root { --cw: min(560px, calc(100vw - 32px)); }
   main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; grid-template-areas: "head" "device" "games"; }
   .head { padding: 24px 16px 0; }
   .games { padding: 8px 16px 24px; max-width: none; }
   .device { position: relative; height: calc(var(--cw) * 1.1 + 30px); margin: 8px auto 0; width: calc(var(--cw) + 40px); perspective-origin: 50% 20%; }
-  .calc { left: 20px; --ry: -8deg; }
+  .calc { left: 20px; }
   .foot { justify-content: center; }
 }
-@media (max-width: 600px) {
-  .dl { font-size: 0; gap: 0; padding: 7px 8px; }  /* (just the arrow, beside Install) */
-  .dl::before { width: 14px; height: 14px; }
-}
-@media (max-width: 420px) {
-  .grid.small { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .grid.big { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .chip { padding: 0 8px 0 7px; }
+@media (max-width: 520px) {
+  .head { grid-template-columns: 1fr; }
+  .title { font-size: 48px; }
+  .grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .pop { width: calc(100vw - 32px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  :root { --t: 1ms; }
-  .app.bounce, .app.shake, .cart.enter, .sheet, .sheet-card, .pop, .ok-key::after { animation: none; }
 }

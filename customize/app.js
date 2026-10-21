@@ -120,7 +120,7 @@
 
   // ------------------------------------------------------------------ drawing
   const tiles = new Map(), buttons = new Map();
-  let shownUsed = 0, tween = 0, previewing = null;
+  let shownUsed = 0, previewing = null;
 
   function render() {
     const list = items(), cap = capacity();
@@ -131,19 +131,18 @@
     const free = cap - used;
     const all = free > cap * 0.002 ? list.concat([{ key: '_free', name: 'Free', bytes: free, free: true }]) : list;
     const laid = treemap(all, Math.max(cap, used));
-    const map = $('#map'), seen = new Set(), first = !tiles.size;
-    laid.forEach((t, i) => {
+    const map = $('#map'), seen = new Set();
+    laid.forEach((t) => {
       let e = tiles.get(t.key);
       const fresh = !e;
       if (fresh) {
-        e = el('div', 'tile enter');
+        e = el('div', 'tile');
         if (t.icon) e.appendChild(el('img', '', { src: t.icon, alt: '', draggable: 'false' }));
         if (t.tag) e.appendChild(el('b')).textContent = t.tag;
         map.appendChild(e);
         tiles.set(t.key, e);
         if (t.id || t.rom) e.addEventListener('click', () => (t.rom ? removeRom(t.rom) : toggle(t.id)));
       }
-      e.classList.remove('leave');
       e.classList.toggle('free', !!t.free);
       e.style.left = (100 * t.x / W) + '%';
       e.style.top = (100 * t.y / H) + '%';
@@ -162,31 +161,17 @@
       const b = e.querySelector('b');
       if (b) b.style.opacity = s >= 14 ? 1 : 0;
       e.dataset.tip = (t.free ? 'Free' : t.name) + '|' + size(t.bytes);
-      if (fresh) {
-        if (first) {  // (the first time, the blocks come in one after another, the biggest first)
-          e.style.transitionDelay = (18 * i) + 'ms';
-          setTimeout(() => { e.style.transitionDelay = ''; }, 18 * i + 400);
-        }
-        requestAnimationFrame(() => requestAnimationFrame(() => e.classList.remove('enter')));
-      }
       seen.add(t.key);
     });
-    for (const [k, e] of tiles) if (!seen.has(k)) { e.classList.add('leave'); tiles.delete(k); setTimeout(() => e.remove(), 260); }
+    for (const [k, e] of tiles) if (!seen.has(k)) { e.remove(); tiles.delete(k); }
 
     $('#screen').classList.toggle('over', over);
     $('#screen').setAttribute('aria-label', 'Space on the calculator: ' + size(used) + ' of ' + size(cap) + ', each game a block its size');
 
     // the numbers
-    const from = shownUsed, t0 = performance.now(), cancel = ++tween;
-    const step = (now) => {
-      if (cancel !== tween) return;
-      const k = Math.min(1, Math.max(0, (now - t0) / 220)), e = 1 - Math.pow(1 - k, 3);  // (a frame's time can be before t0)
-      shownUsed = from + (used - from) * e;
-      if (!previewing) $('#status-line').textContent = (shownUsed / MiB).toFixed(2) + ' OF ' + +(cap / MiB).toFixed(2) + ' MB';
-      $('#battery').style.width = 'calc(' + Math.min(100, 100 * shownUsed / cap) + '% - 2px)';
-      if (k < 1) requestAnimationFrame(step);
-    };
-    step(t0);
+    shownUsed = used;
+    if (!previewing) $('#status-line').textContent = (used / MiB).toFixed(2) + ' OF ' + +(cap / MiB).toFixed(2) + ' MB';
+    $('#battery').style.width = 'calc(' + Math.min(100, 100 * used / cap) + '% - 2px)';
 
     // the icons, in the order they go in the launcher
     for (const [id, b] of buttons) {
@@ -207,9 +192,14 @@
     const s = solo(), file = s ? byId[s].alone.file : 'NumPlay.nwa';
     for (const c of [$('#app-chip'), $('#lang-chip')]) c.disabled = !!s;
     $('#download').setAttribute('aria-label', 'Download ' + file);
-    $('#download').textContent = file;
+    $('#download').dataset.tip = 'Download ' + file;
     $('#app-chip-icon').src = iconUrl();
+    $('#app-chip-icon').classList.toggle('custom', st.app.icon === 'custom');
+    $('#app-chip').dataset.tip = (s ? byId[s].title : st.app.name.trim() || 'No name') + '|its icon and name on your calculator, and how it opens';
+    $('#lang-chip').dataset.tip = LANGS[st.lang][1] + '|the language of its menus';
     $('#lang-chip-label').textContent = LANGS[st.lang][0];
+    $('#space-note').textContent = st.cap === 'xl' ? 'Your calculator has 6 MB for apps, with Enlarged Extra Apps. Its screen shows what fits.'
+      : 'Your calculator has 1.94 MB for apps. Its screen shows what fits.';
     renderCarts();
     save();
   }
@@ -221,7 +211,7 @@
       have.add('c' + r.key);
       if (box.querySelector('[data-k="c' + r.key + '"]')) continue;
       const s = SYS[r.sys];
-      const c = el('button', 'cart enter', { type: 'button', 'data-k': 'c' + r.key, 'aria-label': 'Remove ' + r.name });
+      const c = el('button', 'cart', { type: 'button', 'data-k': 'c' + r.key, 'aria-label': 'Remove ' + r.name });
       c.style.background = s.shell;
       c.dataset.tip = r.name + '|' + s.name + ', ' + size(r.bytes.length);
       const lab = c.appendChild(el('span', 'label'));
@@ -230,7 +220,6 @@
       c.appendChild(el('span', 'x')).innerHTML =
         '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
       c.addEventListener('click', () => removeRom(r));
-      c.addEventListener('animationend', () => c.classList.remove('enter'));
       box.appendChild(c);
     }
     for (const c of box.querySelectorAll('.cart[data-k]')) if (!have.has(c.dataset.k)) c.remove();
@@ -260,38 +249,29 @@
   }
 
   // ------------------------------------------------------------------ picking
-  function bump(e, cls) {
-    if (!e) return;
-    e.classList.remove('bounce', 'shake');
-    void e.offsetWidth;
-    e.classList.add(cls);
-    setTimeout(() => e.classList.remove(cls), 320);
-  }
   function overflow(bytes) {
     toast("That doesn't fit: " + size(bytes) + ' too much' + (st.cap === 'std' ? '. 6 MB can take more' : ''));
     $('#screen').classList.add('over');
     setTimeout(() => render(), 500);
   }
   function toggle(id, quiet) {
-    const b = buttons.get(id), s = solo();
+    const s = solo();
     if (st.picked.has(id)) {
       st.picked.delete(id);
       if (alone(id) && before) { st.picked = new Set(before); before = null; }
     } else if (alone(id)) {
       if (!s) before = ordered();
       st.picked = new Set([id]);
-      bump(b, 'bounce');
       if (!quiet) {
         toast(byId[id].title + ' fills the whole calculator, so it goes on its own. Pick it again to get your games back');
         fetchBytes(KIT + 'apps/' + id + '.nwa.gz').catch(() => {});
       }
     } else {
-      if (s) { bump(b, 'shake'); if (!quiet) toast(byId[s].title + ' takes the whole calculator. Pick it again to take it out'); return; }
-      if (byId[id].xl && st.lang !== 'en') { bump(b, 'shake'); toast('The big games are in English: pick English to add them'); return; }
+      if (s) { if (!quiet) toast(byId[s].title + ' takes the whole calculator. Pick it again to take it out'); return; }
+      if (byId[id].xl && st.lang !== 'en') { toast('The big games are in English: pick English to add them'); return; }
       const over = usedBytes() + flash(id) - capacity();
-      if (over > 0) { bump(b, 'shake'); if (!quiet) overflow(over); return; }
+      if (over > 0) { if (!quiet) overflow(over); return; }
       st.picked.add(id);
-      bump(b, 'bounce');
       if (!quiet) fetchObj(objPath(id)).catch(() => {});  // (ready by the time you install)
     }
     render();
@@ -310,7 +290,7 @@
       const r = { key: ++romKey, sys, bytes, name: romName(f.name) };
       const extra = (st.roms.length ? 0 : flash(rg.id) + ROM_HEAD) + romBytes(r);
       const over = usedBytes() + extra - capacity();
-      if (over > 0) { bump($('#drop'), 'shake'); overflow(over); continue; }
+      if (over > 0) { overflow(over); continue; }
       st.roms.push(r);
       fetchObj(objPath(rg.id)).catch(() => {});
     }
@@ -356,7 +336,7 @@
   function sortable(box) {
     box.addEventListener('pointerdown', (e) => {
       const b = e.target.closest('.app');
-      if (!b || e.button || intro.on) return;
+      if (!b || e.button) return;
       if (e.pointerType === 'touch') {
         if (holding === b) { b.classList.remove('held'); holding = null; justDragged = true; return; }
         if (holding && holding !== b) {  // (a phone: the held icon goes where you tap)
@@ -424,7 +404,6 @@
 
   // ------------------------------------------------------------------ remembering a pick
   function save() {
-    if (intro.on) return;  // (the intro empties the calculator for a moment: not a pick to keep)
     const a = st.app, p = new URLSearchParams();
     p.set('games', ordered().join(','));
     if (st.cap === 'xl') p.set('space', 'xl');
@@ -434,15 +413,15 @@
     if (a.open === 'matrices') p.set('open', 'matrices' + (a.secret ? '-' + a.secret : '') + (a.hint ? '' : '-nohint'));
     const h = p.toString();
     try { history.replaceState(null, '', '#' + h); } catch (e) { /* (a file:// page) */ }
-    store('numplay-studio', h);
-    store('numplay-order', st.order.join(','));
+    store('numplay-studio2', h);  // (2: since the games are ranked)
+    store('numplay-order2', st.order.join(','));  // (2: since the games are ranked)
   }
   function restore() {
     let h = location.hash.slice(1);
-    if (!h) h = store('numplay-studio') || '';
+    if (!h) h = store('numplay-studio2') || '';
     const p = new URLSearchParams(h);
-    const known = kit.games.filter((g) => g !== rg).map((g) => g.id);
-    const saved = (store('numplay-order') || '').split(',').filter((id) => known.includes(id));
+    const known = kit.games.filter((g) => g !== rg).sort((a, b) => (a.xl - b.xl) || ((a.rank || 99) - (b.rank || 99))).map((g) => g.id);
+    const saved = (store('numplay-order2') || '').split(',').filter((id) => known.includes(id));
     const linked = p.has('games') ? p.get('games').split(',').filter((id) => known.includes(id)) : null;
     // the order: the link's picks first, in its order, then the rest as last time, then the kit's
     st.order = [...new Set([...(linked || []), ...saved, ...known])];
@@ -685,6 +664,7 @@
   async function go(btn, sheet) {
     if (btn.classList.contains('busy')) return;
     btn.classList.add('busy');
+    btn.parentNode.classList.add('down');  // (its key stays in while NumPlay is made)
     try {
       const out = await build();
       download(out.bytes, out.file);
@@ -694,6 +674,7 @@
       toast(/more than/.test(e.message) ? e.message : solo() ? "Couldn't get " + byId[solo()].alone.file + ', try again' : "Couldn't make NumPlay.nwa, try again");
     } finally {
       btn.classList.remove('busy');
+      btn.parentNode.classList.remove('down');
     }
   }
   function prefetch() {
@@ -744,7 +725,7 @@
       box.appendChild(b);
     }
     if (custom) {
-      const b = el('button', '', { type: 'button', role: 'radio', 'aria-checked': st.app.icon === 'custom', 'aria-label': 'Your icon', 'data-tip': 'Your icon' });
+      const b = el('button', 'custom', { type: 'button', role: 'radio', 'aria-checked': st.app.icon === 'custom', 'aria-label': 'Your icon', 'data-tip': 'Your icon' });
       b.appendChild(el('img', '', { src: custom.url, alt: '' }));
       b.addEventListener('click', () => { st.app.icon = 'custom'; renderApp(); render(); });
       box.appendChild(b);
@@ -791,181 +772,6 @@
       });
     }
     openPop(pop, btn, true);
-  }
-
-  // ------------------------------------------------------------------ the intro
-  // The first time (and when the title is clicked): the calculator rises and boots, NumPlay's
-  // letters come up off its keypad to make the title, the games fly into its screen one by one,
-  // Retro-Go's cartridges drop into their slot, the star sticker goes on and OK presses itself.
-  // The line under the title says what's happening; any key skips.
-  const intro = { on: false, run: 0, anims: [], temps: [] };
-  const OUT = 'cubic-bezier(0.2, 0.9, 0.25, 1)', SPRING = 'cubic-bezier(0.3, 1.45, 0.5, 1)';
-  // where NumPlay's letters sit on the keypad (their alpha keys), in the calculator picture's pixels
-  const LETTER_KEYS = [[340, 1474], [677, 1598], [172, 1474], [677, 1474], [857, 1354], [159, 1242], [509, 1722]];
-  const LEDE = 'Free games for your NumWorks. Pick yours, then press OK.';
-  let ledeTimer = 0;
-  function caption(text) {
-    const c = $('#caption');
-    clearTimeout(ledeTimer);
-    c.classList.add('swap');
-    ledeTimer = setTimeout(() => { c.textContent = text || LEDE; c.classList.remove('swap'); }, 200);
-  }
-  function play(e, frames, opts) {
-    const a = e.animate(frames, { fill: 'backwards', ...opts });
-    intro.anims.push(a);
-    e.classList.remove('ih');
-    return a.finished.catch(() => {});
-  }
-  const temp = (e) => { intro.temps.push(e); return e; };
-  const center = (r) => [r.left + r.width / 2, r.top + r.height / 2];
-
-  async function playIntro() {
-    if (intro.on || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    intro.on = true;
-    const run = ++intro.run, alive = () => intro.on && intro.run === run;
-    closePops(); hidePreview();
-    scrollTo(0, 0);
-    const target = ordered(), roms = st.roms;
-    intro.restore = () => { st.picked = new Set(target); st.roms = roms; };
-    st.picked = new Set(); st.roms = [];
-    const body = document.body;
-    body.classList.add('intro');
-    const letters = [...document.querySelectorAll('.title .word i')];
-    const hide = [$('#calc'), ...letters, $('#caption'), document.querySelector('.chips'), $('#star'),
-      $('#install'), $('#download'), ...buttons.values(), ...document.querySelectorAll('.row-head'), $('#retro'), document.querySelector('.foot')];
-    for (const e of hide) e.classList.add('ih');
-    render();
-    const skip = temp(el('button', 'intro-skip', { type: 'button' }));
-    skip.textContent = 'Skip';
-    skip.addEventListener('click', endIntro);
-    body.appendChild(skip);
-
-    // the calculator comes up, its screen off; it boots to NumPlay's splash
-    const screen = $('#screen'), calc = $('#calc');
-    const boot = temp(el('div', 'boot'));
-    boot.innerHTML = '<i class="crt"></i><div class="splash"><img alt=""><b>NumPlay</b><span>free games</span></div>';
-    boot.querySelector('img').src = KIT + 'variants/NumPlay.png';
-    screen.appendChild(boot);
-    previewing = 'intro';
-    $('#status-line').textContent = '';
-    await play(calc, [{ opacity: 0, translate: '0 55vh' }, { opacity: 1, offset: 0.3 }, { opacity: 1, translate: '0 0' }], { duration: 900, easing: OUT });
-    if (!alive()) return;
-    const crt = boot.querySelector('.crt'), splash = boot.querySelector('.splash');
-    await play(crt, [{ transform: 'scaleX(0)', opacity: 1 }, { transform: 'scaleX(1)', opacity: 1 }], { duration: 170, easing: 'ease-in', fill: 'forwards' });
-    play(crt, [{ transform: 'scaleX(1) scaleY(1)', opacity: 1 }, { transform: 'scaleX(1) scaleY(140)', opacity: 0 }], { duration: 320, easing: 'ease-out', fill: 'forwards' });
-    $('#status-line').textContent = 'NUMPLAY';
-    await play(splash, [{ opacity: 0, transform: 'scale(0.5)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 460, delay: 140, easing: SPRING, fill: 'forwards' });
-    if (!alive()) return;
-
-    // NumPlay's letters come up off the keypad, key by key, and make the title
-    const cr = calc.getBoundingClientRect(), k = cr.width / 1018;
-    const flights = letters.map((key, i) => {
-      const [kx, ky] = LETTER_KEYS[i], sx = cr.left + kx * k, sy = cr.top + ky * k;
-      const [fx, fy] = center(key.getBoundingClientRect());
-      const dx = sx - fx, dy = sy - fy, lift = Math.min(220, Math.abs(dy) * 0.3), d = 80 * i;
-      return play(key, [
-        { opacity: 0, transform: `translate(${dx}px, ${dy}px) scale(0.45) rotate(0deg)` },
-        { opacity: 1, offset: 0.12, transform: `translate(${dx}px, ${dy - 20}px) scale(0.5) rotate(-8deg)` },
-        { offset: 0.6, transform: `translate(${dx * 0.3}px, ${dy * 0.3 - lift}px) scale(0.9) rotate(${i % 2 ? 12 : -12}deg)` },
-        { opacity: 1, transform: 'translate(0, 0) scale(1) rotate(0deg)' }], { duration: 860, delay: d, easing: OUT });
-    });
-    await Promise.all(flights);
-    if (!alive()) return;
-
-    // the games come in, then fly into the calculator, which fills up block by block
-    caption('Free games for your NumWorks');
-    play($('#caption'), [{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: 200 });
-    const all = [...buttons.values()];
-    all.forEach((b, i) => play(b, [{ opacity: 0, transform: 'translateY(22px) scale(0.5)' }, { opacity: 0.5, transform: 'translateY(0) scale(0.9)' }],
-      { duration: 460, delay: 14 * i, easing: SPRING }));
-    for (const h of document.querySelectorAll('.games .row-head')) if (!h.closest('#retro')) play(h, [{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: 300 });
-    await wait(420 + 14 * all.length);
-    if (!alive()) return;
-    caption('Pick the ones you want');
-    play(splash, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(1.3)' }], { duration: 380, delay: 200, fill: 'forwards' });
-    play(boot, [{ opacity: 1 }, { opacity: 0 }], { duration: 500, delay: 300, fill: 'forwards' });
-    const map = $('#map');
-    const step = Math.max(40, Math.min(100, 1300 / Math.max(target.length, 1)));
-    for (const id of target) {
-      if (!alive()) return;
-      const b = buttons.get(id), from = b.getBoundingClientRect();
-      st.picked.add(id);
-      if (st.picked.size === 1) previewing = null;
-      render();
-      bump(b, 'bounce');
-      const t = tiles.get(id), mr = map.getBoundingClientRect();
-      if (!t) { await wait(step); continue; }
-      const tx = mr.left + (parseFloat(t.style.left) + parseFloat(t.style.width) / 2) / 100 * mr.width;
-      const ty = mr.top + (parseFloat(t.style.top) + parseFloat(t.style.height) / 2) / 100 * mr.height;
-      const g = temp(el('img', 'ghost-icon', { src: KIT + 'icons/' + id + '.png', alt: '' }));
-      Object.assign(g.style, { left: from.left + 'px', top: from.top + 'px', width: from.width + 'px', height: from.height + 'px' });
-      body.appendChild(g);
-      const [fx, fy] = center(from), dx = tx - fx, dy = ty - fy;
-      play(g, [{ transform: 'translate(0, 0) scale(1) rotate(0)', opacity: 1 },
-        { offset: 0.55, transform: `translate(${dx * 0.55}px, ${dy * 0.55 - 70}px) scale(0.85) rotate(${dx > 0 ? 18 : -18}deg)`, opacity: 1 },
-        { transform: `translate(${dx}px, ${dy}px) scale(0.3) rotate(0)`, opacity: 0.2 }], { duration: 640, easing: 'cubic-bezier(0.5, 0, 0.2, 1)', fill: 'forwards' })
-        .then(() => g.remove());
-      await wait(step);
-    }
-    await wait(500);
-    if (!alive()) return;
-
-    // Retro-Go: three cartridges drop into its slot
-    if (rg) {
-      caption('Add your Game Boy, NES and Sega games');
-      play($('#retro .row-head'), [{ opacity: 0 }, { opacity: 1 }], { duration: 300 });
-      await play($('#retro'), [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 460, easing: OUT });
-      const slot = $('#drop').getBoundingClientRect();
-      const drops = [[SYS[1], -16, -40], [SYS[3], 10, 25], [SYS[4], -4, 50]].map(([sys, x, rot], i) => {
-        const c = temp(el('i', 'drop-cart'));
-        Object.assign(c.style, { left: slot.left + 'px', top: slot.top + 'px', background: sys.shell });
-        c.style.setProperty('--c', sys.color);
-        body.appendChild(c);
-        return play(c, [{ opacity: 0, transform: `translate(${x}px, -${200 + 50 * i}px) rotate(${rot}deg)` }, { opacity: 1, offset: 0.25 },
-          { opacity: 1, offset: 0.85, transform: 'translate(0, 0) rotate(0deg)' }, { opacity: 0, transform: 'translate(0, 6px) scale(0.9)' }],
-          { duration: 820, delay: 150 * i, easing: 'cubic-bezier(0.35, 1.4, 0.55, 1)', fill: 'forwards' });
-      });
-      await Promise.all(drops);
-      play($('#drop'), [{ transform: 'scale(1)' }, { transform: 'scale(1.08)', offset: 0.4 }, { transform: 'scale(1)' }], { duration: 360 });
-      await wait(500);
-      if (!alive()) return;
-    }
-
-    // the star sticker goes on, and OK presses itself
-    caption('Press OK to install');
-    const lift = calc.getBoundingClientRect().width / 1018 * 160;  // (from above, onto the calculator)
-    play($('#star'), [{ opacity: 0, transform: 'translateZ(' + lift + 'px) rotateZ(-30deg)' }, { opacity: 1, offset: 0.3 },
-      { opacity: 1, transform: 'translateZ(0) rotateZ(0deg)' }], { duration: 620, easing: SPRING });
-    play(document.querySelector('.chips'), [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 460, easing: OUT });
-    play(document.querySelector('.foot'), [{ opacity: 0 }, { opacity: 1 }], { duration: 600 });
-    const ok = $('#install');
-    await play(ok, [{ opacity: 0 }, { opacity: 1 }], { duration: 300 });
-    if (!alive()) return;
-    await wait(300);
-    await play(ok, [{ background: 'rgba(0, 0, 0, 0)', boxShadow: 'inset 0 0 0 rgba(0, 0, 0, 0)' },
-      { background: 'rgba(0, 0, 0, 0.08)', boxShadow: 'inset 0 3px 8px rgba(0, 0, 0, 0.2)', offset: 0.3 },
-      { background: 'rgba(0, 0, 0, 0)', boxShadow: 'inset 0 0 0 rgba(0, 0, 0, 0)' }], { duration: 420, easing: 'ease-out' });
-    const ring = temp(el('i', 'press-ring'));
-    ok.appendChild(ring);
-    play($('#download'), [{ opacity: 0 }, { opacity: 1 }], { duration: 500 });
-    await play(ring, [{ opacity: 0.9, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(1.7)' }], { duration: 700, easing: 'ease-out', fill: 'forwards' });
-    await wait(700);
-    if (alive()) endIntro();
-  }
-  function endIntro() {
-    if (!intro.on) return;
-    intro.on = false;
-    intro.run++;
-    for (const a of intro.anims) a.cancel();
-    for (const e of intro.temps) e.remove();
-    intro.anims = []; intro.temps = [];
-    for (const e of document.querySelectorAll('.ih')) e.classList.remove('ih');
-    document.body.classList.remove('intro');
-    previewing = null;
-    if (intro.restore) intro.restore();
-    caption('');
-    store('numplay-intro', '1');
-    render();
   }
 
   // ------------------------------------------------------------------ the calculator in 3D, and its sticker
@@ -1133,6 +939,87 @@
     }
   }
 
+  // The keys at the top of the keypad, where the photo has them (measured from it): the D-pad's cross with
+  // its corners rounded (a quadratic curve through each corner), OK and Back's circles, and pills.
+  const KEY_H = 14;
+  function roundPoly(pts, radii, n) {
+    const out = [];
+    pts.forEach((p, i) => {
+      const a = pts[(i + pts.length - 1) % pts.length], b = pts[(i + 1) % pts.length], r = radii[i];
+      const da = Math.hypot(a[0] - p[0], a[1] - p[1]), db = Math.hypot(b[0] - p[0], b[1] - p[1]);
+      const p1 = [p[0] + (a[0] - p[0]) * r / da, p[1] + (a[1] - p[1]) * r / da], p2 = [p[0] + (b[0] - p[0]) * r / db, p[1] + (b[1] - p[1]) * r / db];
+      for (let k = 0; k <= n; k++) {
+        const t = k / n, s = 1 - t;
+        out.push([s * s * p1[0] + 2 * s * t * p[0] + t * t * p2[0], s * s * p1[1] + 2 * s * t * p[1] + t * t * p2[1]]);
+      }
+    });
+    return out;
+  }
+  const circlePts = (cx, cy, r) => Array.from({ length: 40 }, (_, i) => [cx + r * Math.cos(i * Math.PI / 20), cy + r * Math.sin(i * Math.PI / 20)]);
+  const pill = (x0, y0, x1, y1, r) => roundPoly([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], [r, r, r, r], 7);
+  // a shape as a mask (outlines in the photo's pixels, drawn on a canvas, w x h from x0, y0; evenodd: holes)
+  function maskOf(outlines, x0, y0, w, h, scale, evenodd) {
+    const c = el('canvas');
+    c.width = Math.ceil(w * scale); c.height = Math.ceil(h * scale);
+    const x = c.getContext('2d');
+    x.scale(scale, scale);
+    x.translate(-x0, -y0);
+    x.beginPath();
+    for (const pts of outlines) { pts.forEach(([px, py], i) => (i ? x.lineTo(px, py) : x.moveTo(px, py))); x.closePath(); }
+    x.fill(evenodd ? 'evenodd' : 'nonzero');
+    return 'url(' + c.toDataURL() + ')';
+  }
+  function keyOutlines() {
+    // (each taking in the dark edge the photo draws round it)
+    const cross = [[190.5, 794.5], [267.5, 794.5], [267.5, 885.5], [356.5, 885.5], [356.5, 958.5], [267.5, 958.5], [267.5, 1051.5], [190.5, 1051.5],
+      [190.5, 958.5], [100.5, 958.5], [100.5, 885.5], [190.5, 885.5]];
+    const white = [222, 222, 219];
+    // and the hole each sits in, 2 wider, so none of the photo's own edge is left on the front
+    const hole = cross.map(([x, y]) => [x + (x > 229 ? 2 : -2), y + (y > 922 ? 2 : -2)]);
+    const keys = [
+      { id: 'dpad', pts: roundPoly(cross, [23.5, 23.5, 7.5, 23.5, 23.5, 7.5, 23.5, 23.5, 7.5, 23.5, 23.5, 7.5], 6),
+        hole: roundPoly(hole, [25.5, 25.5, 5.5, 25.5, 25.5, 5.5, 25.5, 25.5, 5.5, 25.5, 25.5, 5.5], 6), side: white },
+      { id: 'home', pts: pill(438.5, 815.5, 578.5, 905.5, 44.5), hole: pill(436.5, 813.5, 580.5, 907.5, 46.5), side: [212, 148, 34] },
+      { id: 'power', pts: pill(438.5, 938.5, 578.5, 1028.5, 44.5), hole: pill(436.5, 936.5, 580.5, 1030.5, 46.5), side: [36, 36, 38] },
+      { id: 'ok', pts: circlePts(718, 923, 57), hole: circlePts(718, 923, 59), side: white },
+      { id: 'back', pts: circlePts(857.5, 923, 57), hole: circlePts(857.5, 923, 59), side: white },
+    ];
+    return keys.concat([160, 299, 439, 578, 718, 858].map((x, i) => ({ id: 'row' + i, pts: pill(x - 58.5, 1090.5, x + 58.5, 1169.5, 39.5),
+      hole: pill(x - 60.5, 1088.5, x + 60.5, 1171.5, 41.5), side: white })));
+  }
+  // each key: its top, cut from the photo, standing on its sides, a wall at each step of its outline lit by
+  // the calculator's light, darker down in its hole. Under them all, the dark of the keypad's bed. OK and
+  // Back carry Install and Download.
+  const KEY_DOWN = 10;
+  function keys3d(calc, keys) {
+    part(calc, 'i', 'keybed', { left: U(90), top: U(780), width: U(840), height: U(1220), transform: 'translateZ(' + U(-KEY_DOWN) + ')' });
+    for (const k of keys) {
+      const xs = k.pts.map((p) => p[0]), ys = k.pts.map((p) => p[1]);
+      const x0 = Math.floor(Math.min(...xs)) - 1, y0 = Math.floor(Math.min(...ys)) - 1;
+      const w = Math.ceil(Math.max(...xs)) + 1 - x0, h = Math.ceil(Math.max(...ys)) + 1 - y0;
+      const g = part(calc, 'div', 'key3d', { left: U(x0), top: U(y0), width: U(w), height: U(h) });
+      g.dataset.key = k.id;
+      k.pts.forEach(([x, y], i) => {
+        const [x2, y2] = k.pts[(i + 1) % k.pts.length], len = Math.hypot(x2 - x, y2 - y);
+        if (len < 0.01) return;
+        const phi = Math.atan2(y2 - y, x2 - x), n = [Math.sin(phi), -Math.cos(phi), 0];  // (facing out)
+        const deep = k.side.map((v) => Math.round(v * lit(n) * 0.45)), top = k.side.map((v) => Math.round(Math.min(255, v * lit(n))));
+        part(g, 'i', 'kwall', { left: U(x - x0), top: U(y - y0), width: U(len + 2), height: U(KEY_H + KEY_DOWN),  // (over its neighbours: no seams)
+          transform: 'rotateZ(' + (phi * 180 / Math.PI).toFixed(2) + 'deg) translate3d(' + U(-1) + ', 0, ' + U(-KEY_DOWN) + ') rotateX(90deg)',
+          background: 'linear-gradient(rgb(' + deep.join(',') + '), rgb(' + top.join(',') + ') ' + (100 * KEY_DOWN / (KEY_H + KEY_DOWN)).toFixed(0) + '%, rgb(' + top.join(',') + '))' });
+      });
+      const top = part(g, 'i', 'ktop', { transform: 'translateZ(' + U(KEY_H) + ')' });
+      top.style.setProperty('--key', maskOf([k.pts], x0, y0, w, h, 3));
+      const img = el('img', '', { src: 'calculator.webp', alt: '', draggable: 'false' });
+      Object.assign(img.style, { left: U(-x0), top: U(-y0), width: U(1018), height: U(2000) });
+      top.appendChild(img);
+    }
+    for (const [key, b] of [['ok', $('#install')], ['back', $('#download')]]) {
+      calc.querySelector('.key3d[data-key="' + key + '"]').appendChild(b);
+      b.style.transform = 'translateZ(' + U(KEY_H + 0.5) + ')';
+    }
+  }
+
   function build3d() {
     const body = document.querySelector('.body3d'), star = $('#star');
     // the rounded edges and the sides: the quarter circle in facets, then the side
@@ -1171,10 +1058,21 @@
         transform: 'rotateZ(' + (phi * 180 / Math.PI).toFixed(2) + 'deg) rotateX(-90deg)',
         background: 'linear-gradient(' + grey(n, 236) + ', ' + grey(n, 214) + ')' });
     });
+    // the keys, standing up off the front, each a hole in its photo
+    const keys = keyOutlines();
+    keys3d(document.querySelector('#calc'), keys);
+    $('#calc').style.setProperty('--plate-mask', maskOf([[[0, 0], [1018, 0], [1018, 2000], [0, 2000]], pill(104, 107, 915, 743, 36)]
+      .concat(keys.map((k) => k.hole)), 0, 0, 1018, 2000, 2, true));
     // the sticker: each piece shows its own span of the one artwork
     const S = STAR;
     Object.assign(star.style, { left: (100 * S.lip / 1018) + '%', top: (100 * S.top / 2000) + '%', width: U(S.edge - S.lip), height: U(S.size) });
     star.style.setProperty('--star', U(S.size));
+    const paper = el('canvas');
+    paper.width = paper.height = 256;
+    const px = paper.getContext('2d');
+    starPath(px, 2.56, 1);
+    px.lineWidth = 14 * 2.56; px.lineJoin = 'round'; px.fill(); px.stroke();
+    star.style.setProperty('--star-paper', 'url(' + paper.toDataURL() + ')');
     const art = (key) => {
       const a = el('canvas', 'art');
       a.width = a.height = ART;
@@ -1208,8 +1106,6 @@
     shadeStar(0);
     sticker.draw = stickerRenderer();
     paintSticker();
-    // (a click on any piece of it: GitHub)
-    star.addEventListener('click', (e) => { e.preventDefault(); window.open(star.href, '_blank', 'noopener'); });
   }
   // how much light each piece of the sticker gets, as the part round the edge lifts (0 to 1)
   function shadeStar(lift) {
@@ -1228,26 +1124,27 @@
     }
   }
 
-  // The calculator turns a little toward the pointer. The light on the foil comes from where the pointer
-  // is, and under the pointer the part of the sticker round the edge peels up off the side.
+  // The calculator faces you straight, and turns a little toward the pointer when it's on it. The light on
+  // the foil comes from where the pointer is, and under the pointer the part of the sticker round the edge
+  // peels up off the side.
   function depth() {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const calc = $('#calc'), star = $('#star'), REST = [0, -0.08];
-    let mx = innerWidth * 0.6, my = innerHeight * 0.2, tx = REST[0], ty = REST[1], x = tx, y = ty;
+    const calc = $('#calc'), star = $('#star'), dev = document.querySelector('.device');
+    let mx = innerWidth * 0.6, my = innerHeight * 0.2, tx = 0, ty = 0, x = 0, y = 0;
     let over = false, lift = 0, raf = 0;
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
     const draw = () => {
       raf = 0;
       x += (tx - x) * 0.07; y += (ty - y) * 0.07;
-      calc.style.setProperty('--ry', (-12 + x * 14).toFixed(2) + 'deg');
-      calc.style.setProperty('--rx', (2 - y * 6).toFixed(2) + 'deg');
-      calc.style.setProperty('--lx', (100 - (x + 0.5) * 100).toFixed(1) + '%');
+      calc.style.setProperty('--ry', (x * 18).toFixed(2) + 'deg');
+      calc.style.setProperty('--rx', (-y * 10).toFixed(2) + 'deg');
+      calc.style.setProperty('--lx', (50 - x * 100).toFixed(1) + '%');
       const r = star.getBoundingClientRect(), cx = r.left + r.width * 0.68, cy = r.top + r.height / 2;
       const want = over ? 0.45 + 0.55 * clamp((mx - r.left) / (r.width * 1.3), 0, 1) : 0;
       lift += (want - lift) * 0.14;
       // (the pointer is the light; the calculator's turn is where the sticker is seen from)
       sticker.light = [(mx - cx) / 260, -(my - cy) / 260, 0.85];
-      sticker.view = [(12 - x * 14) / 38 + 0.12, (2 - y * 6) / 38];
+      sticker.view = [-x * 18 / 38 + 0.12, -y * 10 / 38];
       paintSticker();
       shadeStar(lift);
       if (Math.abs(tx - x) + Math.abs(ty - y) > 0.0005 || Math.abs(want - lift) > 0.002) raf = requestAnimationFrame(draw);
@@ -1256,31 +1153,18 @@
     addEventListener('pointermove', (e) => {
       if (e.pointerType === 'touch') return;
       mx = e.clientX; my = e.clientY;
-      tx = mx / innerWidth - 0.5; ty = my / innerHeight - 0.5;
+      const r = dev.getBoundingClientRect(), on = mx >= r.left && mx <= r.right && my >= r.top && my <= r.bottom;
+      tx = on ? clamp((mx - r.left) / r.width - 0.5, -0.5, 0.5) : 0;
+      ty = on ? clamp((my - r.top) / r.height - 0.4, -0.5, 0.5) : 0;
       kick();
     }, { passive: true });
-    document.documentElement.addEventListener('pointerleave', () => { tx = REST[0]; ty = REST[1]; kick(); });
+    document.documentElement.addEventListener('pointerleave', () => { tx = 0; ty = 0; kick(); });
     star.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') { over = true; kick(); } });
     star.addEventListener('pointerleave', () => { over = false; kick(); });
     kick();
   }
 
-  // ------------------------------------------------------------------ the title's letters, GitHub
-  function logoKeys() {
-    const keys = [...document.querySelectorAll('.title .word i')];
-    let busy = false;
-    const wave = () => {
-      if (busy || intro.on) return;
-      busy = true;
-      keys.forEach((k, i) => {
-        setTimeout(() => k.classList.add('lift'), 40 * i);
-        setTimeout(() => k.classList.remove('lift'), 40 * i + 160);
-      });
-      setTimeout(() => { busy = false; }, 40 * keys.length + 300);
-    };
-    $('#logo').addEventListener('pointerenter', wave);
-    $('#logo').addEventListener('click', () => { if (intro.on) endIntro(); else playIntro(); });
-  }
+  // ------------------------------------------------------------------ GitHub's star count, for the sticker
   async function stars() {
     try {
       let n = sessionStorage.getItem('numplay-stars');
@@ -1354,8 +1238,7 @@
     } catch (e) { custom = null; }
 
     const small = $('#small'), big = $('#big');
-    const badge = '<span class="badge"><svg class="b-tick" viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-      '<svg class="b-plus" viewBox="0 0 12 12"><path d="M6 2.5v7M2.5 6h7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span>';
+    const badge = '<span class="badge" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
     for (const g of kit.games) {
       if (g === rg) continue;
       const b = el('button', 'app off', { type: 'button', 'aria-label': g.title, 'aria-pressed': 'false', 'data-id': g.id });
@@ -1414,7 +1297,7 @@
             toast(byId[one].title + ' goes on its own in 1.94 MB. Pick it again to get your other games back');
           }
           const over = usedBytes() - kit.appSpace;
-          if (over > 0) { st.cap = 'xl'; bump(b, 'shake'); toast('Take ' + size(over) + ' of games out first'); return; }
+          if (over > 0) { st.cap = 'xl'; toast('Take ' + size(over) + ' of games out first'); return; }
           closePops(); render(); return;
         }
         if (b.dataset.cap === 'xl' && st.cap !== 'xl') askXL(b);
@@ -1428,7 +1311,6 @@
     $('#sheet').addEventListener('click', (e) => { if (e.target.id === 'sheet' || e.target.closest('.sheet-close')) closeSheet(); });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { closeSheet(); closePops(); if (holding) { holding.classList.remove('held'); holding = null; } }
-      if (intro.on && e.key !== 'Tab') endIntro();
     });
 
     if (rg) {
@@ -1451,17 +1333,14 @@
       });
     }
     tips();
-    logoKeys();
     build3d();
     depth();
-    const first = (!store('numplay-intro') && !location.hash) || /[?&]intro\b/.test(location.search);  // (or ?intro, to see it)
     restore();
     if (st.lang !== 'en') loadKit(st.lang).then(render).catch(() => { st.lang = 'en'; render(); });
     render();
     addEventListener('hashchange', () => { restore(); render(); });
     stars();
     (window.requestIdleCallback || setTimeout)(() => loadTools().catch(() => {}), { timeout: 3000 });
-    if (first) playIntro();
   }
   start();
 })();
