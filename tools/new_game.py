@@ -7,7 +7,7 @@ already draws, reads the keys, pauses, saves and quits the way NumPlay's games d
   python3 tools/new_game.py "My Game" --numplay       also on NumPlay's home screen (games/games.json)
 
 Then:  make -C games/mygame                           output/mygame.nwa, ready to install
-       python3 tools/emu.py games/mygame/output/mygame.nwa --ms 5000 --shots 2000 --out /tmp/shots
+       python3 tools/emulator.py games/mygame/output/mygame.nwa --ms 5000 --shots 2000 --out /tmp/shots
 See docs/make-a-game.md for the whole guide. Works on macOS, Linux and Windows (Python 3 and Pillow).
 """
 import argparse
@@ -57,12 +57,12 @@ def main():
         open(p, "w", encoding="utf-8").write(json.dumps(games, indent=2, ensure_ascii=False) + "\n")
         os.makedirs(os.path.join(dest, "docs"), exist_ok=True)
         print(f"Added to games/games.json. NumPlay's card needs games/{gid}/docs/shot.png (320x240): take one with\n"
-              f"  python3 tools/emu.py games/{gid}/output/{gid}.nwa --ms 4000 --keys 1500-1600:ok --shots 3000 "
+              f"  python3 tools/emulator.py games/{gid}/output/{gid}.nwa --ms 4000 --keys 1500-1600:ok --shots 3000 "
               f"--out games/{gid}/docs\n  and rename it shot.png.")
     print(f"games/{gid}/ is ready: its game is in games/{gid}/src/main.c, its icon in src/icon.png "
           f"(tools/icon.py makes one from any picture).\n"
           f"  make -C games/{gid}                 builds output/{gid}.nwa\n"
-          f"  python3 tools/emu.py games/{gid}/output/{gid}.nwa --ms 5000 --keys 1500-1600:ok --shots 3000 --out shots\n"
+          f"  python3 tools/emulator.py games/{gid}/output/{gid}.nwa --ms 5000 --keys 1500-1600:ok --shots 3000 --out shots\n"
           f"Install the .nwa from https://my.numworks.com/apps with the calculator plugged in.")
 
 

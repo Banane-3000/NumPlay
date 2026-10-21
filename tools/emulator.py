@@ -1,7 +1,7 @@
 # NumPlay emulator: GUI and headless backend in one file.
 from __future__ import annotations
 
-# -------- ARM backend (formerly emu.py) --------
+# -------- ARM backend (formerly emulator.py) --------
 import argparse
 import os
 import struct
@@ -645,7 +645,7 @@ except ImportError:
     DND_FILES = None
     TkinterDnD = None
 
-# The old emu.py backend is inlined above, preserving its separate API.
+# The old emulator.py backend is inlined above, preserving its separate API.
 class _BackendNamespace:
     def __getattr__(self, key):
         try:
@@ -959,7 +959,7 @@ class FidelityFont:
 class TracedCalculator(emu.Calculator):
     """Keep the headless emulator intact, but yield on time-changing syscalls.
 
-    In emu.py, Calculator.run() requests a full millisecond of ARM *instructions*
+    In emulator.py, Calculator.run() requests a full millisecond of ARM *instructions*
     at once. A program can call eadk_timing_msleep(16) hundreds of times before
     that instruction budget expires. Each call immediately advances now_ms, so
     a single emu_start() can advance several *seconds* of virtual time. A 2ms
@@ -1234,14 +1234,14 @@ class TracedCalculator(emu.Calculator):
                           file=sys.stderr, flush=True)
 
         if svc == 23 and delta_ms >= 1:
-            # emu.py's 'no event' path adds 10ms, but does not mark the
+            # emulator.py's 'no event' path adds 10ms, but does not mark the
             # interval as idle. Correct the worker's CPU-load measurement.
             self.slept_ms += delta_ms
 
         if svc in self.TIME_ADVANCING_SVCS and delta_ms >= 0.5:
             self.last_svc_yield = (svc, pc - 2, delta_ms)
             self.svc_yield_count += 1
-            # emu.py unconditionally adds +1ms after emu_start() returns,
+            # emulator.py unconditionally adds +1ms after emu_start() returns,
             # assuming its entire instruction budget ran. We deliberately
             # stopped before the budget was exhausted. Cancel that extra ms
             # now; the backend adds it back immediately after emu_stop().

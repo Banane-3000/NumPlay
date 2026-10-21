@@ -87,8 +87,7 @@ And the tools, all in `tools/`:
 | --- | --- |
 | `setup.py` | Gets the compiler, nwlink and the Python packages |
 | `new_game.py` | Starts a game from the template |
-| `emu.py` | Runs a `.nwa` in an emulator: pictures, GIFs, scripted keys, files kept between runs, profiling |
-| `emu_live.py` | The emulator in a window: click the keys or use your keyboard; `--live` rebuilds when you save (`watch.py` on macOS and Linux, `build_windows.py` on Windows) |
+| `emulator.py` | NumWorks emulator with a graphical calculator, live rebuilds and a `--headless` mode for scripted keys, frames, screenshots and profiling |
 | `icon.py` | Makes the 55 x 56 app icon from any picture, with the rounded corners every NumPlay icon has |
 | `record.py` | Makes GIFs from the emulator's frames |
 | `sizes.py` | How much flash and RAM each game takes inside NumPlay |

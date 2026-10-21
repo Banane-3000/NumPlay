@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks NumPlay-Upsilon.nwa on an emulated N0110 running Upsilon (tools/emu.py --system upsilon):
+"""Checks NumPlay-Upsilon.nwa on an emulated N0110 running Upsilon (tools/emulator.py --system upsilon):
 
 1. it makes no system call Upsilon doesn't have (Home, checksums, flash);
 2. it finds the file system there: a save already on the calculator goes into its copy,
@@ -8,7 +8,7 @@
    there, launcher/src/compat.c);
 4. Home quits.
 
-Usage: test_upsilon.py build/NumPlay-Upsilon.nwa [--out DIR]
+Usage: test_upsilon.py build/compiled/NumPlay-Upsilon.nwa [--out DIR]
 """
 import argparse
 import os
@@ -16,7 +16,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import emu  # noqa: E402
+import emulator as emu  # noqa: E402
 
 emu.configure("n0110", "upsilon")
 from test_progress import copy_lines, presses, records, write_storage  # noqa: E402

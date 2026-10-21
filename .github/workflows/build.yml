@@ -36,7 +36,7 @@ jobs:
 
       - name: Tools
         run: |
-          sudo apt-get update -q && sudo apt-get install -yq pngquant
+          sudo apt-get update -q && sudo apt-get install -yq pngquant python3-tk
           pip install pillow numpy zopfli pyelftools unicorn==2.1.4
           npm install -g nwlink@1.0.0
           rustup target add thumbv7em-none-eabihf
@@ -53,7 +53,7 @@ jobs:
 
       - name: Test
         run: |
-          python3 tests/test_games.py build/apps
+          python3 tests/test_games.py build/compiled/games
           python3 tests/test_uninstall.py build/compiled/NumPlay.nwa --game numdrive
           python3 tests/test_progress.py build/compiled/NumPlay.nwa
           python3 tests/test_numblocks_progress.py build/compiled/games/NumBlocks.nwa

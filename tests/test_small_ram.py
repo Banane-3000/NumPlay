@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Checks NumPlay on calculator software that gives apps less RAM (tools/emu.py --ram-length). NumPlay installs
+"""Checks NumPlay on calculator software that gives apps less RAM (tools/emulator.py --ram-length). NumPlay installs
 with less, and its games use the RAM after it up to the end of what there is (tools/gen_games.py):
 
 1. custom builds of Epsilon 25.2 give apps 133652 bytes: NumBlocks, the hungriest game, starts there;
 2. with 120000 bytes, NumBlocks doesn't fit: OK on its card doesn't start it (the card says how much it lacks),
    while NumDash, which fits, starts and makes no access outside the app's RAM.
 
-Usage: test_small_ram.py build/NumPlay.nwa [--out DIR]
+Usage: test_small_ram.py build/compiled/NumPlay.nwa [--out DIR]
 """
 import argparse
 import os
@@ -14,7 +14,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import emu  # noqa: E402
+import emulator as emu  # noqa: E402
 from test_progress import presses, write_storage  # noqa: E402
 
 

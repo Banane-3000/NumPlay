@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """panel.py NWA [--model n0120|n0110] [--hz 40] [--dir ltr|rtl] [--from MS] [--ms MS] [--keys SPEC] [--out DIR]:
-Doom in the emulator (tools/emu.py) with the calculator's display panel as it refreshes itself: every 1/hz s, after
+Doom in the emulator (tools/emulator.py) with the calculator's display panel as it refreshes itself: every 1/hz s, after
 its blanking time, it goes over its memory a column at a time (left to right, or right to left), and
 eadk_display_wait_for_vblank waits for the blanking time. Each refresh's picture is compared with the frames the app
 sent: a refresh that shows parts of two frames is torn (its picture is saved in DIR, the first few).
@@ -15,7 +15,7 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tools"))
-import emu  # noqa: E402
+import emulator as emu  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("nwa")

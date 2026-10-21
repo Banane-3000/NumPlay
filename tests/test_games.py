@@ -11,7 +11,7 @@ what used to crash calculators or lose saves:
   untouched, and a file added after the save does not stop the game from
   updating it on the second run.
 
-Usage: test_games.py build/apps [--game NAME] [--out DIR]
+Usage: test_games.py build/compiled/games [--game NAME] [--out DIR]
 """
 import argparse
 import json
@@ -21,7 +21,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools"))
-import emu  # noqa: E402
+import emulator as emu  # noqa: E402
 
 K = emu.KEYS
 

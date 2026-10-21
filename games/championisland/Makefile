@@ -7,7 +7,7 @@
 Q ?= @
 CC = arm-none-eabi-gcc
 NWLINK ?= npx --yes -- nwlink@1.0.0
-STRIP ?= arm-none-eabi-strip --strip-unneeded   # STRIP=true keeps symbols (tools/emu.py --profile)
+STRIP ?= arm-none-eabi-strip --strip-unneeded   # STRIP=true keeps symbols (tools/emulator.py --profile)
 BUILD_DIR = output
 DOODLE ?= ../../../potherca-blog/google-doodle-champion-island
 GAME = $(HOT) $(COLD)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Plays Tetris in the ARM emulator for the README's GIF.
 
-Runs the real calculator build (Tetris.nwa) in tools/emu.py, reads the board
+Runs the real calculator build (Tetris.nwa) in tools/emulator.py, reads the board
 and the NEXT panel from the screen, and places each piece with a classic
 heuristic (few holes, low and flat stack, clear lines). Saves raw frames that
 tools/record.py turns into a GIF.
@@ -14,7 +14,7 @@ import struct
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-import emu  # noqa: E402
+import emulator as emu  # noqa: E402
 
 FIELD_X, FIELD_Y, CELL, W, H = 100, 0, 12, 10, 20
 # tile colours (centre pixel, RGB565) -> piece types, as in tetriminos.rs

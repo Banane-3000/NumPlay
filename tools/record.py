@@ -6,7 +6,7 @@ screen as it runs (see launcher/sim/sim.c); this turns the frames into PNG
 screenshots and GIFs.
 
 Usage:
-  record.py --simulator PATH/Epsilon --nwb build/NumPlay.nwb \
+  record.py --simulator PATH/Epsilon --nwb build/data/NumPlay.nwb \
       --keys "1500-1600:right,3000:ok" --out docs/raw \
       [--png 1200:home.png,3400:game.png] [--gif 500-4000:carousel.gif] [--fps 30] [--scale 2]
 """
@@ -81,9 +81,9 @@ def save_gif(frames, path, scale, fps):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--simulator", default=os.environ.get("EPSILON"))
-    ap.add_argument("--nwb", default="build/NumPlay.nwb")
+    ap.add_argument("--nwb", default="build/data/NumPlay.nwb")
     ap.add_argument("--keys", help="scripted keys for the simulator")
-    ap.add_argument("--frames", help="use raw frames already recorded (tools/emu.py, tools/media) instead")
+    ap.add_argument("--frames", help="use raw frames already recorded (tools/emulator.py, tools/media) instead")
     ap.add_argument("--end", type=int, default=0)
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--out", required=True)

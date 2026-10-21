@@ -1,9 +1,9 @@
 # NumPlay: one launcher app with every game, plus each game on its own.
 #
-#   make            build/NumPlay*.nwa and build/apps/*.nwa (the release files)
+#   make            build/data/NumPlay*.nwa and build/compiled/*.nwa
 #   make check      link the NumPlay apps like the calculator does, print sizes, check RAM
-#   make sim        build/NumPlay.nwb for the Epsilon simulator
-#   make emu        run NumPlay.nwa in the ARM emulator (tools/emu.py)
+#   make sim        build/data/NumPlay.nwb for the Epsilon simulator
+#   make emu        run NumPlay.nwa in the ARM emulator (tools/emulator.py)
 #   make clean
 #
 # Needs arm-none-eabi-gcc (with newlib), Node.js for nwlink, Python 3 with
@@ -305,7 +305,7 @@ $(B)/NumPlay.nwb: $(LAUNCHER_SRC) $(LAUNCHER_H) $(B)/sim/gen/gametable.c $(forea
 
 # ------------------------------------------------------------------ tools
 emu: $(B)/NumPlay.nwa
-	$(PY) tools/emu.py $< --ms 4000 --shots 3000 --out $(B)/emu
+	$(PY) tools/emulator.py $< --ms 4000 --shots 3000 --out $(B)/emu
 
 clean:
 	rm -rf $(B)

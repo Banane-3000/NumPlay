@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds bench.c + gen.c for the Cortex-M7 (-Os, hard float) and runs it in Unicorn,
 counting instructions per gen_slab call (1 instruction ~ 1 cycle at 216 MHz, the same
-convention as tools/emu.py) in the game's calling pattern (see bench.c). Also reports the
+convention as tools/emulator.py) in the game's calling pattern (see bench.c). Also reports the
 deepest stack use (painted stack) and gen.c's own static RAM.
 Usage: bench.py [OUTDIR] [--no-spawn] [--profile] [--lines FUNC,...] [--y0 N] [--h N] [--seed S] [--ox CX] [--oz CZ]
                 [--game-flags]"""

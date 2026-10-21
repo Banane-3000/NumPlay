@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """fps.py [--maps 11,12,...] [--low] [--out FILE]: the frame rate in every level, measured in the emulator
-(tools/emu.py, with the calculator's 133652 bytes of RAM). A build that starts in the level and draws it from
+(tools/emulator.py, with the calculator's 133652 bytes of RAM). A build that starts in the level and draws it from
 all over (src/nw/scan.c: the middle of each subsector, looking 8 ways round, monsters awake) is run until every
 view has been drawn, and the time of each frame is noted: its instructions (each frame's game tics, drawing and
 sending to the display) and 40 ns for each pixel sent.
@@ -19,7 +19,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 GAME = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(GAME, "..", "..", "tools"))
-import emu  # noqa: E402
+import emulator as emu  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--maps", default="11,12,13,14,15,16,17,18,19")

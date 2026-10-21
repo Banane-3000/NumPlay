@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Plays 2 Players in the ARM emulator for the README's pictures.
 
-Runs the calculator build (TwoPlayers.nwa) in tools/emu.py as player 1 against the hard computer,
+Runs the calculator build (TwoPlayers.nwa) in tools/emulator.py as player 1 against the hard computer,
 game after game: it reads the screen (the ball, the puck, the tanks, the light cycles) and presses
 the keys a player would. Saves the raw frames, then the gallery's GIF (a few seconds of each game)
 and a screenshot of each game.
@@ -17,7 +17,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "tools"))
-import emu  # noqa: E402
+import emulator as emu  # noqa: E402
 import record  # noqa: E402
 
 K = emu.KEYS

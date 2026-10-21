@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Build NumPlay .nwa files on native Windows (no WSL/Linux required).
+"""Build NumPlay .nwa files on Windows, macOS and Linux.
 
 Requirements: Git for Windows (Git Bash), GNU Make 4.4.1 for Windows, Node.js/npm,
 Python, Rust/rustup and a native Windows arm-none-eabi-gcc toolchain.
 
-Run from PowerShell in the repository root:
-    python tools/build_windows.py --doctor
-    python tools/build_windows.py --launcher-only --skip-languages -j2
-    python tools/build_windows.py --organize-only --tidy-legacy
-    python tools/build_windows.py --watch --launcher-only --skip-languages -j2
+Run from PowerShell (Windows) or a terminal (macOS/Linux):
+    python tools/build.py --doctor
+    python tools/build.py --launcher-only --skip-languages -j2
+    python tools/build.py --organize-only
+    python tools/build.py --watch --launcher-only --skip-languages -j2
 
 It keeps Make's intermediate outputs untouched under build/ and atomically
 exports finished calculator apps into top-level build/compiled/, including the stable
@@ -293,10 +293,10 @@ def doctor() -> bool:
     if not b:
         print("  Git for Windows: https://git-scm.com/downloads/win (includes Git Bash; NOT Linux)")
     if not make_ok:
-        print("  GNU Make 4.4.1: python tools/build_windows.py --install-make")
+        print("  GNU Make 4.4.1: python tools/build.py --install-make")
         print("  (Portable Windows binary; ~400 KB; no administrator privileges or PATH change)")
     if not arm:
-        print("  ARM compiler: python tools/build_windows.py --install-arm")
+        print("  ARM compiler: python tools/build.py --install-arm")
         print("  (Downloads official xPack Windows compiler, about 320 MB, SHA-256 verified)")
     if not node or not npx:
         print("  Node.js: winget install --id OpenJS.NodeJS.LTS -e")
@@ -500,7 +500,7 @@ command -v nwlink >/dev/null || { echo 'Tetris nwlink bridge is unavailable from
 
 # Publish end-user .nwa files outside Make's internal build/ directory.
 # build/ is intentionally left alone: NumPlay's Makefile hard-codes B = build.
-# The stable live path can later be supplied to emu_live.py for auto-reload.
+# The stable live path can later be supplied to emulator.py for auto-reload.
 LIVE_DIR = "live"
 VARIANT_DIR = "variants"
 GAME_DIR = "games"
