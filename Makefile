@@ -30,7 +30,7 @@ APP_SPACE = 2031616
 # Upsilon, the N0110 and N0115's custom software, gives .nwa apps less RAM: NumPlay-Upsilon.nwa has
 # the games that fit it (NumPlay draws their text there: see launcher/src/compat.c)
 UPSILON_RAM = 107674
-UPSILON_GAMES = crossyroad blockblast portal tetris dinorun chess flappybird flappydunk towerblock pacman snake connectfour solitaire g2048 minesweeper \
+UPSILON_GAMES = crossyroad blockblast portal tetris dinorun doodlejump chess flappybird flappydunk towerblock pacman snake connectfour solitaire g2048 minesweeper \
   breakout twoplayer invaders sudoku uttt sokoban
 
 # NumPlay and its discreet versions: the same app, with another name and icon
@@ -62,7 +62,7 @@ ARM_CFLAGS = -std=gnu11 $(EADK_CFLAGS) -DNP_VERSION='"$(VERSION)"' -Os -Wall -We
 ARM_LINK = -nostartfiles --specs=nano.specs -Wl,--relocatable -Wl,--gc-sections -Wl,-e,main \
   -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
 
-.PHONY: all nwa apps check sim emu clean lang FORCE
+.PHONY: all nwa apps check sim emu clean lang FORCE tetris-app
 all: nwa apps
 nwa: $(foreach v,$(VARIANTS),$(B)/$(v).nwa) $(B)/NumPlay-Upsilon.nwa
 
@@ -199,6 +199,11 @@ APP_buckshot = games/buckshot/output/buckshot.nwa:BuckshotRoulette.nwa
 APP_portal = games/portal/output/portal.nwa:PortalReturns.nwa
 APP_chess = games/chess/output/chess.nwa:NumChess.nwa
 APP_tetris = games/tetris/tetris/target/thumbv7em-none-eabihf/release/tetris:Tetris.nwa
+# Tetris on its own, without building every game (tools/build.py --game tetris)
+tetris-app: | $(B)
+	cd games/tetris/tetris && NWLINK="$(NWLINK)" $(CARGO) build --release --quiet
+	cp $(word 1,$(subst :, ,$(APP_tetris))) $(B)/apps/Tetris.nwa
+	arm-none-eabi-strip --strip-unneeded $(B)/apps/Tetris.nwa
 APP_numvisuals = games/numvisuals/output/numvisuals.nwa:NumVisuals.nwa
 # too big to share the calculator's app space with NumPlay: only on their own
 APP_celeste = games/celeste/output/celeste.nwa:Celeste.nwa
