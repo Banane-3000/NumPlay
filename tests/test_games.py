@@ -69,6 +69,8 @@ GAMES = {
     # past how to play, two flaps; next time the run goes on after a flap
     "flappydunk": ("FlappyDunk.nwa", "flappydunk.sav", presses((1500, "ok"), (2200, "ok"), (2550, "ok")), 3500,
                    presses((1500, "ok")), 2500),
+    # past how to play, a game started and a block placed; next time the tower is still there, waiting
+    "towerblock": ("TowerBlocks.nwa", "towerblocks.sav", presses((1500, "ok"), (2200, "ok"), (3000, "ok")), 3600, [], 2500),
     "flappybird": ("FlappyBird.nwa", "flappy.sav",
                    presses((1500, "down"), (1800, "ok"), (2100, "right"), (2400, "back"), (2700, "up"),
                            (2900, "right"), (3100, "ok"), (3900, "ok")) + every(4300, 7500, 450, "ok"), 9000,
@@ -283,6 +285,9 @@ CHECKS = {
     # a run kept (guide read), the ball on its way; then further along the same run
     "flappydunk": (lambda v: len(v) == 200 and v[:2] == b"F\1" and v[2] & 3 == 3 and struct.unpack_from("<f", v, 24)[0] > 1,
                    lambda v: v[2] & 1 and struct.unpack_from("<f", v, 24)[0] > 6),
+    # a tower kept (guide read) with one block placed; then kept as it was
+    "towerblock": (lambda v: len(v) == 668 and v[:2] == b"T\1" and v[2] & 3 == 3 and struct.unpack_from("<I", v, 12)[0] == 1,
+                   lambda v: v[2] & 1 and struct.unpack_from("<I", v, 12)[0] == 1),
     "flappybird": (lambda v: len(v) == 26 and v[:3] == b"F\1\1" and v[8] == 3,  # Custom, Speed Fast
                    lambda v: v[2] == 1 and v[8] == 4),  # read back, Speed Insane
     # the game went on (more points, fewer dots), then Fast was chosen and the game kept

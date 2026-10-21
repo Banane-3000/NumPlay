@@ -261,6 +261,24 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/flappydunk"
   },
   {
+    "id": "towerblock",
+    "title": "Tower Blocks",
+    "tagline": "Stack the blocks as high as you can",
+    "credit": "Based on Tower Blocks by Steve Gardner",
+    "top": "0xD8C7E8",
+    "bottom": "0x6E7BA8",
+    "accent": "0xF2D27A",
+    "colors": 16,
+    "records": [
+      "towerblocks.sav"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "app": "TowerBlocks.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/towerblock"
+  },
+  {
     "id": "pacman",
     "title": "Pac-Man",
     "tagline": "Eat dots, dodge ghosts",
