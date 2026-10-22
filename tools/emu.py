@@ -50,19 +50,25 @@ EXT_RAM_START = EXT_RAM_END - EXT_RAM_LEN
 STACK_TOP = 0x2403F000
 EXT_FLASH_START = 0x90200000
 EXT_FLASH_END = 0x903F0000
+# where installed apps may reach: the app area's end, or with Enlarged Extra Apps (nwagyu's Nwagra, which
+# tells the app loader the space goes on over the second copy of the software) the external flash's end
+APPS_END = EXT_FLASH_END
+XL_APPS_END = 0x90800000
 CPU_HZ = 216_000_000
 MODEL, SYSTEM = "n0120", "epsilon"
 
 
-def configure(model="n0120", system="epsilon", ram_length=None):
+def configure(model="n0120", system="epsilon", ram_length=None, xl=False):
     """The calculator to emulate: the N0120 (RAM at 0x24000000, the userland after an extra data
     sector) or the N0110/N0115 (RAM at 0x20000000); Epsilon or Upsilon (its userland header has no
     device name, apps get 107674 bytes of RAM, its file system is Epsilon 15's and it has none of
     the system calls for Home, checksums or flash). ram_length: the RAM apps get, when another
-    build of the software gives them another amount."""
+    build of the software gives them another amount. xl: Enlarged Extra Apps, an app up to the
+    external flash's end (its userland header still says the app area ends at 0x903F0000)."""
     global MODEL, SYSTEM, SRAM, USERLAND_HEADER, STORAGE, STORAGE_SIZE, EXT_RAM_END, EXT_RAM_LEN, EXT_RAM_START, \
-        STACK_TOP
+        STACK_TOP, APPS_END
     MODEL, SYSTEM = model, system
+    APPS_END = XL_APPS_END if xl else EXT_FLASH_END
     SRAM = 0x20000000 if model == "n0110" else 0x24000000
     USERLAND_HEADER = 0x90010000 if model == "n0110" else 0x90020000
     STORAGE = SRAM + 0x1000
@@ -173,7 +179,7 @@ class Calculator:
         with tempfile.TemporaryDirectory() as d:
             elf = os.path.join(d, "app.elf")
             cmd = [nwlink, "nwa-elf", nwa, elf, "--flash-start", hex(flash_start), "--flash-length",
-                   hex(EXT_FLASH_END - flash_start), "--ram-start", hex(EXT_RAM_START), "--ram-length",
+                   hex(APPS_END - flash_start), "--ram-start", hex(EXT_RAM_START), "--ram-length",
                    str(EXT_RAM_LEN), "--trampoline-start", hex(TRAMPOLINE)]
             if external_data:
                 cmd += ["--external-data", external_data]
@@ -565,12 +571,13 @@ def main():
     ap.add_argument("--model", choices=["n0120", "n0110"], default="n0120")
     ap.add_argument("--system", choices=["epsilon", "upsilon"], default="epsilon")
     ap.add_argument("--ram-length", type=int, help="the RAM apps get (default: the system's)")
+    ap.add_argument("--xl", action="store_true", help="Enlarged Extra Apps: an app up to 6 MB")
     ap.add_argument("--records", action="store_true", help="list storage records at the end")
     ap.add_argument("--frames", help="save raw RGB565 frames here (for tools/record.py --frames)")
     ap.add_argument("--profile", type=int, default=0,
                     help="print the N functions the CPU was found in most (build the .nwa without stripping it)")
     a = ap.parse_args()
-    configure(a.model, a.system, a.ram_length)
+    configure(a.model, a.system, a.ram_length, a.xl)
     os.makedirs(a.out, exist_ok=True)
     c = Calculator(a.nwa, a.flash_start, a.storage, a.nwlink)
     c.keys = parse_keys(a.keys)

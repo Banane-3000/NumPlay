@@ -24,7 +24,7 @@
 
 /* 1 for Epsilon's header, 2 for Upsilon's (no device name: the footer two words sooner, then
  * Omega's magic; and none of the system calls for Home, checksums or flash), 0 if neither */
-static int header_kind(uint32_t address) {
+static int header_kind(uint32_t address, bool past) {
   /* the userland header sits at the start of the userland, after the kernel
    * (and an optional extra data sector) of either firmware slot */
   if (address != 0x90010000 && address != 0x90020000 && address != 0x90410000 && address != 0x90420000) return 0;
@@ -32,9 +32,9 @@ static int header_kind(uint32_t address) {
   const volatile uint32_t *w = (const volatile uint32_t *)address;
   if (h->magic != USERLAND_MAGIC) return 0;
   int kind = h->footer == USERLAND_MAGIC ? 1 : w[9] == USERLAND_MAGIC && w[10] == 0xEFBEADDEu ? 2 : 0;
-  /* this app must run from the app area it describes */
-  uint32_t self = (uint32_t)(uintptr_t)&header_kind;
-  bool inside = h->apps_flash_start < h->apps_flash_end && self >= h->apps_flash_start && self < h->apps_flash_end &&
+  /* this app must run from the app area it describes (past: or after it, up to the flash's end) */
+  uint32_t self = (uint32_t)(uintptr_t)&header_kind, end = past ? 0x90800000u : h->apps_flash_end;
+  bool inside = h->apps_flash_start < end && self >= h->apps_flash_start && self < end &&
                 h->apps_flash_start % 0x10000 == 0;
   return inside ? kind : 0;
 }
@@ -47,19 +47,23 @@ const np_userland_t *np_userland(void) {
   if (done) return cached;
   done = true;
   /* Only external flash is probed: it exists on every model (RAM addresses
-   * differ between models, and reading a missing one faults). */
+   * differ between models, and reading a missing one faults). Then, when no
+   * app area holds this app: Enlarged Extra Apps (nwagyu's Nwagra) install
+   * apps past it, into the other slot of the external flash, whose software
+   * is gone then, so the one header left is this app's. */
   static const uint32_t candidates[] = {0x90010000, 0x90020000, 0x90410000, 0x90420000};
-  for (unsigned i = 0; i < 4; i++) {
-    int kind = header_kind(candidates[i]);
-    if (!kind) continue;
-    if (cached) {  /* two matches: refuse to guess */
-      cached = 0;
-      upsilon = false;
-      return 0;
+  for (int past = 0; past < 2 && !cached; past++)
+    for (unsigned i = 0; i < 4; i++) {
+      int kind = header_kind(candidates[i], past);
+      if (!kind) continue;
+      if (cached) {  /* two matches: refuse to guess */
+        cached = 0;
+        upsilon = false;
+        return 0;
+      }
+      cached = (const np_userland_t *)candidates[i];
+      upsilon = kind == 2;
     }
-    cached = (const np_userland_t *)candidates[i];
-    upsilon = kind == 2;
-  }
   return cached;
 }
 

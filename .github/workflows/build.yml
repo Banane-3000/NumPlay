@@ -42,7 +42,7 @@ jobs:
           rustup target add thumbv7em-none-eabihf
 
       - name: Build
-        run: python3 tools/build.py -j 4
+        run: python3 tools/build.py -j 4 && make kit-langs NWLINK=nwlink
         
       - uses: actions/upload-artifact@v4
         with:
@@ -86,6 +86,21 @@ jobs:
           make -C games/coreball host test
 
 
+
+      - name: Kit for the website
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # NumPlay Studio (customize/) links a NumPlay of your own from the kit (make kit): it goes on the
+        # branch "kit", one commit, and the site is deployed again with it
+        run: |
+          cd build/data/site-kit
+          git init -q -b kit
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Kit of NumPlay $(tr -d '[:space:]' < ../../../VERSION), from $GITHUB_SHA"
+          git push -q -f "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" kit
+          gh workflow run pages.yml --ref main || echo "(the site was not deployed again)"
 
       - name: Release
         if: startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && github.event_name != 'pull_request')

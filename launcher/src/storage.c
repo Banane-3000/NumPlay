@@ -60,10 +60,21 @@ bool np_reset_game(int game) {
 #define CONFIG_NAME "numplay.set"
 #define CONFIG_MAGIC 0x4E /* 'N' */
 
+#if !NP_SIMULATOR
+extern const uint8_t np_defaults[4];  /* how this NumPlay starts: launcher/app_name.c, or the website */
+#endif
+
 void np_config_load(np_config_t *c) {
   c->disguise = false;
   c->secret = NP_SECRET_XNT;
   c->hint = true;
+#if !NP_SIMULATOR
+  if (np_defaults[0] == 'D' && np_defaults[1] == 1) {
+    c->disguise = np_defaults[2] & 1;
+    c->hint = !(np_defaults[2] & 2);
+    if (np_defaults[3] < NP_SECRET_COUNT) c->secret = np_defaults[3];
+  }
+#endif
   uint32_t len = 0;
   const uint8_t *d = ef_read(CONFIG_NAME, &len);
   if (!d || len != 4 || d[0] != CONFIG_MAGIC || d[1] != 1) return;
@@ -158,13 +169,23 @@ static bool lz_scratch(uint32_t largest) {
   return lz_table && lz_buf;
 }
 
+/* a game that keeps a copy of its saves in a script of its own (one of its records), as the big
+ * games do: the installer keeps scripts, so its saves come back without NumPlay's copy */
+static bool own_copy(int g) {
+  for (const char *const *r = np_games[g].records; r && *r; r++) {
+    size_t n = strlen(*r);
+    if (n > 3 && !strcmp(*r + n - 3, ".py")) return true;
+  }
+  return false;
+}
+
 /* Every save file NumPlay knows, each name once (a name ending with '*': every record there is that
  * starts with the rest, like NumBlocks' regions); false when i is past the end */
 static bool save_name(int i, char out[64]) {
   if (i-- == 0) return strcpy(out, CONFIG_NAME), true;
   if (i-- == 0) return strcpy(out, BG_NAME), true; /* the home screen's background */
   for (int g = 0; g < np_game_count; g++)
-    for (const char *const *r = np_games[g].records; r && *r; r++) {
+    for (const char *const *r = own_copy(g) ? NULL : np_games[g].records; r && *r; r++) {
       bool seen = false;
       for (int h = 0; h <= g && !seen; h++)
         for (const char *const *q = np_games[h].records; q && *q && q != r && !seen; q++) seen = !strcmp(*q, *r);

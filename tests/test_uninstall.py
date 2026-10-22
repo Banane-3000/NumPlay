@@ -41,7 +41,7 @@ def main():
     c = emu.Calculator(a.nwa)
     manifest = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "games", "games.json")
     manifest = json.load(open(manifest))
-    games = [g["id"] for g in manifest]
+    games = [g["id"] for g in manifest if f"np_{g['id']}_begin" in c.symbols]  # (the games of this NumPlay)
     order = sorted(games, key=lambda g: c.symbols[f"np_{g}_begin"])
     target = a.game
     if target not in order:
@@ -86,7 +86,7 @@ def main():
     keys.append((t, t + 90, emu.KEYS["right"]))      # choose Uninstall
     hold = t + 500
     keys.append((hold, hold + 1800, emu.KEYS["ok"]))  # hold OK to confirm
-    t = hold + 1800 + 5000
+    t = hold + 1800 + 5000 + 400 * ((end - begin) // SECTOR)  # (a big game's sectors take a while to erase)
     done = t - 200
     keys.append((t, t + 90, emu.KEYS["ok"]))          # dismiss "was uninstalled"
     t += 1000

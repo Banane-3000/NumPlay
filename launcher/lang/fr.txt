@@ -108,6 +108,7 @@ Ultimate Tic-Tac-Toe	Morpion ultime
 Tic-tac-toe in tic-tac-toe	Un morpion dans le morpion
 Backgrounds, clocks, timers	Fonds, horloges, minuteurs
 Stop the invasion, one cannon	Arrête l'invasion avec un seul canon
+Game Boy, NES and Sega games	Jeux Game Boy, NES et Sega
 # (names that stay as they are)
 NumDash	NumDash
 NumBlocks	NumBlocks
@@ -116,6 +117,7 @@ NumDrive	NumDrive
 NumVisuals	NumVisuals
 Space Invaders	Space Invaders
 Sudoku	Sudoku
+Retro-Go	Retro-Go
 # the games' credits
 Inspired by Minecraft, not affiliated with Mojang	Inspiré de Minecraft, sans lien avec Mojang
 By Tatone26, from All the Apps	Par Tatone26, tiré d'All the Apps
@@ -126,6 +128,7 @@ Based on Suika Game by Aladdin X	D'après Suika Game d'Aladdin X
 Based on Core Ball by Yang Hao	D'après Core Ball de Yang Hao
 Based on Space Invaders by Taito	D'après Space Invaders de Taito
 Based on Chrome's dinosaur game by Google	D'après le jeu du dinosaure de Chrome, de Google
+Based on Retro-Go by ducalex	D'après Retro-Go de ducalex
 # a game the RAM of the calculator's software is too small for
 Needs 	Il manque 
  KB more memory	 Ko de mémoire

@@ -13,7 +13,7 @@ GAME = src/res.c src/tex.c src/room.c src/gfx.c src/phys.c src/anim.c src/hero.c
 SRC = $(GAME) src/plat_eadk.c src/main.c
 HEADERS = $(wildcard src/*.h) ../common/epsilon_app.h ../common/epsilon_files.h
 
-CFLAGS = -std=gnu11 $(shell $(NWLINK) eadk-cflags-device) -DDATA_BIN='"src/data.bin"'
+CFLAGS = -std=gnu11 $(shell $(NWLINK) eadk-cflags-device) -DEPSILON_XL=1 -DDATA_BIN='"src/data.bin"'
 CFLAGS += -O2 -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant
 CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fwhole-program -fvisibility=internal
 CFLAGS += -ffunction-sections -fdata-sections $(EXTRA)

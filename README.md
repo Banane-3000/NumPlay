@@ -17,6 +17,13 @@
 
 <p align="center">
   <a href="https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay.nwa"><img src="https://img.shields.io/badge/Download-NumPlay.nwa-1E7F74?style=for-the-badge" alt="Download NumPlay.nwa"></a>
+  <a href="https://mason363.github.io/NumPlay/customize/"><img src="https://img.shields.io/badge/Pick_your_games-NumPlay_Studio-3A3A3C?style=for-the-badge" alt="Pick your games in NumPlay Studio"></a>
+</p>
+
+<p align="center">
+  <a href="https://mason363.github.io/NumPlay/customize/"><img src="docs/media/studio.png" width="640" alt="NumPlay Studio: pick your games, add Game Boy, NES and Sega games, and install in one click"></a>
+  <br>
+  <a href="https://mason363.github.io/NumPlay/customize/"><b>Make your own NumPlay in NumPlay Studio</b></a>
 </p>
 
 <p align="center">
@@ -123,16 +130,25 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
     <td align="center"><a href="https://github.com/Mason363/NumWorks-Super-Mario-Bros"><b>Super Mario Bros.</b></a><br><sub>All 32 stages, in a repository of its own: NumWorks-Super-Mario-Bros</sub></td>
   </tr>
   <tr>
-    <td align="center"><a href="games/monkeymart/README.md"><img src="games/monkeymart/docs/title.png" width="200" alt="Monkey Mart"><br><b>Monkey Mart</b></a><br><sub>Both marts from version 2.1: 14 products, employees and 21 hats. By Bobydeluxe.</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/MonkeyMart.nwa">Download</a></td>
-    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Minecraft 1.18.2, Retro-Go and more: see the roadmap</sub></td>
+    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Minecraft 1.18.2 and more: see the roadmap</sub></td>
   </tr>
 </table>
+
+## Your own Game Boy, NES and Sega games
+
+<table>
+  <tr>
+    <td align="center" width="33%"><a href="games/retrogo/README.md"><img src="docs/media/thumb_retrogo.png" width="200" alt="Retro-Go"><br><b>Retro-Go</b></a><br><sub>Game Boy, Game Boy Color, NES, Master System and Game Gear games, with Retro-Go's menus and save slots</sub></td>
+  </tr>
+</table>
+
+Retro-Go plays the Game Boy, Game Boy Color, NES, Master System and Game Gear games you choose: games you own, or free ones like homebrew games. It isn't in NumPlay.nwa. Drop your games on [NumPlay Studio](https://mason363.github.io/NumPlay/customize/) and you get a NumPlay with Retro-Go and your games inside.
 
 ## How to install
 
 You need your calculator, its USB cable, and a computer with **Google Chrome** or **Microsoft Edge**. It takes about 2 minutes.
 
-1. **Download** [NumPlay.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay.nwa), or one of the big games above.
+1. **Download** [NumPlay.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay.nwa), or one of the big games above. Want other games in it? Pick them in [NumPlay Studio](https://mason363.github.io/NumPlay/customize/) and it makes a NumPlay.nwa with just those.
 2. **Plug** your calculator into the computer and turn it on.
 3. **Go to** [my.numworks.com/apps](https://my.numworks.com/apps) and log in. No account? Sign up there, it's free.
 4. Click **Connect**, then pick your calculator in the small window that opens.
@@ -248,14 +264,14 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [x] Super Mario 64, in a repository of its own: [NumWorks-Super-Mario-64](https://github.com/Mason363/NumWorks-Super-Mario-64)
 - [x] Super Mario Bros., in a repository of its own: [NumWorks-Super-Mario-Bros](https://github.com/Mason363/NumWorks-Super-Mario-Bros)
 - [x] The Nether and the End in NumBlocks: portals, fortresses, strongholds and the Ender Dragon, in NumBlocks.nwa
+- [x] [Retro-Go](https://github.com/ducalex/retro-go) for Game Boy, Game Boy Color, NES, Master System and Game Gear: upload your own ROMs on the website and get a .nwa app that plays them
 - [x] Suika Game
 - [x] Stickman Hook
 - [x] Donkey Kong
 - [x] Core Ball
 - [x] Dune
+- [x] [NumPlay Studio](https://mason363.github.io/NumPlay/customize/), the website where you pick the games in your NumPlay, with Enlarged Extra Apps to fit several big games
 - [ ] Full Minecraft 1.18.2 as a standalone app
-- [ ] A customizer website: pick the games you want in your launcher, with Enlarged Extra Apps support to fit several big games, or big and small ones together
-- [ ] [Retro-Go](https://github.com/ducalex/retro-go) for Game Boy, NES and more: upload your own ROMs on the website and get a .nwa app that plays them
 - [ ] Among Us, against bots
 - [ ] Cat Ninja
 - [ ] A tower defense game: Kingdom Rush or Bloons TD
@@ -277,8 +293,6 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Mr. Bullet
 
 ## Credits
-
-- **Monkey Mart** by TinyDobbins is adapted to native C for NumWorks, using the supplied version 2.1 artwork and game data. Both supplied marts are included. **[Bobydeluxe](https://github.com/Bobydeluxe)** made this adaptation. It installs separately as **MonkeyMart.nwa**. Not affiliated with TinyDobbins.
 
 NumPlay is a fan project, made out of love for these games and for the NumWorks calculator. If you enjoy a game here, go play the original and support the people who made it. NumWorks also has a great community of people making games by hand: try [Numcraft](https://github.com/yannis300307/NumcraftRust), [Celeste Classic](https://github.com/BenchatonDev/Celeste-Numworks), [Tatone26's All the Apps](https://github.com/Tatone26/Numworks-games), the apps on [Nwagyu](https://nwagyu.org/guide/) and [yannis300307's list](https://gist.github.com/yannis300307/9123136f90877107ec0d49ba96b303e5).
 
@@ -329,13 +343,15 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 - **reversal_lava63**, a beta tester who plays NumPlay's apps on a real calculator and reports what's wrong.
 - **[Gabriel](https://github.com/tomcalif9-stack)**, who made the home screen's moving backgrounds, translated NumPlay into French first, and tests it on Upsilon and an N0115.
 - **[LanoCodes17](https://github.com/LanoCodes17)**, whose idea the Konami code is: one of the secret ways into NumPlay from Matrices.
+- **[Retro-Go](https://github.com/ducalex/retro-go)** by ducalex inspired NumPlay's Retro-Go, whose launcher, menus and frame skipping are written again for NumPlay with no code copied from it. Its emulators are **[gnuboy](https://github.com/rofl0r/gnuboy)** by Laguna and Gilgamesh (GNU GPL v2 or later) for the Game Boy and **nofrendo** by Matthew Conte (GNU LGPL v2, used under the GPL) for the NES; the Master System and Game Gear are NumPlay's own, around **[superzazu's z80](https://github.com/superzazu/z80)** by Nicolas Allemand (MIT License). Its tests use Blargg's test ROMs, Matt Currie's dmg-acid2 and cgb-acid2, kevtris's nestest and Frank Cringle's zexdoc and zexall. Not affiliated with them.
+- **NumPlay Studio** builds your NumPlay right in the browser with **GNU ld and objcopy** from [binutils](https://www.gnu.org/software/binutils/) (GNU GPL v3), compiled to WebAssembly with [emscripten](https://emscripten.org).
 - Everyone who reported a bug: **NEE** ([reversallava63](https://github.com/reversallava63)), **Gabriel**, **[briac134](https://github.com/briac134)**, **[Raphanobie](https://github.com/Raphanobie)**, **[zbigzo](https://github.com/zbigzo)**, **Yacine**, **PelicanMan75**, **[Spykube](https://github.com/Spykube)** and **[axio-m](https://github.com/axio-m)**. Thank you!
 
 ## License
 
 NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyright (c) 2026 Mason Chen. Code and fonts from others keep their own licenses: the `UNLICENSE` files in the games' folders and the [LICENSES](LICENSES) folder. The names, artwork and music of the games NumPlay is inspired by belong to their makers and are not covered by it.
 
-<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Aladdin X (Suika Game), Voodoo (Flappy Dunk), Lima Sky (Doodle Jump), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Halfbrick (Jetpack Joyride), Madbox (Stickman Hook), Nintendo (Donkey Kong), Team Lava (Dune!), Inlogic Software (Dune Rider), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Chrome Dino, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Chrome of Google LLC, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog of SEGA, Space Invaders of Taito and Donkey Kong of Nintendo.</sub>
+<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Aladdin X (Suika Game), Voodoo (Flappy Dunk), Lima Sky (Doodle Jump), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog, Master System, Game Gear), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Halfbrick (Jetpack Joyride), Madbox (Stickman Hook), Nintendo (Donkey Kong, Game Boy, NES), Team Lava (Dune!), Inlogic Software (Dune Rider), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Chrome Dino, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper), ducalex (Retro-Go). Tetris is a trademark of The Tetris Company, Chrome of Google LLC, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog, Master System and Game Gear of SEGA, Space Invaders of Taito, and Donkey Kong, Game Boy, Game Boy Color and NES of Nintendo.</sub>
 
 ## Gallery
 
@@ -406,16 +422,17 @@ NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyri
     <td align="center"><img src="docs/media/gallery/sokoban.gif" alt="Sokoban: Microban's ninth level, pushed through to its goals"><br><a href="games/sokoban/README.md"><b>Sokoban</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/retrogo.gif" alt="Retro-Go: from the Game Boy tab to the NES list, then Thwaite, a homebrew game, starts and fireworks stop the missiles"><br><a href="games/retrogo/README.md"><b>Retro-Go</b></a></td>
     <td align="center"><img src="docs/media/gallery/flappydunk.gif" alt="Flappy Dunk: swishes in a row, the ball on fire"><br><a href="games/flappydunk/README.md"><b>Flappy Dunk</b></a></td>
     <td align="center"><img src="docs/media/gallery/towerblock.gif" alt="Tower Blocks: blocks dropped on the tower, the overhangs falling away"><br><a href="games/towerblock/README.md"><b>Tower Blocks</b></a></td>
-    <td align="center"><img src="docs/media/gallery/coreball.gif" alt="Core Ball: every ball shot onto the spinning core, level 3 and level 4 cleared"><br><a href="games/coreball/README.md"><b>Core Ball</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/gallery/coreball.gif" alt="Core Ball: every ball shot onto the spinning core, level 3 and level 4 cleared"><br><a href="games/coreball/README.md"><b>Core Ball</b></a></td>
     <td align="center"><img src="docs/media/gallery/doodlejump.gif" alt="Doodle Jump: the doodler climbs past blue platforms and a monster"><br><a href="games/doodlejump/README.md"><b>Doodle Jump</b></a></td>
     <td align="center"><img src="docs/media/jetpackjoyride.gif" alt="Jetpack Joyride: lasers, a missile, then the Lil' Stomper"><br><a href="games/jetpackjoyride/README.md"><b>Jetpack Joyride</b></a></td>
-    <td align="center"><img src="docs/media/stickmanhook.gif" alt="Stickman Hook: two levels swung from hook to hook, each over the finish line"><br><a href="games/stickmanhook/README.md"><b>Stickman Hook</b></a></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/media/stickmanhook.gif" alt="Stickman Hook: two levels swung from hook to hook, each over the finish line"><br><a href="games/stickmanhook/README.md"><b>Stickman Hook</b></a></td>
     <td align="center"><img src="docs/media/donkeykong.gif" alt="Donkey Kong: Mario climbs the 25m girders past rolling barrels to Pauline"><br><a href="games/donkeykong/README.md"><b>Donkey Kong</b></a></td>
     <td align="center"><img src="docs/media/dune.gif" alt="Dune: the ball rolls down the dunes, flies over the line for coins and lands Perfect Slides"><br><a href="games/dune/README.md"><b>Dune</b></a></td>
   </tr>

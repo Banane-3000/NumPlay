@@ -43,7 +43,7 @@ ENGINE_W = -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variabl
   -Wno-cast-function-type -Wno-pointer-sign -Wno-char-subscripts -Wno-parentheses -Wno-address -Wno-unused-value \
   -Wno-int-in-bool-context -Wno-array-bounds -Wno-stringop-overflow -Wno-absolute-value -Wno-dangling-pointer
 
-ARCH = $(shell $(NWLINK) eadk-cflags-device)
+ARCH = $(shell $(NWLINK) eadk-cflags-device) -DEPSILON_XL=1
 COMMON = $(ARCH) $(INC) -Os -fno-math-errno -fno-unwind-tables -fno-asynchronous-unwind-tables -fsingle-precision-constant -fno-tree-loop-distribute-patterns \
   -ffunction-sections -fdata-sections -fwrapv -flto -fno-fat-lto-objects -fvisibility=internal -DNDEBUG $(EXTRA)
 CFLAGS = -std=gnu11 $(COMMON)

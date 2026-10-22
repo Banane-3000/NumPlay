@@ -2,8 +2,9 @@ name: Pages
 
 # Builds the site (mason363.github.io/NumPlay: the README and docs, with Jekyll, as GitHub Pages
 # did on its own) and deploys it, with the README's downloads, stars and version badges made from
-# GitHub's numbers (tools/badges.py). On each push to main, every six hours so the numbers stay
-# fresh, and after each release (Build starts it).
+# GitHub's numbers (tools/badges.py), and NumPlay Studio (customize/) with the kit Build leaves on
+# the branch "kit". On each push to main, every six hours so the numbers stay fresh, and after each
+# release or new kit (Build starts it).
 
 on:
   push:
@@ -35,6 +36,11 @@ jobs:
           version=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
           python3 tools/badges.py --downloads "$downloads" --stars "$stars" --version "$version" --out docs/badges
           cat docs/badges/*.json
+      - name: NumPlay Studio's kit
+        run: |
+          mkdir -p customize/kit
+          if git fetch -q --depth 1 origin kit; then git archive FETCH_HEAD | tar -x -C customize/kit; ls customize/kit
+          else echo "(no kit yet)"; fi
       - uses: actions/configure-pages@v5
       - uses: actions/jekyll-build-pages@v1
         with:

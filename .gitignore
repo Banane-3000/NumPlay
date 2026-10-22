@@ -8,3 +8,6 @@ games/tetris/tetris/src/data/image.nppm
 # made by the Pages workflow (tools/badges.py)
 docs/badges/
 dist/
+
+# the customizer website's kit (make kit), put there when the site is deployed
+/customize/kit
