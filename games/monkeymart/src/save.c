@@ -1,26 +1,108 @@
-#include "game.h"
+/* The save (save.h): a bytes file with a magic, a version, its size and a checksum; anything else (damaged, cut
+ * short, from elsewhere) is not read: the copy in the Python script is tried, then a fresh start. */
+#include <stddef.h>
 #include <string.h>
-static uint32_t crc32(const uint8_t*p,unsigned n){uint32_t c=~0u;for(unsigned i=0;i<n;i++){c^=p[i];for(unsigned k=0;k<8;k++)c=(c>>1)^(0xedb88320u&-(int32_t)(c&1));}return ~c;}
-static void put(uint8_t**p,uint32_t v,unsigned n){for(unsigned i=0;i<n;i++){*(*p)++=(uint8_t)v;v>>=8;}}
-static uint32_t get(const uint8_t**p,unsigned n){uint32_t v=0;for(unsigned i=0;i<n;i++)v|=(uint32_t)*(*p)++<<(8*i);return v;}
-void save_encode(const Progress*s,uint8_t out[SAVE_BYTES]){memset(out,0,SAVE_BYTES);memcpy(out,"MMR1",4);uint8_t*p=out+4;
- put(&p,s->coins,4);put(&p,s->hats,4);put(&p,s->rng,4);put(&p,s->seconds,4);put(&p,s->total_sales,4);put(&p,s->market,1);put(&p,s->hat,1);put(&p,(uint16_t)s->x,2);put(&p,(uint16_t)s->y,2);put(&p,s->count,1);memcpy(p,s->carry,CARRY_MAX);p+=CARRY_MAX;put(&p,s->tokens,1);put(&p,s->reward_cooldown,2);for(unsigned k=0;k<3;k++)put(&p,s->boosts[k],2);
- for(unsigned m=0;m<2;m++){const MartSave*v=&s->mart[m];put(&p,(uint32_t)v->active,4);put(&p,(uint32_t)(v->active>>32),4);put(&p,v->cash,4);put(&p,v->progress,1);put(&p,v->started,1);
-  for(unsigned n=0;n<MAX_PLACES;n++){put(&p,v->paid[n],2);put(&p,v->production[n],2);put(&p,v->stock[n],1);put(&p,v->stamina[n],1);}
-  for(unsigned u=0;u<12;u++)for(unsigned k=0;k<3;k++)put(&p,v->upgrade[u][k],1);
-  for(unsigned i=0;i<7;i++)put(&p,v->worker_stamina[i],1);
- }p=out+SAVE_BYTES-4;put(&p,crc32(out,SAVE_BYTES-4),4);
+#include "plat.h"
+#include "save.h"
+
+uint32_t mm_sum(const void *data, uint32_t n) {
+  const uint8_t *p = data;
+  uint32_t h = 2166136261u;
+  for (uint32_t i = 0; i < n; i++) h = (h ^ p[i]) * 16777619u;
+  return h;
 }
-bool save_decode(Progress*out,const uint8_t*data,uint32_t size){if(!data||size!=SAVE_BYTES||memcmp(data,"MMR1",4))return false;const uint8_t*tail=data+SAVE_BYTES-4;if(get(&tail,4)!=crc32(data,SAVE_BYTES-4))return false;Progress s={0};const uint8_t*p=data+4;
- s.coins=get(&p,4);s.hats=get(&p,4);s.rng=get(&p,4);s.seconds=get(&p,4);s.total_sales=get(&p,4);s.market=(uint8_t)get(&p,1);s.hat=(uint8_t)get(&p,1);s.x=(int16_t)get(&p,2);s.y=(int16_t)get(&p,2);s.count=(uint8_t)get(&p,1);memcpy(s.carry,p,CARRY_MAX);p+=CARRY_MAX;s.tokens=(uint8_t)get(&p,1);s.reward_cooldown=(uint16_t)get(&p,2);for(unsigned i=0;i<3;i++)s.boosts[i]=(uint16_t)get(&p,2);
- if(s.market>=2||s.hat>=21||s.count>CARRY_MAX||!s.rng||(s.hats&~0x1fffffu)||!(s.hats&1)||!(s.hats&(1u<<s.hat))||s.reward_cooldown>40)return false;
- for(unsigned i=0;i<s.count;i++)if(s.carry[i]<1||s.carry[i]>FOOD_COUNT)return false;
- for(unsigned i=0;i<3;i++)if(s.boosts[i]>120)return false;
- for(unsigned m=0;m<2;m++){MartSave*v=&s.mart[m];const MartDef*def=&marts[m];v->active=get(&p,4);v->active|=(uint64_t)get(&p,4)<<32;v->cash=get(&p,4);v->progress=(uint8_t)get(&p,1);v->started=(uint8_t)get(&p,1);if(v->active>>def->count||v->progress>def->order_count||v->started>1)return false;
-  for(unsigned n=0;n<MAX_PLACES;n++){v->paid[n]=(uint16_t)get(&p,2);v->production[n]=(uint16_t)get(&p,2);v->stock[n]=(uint8_t)get(&p,1);v->stamina[n]=(uint8_t)get(&p,1);if(v->stock[n]>32||v->stamina[n]>28||v->production[n]>12*TICKS||(n<def->count&&v->paid[n]>def->places[n].price))return false;}
-  for(unsigned u=0;u<12;u++)for(unsigned k=0;k<3;k++){v->upgrade[u][k]=(uint8_t)get(&p,1);if(v->upgrade[u][k]>(u<def->upgrade_count?def->upgrade_max[u][k]:0))return false;}
-  for(unsigned i=0;i<7;i++){v->worker_stamina[i]=(uint8_t)get(&p,1);if(v->worker_stamina[i]>12)return false;}
- }
- const MartDef*m=&marts[s.market];if(!s.mart[0].started||!s.mart[s.market].started||s.x<m->minx||s.x>m->maxx||s.y<m->miny||s.y>m->maxy||(s.market==1&&!(s.mart[0].active&(UINT64_C(1)<<31))))return false;
- *out=s;return true;
+
+bool mm_file_ok(const mm_file *f) {
+  if (f->magic != MM_MAGIC || f->version != MM_VERSION || f->size != sizeof *f) return false;
+  if (f->sum != mm_sum(f, offsetof(mm_file, sum))) return false;
+  return mm_progress_ok(&f->p);
+}
+
+static const char head[] = "# Monkey Mart keeps a copy of your marts, coins and hats\n"
+                           "# here, so that installing it again doesn't erase them.\n";
+static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static uint8_t copy[1 + sizeof head + 2 + sizeof MM_SAVE_NAME + 1 + (sizeof(mm_file) + 2) / 3 * 4 + 2];
+
+/* the copy: the file in base 64, in a comment line of a script */
+static bool copy_write(const mm_file *f) {
+  const uint8_t *bytes = (const uint8_t *)f;
+  uint32_t len = sizeof *f, nl = sizeof MM_SAVE_NAME - 1;
+  uint8_t *p = copy;
+  *p++ = 0;   /* (a script's first byte: not imported) */
+  memcpy(p, head, sizeof head - 1), p += sizeof head - 1;
+  *p++ = '#', *p++ = '>';
+  memcpy(p, MM_SAVE_NAME, nl), p += nl;
+  *p++ = ':';
+  for (uint32_t i = 0; i < len; i += 3, p += 4) {
+    uint32_t left = len - i, v = (uint32_t)bytes[i] << 16 | (left > 1 ? (uint32_t)bytes[i + 1] << 8 : 0) | (left > 2 ? bytes[i + 2] : 0);
+    p[0] = (uint8_t)b64[v >> 18 & 63];
+    p[1] = (uint8_t)b64[v >> 12 & 63];
+    p[2] = left > 1 ? (uint8_t)b64[v >> 6 & 63] : '=';
+    p[3] = left > 2 ? (uint8_t)b64[v & 63] : '=';
+  }
+  *p++ = '\n';
+  return plat_save(MM_COPY_NAME, copy, (uint32_t)(p - copy));
+}
+
+static int b64v(uint8_t c) {
+  for (int i = 0; i < 64; i++)
+    if ((uint8_t)b64[i] == c) return i;
+  return -1;
+}
+
+static bool copy_read(mm_file *f) {
+  uint32_t n, nl = sizeof MM_SAVE_NAME - 1;
+  const uint8_t *c = plat_load(MM_COPY_NAME, &n);
+  if (!c) return false;
+  for (uint32_t i = 0; i + nl + 3 <= n; i++) {
+    if (c[i] != '#' || c[i + 1] != '>' || memcmp(c + i + 2, MM_SAVE_NAME, nl) || c[i + 2 + nl] != ':') continue;
+    const uint8_t *l = c + i + 3 + nl;
+    uint32_t m = 0;
+    while (l + m < c + n && l[m] != '\n' && l[m]) m++;
+    if (m != (sizeof *f + 2) / 3 * 4) return false;
+    uint8_t *bytes = (uint8_t *)f;
+    uint32_t o = 0;
+    for (uint32_t k = 0; k < m; k += 4) {
+      int v0 = b64v(l[k]), v1 = b64v(l[k + 1]), v2 = l[k + 2] == '=' ? 0 : b64v(l[k + 2]), v3 = l[k + 3] == '=' ? 0 : b64v(l[k + 3]);
+      if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0) return false;
+      uint32_t w = (uint32_t)(v0 << 18 | v1 << 12 | v2 << 6 | v3);
+      if (o < sizeof *f) bytes[o++] = (uint8_t)(w >> 16);
+      if (o < sizeof *f) bytes[o++] = (uint8_t)(w >> 8);
+      if (o < sizeof *f) bytes[o++] = (uint8_t)w;
+    }
+    return true;
+  }
+  return false;
+}
+
+static mm_file file;     /* (static: the stack stays small) */
+
+bool save_load(mm_progress *p) {
+  uint32_t n;
+  const uint8_t *d = plat_load(MM_SAVE_NAME, &n);
+  bool ok = false;
+  if (d && n == sizeof file) {
+    memcpy(&file, d, sizeof file);
+    ok = mm_file_ok(&file);
+  }
+  if (!ok && copy_read(&file) && mm_file_ok(&file)) {
+    ok = true;
+    plat_save(MM_SAVE_NAME, &file, sizeof file);   /* back where it belongs */
+  }
+  if (!ok) {
+    mm_new_progress(p);
+    return false;
+  }
+  *p = file.p;
+  return true;
+}
+
+bool save_write(const mm_progress *p) {
+  memset(&file, 0, sizeof file);
+  file.magic = MM_MAGIC, file.version = MM_VERSION, file.size = sizeof file;
+  file.p = *p;
+  file.sum = mm_sum(&file, offsetof(mm_file, sum));
+  bool ok = plat_save(MM_SAVE_NAME, &file, sizeof file);
+  copy_write(&file);
+  return ok;
 }

@@ -1,50 +1,62 @@
-# MonkeyMart: native standalone arcade adaptation by Bobydeluxe.
-.DEFAULT_GOAL := build
+# Monkey Mart on the NumWorks calculator.
+#   make            output/monkeymart.nwa
+#   make check      link it like the calculator does (output/monkeymart.bin)
+#   make host       build/play: the game on a computer, for tests and pictures
+#   make test       the rules against the web game's numbers, a bot through the first mart to the second, random
+#                   keys, saves (with the sanitizers); with ORIGINAL=DIR (the web game taken apart, kept with the
+#                   reference: its Lua sources in DIR/lua), the marts' tables against the game's own text too
+#   make data WEB=DIR   src/data.c, src/data.h, src/art.c and src/art.h again, from the web game taken apart in DIR
+#                       (tools/data.py and tools/art.py: Python + Pillow; nothing in DIR is run)
+Q ?= @
 CC = arm-none-eabi-gcc
 NWLINK ?= npx --yes -- nwlink@1.0.0
-PYTHON ?= python3
-HOST_CC ?= cc
-ARM_LD ?= arm-none-eabi-ld
-OBJCOPY ?= arm-none-eabi-objcopy
-SRC = src/main.c src/game.c src/save.c src/render.c src/assets.c src/data.c
-OBJECTS = $(patsubst src/%.c,output/%.o,$(SRC))
+BUILD_DIR = output
+
+SRC = src/main.c src/game.c src/draw.c src/save.c src/data.c src/art.c src/plat_eadk.c
 HEADERS = $(wildcard src/*.h) ../common/epsilon_app.h ../common/epsilon_files.h
-PACKER = tools/compact_nwa.py tools/standalone.ld
-ASSET_FILES = $(filter-out assets/sprite-ids.json,$(wildcard assets/*.png assets/*.json assets/sprites/*.png))
-src/assets.c: tools/assets.py tools/data.py $(ASSET_FILES)
-	$(PYTHON) tools/assets.py
-src/data.c src/sprite-ids.h: src/assets.c
-CFLAGS = -std=c11 $(shell $(NWLINK) eadk-cflags-device) -Os -Wall -Wextra -Werror -Wno-misleading-indentation
-CFLAGS += -ffunction-sections -fdata-sections -fstack-usage -fno-tree-loop-distribute-patterns
-CFLAGS += -flto -fno-fat-lto-objects -fvisibility=internal
-LINK = -nostartfiles --specs=nano.specs -Wl,--relocatable,--gc-sections,-e,main -flinker-output=nolto-rel
-.PHONY: build check test test-arm test-assets assets clean
-build: output/monkeymart.nwa
-output:
-	mkdir -p $@
-output/%.o: src/%.c $(HEADERS) | output
-	$(CC) $(CFLAGS) -c $< -o $@
-output/icon.o: src/icon.png | output
-	$(NWLINK) png-icon-o $< $@
-output/icon-compact.o: output/icon.o $(PACKER)
-	$(PYTHON) tools/compact_nwa.py icon $< $@ --objcopy $(OBJCOPY)
-output/monkeymart-debug.nwa: $(OBJECTS) output/icon-compact.o $(PACKER)
-	$(CC) $(CFLAGS) $(LINK) -Wl,-u,eadk_app_name,-u,eadk_app_icon,-u,eadk_api_level $(OBJECTS) output/icon-compact.o -lm -o output/standalone.o
-	$(PYTHON) tools/compact_nwa.py app output/standalone.o $@ --ld $(ARM_LD)
-output/monkeymart.nwa: output/monkeymart-debug.nwa $(PACKER)
-	$(PYTHON) tools/compact_nwa.py release $< $@ --objcopy $(OBJCOPY)
-check: build
-	$(NWLINK) nwa-bin output/monkeymart.nwa output/monkeymart.bin --ram-length 107674
-	$(NWLINK) nwa-bin output/monkeymart-debug.nwa output/monkeymart-debug.bin --ram-length 107674
-	$(PYTHON) -c "from pathlib import Path; assert Path('output/monkeymart.bin').read_bytes() == Path('output/monkeymart-debug.bin').read_bytes()"
-test: | output
-	$(HOST_CC) -std=c11 -O2 -Wall -Wextra -Werror -Wno-misleading-indentation -DMM_TEST -Isrc tests/test.c src/game.c src/save.c src/render.c src/assets.c src/data.c -lm -o output/test
-	cd output && ./test
-test-arm:
-	$(PYTHON) tests/test_arm.py --nwlink "$(NWLINK)"
-test-assets:
-	$(PYTHON) tests/test_assets.py
-assets:
-	$(PYTHON) tools/assets.py
+
+CFLAGS = -std=gnu11 $(shell $(NWLINK) eadk-cflags-device) -DPLATFORM_DEVICE=1
+CFLAGS += -Os -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant
+CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fwhole-program -fvisibility=internal
+CFLAGS += -ffunction-sections -fdata-sections
+LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
+LDFLAGS += -Wl,-e,main -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
+LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
+
+.PHONY: build check clean host test data
+build: $(BUILD_DIR)/monkeymart.nwa
+
+# apps get 133652 bytes of RAM on custom builds of Epsilon 25.2 (148928 or more on official ones)
+check: $(BUILD_DIR)/monkeymart.nwa
+	$(Q) $(NWLINK) nwa-bin --ram-length 133652 $< $(BUILD_DIR)/monkeymart.bin
+	@echo "BIN     $(BUILD_DIR)/monkeymart.bin: $$(wc -c < $(BUILD_DIR)/monkeymart.bin) bytes"
+
+$(BUILD_DIR)/monkeymart.nwa: $(SRC) $(HEADERS) $(BUILD_DIR)/icon.o
+	@echo "LD      $@"
+	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $(SRC) $(BUILD_DIR)/icon.o -lm -o $@
+	$(Q) arm-none-eabi-strip --strip-unneeded $@
+
+$(BUILD_DIR)/icon.o: src/icon.png | $(BUILD_DIR)
+	@echo "ICON    $<"
+	$(Q) $(NWLINK) png-icon-o $< $@
+
+$(BUILD_DIR):
+	$(Q) mkdir -p $@
+
+# on a computer: tests/play.c runs the game with scripted keys and its bot, checks it and saves pictures
+HOST_SRC = tests/play.c src/draw.c src/save.c src/data.c src/art.c
+HOST_FLAGS = -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -ffp-contract=off -Isrc -DHOST
+host: build/play
+build/play: $(HOST_SRC) src/main.c src/game.c tests/bot.h $(wildcard src/*.h)
+	$(Q) mkdir -p build
+	$(Q) cc $(HOST_FLAGS) -fsanitize=address,undefined -fno-sanitize-recover=undefined $(HOST_SRC) -lm -o $@
+	@echo "HOST    $@"
+test: build/play
+	build/play test build
+	$(if $(ORIGINAL),python3 -I tools/data.py $(ORIGINAL) --check)
+
+data:
+	python3 -I tools/data.py $(WEB)
+
 clean:
-	rm -rf output
+	$(Q) rm -rf $(BUILD_DIR) build
