@@ -326,6 +326,82 @@ static int charms_test(void) {
   return charm_fails ? 1 : 0;
 }
 
+/* the stag stations: their Stag Blanker (Blanker Control) black as the room comes in, faded out after 0.65 s over a
+ * second, so that each is seen, come in by its gate, by the stag and loaded at its bench; and the rides, the stag called
+ * with the bell first */
+static int station_fails;
+static float seen(void) {   /* (the share of the screen under the HUD that is not black) */
+  extern uint16_t host_fb[];
+  for (int i = 0; i < 3; i++) game_draw();   /* (the tiles in, as while playing) */
+  int lit = 0, n = 0;
+  for (int y = 70; y < SCREEN_H; y++)
+    for (int x = 0; x < SCREEN_W; x++, n++) lit += host_fb[y * SCREEN_W + x] != 0;
+  return (float)lit / n;
+}
+static void station_check(int room, const char *how) {
+  float s = seen();
+  bool ok = g_room.id == room && s > 0.2f && !g_hero.hidden;   /* (black: the HUD only, under 1%) */
+  printf("%s stations: %s %s, %.0f%% of the screen seen\n", ok ? "ok  " : "FAIL", room_name(room), how, s * 100);
+  station_fails += !ok;
+}
+static void station_new(int stag_at) {
+  game_new();
+  pd_set_flag(PDF_OPENED_CROSSROADS, true), pd_set_flag(PDF_OPENED_GREENPATH, true), pd_set_flag(PDF_MET_STAG, true);
+  g_pd.stag_position1 = (uint8_t)(stag_at + 1);
+}
+static int stations_test(void) {
+  if (getenv("HKSAVES")) {
+    extern void host_save_dir(const char *d);
+    host_save_dir(getenv("HKSAVES"));
+  }
+  static const struct { int room; const char *gate; float bench_x; } st[] = {
+      {ROOM_ROOM_TOWN_STAG_STATION, "left1", 0}, {ROOM_CROSSROADS_47, "right1", 29.34f}, {ROOM_FUNGUS1_16_ALT, "right1", 30.97f}};
+  for (unsigned i = 0; i < sizeof st / sizeof st[0]; i++) {
+    station_new(1);
+    game_enter_gate(st[i].room, st[i].gate);
+    run_ticks(150, 0);
+    station_check(st[i].room, "come in by its gate");
+    if (!st[i].bench_x) continue;
+    /* (rested at its bench, the game saved; a new game; the save loaded) */
+    station_new(1);
+    save_select(0);
+    game_enter(st[i].room, st[i].bench_x, 7, true);
+    run_ticks(60, 0);
+    run_ticks(3, K_UP);
+    run_ticks(150, 0);
+    bool rested = pd_flag(PDF_AT_BENCH);
+    game_new();
+    bool loaded = rested && save_load(0) && game_respawn();
+    run_ticks(200, 0);
+    if (!loaded) printf("FAIL stations: %s: not rested at its bench and loaded\n", room_name(st[i].room)), station_fails++;
+    else station_check(st[i].room, "loaded at its bench");
+  }
+  /* (the Crossroads: the stag at Dirtmouth called by the bell's ring (the nail), then up in its Travel Range, Dirtmouth
+   * chosen; again with the stag there, Greenpath chosen) */
+  for (int k = 0; k < 2; k++) {
+    station_new(k ? 1 : 0);
+    game_enter(ROOM_CROSSROADS_47, k ? 16.3f : 18.7f, 7, true);
+    run_ticks(120, 0);
+    if (!k) {
+      run_ticks(3, K_ATTACK);
+      run_ticks(600, 0);
+      run_ticks(15, K_LEFT);
+      run_ticks(60, 0);
+    }
+    run_ticks(3, K_UP);
+    run_ticks(200, 0);
+    run_ticks(2, k ? K_DOWN : K_UP);
+    run_ticks(30, 0);
+    run_ticks(2, K_OK);
+    run_ticks(300, 0);
+    run_ticks(2, K_OK);   /* (the ride skipped after 1.5 s) */
+    run_ticks(300, 0);
+    station_check(k ? ROOM_FUNGUS1_16_ALT : ROOM_ROOM_TOWN_STAG_STATION, k ? "by the stag" : "by the stag, called by its bell");
+  }
+  printf("stations: %d failing\n", station_fails);
+  return station_fails ? 1 : 0;
+}
+
 /* the ground's seams, as the calculator rounds: from many places in every room the Knight lands on the ground, then is
  * put a few float steps lower (as near as rounding leaves him), and must walk both ways where no wall stops him; and
  * jumping at a wall, put a few steps nearer it, he must fall back down, not hang on it */
@@ -583,6 +659,7 @@ static int gates_test(const char *which) {
   if (!strcmp(which, "markers")) return markers_test();
   if (!strcmp(which, "arenas")) return arenas_test();
   if (!strcmp(which, "charms")) return charms_test();
+  if (!strcmp(which, "stations")) return stations_test();
   if (!strncmp(which, "wander:", 7)) {   /* (wander:ROOM|all:seed:ticks) */
     char room[64];
     int seed = 1, ticks = 6000;
