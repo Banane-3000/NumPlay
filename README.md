@@ -120,6 +120,9 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
   <tr>
     <td align="center"><a href="games/dune/README.md"><img src="docs/media/thumb_dune.png" width="200" alt="Dune"><br><b>Dune</b></a><br><sub>Roll down the dunes and fly over the line: 26 balls, 7 landscapes</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/Dune.nwa">Download</a></td>
     <td align="center"><a href="https://github.com/Mason363/NumWorks-Super-Mario-64"><b>Super Mario 64</b></a><br><sub>In a repository of its own: NumWorks-Super-Mario-64</sub></td>
+    <td align="center"><a href="https://github.com/Mason363/NumWorks-Super-Mario-Bros"><b>Super Mario Bros.</b></a><br><sub>All 32 stages, in a repository of its own: NumWorks-Super-Mario-Bros</sub></td>
+  </tr>
+  <tr>
     <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Minecraft 1.18.2, Retro-Go and more: see the roadmap</sub></td>
   </tr>
 </table>
@@ -242,6 +245,7 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [x] Sudoku
 - [x] Ultimate Tic-Tac-Toe
 - [x] Super Mario 64, in a repository of its own: [NumWorks-Super-Mario-64](https://github.com/Mason363/NumWorks-Super-Mario-64)
+- [x] Super Mario Bros., in a repository of its own: [NumWorks-Super-Mario-Bros](https://github.com/Mason363/NumWorks-Super-Mario-Bros)
 - [x] The Nether and the End in NumBlocks: portals, fortresses, strongholds and the Ender Dragon, in NumBlocks.nwa
 - [x] Suika Game
 - [x] Stickman Hook
@@ -269,6 +273,7 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Tower Destiny Survive
 - [ ] My Little Universe
 - [ ] Famidash, made for the calculator (not through an emulator)
+- [ ] Mr. Bullet
 
 ## Credits
 
