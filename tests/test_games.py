@@ -230,6 +230,9 @@ GAMES = {
     # time, from the copy, it opens paused: Back, a second more, paused again, quit with On/Off
     "donkeykong": ("DonkeyKong.nwa", "donkeykong.sav", presses((1500, "ok"), (2500, "ok"), (3600, "back")), 5000,
                    presses((1500, "back"), (2700, "back")), 4000),
+    # the title, Play, the first press (the guide goes) and the ball rolls; Home keeps the run. Next time, from the
+    # copy, it opens paused: Back, and it rolls on
+    "dune": ("Dune.nwa", "dune.sav", presses((1500, "ok"), (2600, "ok")), 5000, presses((1500, "back")), 3500),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -274,7 +277,7 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "hillclimb": "hillclimb_saves.py", "pvz": "pvz_saves.py", "sonic": "sonic_saves.py",
           "cookieclicker": "cookieclicker_saves.py", "leveldevil": "leveldevil_saves.py",
           "jetpackjoyride": "jetpackjoyride_saves.py", "stickmanhook": "stickmanhook_saves.py",
-          "donkeykong": "donkeykong_saves.py"}
+          "donkeykong": "donkeykong_saves.py", "dune": "dune_saves.py"}
 
 
 def dk_frames(v):
@@ -408,6 +411,9 @@ CHECKS = {
     # a game kept ("DKG1", the game at 23, one game played) a second in; after the reinstall, from the copy, it goes on
     "donkeykong": (lambda v: v[:4] == b"DKG1" and v[23] == 1 and v[12] == 1 and dk_frames(v) >= 30,
                    lambda v: v[:4] == b"DKG1" and v[23] == 1 and v[12] == 1 and dk_frames(v) >= 90),
+    # a run kept ("DUNE", has_run at 27, the run's frames at 328); after the reinstall, from the copy, it goes on
+    "dune": (lambda v: len(v) == 1548 and v[:4] == b"DUNE" and v[27] == 1 and struct.unpack_from("<I", v, 328)[0] >= 200,
+             lambda v: len(v) == 1548 and v[:4] == b"DUNE" and v[27] == 1 and struct.unpack_from("<I", v, 328)[0] >= 300),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
     # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies kept

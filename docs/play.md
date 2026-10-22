@@ -523,6 +523,19 @@ Climb to the top and save Pauline, as in the 1981 arcade game. Jump over Kong's 
 
 <br clear="right">
 
+## Dune
+
+<img src="../games/dune/docs/shot.png" width="320" align="right" alt="Dune">
+
+| Key | What it does |
+| --- | --- |
+| **OK** (or **EXE**, **shift**), held | Speed up downhill and dive in the air |
+| **Back** | Pause (with Restart, Shop, How to play and Quit) |
+
+The ball rolls on by itself. Hold OK going downhill to speed up and let go going uphill to take off. Fly over the line for points, and land on a downslope for a Perfect Slide. Land on your head, or on the uphill, and the run is over. Coins buy new balls and landscapes in the shop. Your best score, coins and shop are saved.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">

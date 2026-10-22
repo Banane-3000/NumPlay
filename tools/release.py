@@ -42,6 +42,7 @@ ALONE = {
     "jetpackjoyride": ("Jetpack Joyride", "Barry's run through the lab, with five vehicles and the Final Spin"),
     "stickmanhook": ("Stickman Hook", "swing from hook to hook: 39 levels made by hand, then endless ones"),
     "donkeykong": ("Donkey Kong", "the 1981 arcade game: barrels, pies, elevators and rivets, up to Pauline"),
+    "dune": ("Dune", "roll down the dunes and fly over the line, with the shop's 26 balls and 7 landscapes"),
 }
 VARIANTS = [
     ("NumPlay-Invisible.nwa", "The same app, hidden: a blank icon with no name"),
