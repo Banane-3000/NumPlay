@@ -1,98 +1,83 @@
-# Monkey Mart
+> **Monkey Mart is a [NumPlay](../../README.md) game that comes on its own.** It is too big to fit next to NumPlay on the calculator. Get `MonkeyMart.nwa` from the [latest release](https://github.com/Mason363/NumPlay/releases/latest).
 
-Native NumWorks adaptation by **Bobydeluxe**, based on TinyDobbins' Monkey Mart.
+<p align="center">
+  <img src="src/icon.png" width="84" alt="Monkey Mart icon">
+</p>
 
-The supplied reference is version **2.1**. It contains **two playable marts**;
-its third-mart module is commented out and absent from the archive. This port
-includes both supplied marts, their complete layouts and purchase progression,
-14 products, all production chains, employees, upgrades and 21 hat choices.
+<h1 align="center">Monkey Mart</h1>
 
-| Mart | Products | Employees |
-| --- | --- | --- |
-| 1 | Bananas, corn, eggs, milk, popcorn, yogurt | Cashier, two assistants, farmer, chef, manager |
-| 2 | Cocoa, coffee beans, peanuts, chocolate, ground coffee, peanut butter, cappuccino, chocolate bars | Cashier, three assistants, two chefs, manager |
+<p align="center">
+  <b>Run a grocery mart as a monkey, on the NumWorks calculator.</b><br>
+  Both marts of TinyDobbins' web game: crops, animals, machines, customers and workers.
+</p>
 
-Harvest, deliver goods to shelves, supply machines, serve customers at the till
-and collect the money they leave behind. Walk onto purchase pads to expand the
-mart or hire staff. Workers become tired; animals sleep and machines need repair.
-Wake them by approaching, or hire a manager to handle these jobs. Troublemakers
-can scatter goods; recover the goods and approach the troublemaker to send them away.
+<p align="center">
+  <a href="https://github.com/Mason363/NumPlay/releases/latest/download/MonkeyMart.nwa"><b>Download MonkeyMart.nwa</b></a>
+  &nbsp;·&nbsp; <a href="#controls">Controls</a>
+</p>
 
-## Preview
+<p align="center">
+  <img src="../../docs/media/monkeymart.gif" width="640" alt="Monkey Mart: the monkey picks bananas and corn, fills the shelves and takes the money at the till while customers shop">
+</p>
 
-![Title](docs/title.png) ![First checkout](docs/first-checkout.png)
+## Highlights
 
-Developed-mart captures from the validation saves:
+* **Both marts:** the first one sells bananas, corn, eggs, milk, popcorn and yogurt; the truck takes you to the second, with cocoa, coffee beans, peanuts, chocolate, ground coffee, peanut butter, cappuccino and chocolate bars.
+* **Everything by walking:** stand by a palm, a plant, a hen, a cow or a machine to pick up what it makes, by its shelf to put it there, by the till to take the money, and on a pad to pay for what comes next.
+* **Customers with their own lists:** each wants a few foods, takes a basket for a long list, waits at the till and pays the game's prices.
+* **Animals and machines tire:** the hens, the cow and the machines stop after a few items until you walk up to them.
+* **Workers:** a cashier, assistants, a farmer, chefs and a manager, each with the game's rounds. They tire and nap, and the manager wakes them.
+* **The troublemaker:** he throws food off a shelf until you shoo him away.
+* **Upgrades and hats:** stamina, stack and speed for you, your workers, animals and machines, at the game's prices, and 17 hats to buy and wear.
+* **The game's look:** its own pictures, monkeys, animals and font.
+* **Saved as you go:** Home saves and quits, and the game saves every 30 seconds. Your marts are also copied into `monkeymart_saves.py`, so installing the app again doesn't erase them.
 
-![Mart 1](docs/mart1.png) ![Mart 2](docs/mart2.png)
+<table>
+  <tr>
+    <td align="center"><img src="docs/shot.png" width="390" alt="The first mart at work"><br><sub>The first mart, with customers at the shelves and the till</sub></td>
+    <td align="center"><img src="docs/guide.png" width="390" alt="The first minute"><br><sub>The first minute: the guide points to each pad</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/upgrades.png" width="390" alt="The upgrades window"><br><sub>Upgrades for you and your workers</sub></td>
+    <td align="center"><img src="docs/hats.png" width="390" alt="The hat shop"><br><sub>The hat shop</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/mart2.png" width="390" alt="The second mart"><br><sub>The second mart</sub></td>
+    <td align="center"><img src="docs/title.png" width="390" alt="The title screen"><br><sub>The title screen</sub></td>
+  </tr>
+</table>
+
+## How to play
+
+Walk with the arrows. Stand by a banana palm until your arms are full, then by the banana shelf to put them there. Customers walk in, take what they want and wait at the till: stand by it to serve them, and pick up the money they leave. Spend it on the next pad with a price: a new shelf, plant, animal, machine or worker. Hens, cows and machines need corn and bananas brought to their dishes, and stop now and then until you walk up to them. Buy the truck at the end of the first mart to drive to the second.
 
 ## Controls
 
-| Key | Action |
+| Key | What it does |
 | --- | --- |
-| Arrows | Move; nearby interactions are automatic |
-| OK / EXE | Confirm menu selection or purchase |
-| BACK | Pause; return from a submenu |
-| 0 | Map during play; controls from the title screen |
-| HOME / Power | Save and exit |
+| Arrows | Walk, or move the selection in windows |
+| OK | Open the upgrades; buy or choose in windows |
+| shift | Open the hats |
+| Back | Pause (Resume, Marts, How to play, Quit game), or close a window |
+| Home | Save and quit |
 
-The pause menu contains upgrades, hats, mart selection, boosts, controls and a confirmed progress reset.
-Progress is saved every 30 seconds when changed, when pausing and when leaving.
-`monkeymart.sav` occupies **768 bytes**. Full storage offers retry, continue and
-exit options without removing unrelated files.
+## Good to know
 
-## Calculator adaptations
+* **On its own:** Monkey Mart is too big to fit next to NumPlay. Installing it from the NumWorks website swaps out NumPlay and the other apps, and installing NumPlay again swaps it back out.
+* **Version 2.1, the web game:** its two marts, with their places, prices and order. The third mart was still to come in that version.
+* **Left out:** the ads and what they gave (double money, energy boosts, the cash machine, and the four hats you got for watching ads), and music and sound (the calculator has no speaker).
+* **As in the game:** what's on the shelves and in your arms isn't kept when you leave (the shelves restock at random on your return), and nothing is saved until the tutorial ends.
+* **On the keypad:** pressing two arrows into a counter slides you along it, where the game would stop you.
 
-The original sprites, floors, layout positions, prices and unlock order come
-from the supplied game. Graphics are reduced for the 320 × 240 screen, Spine
-animation is baked into compact frames, and menus use sharp native-size English
-text. Controls use calculator keys. The original sound engine is omitted because
-the target calculators have no standard audio output.
+## Credits
 
-Online rewarded advertisements are replaced with explicit, offline rewards on
-a saved cooldown. Claiming a reward grants a token; the originally ad-only hats
-use their original required counts of tokens. This is an adaptation of the
-reference game's content and rules, rather than a pixel-identical web runtime.
+Inspired by [Monkey Mart](https://poki.com/en/g/monkey-mart) by TinyDobbins, not affiliated with them. Go play the original: it's free on the web, with music, sound and the newer marts.
 
-Tested in ARM emulation for N0110, N0115 and N0120, plus Upsilon's smaller RAM
-allocation. Physical-calculator testing remains useful for display-transfer
-timing and firmware-specific behavior. See [VALIDATION.md](VALIDATION.md).
+* The pictures (the marts' floors, shelves, plants, machines, decorations, the clouds and icons), the monkeys and animals (baked from the game's Spine skeleton) and the Riffic font (InkyType's) come from the game's own web build, read by [tools/data.py](tools/data.py) and [tools/art.py](tools/art.py) into [src/data.c](src/data.c) and [src/art.c](src/art.c). Its rules and numbers follow the game's own code.
+* The calculator adaptation is by **[Bobydeluxe](https://github.com/Bobydeluxe)**, who brought it to NumPlay.
 
-## Build
+Made by Mason Chen as part of NumPlay.
 
-Requires ARM GCC, Python with Pillow, Node.js and nwlink. The checked-in assets
-make ordinary builds independent of the reference game and installed fonts.
+## License
 
-```sh
-python build.py --arm-bin /path/to/arm/bin --nwlink /path/to/nwlink
-```
-
-Produces `output/monkeymart.nwa`, `output/monkeymart.bin`, a debug artifact, and a
-JSON size report. The `.nwa` is also copied to `../../build/apps/MonkeyMart.nwa`.
-The same standalone application targets all three calculator models.
-
-Alternatively:
-
-```sh
-make build check
-make test
-make test-assets
-make test-arm
-```
-
-`HOST_CC`, `PYTHON` and `NWLINK` can override local tool locations. ARM tests need
-the repository emulator's Python dependencies: Unicorn, pyelftools and Pillow.
-Build and host tests must precede the ARM tests, which use generated save fixtures.
-
-## Reference and credits
-
-- Original game and artwork: **TinyDobbins**.
-- Native NumWorks adaptation: **Bobydeluxe**; in-game credit: **By Bobydeluxe**.
-- [Supplied reference](https://github.com/Gr4ys0n/Gr4ys0n.github.io/tree/29006b0f11904704c390b457f7055c9fa1e53484/public/assets/games/monkey-mart).
-- [Asset derivation and provenance](ASSETS.md).
-
-Monkey Mart is a large standalone game. It is excluded from the launcher and
-`games/games.json`. Build it with `make build/data/apps/MonkeyMart.nwa` from the
-repository root, or `python tools/build.py --game monkeymart`. Release tooling
-lists `MonkeyMart.nwa` among the individual large games. Not affiliated with
-TinyDobbins.
+The game's code is licensed under the GNU General Public License v3.0: see the `LICENSE` file at the root of the repository. The pictures, the font and the game's data are TinyDobbins' and keep their own terms (see Credits).
