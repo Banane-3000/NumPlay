@@ -237,6 +237,10 @@ GAMES = {
     # the title, Play, the first press (the guide goes) and the ball rolls; Home keeps the run. Next time, from the
     # copy, it opens paused: Back, and it rolls on
     "dune": ("Dune.nwa", "dune.sav", presses((1500, "ok"), (2600, "ok")), 5000, presses((1500, "back")), 3500),
+    # a mart past its tutorial (seeded): the title, the upgrades, your free stack bought (that saves); next time, from
+    # the copy, the next level for 100 coins
+    "monkeymart": ("MonkeyMart.nwa", "monkeymart.sav", presses((1500, "ok"), (2500, "ok"), (3200, "ok"), (3900, "back")),
+                   5000, presses((1500, "ok"), (2500, "ok"), (3200, "ok"), (3900, "back")), 5000),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -254,7 +258,27 @@ def coreball_save(level, best, flags=0):
     return v + struct.pack("<I", h)
 
 
+def monkeymart_save():
+    """monkeymart.sav: "MMMT", version 1, its size (364), then the progress (save.h): 500 coins, the first hat, mart 1
+    with its first six places bought (the tutorial over) and 40 in the cash box, every upgrade at level 1; FNV-1a of
+    it all after"""
+    p = bytearray(352)
+    struct.pack_into("<IIBB", p, 0, 500, 1, 0, 0)
+    p[10] = 6
+    struct.pack_into("<I", p, 12, 40)
+    for i in (6, 4, 0, 1, 5, 7):    # the cash box, the banana shelf, two palms, the corn shelf, a corn plant
+        p[20 + i] = 1
+    for i in range(72):
+        p[278 + i] = 1
+    v = b"MMMT" + struct.pack("<HH", 1, 364) + bytes(p)
+    h = 0x811C9DC5
+    for x in v:
+        h = (h ^ x) * 0x01000193 & 0xFFFFFFFF
+    return v + struct.pack("<I", h)
+
+
 SEEDS = {
+    "monkeymart": monkeymart_save(),
     # level 5 to play, 9 reached, how to play not read yet
     "coreball": coreball_save(5, 9),
     # the first level done and last played
@@ -281,7 +305,7 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "hillclimb": "hillclimb_saves.py", "pvz": "pvz_saves.py", "sonic": "sonic_saves.py",
           "cookieclicker": "cookieclicker_saves.py", "leveldevil": "leveldevil_saves.py",
           "jetpackjoyride": "jetpackjoyride_saves.py", "stickmanhook": "stickmanhook_saves.py",
-          "donkeykong": "donkeykong_saves.py", "dune": "dune_saves.py"}
+          "donkeykong": "donkeykong_saves.py", "dune": "dune_saves.py", "monkeymart": "monkeymart_saves.py"}
 
 
 def dk_frames(v):
@@ -418,6 +442,10 @@ CHECKS = {
     # a run kept ("DUNE", has_run at 27, the run's frames at 328); after the reinstall, from the copy, it goes on
     "dune": (lambda v: len(v) == 1548 and v[:4] == b"DUNE" and v[27] == 1 and struct.unpack_from("<I", v, 328)[0] >= 200,
              lambda v: len(v) == 1548 and v[:4] == b"DUNE" and v[27] == 1 and struct.unpack_from("<I", v, 328)[0] >= 300),
+    # your stack bought (level 2, upgrades_level at 287), the coins kept; after the reinstall, from the copy, level 3
+    # for 100 coins
+    "monkeymart": (lambda v: len(v) == 364 and v[:4] == b"MMMT" and v[287] == 2 and struct.unpack_from("<I", v, 8)[0] >= 500,
+                   lambda v: len(v) == 364 and v[:4] == b"MMMT" and v[287] == 3 and struct.unpack_from("<I", v, 8)[0] >= 400),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
     # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies kept

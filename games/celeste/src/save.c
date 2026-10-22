@@ -9,10 +9,12 @@
 
 #define SAVE_NAME "celeste.sav"
 #define SAVE_MAGIC 0x43454C53u   /* "CELS" */
-#define SAVE_VERSION 2
-/* 1.6.0's saves (version 1): the same up to its checksum, at the end; what came after goes after it */
+#define SAVE_VERSION 3
+/* 1.6.0's saves (version 1) and those before 1.15.1 (version 2, without bind2): the same up to their checksum, at
+ * their end; what came after goes after it */
 #define V1_SIZE 1552
 #define V1_CHECKSUM 1544
+#define V2_SIZE 1680
 
 SaveData g_save;
 
@@ -26,8 +28,9 @@ static uint32_t checksum(uint32_t n) {   /* of the first n bytes */
  * 1.6.0 had not zero) */
 static bool whole(uint32_t n) {
   uint8_t *b = (uint8_t *)&g_save;
-  uint32_t at = n == sizeof g_save ? offsetof(SaveData, checksum) : n == V1_SIZE ? V1_CHECKSUM : 0, ck;
-  if (!at || g_save.magic != SAVE_MAGIC || g_save.size != n || g_save.version != (n == V1_SIZE ? 1 : SAVE_VERSION))
+  uint32_t at = n == sizeof g_save ? offsetof(SaveData, checksum) : n == V2_SIZE ? V2_SIZE - 4 : n == V1_SIZE ? V1_CHECKSUM : 0, ck;
+  if (!at || g_save.magic != SAVE_MAGIC || g_save.size != n ||
+      g_save.version != (n == V1_SIZE ? 1 : n == V2_SIZE ? 2 : SAVE_VERSION))
     return false;
   memcpy(&ck, b + at, 4);
   if (ck != checksum(at)) return false;
@@ -43,8 +46,13 @@ static void save_new(void) {
   g_save.version = SAVE_VERSION;
   g_save.size = sizeof g_save;
   plat_default_binds();
-  memcpy(g_save.bind, g_bind, 4);
+  save_keep_binds();
   g_save.binds_set = 1;
+}
+
+void save_keep_binds(void) {   /* g_bind into the save (written with the next save_write) */
+  memcpy(g_save.bind, g_bind, 4);
+  memcpy(g_save.bind2, g_bind + 4, 5);
 }
 
 /* The copy: installing apps from the NumWorks website keeps only Python scripts, so the save is
@@ -121,8 +129,10 @@ void save_load(void) {
       if (g_save.bind[a] == KEY_BACKSPACE) g_save.bind[a] = KEY_BACK;
     g_save.binds_set = 1;
   }
+  plat_default_binds();
   if (g_save.bind[0] && g_save.bind[1] && g_save.bind[2] && g_save.bind[3]) memcpy(g_bind, g_save.bind, 4);
-  else plat_default_binds(), memcpy(g_save.bind, g_bind, 4);
+  if (g_save.bind2[0]) memcpy(g_bind + 4, g_save.bind2, 5);   /* (pause is never 0: older saves keep the defaults) */
+  save_keep_binds();
 }
 
 bool save_write(void) {

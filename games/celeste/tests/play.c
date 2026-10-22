@@ -197,6 +197,8 @@ int main(int argc, char **argv) {
   printf("session: chapter %d area %d mode %d deaths %u time %u berries %llx; save berries %llx deaths %u\n",
          g_session.chapter, g_session.area, g_session.mode, g_session.deaths, g_session.time,
          (unsigned long long)g_session.berries, (unsigned long long)save_mode()->berries, save_mode()->deaths);
-  printf("keys %d %d %d %d\n", g_bind[0], g_bind[1], g_bind[2], g_bind[3]);
+  printf("keys");
+  for (int a = 0; a < BINDS; a++) printf(" %d", g_bind[a]);
+  printf("\n");
   return 0;
 }

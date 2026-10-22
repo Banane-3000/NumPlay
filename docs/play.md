@@ -536,6 +536,21 @@ The ball rolls on by itself. Hold OK going downhill to speed up and let go going
 
 <br clear="right">
 
+## Monkey Mart
+
+<img src="../games/monkeymart/docs/shot.png" width="320" align="right" alt="Monkey Mart">
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** | Walk |
+| **OK** | Upgrades |
+| **shift** | Hats |
+| **Back** | Menu (with How to play and Quit) |
+
+Walk the monkey over the plants and animals to pick up what they make, carry it to the shelves, and take the money at the counter. Stand on a price pad to pay for a new stand, a machine or a worker; plants and animals get tired and need a visit to wake up. When the first mart is full, the truck takes you to the second. Your mart is saved.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">

@@ -1,0 +1,158 @@
+/* Monkey Mart's two marts (data.c; this file and data.c are made by tools/data.py from the web game, version 2.1).
+ *
+ * Positions are the game's world units: y up, the middle of the mart at 0, 0 (the screen shows a third of a unit a
+ * pixel). A place is the game's "place box": a palm, a shelf, a machine, the cash box, a worker's spot or the truck,
+ * bought by standing on its pad. Reaches ("radius") are squared distances, as the game compares them. */
+#ifndef MM_DATA_H
+#define MM_DATA_H
+#include <stdint.h>
+
+#define MM_MARTS 2
+#define MM_PLACES 43        /* most places in a mart */
+#define MM_FOODS 14
+#define MM_STAFF 7          /* the cashier, the assistants and chefs (five), the manager */
+#define MM_BUYERS 8
+#define MM_HATS 21
+#define MM_NONE 255
+#define MM_GROUND (-32768)  /* a decor's depth: on the ground, under everything */
+
+/* place kinds */
+enum {
+  PL_ZAVOD = 1,             /* makes food: a plant, an animal, a machine */
+  PL_SKLAD = 2,             /* holds food: a shelf, a feeder, the cash box */
+  PL_BUYER = 4,             /* customers take from it */
+  PL_SOLID = 8,             /* the player can't walk through it (its polygon) */
+  PL_HIDE = 16              /* no picture of its own */
+};
+
+typedef struct { int16_t x, y; } mm_pt;
+
+typedef struct {
+  mm_pt pos;                /* where it stands (its picture's middle) */
+  mm_pt work;               /* where it's reached from (pos + offsetWork) */
+  mm_pt buy;                /* its pad (pos + offsetBuy) */
+  mm_pt pos2;               /* the second picture (pos - offsetGraphic) */
+  int16_t zy;               /* the picture's depth: pos.y - offsetY */
+  uint16_t radius;          /* squared reach of the work point */
+  uint16_t price;
+  uint8_t flags, food;      /* PL_*, the food it makes or holds (1..14) */
+  uint8_t count0, cap0;     /* food at the start (countFood), room (maxCount) */
+  uint8_t build;            /* half seconds an item (zavodBuild: 5 plants, 12 machines and animals) */
+  uint8_t stamina;          /* items before it tires (stamina_max) */
+  uint8_t feed, feed2;      /* the feeders it eats from */
+  uint16_t pic, pic2;       /* its pictures */
+  uint16_t view;            /* its shown food: mm_views[view .. view + nview) */
+  uint8_t nview;
+  uint8_t spot, nspot;      /* where customers stand at it: the mart's spots[spot .. spot + nspot) */
+  uint8_t poly;             /* its polygon (the mart's polys), or MM_NONE */
+} mm_place;
+
+/* a shown food: offset from its place, depth (a y offset, tenths), picture */
+typedef struct { int16_t dx, dy, dz; uint16_t pic; } mm_view;
+
+/* what buying a place sets going */
+enum { HK_ON, HK_BUYER, HK_STAFF, HK_TRUCK };
+typedef struct { uint8_t place, kind; int16_t a, b; } mm_hook;   /* HK_ON: place a; HK_BUYER: customer a after b
+                                                                    ticks; HK_STAFF: worker a; HK_TRUCK: the truck's
+                                                                    stop at the truck + (a, b) */
+
+/* named spots of the path grid (getTilePlace) */
+enum {
+@TILES@,
+  T_COUNT
+};
+enum { TL_SKLAD = 1, TL_EXIT = 2 };
+typedef struct { uint8_t tx, ty, place, flags; } mm_tile;      /* tx 255: not in this mart */
+
+/* a shelf or feeder a worker keeps full (getDataPlace) */
+typedef struct {
+  uint8_t place, food;
+  int16_t offx, offy;       /* where to stand at a source: its position + (offx, -offy) */
+  uint8_t to, from;         /* tiles: the shelf, the sources */
+  uint8_t src[6], nsrc;     /* the sources, in the order they're visited */
+} mm_goal;
+
+typedef struct {
+  uint8_t hat, carry, rest; /* hat, how much it carries, its resting spot (relax_place<rest>) */
+  uint8_t ngoal, goal[3];   /* its goals (mm_goal indexes) */
+  uint64_t allow;           /* the places it may take from or fill */
+} mm_staff;
+
+enum { ZV_COW, ZV_CHICKEN, ZV_MACHINE };
+enum { @ALERTS@ };
+typedef struct {
+  uint8_t kind, name;       /* ZV_*, AL_* */
+  uint8_t zavod, feed, feed2;
+  mm_pt pos;                /* the animal or machine */
+  mm_pt panel, panel2;      /* its feeders' count panels */
+  uint16_t radius;          /* squared reach to wake or repair it */
+  uint8_t tile;             /* where the manager goes to see to it */
+} mm_zavod;
+
+/* upgrades: a row of the game's tables (upgrades_max, upgrades_price), and the rows as the window lists them */
+enum { UP_PLAYER, UP_STAFF, UP_ZAVOD };
+typedef struct {
+  uint8_t kind, target;     /* UP_*, the worker or the mart's upzavod row */
+  uint8_t badge;            /* the place the "!" on the upgrades key looks at (listUpgradesId) */
+  uint8_t max[3];           /* levels to buy: stamina, stack, speed */
+  uint16_t price[3][3];     /* 0: free */
+} mm_uprow;
+typedef struct {
+  uint8_t row, place;       /* the row, the place that shows it (MM_NONE: always) */
+  uint16_t icon, icon_off;  /* its picture, and greyed while not bought */
+  uint16_t small[3];        /* what it looks after */
+  const char *title;
+} mm_upshow;
+
+typedef struct {
+  uint16_t pic;
+  int16_t x, y, zy;         /* drawn at x, y; sorted by zy (MM_GROUND: under everything) */
+  uint8_t cond;             /* shown once that place is bought (MM_NONE: always) */
+} mm_decor;
+
+typedef struct {
+  const mm_place *places;
+  const mm_pt (*polys)[4];
+  const mm_pt *spots;
+  const uint8_t *order;              /* the main order of sale (listSalesMain) */
+  const uint8_t (*unlocks)[2];       /* buying [0] puts [1] up for sale (checkNextPlaceSale) */
+  const uint16_t (*blocks)[2];       /* buying [0] closes grid cell [1] (getIndexes) */
+  const mm_hook *hooks;
+  const uint8_t *grid;               /* walkable cells, a bit each */
+  const mm_tile *tiles;
+  const mm_goal *goals;
+  const mm_staff *staff;
+  const uint8_t (*wish)[4];          /* place, food, wish rows, most items (getWishList) */
+  const uint8_t (*empties)[4];       /* shelf, machine, feeder, feeder (checkEmptySklad) */
+  const uint8_t (*fills)[2];         /* place, shelf (fillWarehouses) */
+  const mm_zavod *zavods;
+  const mm_uprow *uprows;
+  const mm_upshow *upshow;
+  const uint8_t (*upzavod)[3];       /* machine, feeder, feeder (placesUpgrade) */
+  const mm_decor *decor;
+  const uint8_t *camera;             /* buying these shows the next pad (placesCamera) */
+  uint8_t count, norder, nunlock;
+  uint16_t nblock;
+  uint8_t nhook, w, h, ngoal, nwish, nempty, nfill, nzavod, nuprow, nupshow;
+  uint8_t ndecor, ncamera, nupzavod;
+  mm_pt start;                       /* the player (posDodik) */
+  int16_t minx, maxx, miny, maxy;    /* where the player may walk (limitMove) */
+  mm_pt exit, door, manager, trash, basket;   /* posExit, posStart, posManager, posTrash, posBasket */
+  uint8_t last;                      /* the last place of the order (NUMPLACE_LAST) */
+  uint8_t zav, min;                  /* NUMPLACE_ZAVOD, NUMPLACE_MIN (the troublemaker comes once it's bought) */
+  uint8_t crazy;                     /* NUM_SALE_CRAZY: sales before the troublemaker */
+  uint8_t cash, truck;               /* the cash box, the truck */
+  uint8_t wish_counts[8];            /* mart 2: most items by how many foods are sold (0: mart 1's rows) */
+  uint16_t bg;                       /* its floor (mm_floors) */
+} mm_mart;
+
+typedef enum { HAT_COINS, HAT_FREE, HAT_ADS } mm_hat_kind;
+typedef struct { uint8_t kind; uint16_t price; } mm_hat;
+
+extern const mm_mart mm_marts[MM_MARTS];
+extern const mm_view mm_views[@VIEWS@];
+extern const uint8_t mm_food_price[MM_FOODS + 1], mm_food_most[MM_FOODS + 1];
+extern const mm_hat mm_hats[MM_HATS];
+extern const char *const mm_food_name[MM_FOODS + 1];
+extern const uint16_t mm_food_pic[MM_FOODS + 1], mm_food_icon[MM_FOODS + 1], mm_alert_icon[];
+#endif
