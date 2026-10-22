@@ -12,7 +12,7 @@ typedef struct {
   float tube[2][5];               /* from (x, y) to axle (index), colour 0xRRGGBB, radius */
   float layer[2][4];              /* picture, its centre (x, y), in front (1) or behind */
 } VehArt;
-#define NVEH 8
+#define NVEH 13
 static const VehArt veh_art[NVEH] = {
   {IMG_CH_JEEP, IMG_WHEEL_JEEP, 0, 0, 0, 0.400f, {{0}}, {{0}}},   /* Hill Climber */
   {IMG_CH_BIKE, IMG_WHEEL_BIKE, 1, 2, 0, 0.500f, {{0.000f, -0.500f, 0.000f, 5922406.0f, 0.090f}, {0.600f, 0.425f, 1.000f, 3159098.0f, 0.070f}}, {{0}}},   /* Motocross Bike */
@@ -22,5 +22,10 @@ static const VehArt veh_art[NVEH] = {
   {IMG_CH_RALLY, IMG_WHEEL_RALLY, 0, 0, 0, 0.500f, {{0}}, {{0}}},   /* Rally Car */
   {IMG_CH_BUGGY, IMG_WHEEL_BUGGY, 0, 0, 0, 0.500f, {{0}}, {{0}}},   /* Dune Buggy */
   {IMG_CH_TANK, IMG_WHEEL_TANK, 0, 0, 2, 0.350f, {{0}}, {{IMG_LAYER_CAR_TANK_BG, 0.000f, 0.000f, 0}, {IMG_LAYER_CAR_TANK_CANNON, 1.600f, 0.800f, 1}}},   /* Tank */
+  {IMG_CH_TRACTOR, IMG_WHEEL_TRACTOR, 0, 0, 0, 1.090f, {{0}}, {{0}}},   /* Tractor */
+  {IMG_CH_BUS, IMG_WHEEL_MONSTER, 0, 0, 0, 0.700f, {{0}}, {{0}}},   /* Tourist Bus */
+  {IMG_CH_DIESEL, IMG_WHEEL_MONSTER, 0, 0, 0, 0.700f, {{0}}, {{0}}},   /* Super Diesel 4x4 */
+  {IMG_CH_SNOWMOBILE, IMG_WHEEL_TANK, 1, 0, 0, 0.462f, {{0}}, {{0}}},   /* Snow Mobile */
+  {IMG_CH_TRUCK, IMG_WHEEL_MONSTER, 0, 0, 0, 0.700f, {{0}}, {{0}}},   /* Truck */
 };
 #endif

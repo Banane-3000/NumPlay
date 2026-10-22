@@ -1,3 +1,5 @@
+/* Altered for NumPlay's Hill Climb Racing (NumWorks calculator): sensors call PreSolve while they overlap, as in the
+ * game's own Box2D (its pits of mud and lava are sensors) */
 /*
 * Copyright (c) 2006-2009 Erin Catto http://www.box2d.org
 *
@@ -233,7 +235,7 @@ void b2Contact::Update(b2ContactListener* listener)
 		listener->EndContact(this);
 	}
 
-	if (sensor == false && touching && listener)
+	if (touching && listener)
 	{
 		listener->PreSolve(this, &oldManifold);
 	}

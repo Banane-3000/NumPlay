@@ -3,7 +3,7 @@
 #include <string.h>
 #include "gfx.h"
 
-enum { C_FILL, C_RRECT, C_VGRAD, C_ROWS, C_IMAGE, C_BLIT, C_TEXT, C_CIRCLE, C_RING, C_TUBE, C_GROUND };
+enum { C_FILL, C_RRECT, C_VGRAD, C_ROWS, C_IMAGE, C_BLIT, C_TEXT, C_CIRCLE, C_RING, C_TUBE, C_GROUND, C_LIQUID };
 
 typedef struct {
   uint8_t type, alpha;
@@ -204,6 +204,7 @@ void gfx_tube(float x0, float y0, float x1, float y1, float r, uint16_t c, int a
 }
 
 void gfx_ground_draw(void) { add(C_GROUND, 0, 0, SCREEN_W, SCREEN_H, 255); }
+void gfx_liquid_draw(void) { add(C_LIQUID, 0, 0, SCREEN_W, SCREEN_H, 255); }
 
 /* ------------------------------------------------------------------ painting a band */
 __attribute__((noinline)) static void paint_fill(const Cmd *k, int y0, int y1) {
@@ -455,6 +456,29 @@ __attribute__((noinline)) static void paint_ground(int y0, int y1) {
   }
 }
 
+/* A pit's mud or lava: from its surface's line down to the ground's, the pit's picture's rows by the depth */
+__attribute__((noinline)) static void paint_liquid(int y0, int y1) {
+  const Ground *g = &gfx_ground;
+  const Img *li = img(g->lpic);
+  const uint16_t *pal = img_pal565(li);
+  const uint8_t *px = img_px(li);
+  int h = li->h, w = li->w;
+  for (int x = 0; x < SCREEN_W; x++) {
+    int top8 = g->liquid[x];
+    if (top8 >= g->floor[x]) continue;
+    int ya = (top8 + 3) >> 3, yb = (g->floor[x] + 3) >> 3;
+    if (ya < y0) ya = y0;
+    if (yb > y1) yb = y1;
+    int u = (g->gu[x] * w) >> 7;
+    for (int y = ya; y < yb; y++) {
+      int32_t v = (int32_t)((int64_t)(y * 8 + 4 - top8) * g->ldv >> 3) >> 16;
+      if (v >= h) v = h - 1;
+      if (v < 0) v = 0;
+      band[(y - by0) * SCREEN_W + x] = pal[px[v * w + u]];
+    }
+  }
+}
+
 void gfx_end(void) {
   for (by0 = 0; by0 < SCREEN_H; by0 = by1) {
     by1 = by0 + GFX_BAND < SCREEN_H ? by0 + GFX_BAND : SCREEN_H;
@@ -474,6 +498,7 @@ void gfx_end(void) {
         case C_RING: paint_circle(k, y0, y1, true); break;
         case C_TUBE: paint_tube(k, y0, y1); break;
         case C_GROUND: paint_ground(y0, y1); break;
+        case C_LIQUID: paint_liquid(y0, y1); break;
       }
     }
     plat_push(0, by0, SCREEN_W, by1 - by0, band);

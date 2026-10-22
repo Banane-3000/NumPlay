@@ -36,6 +36,8 @@ APP_SPACE = 2031616
 # external flash (0x90800000), over the second copy of the calculator's software: a NumPlay of the big
 # games (games.json "xl", made with the customizer website from `make kit`) is for that
 XL_APP_SPACE = 6291456
+# big games that must install on their own without Enlarged Extra Apps: make check holds them to APP_SPACE
+APP_SPACE_APPS = HillClimbRacing
 # Upsilon, the N0110 and N0115's custom software, gives .nwa apps less RAM: NumPlay-Upsilon.nwa has
 # the games that fit it (NumPlay draws their text there: see launcher/src/compat.c)
 UPSILON_RAM = 107674
@@ -218,6 +220,9 @@ check: nwa apps
 	@for a in $(BIG_APPS); do $(NWLINK) nwa-bin --ram-length $(CUSTOM_RAM) $(B)/apps/$$a.nwa $(B)/apps/$$a.bin >/dev/null || \
 	  { echo "$$a.nwa needs more RAM than custom builds of 25.2 give apps ($(CUSTOM_RAM) bytes)"; exit 1; }; done; \
 	  echo "NumPlay's games and $(BIG_APPS) fit in $(CUSTOM_RAM) bytes of RAM"
+	@for a in $(APP_SPACE_APPS); do n=$$(wc -c < $(B)/apps/$$a.bin); \
+	  [ $$n -le $(APP_SPACE) ] || { echo "$$a.nwa is bigger than the calculator's app space ($(APP_SPACE) bytes)"; exit 1; }; \
+	  echo "$$a.nwa installs as $$n bytes ($$(( $(APP_SPACE) - n )) to spare)"; done
 	@for a in $(foreach g,$(OPTIONAL_GAMES),$(if $(NWA_$(g)),$(basename $(NWA_$(g))))); do \
 	  $(NWLINK) nwa-bin --ram-length $(CUSTOM_RAM) $(B)/apps/$$a.nwa $(B)/apps/$$a.bin >/dev/null || \
 	  { echo "$$a.nwa needs more RAM than custom builds of 25.2 give apps ($(CUSTOM_RAM) bytes)"; exit 1; }; \

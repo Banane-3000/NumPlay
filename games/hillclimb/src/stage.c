@@ -1,36 +1,43 @@
-/* The stages (stage.h): the game's own ground, ceilings, bridges, trees, coins, fuel cans; the levels. */
+/* The stages (stage.h): the game's own ground, ceilings, bridges, pits, trees, coins, fuel cans; the levels. */
 #include <math.h>
+#include <stdlib.h>
 #include "data.h"
 #include "stage.h"
 
 #define PI 3.14159265f
 
 /* name, price, gravity, friction, coin multiplier and rows; sky, surface, ground, ceiling's surface, icon, particle;
- * ceiling, feature, clouds, stars; bridges and their spacing; levels; the surface's colour. Gravity, friction,
- * coins, ceilings, bridges are the game's (Stage::create, Stage*::get*), the prices and levels the game's
+ * ceiling, feature, clouds, stars; bridges and their spacing; levels; the surface's colour; pits. Gravity, friction,
+ * coins, ceilings, bridges, pits are the game's (Stage::create, Stage*::get*), the prices and levels the game's
  * (StageManager::initialize). */
 const Stage stages[NSTAGES] = {
   {"Countryside", 0, 10, 0.6f, 1.25f, 0, IMG_SKY, IMG_SURF_COUNTRY, IMG_GROUND_COUNTRY, IMG_SURF_CAVE, IMG_STAGE_COUNTRY,
-   IMG_GRASS, 0, FEAT_NONE, 1, 0, 1, 12.76214f, 70, 200, 200, 15, 0x7CC62B},
+   IMG_GRASS, 0, FEAT_NONE, 1, 0, 1, 12.76214f, 70, 200, 200, 15, 0x7CC62B, PIT_NONE},
   {"Desert", 35000, 10, 0.5f, 1.75f, 0, IMG_SKY, IMG_SURF_DESERT, IMG_GROUND_DESERT, IMG_SURF_CAVE, IMG_STAGE_DESERT,
-   IMG_DIRT, 0, FEAT_NONE, 1, 0, 1, 5.76214f, 110, 200, 200, 25, 0xE8D99A},
+   IMG_DIRT, 0, FEAT_NONE, 1, 0, 1, 5.76214f, 110, 200, 200, 25, 0xE8D99A, PIT_NONE},
   {"Arctic", 75000, 10, 0.15f, 1.95f, 0, IMG_SKY, IMG_SURF_ARCTIC, IMG_GROUND_ARCTIC, IMG_SURF_CAVE, IMG_STAGE_ARCTIC,
-   IMG_SNOW, 0, FEAT_NONE, 1, 0, 1, 12.76214f, 70, 200, 200, 30, 0xF2F6FA},
+   IMG_SNOW, 0, FEAT_NONE, 1, 0, 1, 12.76214f, 70, 200, 200, 30, 0xF2F6FA, PIT_NONE},
   {"Highway", 125000, 10, 0.4f, 1.15f, 0, IMG_SKY_HIGHWAY, IMG_SURF_HIGHWAY, IMG_GROUND_HIGHWAY, IMG_SURF_CAVE,
-   IMG_STAGE_HIGHWAY, IMG_SMOKE, 0, FEAT_NONE, 1, 0, 0, 7.76214f, 70, 600, 300, 25, 0x6E6E6E},
+   IMG_STAGE_HIGHWAY, IMG_SMOKE, 0, FEAT_NONE, 1, 0, 0, 7.76214f, 70, 600, 300, 25, 0x6E6E6E, PIT_NONE},
   {"Cave", 150000, 10, 0.6f, 1.7f, -0.5f, IMG_SKY_CAVE, IMG_SURF_CAVE, IMG_GROUND_COUNTRY, IMG_SURF_CAVE, IMG_STAGE_CAVE,
-   IMG_ROCKS, 1, FEAT_NONE, 0, 0, 1, 12.76214f, 70, 300, 300, 30, 0xB7B2A8},
+   IMG_ROCKS, 1, FEAT_NONE, 0, 0, 1, 12.76214f, 70, 300, 300, 30, 0xB7B2A8, PIT_NONE},
   {"Moon", 175000, 3.5f, 0.8f, 1.95f, 0, IMG_SKY_MOON, IMG_SURF_MOON, IMG_GROUND_MOON, IMG_SURF_CAVE, IMG_STAGE_MOON,
-   IMG_SMOKE, 0, FEAT_NONE, 0, 1, 0, 7.76214f, 70, 200, 300, 40, 0xB9BAD8},
+   IMG_SMOKE, 0, FEAT_NONE, 0, 1, 0, 7.76214f, 70, 200, 300, 40, 0xB9BAD8, PIT_NONE},
   {"Mars", 250000, 5, 0.6f, 1.7f, -0.5f, IMG_SKY_MARS, IMG_SURF_MARS, IMG_GROUND_MARS, IMG_SURF_MARS, IMG_STAGE_MARS,
-   IMG_ROCKS_MARS, 1, FEAT_NONE, 0, 0, 1, 12.76214f, 70, 200, 300, 40, 0xC77B5A},
+   IMG_ROCKS_MARS, 1, FEAT_NONE, 0, 0, 1, 12.76214f, 70, 200, 300, 40, 0xC77B5A, PIT_NONE},
   {"Alien Planet", 750000, 10, 0.07f, 1.15f, 0, IMG_SKY_FOREST, IMG_SURF_ALIEN, IMG_GROUND_ALIEN, IMG_SURF_ALIEN,
-   IMG_STAGE_ALIEN, IMG_SLIME, 0, FEAT_NONE, 0, 1, 0, 7.76214f, 70, 200, 300, 40, 0x6FA34A},
+   IMG_STAGE_ALIEN, IMG_SLIME, 0, FEAT_NONE, 0, 1, 0, 7.76214f, 70, 200, 300, 40, 0x6FA34A, PIT_NONE},
   {"Arctic Cave", 800000, 10, 0.07f, 1.7f, -0.5f, IMG_SKY_ARCTIC_CAVE, IMG_SURF_ARCTIC, IMG_GROUND_ARCTIC,
    IMG_SURF_ARCTIC, IMG_STAGE_ARCTIC_CAVE, IMG_SNOW, 1, FEAT_ICICLES, 0, 0, 1, 12.76214f, 70, 200, 300, 40,
-   0xEAF3F8},
+   0xEAF3F8, PIT_NONE},
   {"Forest", 850000, 10, 0.6f, 1.7f, 0, IMG_SKY_FOREST, IMG_SURF_FOREST, IMG_GROUND_FOREST, IMG_SURF_CAVE,
-   IMG_STAGE_FOREST, IMG_GRASS, 0, FEAT_TREES, 1, 0, 1, 12.76214f, 70, 200, 250, 40, 0x4E9A2E},
+   IMG_STAGE_FOREST, IMG_GRASS, 0, FEAT_TREES, 1, 0, 1, 12.76214f, 70, 200, 250, 40, 0x4E9A2E, PIT_NONE},
+  {"Mountain", 850000, 10, 0.6f, 1.7f, 0, IMG_SKY_CLIFFS, IMG_SURF_CAVE, IMG_GROUND_CLIFFS, IMG_SURF_CAVE,
+   IMG_STAGE_MOUNTAIN, IMG_ROCKS, 0, FEAT_NONE, 1, 0, 1, 12.76214f, 70, 200, 250, 40, 0x8E8A84, PIT_NONE},
+  {"Mudpool", 1000000, 10, 0.1f, 1.25f, 0, IMG_SKY_MUD, IMG_SURF_MUD, IMG_GROUND_MUD, IMG_SURF_CAVE,
+   IMG_STAGE_MUDPOOL, IMG_DIRT_MUD, 0, FEAT_NONE, 0, 0, 0, 12.76214f, 70, 200, 250, 40, 0x8A6A44, PIT_MUD},
+  {"Volcano", 1000000, 10, 0.6f, 1.7f, -0.5f, IMG_SKY_VOLCANO, IMG_SURF_VOLCANO, IMG_GROUND_VOLCANO, IMG_SURF_CAVE,
+   IMG_STAGE_VOLCANO, IMG_ROCKS, 0, FEAT_NONE, 0, 0, 0, 12.76214f, 70, 200, 250, 40, 0x2E2A28, PIT_LAVA},
 };
 
 const Stage *stage = &stages[0];
@@ -159,8 +166,37 @@ static float h_forest(float x) {
   return h * grow(u / 2000, 1.5f, 0.5f);
 }
 
+/* the Mountain and the Volcano climb all the way (their u/3 and u/6) */
+static float h_mountain(float x) {
+  float u = 10 + 1.5f * x;
+  float h = 2 * cosf(u / 6.41f) +
+            (0.2f * sinf(u + sinf(0.415f * u)) + 0.25f * cosf(0.655f * u + sinf(0.215f * u))) * clampf(0.0015f * u, 0, 1) +
+            2 * cosf(0.16f * u + sinf(0.3515f * u) + 2.411f) * clampf(0.00075f * u, 0, 1) +
+            2 * cosf(0.1952f * u + sinf(1.215f * u) + 5.6f) * clampf(0.00275f * u, 0, 1) + u / 3;
+  return h * grow(u / 4000, 1.8f, 0.2f);
+}
+
+static float h_mudpool(float x) {
+  float u = 10 + 1.5f * x, s = sinf(0.25f * u);
+  float h = 2 * cosf(u / 10) + 0.2f * cosf(u + s) * clampf(0.0013f * u, 0, 1) +
+            2 * cosf(0.17f * u + s) * clampf(0.00035f * u, 0, 1) +
+            2 * cosf(0.0952f * u + sinf(0.15f * u)) * clampf(0.00125f * u, 0, 1) +
+            (4 * sinf(u / 30 + cosf(u / 32.14f)) * clampf(0.0007f * u, 0, 1) - 1);
+  return h * grow(u / 2000, 1.5f, 0.5f);
+}
+
+static float h_volcano(float x) {
+  float u = 10 + 1.5f * x;
+  float h = 2 * cosf(u / 6.41f) +
+            (0.2f * sinf(u + sinf(0.415f * u)) + 0.25f * cosf(0.855f * u + sinf(0.215f * u))) * clampf(0.0015f * u, 0, 1) +
+            2 * cosf(0.3f * u + sinf(0.3515f * u) + 2.411f) * clampf(0.00075f * u, 0, 1) +
+            2 * cosf(0.2052f * u + sinf(1.215f * u) + 5.6f) * clampf(0.00275f * u, 0, 0.1f) + u / 6;
+  return h * grow(u / 4000, 1.8f, 0.2f);
+}
+
 static float (*const heights[NSTAGES])(float) = {h_countryside, h_desert, h_arctic, h_highway, h_cave, h_moon,
-                                                 h_mars, h_alien, h_arctic_cave, h_forest};
+                                                 h_mars, h_alien, h_arctic_cave, h_forest, h_mountain, h_mudpool,
+                                                 h_volcano};
 
 /* the caves' ceiling over the ground (StageCave::getCaveHeightAtX); Mars opens up now and then */
 static float cave_height(float x) {
@@ -178,70 +214,102 @@ static float cave_height(float x) {
   return 50 + w * (c + top - 50);
 }
 
-/* ------------------------------------------------------------------ bridges (GameContentLayer::addNewBridge) */
-#define MAXBRIDGE 400
-static float br_x0[MAXBRIDGE], br_len[MAXBRIDGE], br_y[MAXBRIDGE], br_shift[MAXBRIDGE];
-static int br_n;   /* worked out so far */
+/* ------------------------------------------------------------------ bridges and pits (GameContentLayer::addNewBridge,
+ * addNewPit): a stage has one or the other, so they share their memory */
+#define MAXGAP 400
+static float gp_x0[MAXGAP], gp_len[MAXGAP], gp_y[MAXGAP], gp_shift[MAXGAP];
+static int gp_n;   /* worked out so far */
 
-/* the stage's own height with the bridges so far taken out */
+/* the stage's own height with the bridges or pits so far taken out */
 static float base_height(float x) { return heights[stage_id](x); }
 
-static void bridges_upto(int k) {
-  while (br_n <= k && br_n < MAXBRIDGE) {
-    int n = br_n;
-    float x0 = n ? br_x0[n - 1] + (float)(int)(stage->bridge_d * (2 + sinf((float)n / stage->bridge_k))) : 120;
-    float shift = n ? br_shift[n - 1] - br_len[n - 1] : 0;
-    br_x0[n] = x0;
-    br_len[n] = (float)(int)(13 + 5 * sinf((float)n * 2.172f));
-    br_shift[n] = shift;
-    br_y[n] = base_height(x0 + shift);
-    br_n++;
+static float gap_start(void) { return stage->pits ? 110 : 120; }
+
+/* bridges: the first at 120 m, then every bridge_d (2 + sin(n / bridge_k)) m, 13 + 5 sin(2.172 n) m long; pits: the
+ * first at 110 m, then every getDistanceToNextPit(n) = 70 (2 + sin(n / 12.76214)) m (the same on both stages),
+ * 20 + 5 sin(2.172 n) m long. Each takes its length out of the road after it */
+static void gaps_upto(int k) {
+  while (gp_n <= k && gp_n < MAXGAP) {
+    int n = gp_n;
+    float x0 = gap_start(), len;
+    if (stage->pits) {
+      if (n) x0 = gp_x0[n - 1] + (float)(int)(70 * (2 + sinf((float)n / 12.76214f)));
+      len = (float)(int)(20 + 5 * sinf((float)n * 2.172f));
+    } else {
+      if (n) x0 = gp_x0[n - 1] + (float)(int)(stage->bridge_d * (2 + sinf((float)n / stage->bridge_k)));
+      len = (float)(int)(13 + 5 * sinf((float)n * 2.172f));
+    }
+    float shift = n ? gp_shift[n - 1] - gp_len[n - 1] : 0;
+    gp_x0[n] = x0;
+    gp_len[n] = len;
+    gp_shift[n] = shift;
+    gp_y[n] = base_height(x0 + shift);
+    gp_n++;
   }
 }
 
-bool stage_bridge_k(int k, float *x0, float *len, float *y) {
-  if (!stage->bridges || k < 0 || k >= MAXBRIDGE) return false;
-  bridges_upto(k);
-  *x0 = br_x0[k], *len = br_len[k], *y = br_y[k];
+static bool gap_k(bool on, int k, float *x0, float *len, float *y) {
+  if (!on || k < 0 || k >= MAXGAP) return false;
+  gaps_upto(k);
+  *x0 = gp_x0[k], *len = gp_len[k], *y = gp_y[k];
   return true;
 }
+bool stage_bridge_k(int k, float *x0, float *len, float *y) { return gap_k(stage->bridges, k, x0, len, y); }
+bool stage_pit_k(int k, float *x0, float *len, float *y) { return gap_k(stage->pits, k, x0, len, y); }
 
-/* the last bridge starting before x, or -1 */
-static int bridge_before(float x) {
-  if (!stage->bridges || x <= 120) return -1;
+/* the last bridge or pit starting before x, or -1 */
+static int gap_before(float x) {
+  if ((!stage->bridges && !stage->pits) || x <= gap_start()) return -1;
   int k = 0;
   for (;; k++) {
-    bridges_upto(k + 1);
-    if (k + 1 >= MAXBRIDGE - 1 || br_x0[k + 1] >= x) break;
+    gaps_upto(k + 1);
+    if (k + 1 >= MAXGAP - 1 || gp_x0[k + 1] >= x) break;
   }
   return k;
 }
 
-int stage_bridge_first(float x) {
-  int k = bridge_before(x);
+static int gap_first(float x) {
+  int k = gap_before(x);
   if (k < 0) return 0;
-  return br_x0[k] + br_len[k] < x ? k + 1 : k;
+  return gp_x0[k] + gp_len[k] < x ? k + 1 : k;
 }
+int stage_bridge_first(float x) { return gap_first(x); }
+int stage_pit_first(float x) { return gap_first(x); }
 
+float stage_pit_depth(void) { return stage->pits == PIT_MUD ? 2.0f : stage->pits == PIT_LAVA ? 1.5f : 1.0f; }
+
+/* the ground: past a bridge or a pit the road goes on as from its start (blended in over 5 m); under a bridge, a
+ * canyon; in a pit, a dip stage_pit_depth deep */
 float stage_floor(float x) {
-  int k = bridge_before(x);
+  int k = gap_before(x);
   if (k < 0) return base_height(x);
-  float x0 = br_x0[k], len = br_len[k];
-  /* past a bridge the road goes on as from its start (blended in over 5 m) */
+  float x0 = gp_x0[k], len = gp_len[k];
   float b = powf(sinf(clampf((x - x0) / 5, 0, 1) * 3.14159265358979 * 0.5), 1.25f);
-  float h = base_height(x + br_shift[k] - len * b);
-  if (x < x0 + len) {   /* under it, a canyon */
+  float h = base_height(x + gp_shift[k] - len * b);
+  if (x < x0 + len) {
     float s = sinf((x - x0) / len * 3.1415f);
-    float s1 = powf(s, 1.25f);
-    h = br_y[k] - s1 * 8 - powf(s, 0.85f) * 20 * s1;
+    if (stage->pits) {
+      float d = clampf(9 * powf(s, 2.75f), 0, 1);
+      h = gp_y[k] - stage_pit_depth() * powf(s, 1.25f) * d;
+    } else {
+      float s1 = powf(s, 1.25f);
+      h = gp_y[k] - s1 * 8 - powf(s, 0.85f) * 20 * s1;
+    }
   }
   return h;
 }
 
+/* is x on a bridge's deck or a pit's surface (that of the last one starting before k_x), and its height */
+static bool deck_at(float x, float k_x, float *y) {
+  int k = gap_before(k_x);
+  if (k < 0 || x >= gp_x0[k] + gp_len[k]) return false;
+  *y = gp_y[k];
+  return true;
+}
+
 float stage_deck(float x) {
-  int k = bridge_before(x);
-  if (k >= 0 && x < br_x0[k] + br_len[k]) return br_y[k];
-  return stage_floor(x);
+  float y;
+  return deck_at(x, x, &y) ? y : stage_floor(x);
 }
 
 /* ------------------------------------------------------------------ the ground as built: 0.5 m apart */
@@ -351,9 +419,9 @@ void stage_tree_fall(int k) {
 /* ------------------------------------------------------------------ coins and fuel (GameContentLayer::addCoinChunk) */
 /* the ground under a coin: a bridge's deck, or the highest of three points */
 static float coin_floor(float x) {
-  int k = bridge_before(x + 0.01f);
-  if (k >= 0 && x < br_x0[k] + br_len[k]) return br_y[k];
-  float h = stage_floor(x), v;
+  float h, v;
+  if (deck_at(x, x + 0.01f, &h)) return h;
+  h = stage_floor(x);
   if ((v = stage_floor(x + 0.75f)) > h) h = v;
   if ((v = stage_floor(x - 0.75f)) > h) h = v;
   return h;
@@ -380,7 +448,7 @@ int stage_coin_group(int k, float *xs, float *ys, int *vals) {
 /* chunks between cans (Stage*::getFuelDensity), after n cans */
 static int fuel_density(int n) {
   switch (stage_id) {
-    case ST_ARCTIC: case ST_ARCTIC_CAVE: return n > 19 ? n - 16 : 3;
+    case ST_ARCTIC: case ST_ARCTIC_CAVE: case ST_VOLCANO: return n > 19 ? n - 16 : 3;
     case ST_HIGHWAY: return 5 * n / 4 + 5;
     case ST_CAVE: return 5 - n % 3;
     case ST_MARS: return n / 3 + 5;
@@ -414,7 +482,10 @@ uint32_t stage_level_bonus(int n) { return stage->lvl_mult * stage_level_goal(n)
 
 void stage_set(int s) {
   stage = &stages[s], stage_id = s;
-  br_n = 0;
+#ifdef HOST
+  if (stage->bridges && stage->pits) abort();   /* (tests: they share their memory) */
+#endif
+  gp_n = 0;
   tr_n = 0, tr_count = 0, tr_group = 0, tr_next = 30;
   can_n = 0, can_scan = 0, can_count = 0, can_dens = fuel_density(0);
   for (int i = 0; i < VCACHE; i++) vkey[i] = rkey[i] = 0x7FFFFFFF;
