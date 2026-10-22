@@ -10,7 +10,7 @@ Run from PowerShell (Windows) or a terminal (macOS/Linux):
     python tools/build.py --organize-only
     python tools/build.py --watch --launcher-only --skip-languages -j2
 
-It keeps Make's intermediate outputs untouched under build/ and atomically
+It keeps Make's intermediate outputs under build/data/ and atomically
 exports finished calculator apps into top-level build/compiled/, including the stable
 live-emulator input build/compiled/NumPlay.nwa. `--watch` monitors source edits and
 rebuilds incrementally, publishing only after successful builds. `--organize-only`
@@ -354,17 +354,17 @@ def install_arm() -> Path:
 def ensure_build_directories(build: Path | None = None) -> tuple[Path, ...]:
     """Repair an incomplete build tree without deleting any existing outputs.
 
-    The root Makefile creates build/arm, build/modules, etc. inside the recipe
-    for the `build` directory. If build/ *already exists* (for example after
+    The root Makefile creates build/data/arm, build/data/modules, etc. inside the recipe
+    for the `build` directory. If build/data/ *already exists* (for example after
     an interrupted attempt, or after a previous failed Make invocation), Make
     skips that recipe. Parallel ARM compiler jobs then fail with an interleaved
-    `can't create build/arm/*.o: No such file or directory` error.
+    `can't create build/data/arm/*.o: No such file or directory` error.
 
     These directories are always safe to create ahead of Make, and the rest
     remain governed by the repo's Makefile. Creating them before starting
     any parallel build jobs also removes a directory-creation race.
     """
-    build = ROOT / "build" if build is None else build
+    build = ROOT / "build" / "data" if build is None else build
     relative = ("modules", "gen", "arm", "apps", "sim", "variant",
                 "tetris", "gen-upsilon", "arm-upsilon", "lang")
     created = []
@@ -499,8 +499,8 @@ command -v nwlink >/dev/null || { echo 'Tetris nwlink bridge is unavailable from
                 invoke(["lang"])
 
 
-# Publish end-user .nwa files outside Make's internal build/ directory.
-# build/ is intentionally left alone: NumPlay's Makefile hard-codes B = build.
+# Publish end-user .nwa files outside Make's internal build/data directory.
+# The root Makefile uses B = build/data.
 # The stable live path can later be supplied to emulator.py for auto-reload.
 LIVE_DIR = "live"
 VARIANT_DIR = "variants"
@@ -552,7 +552,7 @@ def atomic_copy(src: Path, dest: Path) -> None:
 
 
 def collect_sources(*, apps: bool, langs: bool) -> list[Path]:
-    build = ROOT / "build"
+    build = ROOT / "build" / "data"
     # Never include existing build/compiled/ files: only fresh Makefile output sources.
     sources = list(sorted(build.glob("NumPlay*.nwa")))
     if not langs:
@@ -564,14 +564,14 @@ def collect_sources(*, apps: bool, langs: bool) -> list[Path]:
 
 def publish_outputs(*, apps: bool, langs: bool, output: Path = OUTPUT,
                     verbose: bool = True) -> list[Path]:
-    """Organize completed binaries, leaving compiler artifacts in build/.
+    """Organize completed binaries, leaving compiler artifacts in build/data/.
 
     If a build fails this function isn't called, so the last successful live
     binary remains untouched. No .nwa source or compiler object is deleted.
     """
     sources = collect_sources(apps=apps, langs=langs)
     if not sources:
-        raise RuntimeError("No .nwa files found inside build/. Run a build first.")
+        raise RuntimeError("No .nwa files found inside build/data/. Run a build first.")
     # Keep these generated binary exports out of git status without touching
     # the project's tracked root .gitignore. A lone '*' ignores this file too.
     output.mkdir(parents=True, exist_ok=True)
@@ -784,11 +784,20 @@ def _game_output(game: str) -> tuple[str, Path]:
     if not game_dir.is_dir():
         raise ValueError(f"Missing game directory: {game}")
     file = labels[game]
-    # Each game's own output: output/, output/device/ (NumDrive) or build/ (NumDash); Tetris, Cargo's.
-    candidate = [game_dir / "output" / f"{game}.nwa", game_dir / "output" / "device" / f"{game}.nwa",
-                 game_dir / "build" / f"{game}.nwa"]
+    # Conventional Makefiles can put all standalone intermediates in build/data.
+    # Special layouts still use their original output paths until migrated.
+    makefile = (game_dir / "Makefile").read_text(encoding="utf-8") if (game_dir / "Makefile").exists() else ""
+    active = "\n".join(line for line in makefile.splitlines()
+                       if not line.lstrip().startswith("#"))
+    conventional = ("output/" not in active) and any(
+        re.search(rf"(?m)^{variable}\s*=\s*output\s*$", makefile)
+        for variable in ("BUILD_DIR", "OUT"))
+    candidate = ([ROOT / "build" / "data" / "games" / game / f"{game}.nwa"]
+                 if conventional else [game_dir / "output" / f"{game}.nwa",
+                                      game_dir / "output" / "device" / f"{game}.nwa",
+                                      game_dir / "build" / f"{game}.nwa"])
     if game == "tetris":
-        candidate = [ROOT / "build" / "apps" / "Tetris.nwa"]
+        candidate = [ROOT / "build" / "data" / "apps" / "Tetris.nwa"]
     return file, next((p for p in candidate if p.is_file()), candidate[0])
 
 
@@ -811,7 +820,15 @@ def _build_once(a) -> None:
             _publish_game("tetris")
             return
         _game_output(a.game)  # Fail before launching a compiler on invalid IDs.
-        _run_make(["-C", f"games/{a.game}", "build"], jobs=a.jobs)
+        source_makefile = (ROOT / "games" / a.game / "Makefile").read_text(encoding="utf-8")
+        active = "\n".join(x for x in source_makefile.splitlines()
+                           if not x.lstrip().startswith("#"))
+        variable = next((v for v in ("BUILD_DIR", "OUT")
+                         if re.search(rf"(?m)^{v}\s*=\s*output\s*$", source_makefile)), None)
+        make_args = ["-C", f"games/{a.game}", "build"]
+        if variable and "output/" not in active:
+            make_args.append(f"{variable}=../../build/data/games/{a.game}")
+        _run_make(make_args, jobs=a.jobs)
         _publish_game(a.game)
         return
     if os.name == "nt":
@@ -875,7 +892,7 @@ def main() -> int:
     if a.clean:
         # Do not call `make clean`: several game recipes erase local build/
         # folders also used by host tests (including host-saves).
-        for location in (OUTPUT,):
+        for location in (ROOT / "build" / "data", OUTPUT):
             if location.is_symlink():
                 raise RuntimeError(f"Refusing to clean symlink: {location}")
             if location.is_dir():

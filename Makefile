@@ -1,8 +1,9 @@
 # NumPlay: one launcher app with every game, plus each game on its own.
 #
-#   make            build/NumPlay*.nwa and build/apps/*.nwa (the release files)
+#   make            build/data/NumPlay*.nwa and build/data/apps/*.nwa (python3 tools/build.py also puts the
+#                   finished ones in build/compiled: the NumPlays, and each game in build/compiled/games)
 #   make check      link the NumPlay apps like the calculator does, print sizes, check RAM
-#   make sim        build/NumPlay.nwb for the Epsilon simulator
+#   make sim        build/data/NumPlay.nwb for the Epsilon simulator
 #   make emu        run NumPlay.nwa in the ARM emulator (tools/emu.py)
 #   make clean
 #
@@ -15,7 +16,11 @@ ARM_LD = arm-none-eabi-ld
 ARM_OBJCOPY = arm-none-eabi-objcopy
 PY ?= python3
 CARGO ?= cargo
-B = build
+B = build/data
+# Conventional games honor a configurable output directory; special layouts are kept local.
+GAMES_REDIRECT = balatro blockblast breakout buckshot celeste championisland chess connectfour cookieclicker coreball dinorun donkeykong doodlejump doom dune finalearth2 flappybird flappydunk fnaf g2048 hillclimb hollowknight invaders isaac jetpackjoyride leveldevil minesweeper numblocks numpowder numvisuals pacman portal pvz snake sokoban solitaire sonic stickmanhook subway sudoku suika towerblock twoplayer undertale uttt
+GAMES_OUT = dinorun
+GAME_REDIRECT_ARG = $(if $(filter $(1),$(GAMES_OUT)),OUT=../../$(B)/games/$(1),BUILD_DIR=../../$(B)/games/$(1))
 # the RAM the oldest calculator software that runs apps gives them (23.2: 148928 bytes; 25.2 gives 153676).
 # NumPlay itself takes less: a game goes on past it into the RAM the software has left (see
 # tools/gen_games.py), so it installs with less too, custom builds of the software say, where a game that
@@ -24,7 +29,7 @@ RAM_LIMIT = 148928
 # custom builds of Epsilon 25.2's source give apps less: 133652 bytes; every game fits there too, in NumPlay and on
 # its own (their big buffers are on the stack, 32 KB apart from that RAM, or in the RAM the software has left)
 CUSTOM_RAM = 133652
-BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook DonkeyKong
+BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook DonkeyKong Dune
 # the calculator's space for installed apps (0x90200000 to 0x903F0000 in its flash)
 APP_SPACE = 2031616
 # with Enlarged Extra Apps (nwagyu's Nwagra), the app loader is told the space goes on to the end of the
@@ -34,8 +39,8 @@ XL_APP_SPACE = 6291456
 # Upsilon, the N0110 and N0115's custom software, gives .nwa apps less RAM: NumPlay-Upsilon.nwa has
 # the games that fit it (NumPlay draws their text there: see launcher/src/compat.c)
 UPSILON_RAM = 107674
-UPSILON_GAMES = crossyroad blockblast suika portal tetris dinorun doodlejump chess flappybird flappydunk towerblock pacman snake connectfour \
-  solitaire g2048 minesweeper breakout twoplayer invaders sudoku uttt sokoban
+UPSILON_GAMES = crossyroad blockblast suika portal tetris dinorun doodlejump chess flappybird flappydunk towerblock coreball pacman \
+  snake connectfour solitaire g2048 minesweeper breakout twoplayer invaders sudoku uttt sokoban
 
 # NumPlay and its discreet versions: the same app, with another name and icon
 # on the calculator's home screen. Each one is a release file.
@@ -80,10 +85,10 @@ $(B):
 MOD_numdash = games/numdash/build/module.o
 MOD_crossyroad = games/crossyroad/output/module.o
 MOD_numdrive = games/numdrive/output/device/module.o
-MOD_balatro = games/balatro/output/module.o
-MOD_buckshot = games/buckshot/output/module.o
-MOD_portal = games/portal/output/module.o
-MOD_chess = games/chess/output/module.o
+MOD_balatro = $(B)/games/balatro/module.o
+MOD_buckshot = $(B)/games/buckshot/module.o
+MOD_portal = $(B)/games/portal/module.o
+MOD_chess = $(B)/games/chess/module.o
 MOD_tetris = $(B)/tetris/raw.o
 ENTRY = main
 ENTRY_tetris = np_tetris_main
@@ -98,8 +103,8 @@ $(B)/tetris/raw.o: FORCE | $(B)
 # RAM after its own in the arena: its _heap_start is np_<game>_heap and its malloc's _sbrk the launcher's.
 $(B)/modules/%.o: FORCE | $(B)
 	@if [ "$*" = tetris ]; then $(MAKE) --no-print-directory $(MOD_tetris); \
-	elif [ -n "$(filter $*,$(XL_GAMES))" ]; then $(MAKE) --no-print-directory -C games/$* build NWLINK="$(NWLINK)"; \
-	else $(MAKE) --no-print-directory -C games/$* module NWLINK="$(NWLINK)"; fi
+	elif [ -n "$(filter $*,$(XL_GAMES))" ]; then $(MAKE) --no-print-directory -C games/$* build NWLINK="$(NWLINK)" $(if $(filter $*,$(GAMES_REDIRECT)),$(call GAME_REDIRECT_ARG,$*),); \
+	else $(MAKE) --no-print-directory -C games/$* module NWLINK="$(NWLINK)" $(if $(filter $*,$(GAMES_REDIRECT)),$(call GAME_REDIRECT_ARG,$*),); fi
 	$(ARM_LD) -r -d -z noexecstack --force-group-allocation -T tools/module.ld $(MOD_$*) -o $(B)/modules/$*.1.o
 	$(ARM_OBJCOPY) --keep-global-symbol=$(or $(ENTRY_$*),$(ENTRY)) \
 	  --redefine-sym eadk_keyboard_scan=np_keyboard_scan --redefine-sym eadk_event_get=np_event_get \
@@ -110,7 +115,7 @@ $(B)/modules/%.o: FORCE | $(B)
 	  --entry $(or $(ENTRY_$*),$(ENTRY)) --json $(B)/modules/$*.json
 
 # games in the standard layout (see tools/games_mk.py)
-$(foreach g,$(STD_GAMES),$(eval MOD_$(g) = games/$(g)/output/module.o)$(eval SIM_$(g) = games/$(g)/output/sim-module.o))
+$(foreach g,$(STD_GAMES),$(eval MOD_$(g) = $(if $(filter $(g),$(GAMES_REDIRECT)),$(B)/games/$(g)/module.o,games/$(g)/output/module.o))$(eval SIM_$(g) = $(if $(filter $(g),$(GAMES_REDIRECT)),$(B)/games/$(g)/sim-module.o,games/$(g)/output/sim-module.o)))
 
 MODULES = $(foreach g,$(GAMES),$(B)/modules/$(g).o)
 
@@ -202,8 +207,8 @@ kit-langs: kit
 	  [ -d $(B)/lang/$$l ] || $(PY) tools/lang.py tree $$l $(B)/lang/$$l || exit 1; \
 	  $(MAKE) -C $(B)/lang/$$l kit XL_GAMES= NWLINK="$(NWLINK)" || exit 1; \
 	  rm -rf $(B)/site-kit/$$l && mkdir -p $(B)/site-kit/$$l && \
-	  cp -R $(B)/lang/$$l/build/site-kit/kit.json $(B)/lang/$$l/build/site-kit/base.o.gz \
-	    $(B)/lang/$$l/build/site-kit/arena.o.gz $(B)/lang/$$l/build/site-kit/games $(B)/site-kit/$$l/ || exit 1; \
+	  cp -R $(B)/lang/$$l/$(B)/site-kit/kit.json $(B)/lang/$$l/$(B)/site-kit/base.o.gz \
+	    $(B)/lang/$$l/$(B)/site-kit/arena.o.gz $(B)/lang/$$l/$(B)/site-kit/games $(B)/site-kit/$$l/ || exit 1; \
 	done
 
 check: nwa apps
@@ -246,47 +251,48 @@ lang: $(foreach l,$(LANGS),$(B)/NumPlay-$(LANG_$(l)).nwa)
 $(foreach l,$(LANGS),$(B)/NumPlay-$(LANG_$(l)).nwa): $(B)/NumPlay-%.nwa: FORCE | $(B)
 	$(eval L := $(if $(filter French,$*),fr,zh))
 	$(PY) tools/lang.py tree $(L) $(B)/lang/$(L)
-	$(MAKE) -C $(B)/lang/$(L) build/NumPlay.nwa NWLINK="$(NWLINK)"
-	$(NWLINK) nwa-bin --ram-length $$(( $(CUSTOM_RAM) - $$(cat $(B)/lang/$(L)/build/gen/arena_extra) )) \
-	  $(B)/lang/$(L)/build/NumPlay.nwa $(B)/lang/$(L)/build/NumPlay.bin
-	@n=$$(wc -c < $(B)/lang/$(L)/build/NumPlay.bin); echo "NumPlay-$*.nwa installs as $$n bytes ($$(( $(APP_SPACE) - n )) to spare)"; \
+	$(MAKE) -C $(B)/lang/$(L) build/data/NumPlay.nwa NWLINK="$(NWLINK)"
+	$(NWLINK) nwa-bin --ram-length $$(( $(CUSTOM_RAM) - $$(cat $(B)/lang/$(L)/build/data/gen/arena_extra) )) \
+	  $(B)/lang/$(L)/build/data/NumPlay.nwa $(B)/lang/$(L)/build/data/NumPlay.bin
+	@n=$$(wc -c < $(B)/lang/$(L)/build/data/NumPlay.bin); echo "NumPlay-$*.nwa installs as $$n bytes ($$(( $(APP_SPACE) - n )) to spare)"; \
 	  [ $$n -le $(APP_SPACE) ] || { echo "NumPlay-$*.nwa is bigger than the calculator's app space"; exit 1; }
-	cp $(B)/lang/$(L)/build/NumPlay.nwa $@
+	cp $(B)/lang/$(L)/build/data/NumPlay.nwa $@
 
 # ------------------------------------------------------------------ games on their own
 APP_numdash = games/numdash/build/numdash.nwa:NumDash.nwa
 APP_crossyroad = games/crossyroad/output/crossyroad.nwa:CrossyRoad.nwa
 APP_numdrive = games/numdrive/output/device/numdrive.nwa:NumDrive.nwa
-APP_balatro = games/balatro/output/balatro.nwa:Balatro.nwa
-APP_buckshot = games/buckshot/output/buckshot.nwa:BuckshotRoulette.nwa
-APP_portal = games/portal/output/portal.nwa:PortalReturns.nwa
-APP_chess = games/chess/output/chess.nwa:NumChess.nwa
+APP_balatro = $(B)/games/balatro/balatro.nwa:Balatro.nwa
+APP_buckshot = $(B)/games/buckshot/buckshot.nwa:BuckshotRoulette.nwa
+APP_portal = $(B)/games/portal/portal.nwa:PortalReturns.nwa
+APP_chess = $(B)/games/chess/chess.nwa:NumChess.nwa
 APP_tetris = games/tetris/tetris/target/thumbv7em-none-eabihf/release/tetris:Tetris.nwa
 # Tetris on its own, without building every game (tools/build.py --game tetris)
 tetris-app: | $(B)
 	cd games/tetris/tetris && NWLINK="$(NWLINK)" $(CARGO) build --release --quiet
 	cp $(word 1,$(subst :, ,$(APP_tetris))) $(B)/apps/Tetris.nwa
 	arm-none-eabi-strip --strip-unneeded $(B)/apps/Tetris.nwa
-APP_numvisuals = games/numvisuals/output/numvisuals.nwa:NumVisuals.nwa
+APP_numvisuals = $(B)/games/numvisuals/numvisuals.nwa:NumVisuals.nwa
 # too big to share the calculator's app space with NumPlay: only on their own
-APP_celeste = games/celeste/output/celeste.nwa:Celeste.nwa
-APP_championisland = games/championisland/output/championisland.nwa:ChampionIsland.nwa
-APP_hollowknight = games/hollowknight/output/hollowknight.nwa:HollowKnight.nwa
-APP_undertale = games/undertale/output/undertale.nwa:Undertale.nwa
-APP_subway = games/subway/output/subway.nwa:SubwaySurfers.nwa
-APP_fnaf = games/fnaf/output/fnaf.nwa:FiveNightsAtFreddys.nwa
-APP_hillclimb = games/hillclimb/output/hillclimb.nwa:HillClimbRacing.nwa
-APP_finalearth2 = games/finalearth2/output/finalearth2.nwa:FinalEarth2.nwa
-APP_numpowder = games/numpowder/output/numpowder.nwa:NumPowder.nwa
-APP_doom = games/doom/output/doom.nwa:Doom.nwa
-APP_isaac = games/isaac/output/isaac.nwa:BindingOfIsaac.nwa
-APP_pvz = games/pvz/output/pvz.nwa:PlantsVsZombies.nwa
-APP_sonic = games/sonic/output/sonic.nwa:SonicTheHedgehog.nwa
-APP_cookieclicker = games/cookieclicker/output/cookieclicker.nwa:CookieClicker.nwa
-APP_leveldevil = games/leveldevil/output/leveldevil.nwa:LevelDevil.nwa
-APP_jetpackjoyride = games/jetpackjoyride/output/jetpackjoyride.nwa:JetpackJoyride.nwa
-APP_stickmanhook = games/stickmanhook/output/stickmanhook.nwa:StickmanHook.nwa
-APP_donkeykong = games/donkeykong/output/donkeykong.nwa:DonkeyKong.nwa
+APP_celeste = $(B)/games/celeste/celeste.nwa:Celeste.nwa
+APP_championisland = $(B)/games/championisland/championisland.nwa:ChampionIsland.nwa
+APP_hollowknight = $(B)/games/hollowknight/hollowknight.nwa:HollowKnight.nwa
+APP_undertale = $(B)/games/undertale/undertale.nwa:Undertale.nwa
+APP_subway = $(B)/games/subway/subway.nwa:SubwaySurfers.nwa
+APP_fnaf = $(B)/games/fnaf/fnaf.nwa:FiveNightsAtFreddys.nwa
+APP_hillclimb = $(B)/games/hillclimb/hillclimb.nwa:HillClimbRacing.nwa
+APP_finalearth2 = $(B)/games/finalearth2/finalearth2.nwa:FinalEarth2.nwa
+APP_numpowder = $(B)/games/numpowder/numpowder.nwa:NumPowder.nwa
+APP_doom = $(B)/games/doom/doom.nwa:Doom.nwa
+APP_isaac = $(B)/games/isaac/isaac.nwa:BindingOfIsaac.nwa
+APP_pvz = $(B)/games/pvz/pvz.nwa:PlantsVsZombies.nwa
+APP_sonic = $(B)/games/sonic/sonic.nwa:SonicTheHedgehog.nwa
+APP_cookieclicker = $(B)/games/cookieclicker/cookieclicker.nwa:CookieClicker.nwa
+APP_leveldevil = $(B)/games/leveldevil/leveldevil.nwa:LevelDevil.nwa
+APP_jetpackjoyride = $(B)/games/jetpackjoyride/jetpackjoyride.nwa:JetpackJoyride.nwa
+APP_stickmanhook = $(B)/games/stickmanhook/stickmanhook.nwa:StickmanHook.nwa
+APP_donkeykong = $(B)/games/donkeykong/donkeykong.nwa:DonkeyKong.nwa
+APP_dune = $(B)/games/dune/dune.nwa:Dune.nwa
 # the big games' modules are made from these (the kit)
 $(foreach g,$(XL_GAMES),$(eval MOD_$(g) = $$(word 1,$$(subst :, ,$$(APP_$(g))))))
 
@@ -294,29 +300,30 @@ apps: | $(B)
 	$(MAKE) -C games/numdash build NWLINK="node node_modules/nwlink/bin/nwlink"
 	$(MAKE) -C games/crossyroad NWLINK="$(NWLINK)"
 	$(MAKE) -C games/numdrive NWLINK="$(NWLINK)"
-	$(MAKE) -C games/balatro build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/buckshot build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/portal build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/chess build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/numvisuals build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/celeste build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/championisland build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/hollowknight build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/undertale build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/subway build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/fnaf build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/hillclimb build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/finalearth2 build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/numpowder build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/doom build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/isaac build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/pvz build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/sonic build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/cookieclicker build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/leveldevil build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/jetpackjoyride build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/stickmanhook build NWLINK="$(NWLINK)"
-	$(MAKE) -C games/donkeykong build NWLINK="$(NWLINK)"
+	$(MAKE) -C games/balatro build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/balatro
+	$(MAKE) -C games/buckshot build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/buckshot
+	$(MAKE) -C games/portal build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/portal
+	$(MAKE) -C games/chess build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/chess
+	$(MAKE) -C games/numvisuals build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/numvisuals
+	$(MAKE) -C games/celeste build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/celeste
+	$(MAKE) -C games/championisland build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/championisland
+	$(MAKE) -C games/hollowknight build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/hollowknight
+	$(MAKE) -C games/undertale build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/undertale
+	$(MAKE) -C games/subway build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/subway
+	$(MAKE) -C games/fnaf build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/fnaf
+	$(MAKE) -C games/hillclimb build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/hillclimb
+	$(MAKE) -C games/finalearth2 build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/finalearth2
+	$(MAKE) -C games/numpowder build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/numpowder
+	$(MAKE) -C games/doom build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/doom
+	$(MAKE) -C games/isaac build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/isaac
+	$(MAKE) -C games/pvz build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/pvz
+	$(MAKE) -C games/sonic build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/sonic
+	$(MAKE) -C games/cookieclicker build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/cookieclicker
+	$(MAKE) -C games/leveldevil build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/leveldevil
+	$(MAKE) -C games/jetpackjoyride build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/jetpackjoyride
+	$(MAKE) -C games/stickmanhook build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/stickmanhook
+	$(MAKE) -C games/donkeykong build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/donkeykong
+	$(MAKE) -C games/dune build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/dune
 	cd games/tetris/tetris && NWLINK="$(NWLINK)" $(CARGO) build --release --quiet
 	cp $(word 1,$(subst :, ,$(APP_numdash))) $(B)/apps/$(word 2,$(subst :, ,$(APP_numdash)))
 	cp $(word 1,$(subst :, ,$(APP_crossyroad))) $(B)/apps/$(word 2,$(subst :, ,$(APP_crossyroad)))
@@ -345,22 +352,23 @@ apps: | $(B)
 	cp $(word 1,$(subst :, ,$(APP_jetpackjoyride))) $(B)/apps/$(word 2,$(subst :, ,$(APP_jetpackjoyride)))
 	cp $(word 1,$(subst :, ,$(APP_stickmanhook))) $(B)/apps/$(word 2,$(subst :, ,$(APP_stickmanhook)))
 	cp $(word 1,$(subst :, ,$(APP_donkeykong))) $(B)/apps/$(word 2,$(subst :, ,$(APP_donkeykong)))
+	cp $(word 1,$(subst :, ,$(APP_dune))) $(B)/apps/$(word 2,$(subst :, ,$(APP_dune)))
 	arm-none-eabi-strip --strip-unneeded $(B)/apps/Tetris.nwa
 
 STD_APPS = $(foreach g,$(STD_GAMES),$(B)/apps/$(NWA_$(g)))
 apps: $(STD_APPS)
 $(STD_APPS): $(B)/apps/%.nwa: FORCE | $(B)
-	$(MAKE) --no-print-directory -C games/$(APPID_$*) build NWLINK="$(NWLINK)"
-	cp games/$(APPID_$*)/output/$(APPID_$*).nwa $@
+	$(MAKE) --no-print-directory -C games/$(APPID_$*) build NWLINK="$(NWLINK)" $(if $(filter $(APPID_$*),$(GAMES_REDIRECT)),$(call GAME_REDIRECT_ARG,$(APPID_$*)),)
+	cp $(if $(filter $(APPID_$*),$(GAMES_REDIRECT)),$(B)/games/$(APPID_$*)/$(APPID_$*).nwa,games/$(APPID_$*)/output/$(APPID_$*).nwa) $@
 
 # ------------------------------------------------------------------ simulator
 SIM_numdash = games/numdash/build/sim-module.o
 SIM_crossyroad = games/crossyroad/output/sim-module.o
 SIM_numdrive = games/numdrive/output/sim-module.o
-SIM_balatro = games/balatro/output/sim-module.o
-SIM_buckshot = games/buckshot/output/sim-module.o
-SIM_portal = games/portal/output/sim-module.o
-SIM_chess = games/chess/output/sim-module.o
+SIM_balatro = $(B)/games/balatro/sim-module.o
+SIM_buckshot = $(B)/games/buckshot/sim-module.o
+SIM_portal = $(B)/games/portal/sim-module.o
+SIM_chess = $(B)/games/chess/sim-module.o
 SIM_tetris = $(B)/sim/tetris.o
 SIM_CFLAGS = -std=gnu11 -O2 -fPIC -DNP_SIMULATOR=1 -DNP_VERSION='"$(VERSION)"' $(EADK_SIM_CFLAGS) -Ilauncher/src -Wall -Wno-unused-parameter
 
@@ -370,7 +378,7 @@ $(B)/sim/tetris.o: FORCE | $(B)
 	  games/tetris/tetris/target/aarch64-apple-darwin/release/libtetris.a -o $@
 
 $(B)/sim/%.mod: FORCE | $(B)
-	@if [ "$*" != tetris ]; then $(MAKE) --no-print-directory -C games/$* sim-module NWLINK="$(NWLINK)"; \
+	@if [ "$*" != tetris ]; then $(MAKE) --no-print-directory -C games/$* sim-module NWLINK="$(NWLINK)" $(if $(filter $*,$(GAMES_REDIRECT)),$(call GAME_REDIRECT_ARG,$*),); \
 	else $(MAKE) --no-print-directory $(SIM_tetris); fi
 
 $(B)/sim/gen/gametable.c: games/games.json tools/gen_games.py $(MODULES)
@@ -387,7 +395,7 @@ emu: $(B)/NumPlay.nwa
 	$(PY) tools/emu.py $< --ms 4000 --shots 3000 --out $(B)/emu
 
 clean:
-	rm -rf $(B)
+	rm -rf $(B) build/compiled
 	-$(MAKE) -C games/numdash clean
 	-$(MAKE) -C games/crossyroad clean
 	-$(MAKE) -C games/numdrive clean
@@ -413,5 +421,6 @@ clean:
 	-$(MAKE) -C games/jetpackjoyride clean
 	-$(MAKE) -C games/stickmanhook clean
 	-$(MAKE) -C games/donkeykong clean
+	-$(MAKE) -C games/dune clean
 	-cd games/tetris/tetris && $(CARGO) clean
 	-$(foreach g,$(STD_GAMES),$(MAKE) -C games/$(g) clean;)

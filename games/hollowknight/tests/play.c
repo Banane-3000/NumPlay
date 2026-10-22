@@ -250,6 +250,158 @@ static int arenas_test(void) {
   return fails || !total ? 1 : 0;
 }
 
+/* the charms (issue #138): OK changes nothing away from a bench. Resting at one: a charm equipped (its effect on:
+ * Lifeblood Heart's lifeblood), none past the notches, one unequipped, one overcharmed on the fifth try and taken off
+ * again; Home as one moves (inv_settle) saves it in its place, and a load brings them back */
+static int charm_fails;
+static void charm_check(bool ok, const char *what) {
+  printf("%s charms: %s (equipped %d %d %d, notches %d of %d)\n", ok ? "ok  " : "FAIL", what, g_pd.equipped[0],
+         g_pd.equipped[1], g_pd.equipped[2], g_pd.charm_slots_filled, g_pd.charm_slots);
+  charm_fails += !ok;
+}
+/* (keys as --play has them, without drawing: L R U D, O OK, I the inventory) */
+static void charm_keys(const char *keys) {
+  for (const char *p = keys; *p; p++) {
+    uint32_t k = *p == 'L' ? K_LEFT : *p == 'R' ? K_RIGHT : *p == 'U' ? K_UP : *p == 'D' ? K_DOWN : *p == 'O' ? K_OK | K_JUMP
+               : *p == 'I' ? K_INV : 0;
+    run_ticks(2, k);
+    run_ticks(*p == 'O' ? 60 : *p == 'I' ? 40 : 12, 0);   /* (a charm's move, a failed one there and back; the panes) */
+  }
+}
+static int charms_test(void) {
+  if (getenv("HKSAVES")) {
+    extern void host_save_dir(const char *d);
+    host_save_dir(getenv("HKSAVES"));
+  }
+  /* (Gathering Swarm 1, Wayward Compass 2, Quick Focus 7, Lifeblood Heart 8: in the collection's second, first,
+   * 26th and 28th places; the inventory opening on its Charms pane, the cursor on the second place) */
+  game_new();
+  pd_set_flag(PDF_HAS_CHARM, true);
+  static const int got[] = {1, 2, 7, 8};
+  for (int i = 0; i < 4; i++) pd_set_flag(PDF_GOT_CHARM_1 + got[i] - 1, true);
+  g_pd.current_inv_pane = 1;
+  save_select(0);
+  game_enter(ROOM_TOWN, 120, 12, true);
+  run_ticks(60, 0);
+  charm_keys("IO");
+  charm_check(inv_open() && !charm_on(1) && !g_pd.charm_slots_filled, "away from a bench, OK equips nothing");
+  charm_keys("I");
+  /* (Dirtmouth's bench: sat on) */
+  game_enter(ROOM_TOWN, 132.4f, 12, true);
+  run_ticks(60, 0);
+  run_ticks(3, K_UP);
+  run_ticks(150, 0);
+  charm_check(pd_flag(PDF_AT_BENCH), "resting at the bench");
+  charm_keys("IO");
+  charm_check(charm_on(1) && g_pd.charm_slots_filled == 1 && g_pd.equipped[0] == 1, "Gathering Swarm equipped");
+  charm_keys("DDRRRRRRO");
+  charm_check(charm_on(8) && g_pd.charm_slots_filled == 3 && g_pd.health_blue == 2, "Lifeblood Heart equipped, its lifeblood on");
+  charm_keys("UULLLLLLLO");
+  charm_check(!charm_on(2) && g_pd.charm_slots_filled == 3, "no notch left: Wayward Compass not equipped");
+  charm_keys("RO");
+  charm_check(!charm_on(1) && g_pd.charm_slots_filled == 2 && g_pd.equipped[0] == 8 && !g_pd.equipped[1],
+              "Gathering Swarm unequipped");
+  charm_keys("DDRRRRO");
+  charm_keys("OOO");
+  charm_check(!charm_on(7) && g_pd.charm_slots_filled == 2 && !pd_flag(PDF_OVERCHARMED), "Quick Focus refused four times");
+  charm_keys("O");
+  charm_check(charm_on(7) && g_pd.charm_slots_filled == 5 && pd_flag(PDF_OVERCHARMED) && pd_flag(PDF_CAN_OVERCHARM),
+              "the fifth try overcharms");
+  charm_keys("O");
+  charm_check(!charm_on(7) && g_pd.charm_slots_filled == 2 && !pd_flag(PDF_OVERCHARMED), "Quick Focus off, overcharming over");
+  /* (Home as Gathering Swarm moves up: put in its place, then saved; a new game; the save loaded) */
+  charm_keys("UULLLL");
+  run_ticks(2, K_OK);
+  run_ticks(3, 0);
+  bool settled = g_pd.disable_pause && inv_settle();
+  charm_check(settled && charm_on(1) && g_pd.charm_slots_filled == 3, "Home in the inventory: Gathering Swarm in place");
+  charm_check(save_game(), "saved");
+  game_new();
+  charm_check(save_load(0) && game_respawn(), "loaded");
+  run_ticks(10, 0);
+  charm_check(charm_on(1) && charm_on(8) && !charm_on(7) && g_pd.charm_slots_filled == 3 && g_pd.equipped[0] == 8 &&
+              g_pd.equipped[1] == 1 && g_pd.health_blue == 2 && pd_flag(PDF_AT_BENCH),
+              "loaded at the bench with Lifeblood Heart and Gathering Swarm on");
+  printf("charms: %d failing\n", charm_fails);
+  return charm_fails ? 1 : 0;
+}
+
+/* the stag stations: their Stag Blanker (Blanker Control) black as the room comes in, faded out after 0.65 s over a
+ * second, so that each is seen, come in by its gate, by the stag and loaded at its bench; and the rides, the stag called
+ * with the bell first */
+static int station_fails;
+static float seen(void) {   /* (the share of the screen under the HUD that is not black) */
+  extern uint16_t host_fb[];
+  for (int i = 0; i < 3; i++) game_draw();   /* (the tiles in, as while playing) */
+  int lit = 0, n = 0;
+  for (int y = 70; y < SCREEN_H; y++)
+    for (int x = 0; x < SCREEN_W; x++, n++) lit += host_fb[y * SCREEN_W + x] != 0;
+  return (float)lit / n;
+}
+static void station_check(int room, const char *how) {
+  float s = seen();
+  bool ok = g_room.id == room && s > 0.2f && !g_hero.hidden;   /* (black: the HUD only, under 1%) */
+  printf("%s stations: %s %s, %.0f%% of the screen seen\n", ok ? "ok  " : "FAIL", room_name(room), how, s * 100);
+  station_fails += !ok;
+}
+static void station_new(int stag_at) {
+  game_new();
+  pd_set_flag(PDF_OPENED_CROSSROADS, true), pd_set_flag(PDF_OPENED_GREENPATH, true), pd_set_flag(PDF_MET_STAG, true);
+  g_pd.stag_position1 = (uint8_t)(stag_at + 1);
+}
+static int stations_test(void) {
+  if (getenv("HKSAVES")) {
+    extern void host_save_dir(const char *d);
+    host_save_dir(getenv("HKSAVES"));
+  }
+  static const struct { int room; const char *gate; float bench_x; } st[] = {
+      {ROOM_ROOM_TOWN_STAG_STATION, "left1", 0}, {ROOM_CROSSROADS_47, "right1", 29.34f}, {ROOM_FUNGUS1_16_ALT, "right1", 30.97f}};
+  for (unsigned i = 0; i < sizeof st / sizeof st[0]; i++) {
+    station_new(1);
+    game_enter_gate(st[i].room, st[i].gate);
+    run_ticks(150, 0);
+    station_check(st[i].room, "come in by its gate");
+    if (!st[i].bench_x) continue;
+    /* (rested at its bench, the game saved; a new game; the save loaded) */
+    station_new(1);
+    save_select(0);
+    game_enter(st[i].room, st[i].bench_x, 7, true);
+    run_ticks(60, 0);
+    run_ticks(3, K_UP);
+    run_ticks(150, 0);
+    bool rested = pd_flag(PDF_AT_BENCH);
+    game_new();
+    bool loaded = rested && save_load(0) && game_respawn();
+    run_ticks(200, 0);
+    if (!loaded) printf("FAIL stations: %s: not rested at its bench and loaded\n", room_name(st[i].room)), station_fails++;
+    else station_check(st[i].room, "loaded at its bench");
+  }
+  /* (the Crossroads: the stag at Dirtmouth called by the bell's ring (the nail), then up in its Travel Range, Dirtmouth
+   * chosen; again with the stag there, Greenpath chosen) */
+  for (int k = 0; k < 2; k++) {
+    station_new(k ? 1 : 0);
+    game_enter(ROOM_CROSSROADS_47, k ? 16.3f : 18.7f, 7, true);
+    run_ticks(120, 0);
+    if (!k) {
+      run_ticks(3, K_ATTACK);
+      run_ticks(600, 0);
+      run_ticks(15, K_LEFT);
+      run_ticks(60, 0);
+    }
+    run_ticks(3, K_UP);
+    run_ticks(200, 0);
+    run_ticks(2, k ? K_DOWN : K_UP);
+    run_ticks(30, 0);
+    run_ticks(2, K_OK);
+    run_ticks(300, 0);
+    run_ticks(2, K_OK);   /* (the ride skipped after 1.5 s) */
+    run_ticks(300, 0);
+    station_check(k ? ROOM_FUNGUS1_16_ALT : ROOM_ROOM_TOWN_STAG_STATION, k ? "by the stag" : "by the stag, called by its bell");
+  }
+  printf("stations: %d failing\n", station_fails);
+  return station_fails ? 1 : 0;
+}
+
 /* the ground's seams, as the calculator rounds: from many places in every room the Knight lands on the ground, then is
  * put a few float steps lower (as near as rounding leaves him), and must walk both ways where no wall stops him; and
  * jumping at a wall, put a few steps nearer it, he must fall back down, not hang on it */
@@ -506,6 +658,8 @@ static int gates_test(const char *which) {
   if (!strcmp(which, "seams")) return seams_test();
   if (!strcmp(which, "markers")) return markers_test();
   if (!strcmp(which, "arenas")) return arenas_test();
+  if (!strcmp(which, "charms")) return charms_test();
+  if (!strcmp(which, "stations")) return stations_test();
   if (!strncmp(which, "wander:", 7)) {   /* (wander:ROOM|all:seed:ticks) */
     char room[64];
     int seed = 1, ticks = 6000;

@@ -42,23 +42,23 @@ jobs:
           rustup target add thumbv7em-none-eabihf
 
       - name: Build
-        run: make -j4 nwa apps check NWLINK=nwlink && make lang NWLINK=nwlink && make kit-langs NWLINK=nwlink
+        run: python3 tools/build.py -j 4 && make kit-langs NWLINK=nwlink
         
       - uses: actions/upload-artifact@v4
         with:
           name: nwa
           path: |
-            build/NumPlay*.nwa
-            build/apps/*.nwa
+            build/compiled/NumPlay*.nwa
+            build/compiled/games/*.nwa
 
       - name: Test
         run: |
-          python3 tests/test_games.py build/apps
-          python3 tests/test_uninstall.py build/NumPlay.nwa --game numdrive
-          python3 tests/test_progress.py build/NumPlay.nwa
-          python3 tests/test_numblocks_progress.py build/apps/NumBlocks.nwa
-          python3 tests/test_upsilon.py build/NumPlay-Upsilon.nwa
-          python3 tests/test_small_ram.py build/NumPlay.nwa
+          python3 tests/test_games.py build/compiled/games
+          python3 tests/test_uninstall.py build/compiled/NumPlay.nwa --game numdrive
+          python3 tests/test_progress.py build/compiled/NumPlay.nwa
+          python3 tests/test_numblocks_progress.py build/compiled/games/NumBlocks.nwa
+          python3 tests/test_upsilon.py build/compiled/NumPlay-Upsilon.nwa
+          python3 tests/test_small_ram.py build/compiled/NumPlay.nwa
           make -C games/numblocks host test
           make -C games/championisland host test
           make -C games/undertale host test
@@ -73,6 +73,7 @@ jobs:
           make -C games/cookieclicker host test
           make -C games/jetpackjoyride host test
           make -C games/donkeykong host test
+          make -C games/dune host test
           make -C games/invaders host test
           make -C games/sudoku host test
           make -C games/uttt host test
@@ -82,6 +83,7 @@ jobs:
           make -C games/suika host test
           make -C games/doodlejump host test
           make -C games/stickmanhook host test
+          make -C games/coreball host test
 
 
 
@@ -92,11 +94,11 @@ jobs:
         # NumPlay Studio (customize/) links a NumPlay of your own from the kit (make kit): it goes on the
         # branch "kit", one commit, and the site is deployed again with it
         run: |
-          cd build/site-kit
+          cd build/data/site-kit
           git init -q -b kit
           git add -A
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit -q -m "Kit of NumPlay $(tr -d '[:space:]' < ../../VERSION), from $GITHUB_SHA"
+            commit -q -m "Kit of NumPlay $(tr -d '[:space:]' < ../../../VERSION), from $GITHUB_SHA"
           git push -q -f "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" kit
           gh workflow run pages.yml --ref main || echo "(the site was not deployed again)"
 
@@ -112,9 +114,9 @@ jobs:
             echo "$tag is already released"
             exit 0
           fi
-          python3 tools/release.py --tag "$tag" --notes build/release-notes.md > build/release-files.txt
-          mapfile -t files < build/release-files.txt
+          python3 tools/release.py --tag "$tag" --notes build/data/release-notes.md --build build/compiled > build/data/release-files.txt
+          mapfile -t files < build/data/release-files.txt
           gh release create "$tag" "${files[@]}" --target "$GITHUB_SHA" \
-            --title "NumPlay $tag" --notes-file build/release-notes.md
+            --title "NumPlay $tag" --notes-file build/data/release-notes.md
           # the README's version and downloads badges come from the site (docs/badges): deploy it again
           gh workflow run pages.yml --ref main || echo "(the site was not deployed again)"

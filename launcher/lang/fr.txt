@@ -86,6 +86,8 @@ Chess	Échecs
 Bots, puzzles, 2 players	Bots, problèmes, 2 joueurs
 Flappy Bird	Flappy Bird
 Flap through the pipes	Vole entre les tuyaux
+Core Ball	Core Ball
+Stick every ball to the spinning core	Plante chaque boule dans le noyau qui tourne
 Pac-Man	Pac-Man
 Eat dots, dodge ghosts	Mange les points, fuis les fantômes
 Snake	Snake
@@ -123,6 +125,7 @@ Inspired by Tatone26's All the Apps	Inspiré d'All the Apps de Tatone26
 Based on 2048 by Gabriele Cirulli	D'après 2048 de Gabriele Cirulli
 Based on Block Blast! by Hungry Studio	D'après Block Blast! de Hungry Studio
 Based on Suika Game by Aladdin X	D'après Suika Game d'Aladdin X
+Based on Core Ball by Yang Hao	D'après Core Ball de Yang Hao
 Based on Space Invaders by Taito	D'après Space Invaders de Taito
 Based on Chrome's dinosaur game by Google	D'après le jeu du dinosaure de Chrome, de Google
 Based on Retro-Go by ducalex	D'après Retro-Go de ducalex

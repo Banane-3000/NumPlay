@@ -24,6 +24,6 @@ The original is released into the public domain ([UNLICENSE](UNLICENSE)). This c
 
 ## Build
 
-`cargo build --release` (Rust with the `thumbv7em-none-eabihf` target, `arm-none-eabi-gcc` and `nwlink` in the path) writes the app to `target/thumbv7em-none-eabihf/release/tetris`. From the NumPlay root, `make apps` copies it to `build/apps/Tetris.nwa`.
+`cargo build --release` (Rust with the `thumbv7em-none-eabihf` target, `arm-none-eabi-gcc` and `nwlink` in the path) writes the app to `target/thumbv7em-none-eabihf/release/tetris`. From the NumPlay root, `python3 tools/build.py` puts it in `build/compiled/games/Tetris.nwa`.
 
 `numworks_utils` and `nppm_decoder` are Tatone26's libraries from the same repository.

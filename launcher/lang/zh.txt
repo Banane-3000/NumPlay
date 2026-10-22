@@ -85,6 +85,8 @@ Chess	国际象棋
 Bots, puzzles, 2 players	电脑对手、谜题、双人对战
 Flappy Bird	笨鸟先飞
 Flap through the pipes	拍着翅膀穿过水管
+Core Ball	酷啵
+Stick every ball to the spinning core	把每个球都插到旋转的核心上
 Pac-Man	吃豆人
 Eat dots, dodge ghosts	吃豆子，躲幽灵
 Snake	贪吃蛇
@@ -122,6 +124,7 @@ Inspired by Tatone26's All the Apps	灵感来自 Tatone26 的 All the Apps
 Based on 2048 by Gabriele Cirulli	改编自 Gabriele Cirulli 的 2048
 Based on Block Blast! by Hungry Studio	改编自 Hungry Studio 的 Block Blast!
 Based on Suika Game by Aladdin X	改编自 Aladdin X 的西瓜游戏
+Based on Core Ball by Yang Hao	改编自随机（Yang Hao）的酷啵
 Based on Space Invaders by Taito	改编自 Taito 的 Space Invaders
 Based on Chrome's dinosaur game by Google	改编自 Google Chrome 的小恐龙游戏
 Based on Retro-Go by ducalex	改编自 ducalex 的 Retro-Go

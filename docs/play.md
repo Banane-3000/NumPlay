@@ -95,7 +95,7 @@ Hollow Knight comes as its own app, `HollowKnight.nwa`: it is too big to share t
 | **⌫** | Pause |
 | **Home** | Save and quit |
 
-Choose Start Game, then a save. Rest at benches to save and to change charms. In menus, **OK** or **EXE** confirms and **Back** goes back. In the inventory, left and right at the edges change pages; on the map page, **OK** places markers once you have them, and **shift** shows or hides the key and the pins. Home saves and quits, as Quit to Menu does. Your saves are also copied into `hollowknight_saves.py`, so installing the app again doesn't erase them.
+Choose Start Game, then a save. Rest at benches to save and to change charms: **toolbox**, right to Charms, then **OK** on a charm. In menus, **OK** or **EXE** confirms and **Back** goes back. In the inventory, left and right at the edges change pages; on the map page, **OK** places markers once you have them, and **shift** shows or hides the key and the pins. Home saves and quits, as Quit to Menu does. Your saves are also copied into `hollowknight_saves.py`, so installing the app again doesn't erase them.
 
 <br clear="right">
 
@@ -523,6 +523,19 @@ Climb to the top and save Pauline, as in the 1981 arcade game. Jump over Kong's 
 
 <br clear="right">
 
+## Dune
+
+<img src="../games/dune/docs/shot.png" width="320" align="right" alt="Dune">
+
+| Key | What it does |
+| --- | --- |
+| **OK** (or **EXE**, **shift**), held | Speed up downhill and dive in the air |
+| **Back** | Pause (with Restart, Shop, How to play and Quit) |
+
+The ball rolls on by itself. Hold OK going downhill to speed up and let go going uphill to take off. Fly over the line for points, and land on a downslope for a Perfect Slide. Land on your head, or on the uphill, and the run is over. Coins buy new balls and landscapes in the shop. Your best score, coins and shop are saved.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">
@@ -636,6 +649,19 @@ Each press flaps the wings once and the ball falls in between: drop it down thro
 | **Back** | Menu (with How to play and Quit) |
 
 Each block slides in from one side, along one edge of the tower and then the other, a little faster each time. Drop it on the block below: the part that hangs over falls away, so the blocks get smaller, and landing it just right keeps it whole. Miss the tower and the game is over. Your tower and best score are saved.
+
+<br clear="right">
+
+## Core Ball
+
+<img src="../games/coreball/docs/shot.png" width="320" align="right" alt="Core Ball">
+
+| Key | What it does |
+| --- | --- |
+| **OK** (or **EXE**) | Shoot a ball |
+| **Back** | Menu (with Restart, Levels, How to play and Quit) |
+
+Shoot every ball onto the spinning core without touching the balls already on it. The core turns faster, slower and back the other way as the levels go on, through 60 levels. The screen turns green when the level is cleared and red when two balls touch. Your level is saved.
 
 <br clear="right">
 

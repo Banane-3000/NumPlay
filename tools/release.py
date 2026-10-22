@@ -10,7 +10,7 @@ link to each file, and every file gets a label saying what it is.
   then the list;
 - prints one `path#label` per line, the arguments of `gh release create`.
 
-Usage: release.py --tag v1.3.0 --notes build/release-notes.md
+Usage: release.py --tag v1.3.0 --notes build/data/release-notes.md --build build/compiled
 """
 import argparse
 import json
@@ -42,6 +42,7 @@ ALONE = {
     "jetpackjoyride": ("Jetpack Joyride", "Barry's run through the lab, with five vehicles and the Final Spin"),
     "stickmanhook": ("Stickman Hook", "swing from hook to hook: 39 levels made by hand, then endless ones"),
     "donkeykong": ("Donkey Kong", "the 1981 arcade game: barrels, pies, elevators and rivets, up to Pauline"),
+    "dune": ("Dune", "roll down the dunes and fly over the line, with the shop's 26 balls and 7 landscapes"),
 }
 VARIANTS = [
     ("NumPlay-Invisible.nwa", "The same app, hidden: a blank icon with no name"),
@@ -52,7 +53,7 @@ LANGUAGES = [
     ("NumPlay-French.nwa", "NumPlay en français : tous les jeux, en français"),
     ("NumPlay-Chinese.nwa", "NumPlay 中文版：所有游戏，简体中文"),
 ]
-UPSILON = ("NumPlay-Upsilon.nwa", "For calculators running Upsilon (N0110, N0115): the 23 games that fit in the memory "
+UPSILON = ("NumPlay-Upsilon.nwa", "For calculators running Upsilon (N0110, N0115): the 24 games that fit in the memory "
            "Upsilon gives apps. Install it with nwlink, see the README")
 
 
@@ -70,7 +71,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tag", required=True)
     ap.add_argument("--notes", required=True)
-    ap.add_argument("--build", default="build")
+    ap.add_argument("--build", default="build/compiled")
     a = ap.parse_args()
     # (a game the default NumPlay.nwa leaves out, "default": false, comes from the customizer website)
     games = [g for g in json.load(open(os.path.join(ROOT, "games", "games.json"))) if g.get("default", True)]
@@ -100,7 +101,7 @@ def main():
         for gid in alone:
             title, what = ALONE[gid]
             name, what = apps[gid], f"{title}: {what}"
-            files.append((os.path.join(a.build, "apps", name), f"{name} · {what}"))
+            files.append((os.path.join(a.build, "games", name), f"{name} · {what}"))
             notes.append(f"| {link(name)} | {what} |")
     name, what = UPSILON
     notes += ["", "### On Upsilon", "", "| File | |", "| --- | --- |", f"| {link(name)} | {what} |"]
@@ -113,7 +114,7 @@ def main():
             continue
         tagline = g["tagline"][0].lower() + g["tagline"][1:]
         what = f"Only {g['title']}: {tagline}"
-        files.append((os.path.join(a.build, "apps", name), f"{name} · {what}"))
+        files.append((os.path.join(a.build, "games", name), f"{name} · {what}"))
         notes.append(f"| {link(name)} | {what} |")
     notes += ["", "<sub>The file list below is sorted A to Z by GitHub. Each file's label says what it is.</sub>"]
 

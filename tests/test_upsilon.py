@@ -8,7 +8,7 @@
    there, launcher/src/compat.c);
 4. Home quits.
 
-Usage: test_upsilon.py build/NumPlay-Upsilon.nwa [--out DIR]
+Usage: test_upsilon.py build/compiled/NumPlay-Upsilon.nwa [--out DIR]
 """
 import argparse
 import os
