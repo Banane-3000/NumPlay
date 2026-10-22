@@ -1,0 +1,100 @@
+# Retro-Go in French: the English text as in the source, a tab, the translation (see tools/lang.py).
+OK	OK
+Yes	Oui
+No	Non
+arrows	flèches
+D-pad	Croix
+Back	Retour
+shift	shift
+Select	Select
+EXE	EXE
+Start	Start
+Backspace	Effacer
+menu	menu
+Home	Accueil
+quit	quitter
+Off	Non
+Fit	Ajusté
+Full	Plein
+Pocket	Pocket
+Light	Light
+Day	Jour
+Hour	Heure
+Min	Min
+Sec	Sec
+Auto	Auto
+Never	Jamais
+Always	Toujours
+On	Oui
+Palette	Palette
+RTC config	Horloge
+SRAM autosave	Sauvegarde auto
+Overscan	Bords
+Crop sides	Rogner les côtés
+Sprite limit	Limite de sprites
+Scaling	Taille
+Speed	Vitesse
+Emulator options	Options de l'émulateur
+Options	Options
+Menu	Menu
+Quit	Quitter
+Home (saves)	Accueil (sauve)
+Controls	Touches
+Retro-Go	Retro-Go
+Port	Portage
+Not affiliated with Retro-Go	Sans lien avec Retro-Go
+About Retro-Go	À propos de Retro-Go
+Slot 0	Case 0
+Slot 1	Case 1
+Slot 2	Case 2
+Slot 3	Case 3
+empty	vide
+last used	la dernière
+saved	sauvée
+Saving...	Sauvegarde...
+Save & Continue	Sauver et continuer
+Save & Quit	Sauver et quitter
+Load game	Charger une partie
+Reset	Redémarrer
+About	À propos
+Save	Sauver
+Not enough room	Plus de place
+Delete other saves to make room.	Efface d'autres sauvegardes pour faire de la place.
+Load	Charger
+This save can't be read.	Cette sauvegarde est illisible.
+Soft reset	Redémarrage doux
+Hard reset	Redémarrage complet
+Reset Emulation?	Redémarrer le jeu ?
+Quit game?	Quitter le jeu ?
+The battery save is kept.	La sauvegarde de la cartouche est gardée.
+This cartridge type isn't supported.	Ce type de cartouche n'est pas pris en charge.
+This game needs more memory than the calculator has.	Ce jeu demande plus de mémoire que la calculatrice n'en a.
+This file isn't a game Retro-Go can read.	Retro-Go ne sait pas lire ce fichier.
+Can't start the game	Impossible de lancer le jeu
+Welcome to Retro-Go!	Bienvenue dans Retro-Go !
+Add games on NumPlay's	Ajoute des jeux sur le site
+customizer website:	de personnalisation de NumPlay :
+Game Boy, Game Boy Color, NES,	des jeux Game Boy, Game Boy Color, NES,
+Master System and Game Gear.	Master System et Game Gear.
+Home: quit	Accueil : quitter
+Left/Right: system    OK: games    Home: quit	Gauche/Droite : console    OK : jeux    Accueil : quitter
+OK: play    Back: systems    Left/Right: system	OK : jouer    Retour : consoles    Gauche/Droite : console
+Reading...	Lecture...
+Name	Nom
+System	Console
+Size	Taille
+Close	Fermer
+File properties	Propriétés
+Resume game	Reprendre
+New game	Nouvelle partie
+Delete save	Effacer une sauvegarde
+Properties	Propriétés
+Resume	Reprendre
+Delete save?	Effacer la sauvegarde ?
+Delete sram file?	Effacer la sauvegarde de la cartouche ?
+# a Sega pad's buttons and the Master System's
+A, 2	A, 2
+B, 1	B, 1
+Start, Pause	Start, Pause
+Pause	Pause
+z80 by superzazu	z80 de superzazu

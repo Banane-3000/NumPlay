@@ -13,7 +13,11 @@
  * Files. The file system is found through the userland header of the
  * software that runs this app: at the start of the userland of either
  * firmware slot, 64 KiB later on models with an extra data sector. Only
- * addresses in external flash are probed, which exist on every model.
+ * addresses in external flash are probed, which exist on every model. The
+ * header is the one whose app area holds this app. Built with EPSILON_XL (the
+ * big games), an app past that area takes the one header left: Enlarged Extra
+ * Apps fill the other slot with apps, and a NumPlay with big games puts them
+ * there (its own games come first, in the app area).
  *
  * Upsilon. The custom software of the N0110 and N0115 runs .nwa apps too. Its
  * header has the same first words but no device name (the footer comes two
@@ -50,17 +54,24 @@ __attribute__((unused)) static const epsilon_userland_t *epsilon_userland_of(boo
   uint32_t self = (uint32_t)(uintptr_t)&epsilon_userland_of;
   const epsilon_userland_t *found = NULL;
   bool ups = false;
-  for (unsigned i = 0; i < sizeof where / sizeof where[0]; i++) {
-    const volatile epsilon_userland_t *h = (const volatile epsilon_userland_t *)(uintptr_t)where[i];
-    const volatile uint32_t *w = (const volatile uint32_t *)(uintptr_t)where[i];
-    if (h->magic != 0xDEC0EDFEu) continue;
-    bool official = h->footer == 0xDEC0EDFEu, omega = w[9] == 0xDEC0EDFEu && w[10] == 0xEFBEADDEu;
-    if (!official && !omega) continue;
-    if (self < h->apps_flash_start || self >= h->apps_flash_end) continue;
-    if (found) return NULL; /* ambiguous: better not guess */
-    found = (const epsilon_userland_t *)h;
-    ups = omega;
-  }
+#if EPSILON_XL
+  /* then, when no app area holds this app: Enlarged Extra Apps (nwagyu's Nwagra) install apps past
+   * it, into the other slot of the external flash, whose software is gone then */
+  for (int past = 0; past < 2 && !found; past++)
+#else
+  const bool past = false;
+#endif
+    for (unsigned i = 0; i < sizeof where / sizeof where[0]; i++) {
+      const volatile epsilon_userland_t *h = (const volatile epsilon_userland_t *)(uintptr_t)where[i];
+      const volatile uint32_t *w = (const volatile uint32_t *)(uintptr_t)where[i];
+      if (h->magic != 0xDEC0EDFEu) continue;
+      bool official = h->footer == 0xDEC0EDFEu, omega = w[9] == 0xDEC0EDFEu && w[10] == 0xEFBEADDEu;
+      if (!official && !omega) continue;
+      if (self < h->apps_flash_start || self >= (past ? 0x90800000u : h->apps_flash_end)) continue;
+      if (found) return NULL; /* ambiguous: better not guess */
+      found = (const epsilon_userland_t *)h;
+      ups = omega;
+    }
   if (upsilon) *upsilon = found && ups;
   return found;
 }
