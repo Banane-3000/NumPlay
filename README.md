@@ -291,6 +291,11 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] My Little Universe
 - [ ] Famidash, made for the calculator (not through an emulator)
 - [ ] Mr. Bullet
+- [ ] Hungry Shark Evolution and Hungry Shark World
+- [ ] Castle Crashers
+- [ ] Hotline Miami
+- [ ] Meowdoku
+- [ ] More of Retro-Go: Game & Watch, SNES, Mega Drive, SG-1000 and ColecoVision
 
 ## Credits
 
