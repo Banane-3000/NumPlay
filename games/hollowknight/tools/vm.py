@@ -1025,8 +1025,10 @@ class Compiler:
                  "AudioPlayInState", "FadeAudio", "PlayRandomSound", "SetRotation", "RandomFloat",
                  "GetLastEvent", "SetBoxCollider2DSize", "Tk2dSpriteSetColor", "SetTextMeshProColor",
                  "AudioPlayRandom", "SetName", "GameObjectIsNull", "PlayVibrationV2",
-                 "SpawnFromPool", "SpawnRandomObjects", "Rotate", "GetEventSender", "SetMaterialColor",
-                 "GetMaterialColor", "EaseColor", "GetMidPoint", "SetAudioClip"):
+                 "SpawnFromPool", "SpawnRandomObjects", "Rotate", "GetEventSender", "GetMidPoint", "SetAudioClip"):
+            return None
+        if n in ("SetMaterialColor", "GetMaterialColor", "EaseColor") and self.f["name"] != "Blanker Control":
+            # (colors: only the stag stations' Stag Blanker's, black as the room comes in, then faded out to show it)
             return None
         if n == "SendEventByNameV2":
             n = "SendEventByName"
