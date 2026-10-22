@@ -117,8 +117,8 @@ static int run(void) {
   for (;;) {
     uint32_t keys = plat_keys();
     if (keys & K_HOME) {
-      /* (as Quit to Menu: saved, when the pause menu could be opened) */
-      if (menu_in_game() && !g_pd.disable_pause && !game_changing_room()) save_game();
+      /* (as Quit to Menu: saved, when the pause menu could be opened, or in the inventory: charms just changed kept) */
+      if (menu_in_game() && (!g_pd.disable_pause || inv_settle()) && !game_changing_room()) save_game();
       break;
     }
     if (menu_quit()) break;

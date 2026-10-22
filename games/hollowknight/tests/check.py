@@ -12,6 +12,8 @@
 - a long walk of made up keys from every room: the Knight never out of the room, without control, wedged, undrawn or
   out of the view, and the view never jumping
 - a bench: sat on, the inventory opened, a charm equipped, then up again (atBench off)
+- the charms: OK changes none away from a bench; at one, equipped (its effect on), none past the notches, unequipped,
+  overcharmed on the fifth try and off again, kept by Home in the inventory and a load
 - every room played with its enemies hit, in a new game and after the bosses, drawn whole and fast (as a slow
   calculator draws it): the sanitizers stop on any fault
 """
@@ -68,6 +70,9 @@ def main():
     pd = pd[:next((i for i, t in enumerate(pd) if not t.isdigit()), len(pd))]
     bench = "77" in pd and "0" not in pd
     results.append(report("bench: a charm equipped", rc, out if bench else out + "\nFAIL bools on: " + " ".join(pd), ("FAIL",)))
+    with tempfile.TemporaryDirectory() as saves:
+        rc, out = play("--gates", "charms", env={"HKSAVES": saves})
+    results.append(report("charms: changed at a bench only", rc, out, ("FAIL",)))
     with ThreadPoolExecutor(JOBS) as pool:
         walks = list(pool.map(lambda w: play("--gates", "wander:all:%d:%d" % w, env={"HKFAST": "1"} if w[0] % 2 else None), WALKS))
     for (seed, ticks), (rc, out) in zip(WALKS, walks):
