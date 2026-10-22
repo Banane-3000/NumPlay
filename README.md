@@ -123,6 +123,7 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
     <td align="center"><a href="https://github.com/Mason363/NumWorks-Super-Mario-Bros"><b>Super Mario Bros.</b></a><br><sub>All 32 stages, in a repository of its own: NumWorks-Super-Mario-Bros</sub></td>
   </tr>
   <tr>
+    <td align="center"><a href="games/monkeymart/README.md"><img src="games/monkeymart/docs/title.png" width="200" alt="Monkey Mart"><br><b>Monkey Mart</b></a><br><sub>Both marts from version 2.1: 14 products, employees and 21 hats. By Bobydeluxe.</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/MonkeyMart.nwa">Download</a></td>
     <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Minecraft 1.18.2, Retro-Go and more: see the roadmap</sub></td>
   </tr>
 </table>
@@ -276,6 +277,8 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Mr. Bullet
 
 ## Credits
+
+- **Monkey Mart** by TinyDobbins is adapted to native C for NumWorks, using the supplied version 2.1 artwork and game data. Both supplied marts are included. **[Bobydeluxe](https://github.com/Bobydeluxe)** made this adaptation. It installs separately as **MonkeyMart.nwa**. Not affiliated with TinyDobbins.
 
 NumPlay is a fan project, made out of love for these games and for the NumWorks calculator. If you enjoy a game here, go play the original and support the people who made it. NumWorks also has a great community of people making games by hand: try [Numcraft](https://github.com/yannis300307/NumcraftRust), [Celeste Classic](https://github.com/BenchatonDev/Celeste-Numworks), [Tatone26's All the Apps](https://github.com/Tatone26/Numworks-games), the apps on [Nwagyu](https://nwagyu.org/guide/) and [yannis300307's list](https://gist.github.com/yannis300307/9123136f90877107ec0d49ba96b303e5).
 

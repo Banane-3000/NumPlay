@@ -29,7 +29,7 @@ RAM_LIMIT = 148928
 # custom builds of Epsilon 25.2's source give apps less: 133652 bytes; every game fits there too, in NumPlay and on
 # its own (their big buffers are on the stack, 32 KB apart from that RAM, or in the RAM the software has left)
 CUSTOM_RAM = 133652
-BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook DonkeyKong Dune
+BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook DonkeyKong Dune MonkeyMart
 # the calculator's space for installed apps (0x90200000 to 0x903F0000 in its flash)
 APP_SPACE = 2031616
 # Upsilon, the N0110 and N0115's custom software, gives .nwa apps less RAM: NumPlay-Upsilon.nwa has
@@ -230,6 +230,7 @@ APP_jetpackjoyride = $(B)/games/jetpackjoyride/jetpackjoyride.nwa:JetpackJoyride
 APP_stickmanhook = $(B)/games/stickmanhook/stickmanhook.nwa:StickmanHook.nwa
 APP_donkeykong = $(B)/games/donkeykong/donkeykong.nwa:DonkeyKong.nwa
 APP_dune = $(B)/games/dune/dune.nwa:Dune.nwa
+APP_monkeymart = games/monkeymart/output/monkeymart.nwa:MonkeyMart.nwa
 
 apps: | $(B)
 	$(MAKE) -C games/numdash build NWLINK="node node_modules/nwlink/bin/nwlink"
@@ -289,6 +290,13 @@ apps: | $(B)
 	cp $(word 1,$(subst :, ,$(APP_donkeykong))) $(B)/apps/$(word 2,$(subst :, ,$(APP_donkeykong)))
 	cp $(word 1,$(subst :, ,$(APP_dune))) $(B)/apps/$(word 2,$(subst :, ,$(APP_dune)))
 	arm-none-eabi-strip --strip-unneeded $(B)/apps/Tetris.nwa
+
+# Monkey Mart is a large standalone app, outside the launcher game list.
+apps: $(B)/apps/MonkeyMart.nwa
+$(B)/apps/MonkeyMart.nwa: FORCE | $(B)
+	$(MAKE) --no-print-directory -C games/monkeymart build NWLINK="$(NWLINK)"
+	mkdir -p $(B)/apps
+	cp games/monkeymart/output/monkeymart.nwa $@
 
 STD_APPS = $(foreach g,$(STD_GAMES),$(B)/apps/$(NWA_$(g)))
 apps: $(STD_APPS)
@@ -357,5 +365,6 @@ clean:
 	-$(MAKE) -C games/stickmanhook clean
 	-$(MAKE) -C games/donkeykong clean
 	-$(MAKE) -C games/dune clean
+	-$(MAKE) -C games/monkeymart clean
 	-cd games/tetris/tetris && $(CARGO) clean
 	-$(foreach g,$(STD_GAMES),$(MAKE) -C games/$(g) clean;)
