@@ -30,12 +30,22 @@ RAM_LIMIT = 148928
 # its own (their big buffers are on the stack, 32 KB apart from that RAM, or in the RAM the software has left)
 CUSTOM_RAM = 133652
 BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook DonkeyKong Dune MonkeyMart
-# the calculator's space for installed apps (0x90200000 to 0x903F0000 in its flash)
+# the calculator's space for installed apps: from the end of its software (64 KiB aligned) to 64 KiB before the
+# end of its 4 MiB slot of flash, 0x903F0000. The software's size sets the start: 0x90200000 is the latest a
+# NumPlay counts on (1.94 MB, APP_SPACE); Epsilon 26.4 on an N0120 ends at 0x90180000 (2.44 MB, the
+# installer's 2496 KB)
+APP_START = 0x90200000
+APP_START_26 = 0x90180000
+APP_END = 0x903F0000
 APP_SPACE = 2031616
 # with Enlarged Extra Apps (nwagyu's Nwagra), the app loader is told the space goes on to the end of the
 # external flash (0x90800000), over the second copy of the calculator's software: a NumPlay of the big
-# games (games.json "xl", made with the customizer website from `make kit`) is for that
+# games (games.json "xl", made with the customizer website from `make kit`) is for that: 6 MB, or 6.5 MB
+# from 0x90180000 (the installer's 6656 KB)
+XL_END = 0x90800000
 XL_APP_SPACE = 6291456
+# the spaces the customizer website offers (kit.json "spaces"; tools/kit.py links a NumPlay at each)
+SPACES = std:$(APP_START):$(APP_END) e26:$(APP_START_26):$(APP_END) xl:$(APP_START):$(XL_END) xl26:$(APP_START_26):$(XL_END)
 # Upsilon, the N0110 and N0115's custom software, gives .nwa apps less RAM: NumPlay-Upsilon.nwa has
 # the games that fit it (NumPlay draws their text there: see launcher/src/compat.c)
 UPSILON_RAM = 107674
@@ -113,6 +123,14 @@ $(B)/modules/%.o: FORCE | $(B)
 	  $(B)/modules/$*.1.o $(B)/modules/$*.2.o
 	$(PY) tools/npmodule.py $(B)/modules/$*.2.o $@ --game $* --index $(INDEX_$*) \
 	  --entry $(or $(ENTRY_$*),$(ENTRY)) --json $(B)/modules/$*.json
+
+# A language's tree (make kit-langs) takes the big games' modules from the English build (XL_FROM) as they are:
+# they're in English, and call nothing of NumPlay's but the launcher (KIT_API)
+ifneq ($(XL_FROM),)
+$(foreach g,$(XL_GAMES),$(B)/modules/$(g).o): $(B)/modules/%.o: $(XL_FROM)/$(B)/modules/%.o | $(B)
+	cp $< $@
+	cp $(XL_FROM)/$(B)/modules/$*.json $(B)/modules/$*.json
+endif
 
 # games in the standard layout (see tools/games_mk.py)
 $(foreach g,$(STD_GAMES),$(eval MOD_$(g) = $(if $(filter $(g),$(GAMES_REDIRECT)),$(B)/games/$(g)/module.o,games/$(g)/output/module.o))$(eval SIM_$(g) = $(if $(filter $(g),$(GAMES_REDIRECT)),$(B)/games/$(g)/sim-module.o,games/$(g)/output/sim-module.o)))
@@ -197,18 +215,21 @@ kit: $(KIT)/base.o $(B)/arm/arena.o $(KIT_GAMES) $(B)/NumPlay.nwa \
   $(foreach v,$(VARIANTS),$(B)/variant/$(v)-name.o $(B)/variant/$(v)-icon.o)
 	$(PY) tools/kit.py games/games.json $(B) $(B)/site-kit --version $(VERSION) --variants "$(VARIANTS)" \
 	  --default "$(GAMES)" --upsilon "$(UPSILON_GAMES)" --app-space $(APP_SPACE) --xl-app-space $(XL_APP_SPACE) \
-	  --ram $(CUSTOM_RAM) --ram-limit $(RAM_LIMIT) --upsilon-ram $(UPSILON_RAM) --nwlink "$(NWLINK)" --langs "$(LANGS)" \
-	  --alone "$(foreach g,$(XL_GAMES),$(g)=$(APP_$(g)))"
+	  --spaces "$(SPACES)" --ram $(CUSTOM_RAM) --ram-limit $(RAM_LIMIT) --upsilon-ram $(UPSILON_RAM) --nwlink "$(NWLINK)" \
+	  --langs "$(LANGS)" --alone "$(foreach g,$(XL_GAMES),$(g)=$(if $(XL_FROM),$(XL_FROM)/)$(APP_$(g)))" \
+	  $(if $(XL_FROM),--english "$(XL_FROM)/$(B)/site-kit")
 
-# ...and in French and Chinese, from each language's tree (make lang), in site-kit/<code> (without the big
-# games, which are in English: the website uses them in English NumPlays)
+# ...and in French and Chinese, from each language's tree (make lang), in site-kit/<code>. The big games stay in
+# English: their modules come from this build (XL_FROM), their names, taglines and screenshots from the tree
 kit-langs: kit
 	@for l in $(LANGS); do \
 	  [ -d $(B)/lang/$$l ] || $(PY) tools/lang.py tree $$l $(B)/lang/$$l || exit 1; \
-	  $(MAKE) -C $(B)/lang/$$l kit XL_GAMES= NWLINK="$(NWLINK)" || exit 1; \
+	  cp Makefile $(B)/lang/$$l/ && cp tools/*.py tools/*.ld $(B)/lang/$$l/tools/ || exit 1; \
+	  $(MAKE) -C $(B)/lang/$$l kit XL_FROM="$(CURDIR)" NWLINK="$(NWLINK)" || exit 1; \
 	  rm -rf $(B)/site-kit/$$l && mkdir -p $(B)/site-kit/$$l && \
 	  cp -R $(B)/lang/$$l/$(B)/site-kit/kit.json $(B)/lang/$$l/$(B)/site-kit/base.o.gz \
 	    $(B)/lang/$$l/$(B)/site-kit/arena.o.gz $(B)/lang/$$l/$(B)/site-kit/games $(B)/site-kit/$$l/ || exit 1; \
+	  cp $(B)/lang/$$l/$(B)/site-kit/apps/* $(B)/site-kit/apps/ 2>/dev/null; \
 	done
 
 check: nwa apps

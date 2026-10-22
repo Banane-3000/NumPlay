@@ -250,18 +250,22 @@ body.dragging .drop-hint { display: flex; }
 .segctl.col button[aria-checked="true"] { background: #eceef1; box-shadow: none; }
 .tick { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--mute); white-space: nowrap; }
 
-/* ---- 1.94 MB or 6 MB */
-.cap { display: flex; gap: 2px; background: var(--track); border-radius: 999px; padding: 2px; flex-shrink: 0; }
-.cap button { border: 0; background: transparent; padding: 4px 10px; border-radius: 999px; cursor: pointer; font-size: 12px; font-weight: 650; color: var(--mute); white-space: nowrap; }
-.cap button[aria-checked="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); }
-#xl-pop { width: 360px; gap: 10px; }
-.xl-title { font-size: 16px; }
-.xl-text, .xl-warn { margin: 0; font-size: 13px; line-height: 1.45; color: #3a3d42; }
-.xl-warn { color: #8a4b00; background: #fff4e0; border-radius: 10px; padding: 8px 10px; }
+/* ---- your calculator's space for apps: it depends on its software, and on Nwagra */
+.space-chip {
+  display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 12px; border: 0; border-radius: 15px; flex-shrink: 0;
+  background: var(--card); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); cursor: pointer; white-space: nowrap;
+  font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.space-chip .caret { color: var(--mute); }
+.space-chip:hover { background: #fafafa; }
+.space-pop { width: 310px; gap: 8px; padding: 12px 8px 8px; }
+.pop-title { font-size: 13px; font-weight: 650; color: var(--mute); padding: 0 12px; }
+.spaces button { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.spaces button b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.nwagra { display: flex; flex-direction: column; gap: 8px; padding: 4px 8px 4px; }
+.nwagra a { color: #0060c0; font-weight: 650; text-decoration: none; }
+.xl-warn { margin: 0; font-size: 13px; line-height: 1.45; color: #8a4b00; background: #fff4e0; border-radius: 10px; padding: 8px 10px; }
 .xl-steps { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; color: #3a3d42; }
-.xl-buttons { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
-.xl-guide { font-size: 13px; font-weight: 650; color: #0060c0; text-decoration: none; }
-.xl-ok { padding: 10px 20px; font-size: 14px; }
 
 /* ---- Retro-Go: your own games, as cartridges */
 .retro { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
@@ -350,6 +354,24 @@ body.dragging .drop-hint { display: flex; }
 .foot a:hover { color: var(--ink); }
 .noscript { text-align: center; padding: 0 16px; }
 
+/* ---- the light calculator, for slow computers and phones (app.js, buildFlat): the same photo, flat. OK and Back
+   are cut from it, over a gap that shows round them as they go in; the sticker is drawn once, as the 3D one
+   looks from the front */
+html.flat .device { perspective: none; }
+html.flat .calc { transform: none; transform-style: flat; }
+html.flat .calc-img { clip-path: none; -webkit-mask: none; mask: none; }
+html.flat .well { transform: none; }
+html.flat .well-img, html.flat .body3d { display: none; }
+.fkey { position: absolute; border-radius: 50%; background: radial-gradient(closest-side, #858589 92%, #b9b9bd 100%); }
+.ftop { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; display: block; transition: transform 90ms var(--ease); }
+.ftop img { position: absolute; max-width: none; pointer-events: none; user-select: none; }
+.fkey:has(> .ok-key:hover) .ftop, .fkey:has(> .dl:hover) .ftop { transform: scale(0.985); }
+.fkey:has(> .ok-key:active) .ftop, .fkey:has(> .dl:active) .ftop, .fkey.down .ftop { transform: scale(0.94); }
+html.flat .sticker canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* ---- on a phone, the keys under your thumb once the calculator is scrolled away (app.js, dock) */
+.dock { display: none; }
+
 /* ---- the intro: the games flying into the calculator */
 .flyer { position: fixed; left: 0; top: 0; z-index: 70; pointer-events: none; will-change: transform, opacity; }
 .flyer img { display: block; width: 100%; aspect-ratio: 55 / 56; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.22)); }
@@ -369,9 +391,28 @@ html.intro-wait main { opacity: 0; }
   .head { padding: 24px 16px 0; }
   .games { padding: 8px 16px 0; }
   .side { padding: 22px 16px 24px; }
-  .device { position: relative; height: calc(var(--cw) * 1.1 + 30px); margin: 8px auto 0; width: calc(var(--cw) + 40px); perspective-origin: 50% 20%; }
+  /* (the calculator down to just above its first row of keys, fading out there) */
+  .device {
+    position: relative; height: calc(var(--cw) * 1.066 + 30px); margin: 8px auto 0; width: min(calc(var(--cw) + 40px), 100%); perspective-origin: 50% 20%;
+    -webkit-mask: linear-gradient(#000 calc(100% - 18px), transparent); mask: linear-gradient(#000 calc(100% - 18px), transparent);
+  }
   .meter { display: none; }
   .foot { justify-content: center; }
+  .dock {
+    position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 30; max-width: 520px; margin: 0 auto;
+    display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 20px; border-radius: 999px;
+    background: var(--card); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    transform: translateY(calc(100% + 16px)); visibility: hidden; transition: transform 220ms var(--ease), visibility 0s 220ms;
+  }
+  .dock.show { transform: none; visibility: visible; transition: transform 220ms var(--ease); }
+  .dock-used { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dock.over .dock-used { color: #d70015; }
+  .dock-dl { width: 48px; height: 48px; flex-shrink: 0; border: 0; border-radius: 24px; background: var(--track); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .dock-install { height: 48px; padding: 0 28px; flex-shrink: 0; }
+  .dock button.busy { cursor: progress; opacity: 0.6; }
+  body.docked .toast { bottom: 82px; }
+  .side { padding-bottom: 92px; }  /* (room for it under the footer) */
+  .space-chip { height: 40px; padding: 0 14px 0 16px; border-radius: 20px; font-size: 14px; }
 }
 @media (max-width: 520px) {
   .head { grid-template-columns: 1fr; }

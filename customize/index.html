@@ -72,10 +72,10 @@
   <aside class="side" aria-label="Big games, and your own Game Boy, NES and Sega games">
     <div class="row-head">
       <h2>Big games</h2>
-      <div class="cap" role="radiogroup" aria-label="Space for apps">
-        <button type="button" role="radio" data-cap="std" aria-checked="true" data-tip="Every NumWorks">1.94 MB</button>
-        <button type="button" role="radio" data-cap="xl" aria-checked="false" data-tip="With Enlarged Extra Apps">6 MB</button>
-      </div>
+      <button id="space-chip" type="button" class="space-chip" aria-haspopup="dialog" aria-expanded="false" aria-label="Your calculator's space for apps">
+        <span id="space-chip-label">1.94 MB</span>
+        <svg class="caret" viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
     </div>
     <section id="big" class="grid big" aria-label="Big games, best first"></section>
     <section id="retro" class="retro" aria-label="Your own Game Boy, NES and Sega games" hidden>
@@ -152,6 +152,18 @@
 <div id="lang-pop" class="pop narrow" role="dialog" aria-label="Language" hidden>
   <div id="langs" class="segctl col" role="radiogroup" aria-label="Language"></div>
 </div>
+<div id="space-pop" class="pop space-pop" role="dialog" aria-labelledby="space-title" hidden>
+  <b id="space-title" class="pop-title">Your calculator's space for apps</b>
+  <div id="spaces" class="segctl col spaces" role="radiogroup" aria-labelledby="space-title"></div>
+  <div id="nwagra" class="nwagra" hidden>
+    <ol class="xl-steps">
+      <li>Add the Nwagra bookmark from <a href="https://nwagyu.org/guide/help/enlarge-your-memory.html" target="_blank" rel="noopener">nwagyu's guide</a></li>
+      <li>Update your calculator twice on my.numworks.com</li>
+      <li>On the installer page, click the bookmark, then drop NumPlay.nwa</li>
+    </ol>
+    <p class="xl-warn">If your calculator then says exam mode is on, Nwagra doesn't work with its version.</p>
+  </div>
+</div>
 <input id="icon-file" type="file" accept="image/*" hidden>
 
 <div id="sheet" class="sheet" hidden>
@@ -180,6 +192,14 @@
 
 
 <noscript><p class="noscript">NumPlay Studio needs JavaScript to build your NumPlay. You can also <a href="https://github.com/Mason363/NumPlay/releases/latest/download/NumPlay.nwa">download NumPlay.nwa</a> with all of its games.</p></noscript>
+
+<div id="dock" class="dock" aria-label="Your NumPlay">
+  <span id="dock-used" class="dock-used"></span>
+  <button id="dock-download" type="button" class="dock-dl" aria-label="Download NumPlay.nwa">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
+  </button>
+  <button id="dock-install" type="button" class="install dock-install">Install</button>
+</div>
 
 <div id="tip" class="tip" role="tooltip"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>

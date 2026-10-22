@@ -56,7 +56,7 @@ Then:
 
 A **small game inside NumPlay** follows Block Blast's pattern (`games/blockblast`): built with `-DNP_MODULE=1`, it draws with the launcher's `gfx_*` functions and fonts and saves with `np_file_read` and `np_file_write`, so it costs only its rules and its screen. On its own it compiles those files in. `tools/new_game.py "My Game" --numplay` starts one this way.
 
-A **big game** builds as its own `.nwa` (like `games/finalearth2`), with a build for your computer to test it.
+A **big game** builds as its own `.nwa` (like `games/finalearth2`), with a build for your computer to test it. It's built with `-DEPSILON_XL=1`, so in a NumPlay that goes past the calculator's app area (Nwagra) it still finds its saves.
 
 ## What every game needs
 

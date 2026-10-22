@@ -11,15 +11,20 @@ in the ARM emulator, with tests/test_games.py's sessions:
 - ram: each big game's RAM inside NumPlay, against custom builds of 25.2 (133652 bytes), 23.2 (148928)
   and Upsilon (107674). The games play with the least the calculators give where they fit, and where
   one doesn't, OK on its card doesn't start it (the card says how much it lacks);
-- probe: each big game alone with --ram bytes of RAM, whatever it needs (to find the least it plays in).
+- probe: each big game alone with --ram bytes of RAM, whatever it needs (to find the least it plays in);
+- spaces: for each space for apps the website offers (kit.json "spaces": the app area from 0x90200000, or from
+  0x90180000 as on Epsilon 26.4, each also on to 0x90800000 with Nwagra), the fullest NumPlay it lets you make
+  there, NumPlay's games and the big games in their order while they fit, installed at that space's start, with
+  the userland header's app area starting there: the last of NumPlay's games (without Nwagra) and the first and
+  last big games played where they are, in the app area, past it, and into the second slot.
 
 In each session the game starts and plays, saves, and finds its saves again from its own copy as after
 installing NumPlay again; Home and On/Off take you back out of NumPlay, which clears the RAM, with no
 access outside the app's RAM, no write to flash or to the firmware's RAM. nwlink nwa-bin links each
 NumPlay at the app area's start with its whole space (6 MB for the sets).
 
-Usage: test_kit.py [--kit build/site-kit] [--only alone,sets,ram,probe] [--game ID] [--set N] [--ram N]
-                   [--out DIR]
+Usage: test_kit.py [--kit build/data/site-kit] [--only alone,sets,ram,spaces,probe] [--game ID] [--set N]
+                   [--space ID] [--ram N] [--out DIR]
 """
 import argparse
 import gzip
@@ -41,12 +46,14 @@ CUSTOM_RAM, RAM_LIMIT, UPSILON_RAM = 133652, 148928, 107674
 MANIFEST = json.load(open(os.path.join(ROOT, "games", "games.json")))
 XL = [g["id"] for g in MANIFEST if g.get("xl")]                  # the big games
 SMALL = [g["id"] for g in MANIFEST if g.get("default", True)]    # NumPlay's own
-# NumPlays for Enlarged Extra Apps: the three biggest; five more; four more; three with all of NumPlay's games
+# NumPlays for Enlarged Extra Apps: the three biggest; five more; four more; three with all of NumPlay's games; the
+# four newest past the app area, into the second slot, after the biggest that fits there
 SETS = [
     ["celeste", "hollowknight", "championisland"],
     ["undertale", "doom", "pvz", "numpowder", "leveldevil"],
     ["cookieclicker", "subway", "fnaf", "isaac"],
     SMALL + ["sonic", "hillclimb", "finalearth2"],
+    ["cookieclicker", "jetpackjoyride", "stickmanhook", "donkeykong", "dune"],
 ]
 
 
@@ -80,10 +87,10 @@ class Kit:
         return self.k["launcherRam"] + self.games[i]["ram"]
 
 
-def installed(nwa, space, ram=RAM_LIMIT):
+def installed(nwa, space, ram=RAM_LIMIT, start=0x90200000):
     """the bytes nwlink installs, linked at the app area's start with this much space"""
     b = nwa[:-4] + ".bin"
-    r = subprocess.run(["nwlink", "nwa-bin", "--flash-start", hex(emu.EXT_FLASH_START), "--flash-length", str(space),
+    r = subprocess.run(["nwlink", "nwa-bin", "--flash-start", hex(start), "--flash-length", str(space),
                         "--ram-length", str(ram), nwa, b], capture_output=True, text=True)
     return os.path.getsize(b) if r.returncode == 0 else None, (r.stdout + r.stderr).strip()
 
@@ -154,12 +161,13 @@ def report(tag, problems, extra=""):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--kit", default=os.path.join(ROOT, "build", "site-kit"))
-    ap.add_argument("--only", default="alone,sets,ram")
+    ap.add_argument("--kit", default=os.path.join(ROOT, "build", "data", "site-kit"))
+    ap.add_argument("--only", default="alone,sets,ram,spaces")
     ap.add_argument("--game", help="only this big game (alone, ram)")
     ap.add_argument("--set", type=int, help="only this set (0, 1...)")
+    ap.add_argument("--space", help="only this space (kit.json spaces: std, e26, xl, xl26)")
     ap.add_argument("--ram", type=int, help="the RAM apps get (alone, sets; default: the least they fit in)")
-    ap.add_argument("--out", default=os.path.join(ROOT, "build", "test_kit"))
+    ap.add_argument("--out", default=os.path.join(ROOT, "build", "data", "test_kit"))
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     only = a.only.split(",")
@@ -178,27 +186,27 @@ def main():
             size, msg = installed(nwa, k["appSpace"])
             g = kit.games[i]
             if size is None or size > k["appSpace"]:
-                # too big for the app space next to the launcher: in NumPlay only with Enlarged Extra Apps, and the
-                # website hands out its own app instead (kit.json "alone": build/apps' file, as it is)
+                # too big for the app space next to the launcher: in NumPlay only with more space (Epsilon 26's, or
+                # Enlarged Extra Apps), and the website hands out its own app instead (kit.json "alone", as it is)
                 big, msg2 = installed(nwa, k["xlAppSpace"])
                 problems = [] if big and big > k["appSpace"] else [f"nwa-bin: {msg or msg2}"]
                 own = g.get("alone") or {}
                 gz = os.path.join(a.kit, "apps", i + ".nwa.gz")
-                app = os.path.join(ROOT, "build", "apps", own.get("file", "?"))
+                app = os.path.join(ROOT, "build", "data", "apps", own.get("file", "?"))
                 if not own or not os.path.exists(gz):
                     problems.append("the kit hasn't got it on its own (kit.json alone, apps/)")
                 else:
                     with gzip.open(gz) as f:
                         data = f.read()
                     if not os.path.exists(app) or open(app, "rb").read() != data:
-                        problems.append(f"apps/{i}.nwa.gz isn't build/apps/{own['file']}")
+                        problems.append(f"apps/{i}.nwa.gz isn't build/data/apps/{own['file']}")
                     mine = os.path.join(tmp, f"own-{i}.nwa")
                     open(mine, "wb").write(data)
                     n, msg3 = installed(mine, k["appSpace"])
                     if n is None or n > k["appSpace"] or n != own["size"]:
                         problems.append(f"on its own: {n} bytes, kit.json says {own['size']} ({msg3})")
                 failed |= report(f"alone {i}", problems, f"{big} bytes, {big - k['appSpace']} over the app space: "
-                                 f"only with Enlarged Extra Apps, else {own.get('file')} on its own" if big else "")
+                                 f"in NumPlay with more space (Epsilon 26, Nwagra), else {own.get('file')} on its own" if big else "")
                 continue
             emu.configure("n0120", "epsilon", a.ram or (CUSTOM_RAM if kit.ram(i) <= CUSTOM_RAM else RAM_LIMIT))
             problems, stack, heap = session(nwa, ids, i, a.out, f"alone_{i}")
@@ -229,6 +237,41 @@ def main():
             for i in [x for x in ids if x in XL] + [x for x in ids if x in SMALL][:3]:
                 problems, stack, heap = session(nwa, ids, i, a.out, f"set{n}_{i}")
                 failed |= report(f"  set {n}: {i}", problems, f"stack {stack}, malloc {heap}")
+
+    if "spaces" in only:
+        for sp in k.get("spaces", []):
+            if a.space and a.space != sp["id"]:
+                continue
+            size, start = sp["size"], sp["start"]
+            ids = [g["id"] for g in sorted(k["games"], key=lambda g: g["index"]) if g["default"]]
+            used = k["base"] + sum(kit.games[i]["flash"] for i in ids)
+            for g in sorted(k["games"], key=lambda g: g["index"]):
+                if g["xl"] and used + g["flash"] <= size:
+                    ids.append(g["id"])
+                    used += g["flash"]
+            nwa = os.path.join(tmp, f"space-{sp['id']}.nwa")
+            ids = kit.link(ids, nwa)
+            n, msg = installed(nwa, size, start=start)
+            if n is None or n > size or n > used:
+                failed |= report(f"space {sp['id']}", [f"{n} bytes in {size} at {start:#x}, {used} by the kit: {msg}"])
+                continue
+            print(f"space {sp['id']}: {size} bytes from {start:#x}, {len(ids)} games installed as {n} bytes, "
+                  f"up to {start + n:#x}", flush=True)
+            xl = sp["end"] > emu.EXT_FLASH_END
+            ram = a.ram or (CUSTOM_RAM if max(kit.ram(i) for i in ids) <= CUSTOM_RAM else RAM_LIMIT)
+            emu.configure("n0120", "epsilon", ram, xl=xl, apps_start=start)
+            # (where each game's block is, from the symbols of the NumPlay the emulator runs)
+            c = _Calculator(nwa)
+            at = {i: c.symbols.get(f"np_{i}_begin", 0) for i in ids}
+            # the last of NumPlay's games in the app area, and the first and last big games: in it or just past it,
+            # and the furthest out (the others are where the sets have them)
+            big = [x for x in ids if x in XL]
+            for i in ([] if xl else [x for x in ids if x in SMALL][-1:]) + big[:1] + big[1:][-1:]:
+                where = ("past the app area, in the second slot" if at[i] >= 0x90400000 else
+                         "past the app area" if at[i] >= emu.EXT_FLASH_END else "in the app area")
+                problems, stack, heap = session(nwa, ids, i, a.out, f"space_{sp['id']}_{i}")
+                failed |= report(f"  space {sp['id']}: {i}", problems, f"at {at[i]:#x}, {where}, stack {stack}")
+            emu.configure("n0120", "epsilon")
 
     if "ram" in only:
         print(f"{'RAM in NumPlay':18s} {'needs':>7s} {'133652':>8s} {'148928':>8s} {'107674':>8s}")

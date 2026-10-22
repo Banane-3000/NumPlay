@@ -7,10 +7,10 @@
   const KIT = 'kit/';
   const MEDIA = '../docs/media/';  // the games' clips (kit.json: previews/ or gallery/)
   const MiB = 1048576;
-  // Enlarged Extra Apps (nwagyu's Nwagra): it moves the end of the app area from the end of
-  // Epsilon's slot to the end of the 8 MB flash, so apps go from 0x90200000 to 0x90800000
-  const XL_SPACE = 6 * MiB;
-  const NWAGRA = 'https://nwagyu.org/guide/help/enlarge-your-memory.html';
+  // The calculator's space for apps (kit.json "spaces"): from where its software ends, 0x90200000 or, on Epsilon 26,
+  // 0x90180000, to 0x903F0000; with Enlarged Extra Apps (nwagyu's Nwagra) on to the end of the flash, 0x90800000
+  const SPACES = { std: 'Every NumWorks', e26: 'Epsilon 26', xl: 'Nwagra', xl26: 'Nwagra on Epsilon 26' };
+  const XL_SPACE = 6 * MiB;  // (kits from before kit.json had spaces)
   const SYS = {
     1: { tag: 'GB', name: 'Game Boy', color: '#6d8a0c', shell: '#c9c9cf' },
     2: { tag: 'GBC', name: 'Game Boy Color', color: '#6a3fb5', shell: '#b9a6d8' },
@@ -54,24 +54,43 @@
   let romKey = 0;
 
   // ------------------------------------------------------------------ sizes
-  const capacity = () => st.cap === 'xl' ? XL_SPACE : kit.appSpace;
+  const spaces = () => kit.spaces && kit.spaces.length ? kit.spaces :
+    [{ id: 'std', size: kit.appSpace }, { id: 'xl', size: kit.xlAppSpace || XL_SPACE }];
+  const space = () => spaces().find((s) => s.id === st.cap) || spaces()[0];
+  const capacity = () => space().size;
+  const nwagra = () => st.cap.startsWith('xl');
+  const mb = (b) => +(b / MiB).toFixed(2) + ' MB';
   const langKit = () => kits[st.lang] || kit;
-  const flash = (id) => ((langKit().byId || {})[id] || byId[id]).flash;
+  const game = (id) => (langKit().byId || {})[id] || byId[id];  // (as the app's language has it)
+  const flash = (id) => game(id).flash;
   const romBytes = (r) => ROM_ENTRY + align4(r.bytes.length);
   const iconUrl = () => st.app.icon === 'custom' && custom ? custom.url : KIT + 'variants/' + st.app.icon + '.png';
   const ordered = () => st.order.filter((id) => st.picked.has(id));
-  // a big game too big to go beside the launcher in 1.94 MB (kit.json "alone") goes on its own there,
+  // NumPlay's own bytes: with the library functions NumPlay's games call, or only the launcher when it has big
+  // games only (they bring their own)
+  const own = (ids, roms) => {
+    const k = langKit();
+    return ids.some((id) => !byId[id].xl) || (rg && roms.length) ? k.base : k.baseAlone || k.base;
+  };
+  // what a NumPlay of these games (and Game Boy, NES and Sega games) takes
+  function total(ids, roms = st.roms) {
+    let n = own(ids, roms);
+    for (const id of ids) n += flash(id);
+    if (rg && roms.length) n += flash(rg.id) + ROM_HEAD + roms.reduce((a, r) => a + romBytes(r), 0);
+    return n;
+  }
+  // a big game too big to go beside the launcher in this space (kit.json "alone") goes on its own there,
   // as its own app: as if you installed just that game
-  const alone = (id) => st.cap === 'std' && !!byId[id].alone;
+  const alone = (id) => !!game(id).alone && own([id], []) + flash(id) > capacity();
   const solo = () => ordered().find(alone) || null;
   let before = null;  // your games while one of those is picked, back when it's taken out
   function items() {
     const s = solo();
     if (s) {
       const g = byId[s];
-      return [{ key: s, id: s, name: g.title, bytes: g.alone.size, color: hex(g.top), icon: g.icon ? KIT + 'icons/' + s + '.png' : null }];
+      return [{ key: s, id: s, name: g.title, bytes: game(s).alone.size, color: hex(g.top), icon: g.icon ? KIT + 'icons/' + s + '.png' : null }];
     }
-    const out = [{ key: '_core', name: st.app.name.trim() || 'NumPlay', bytes: langKit().base, color: '#3a3a3c', icon: iconUrl() }];
+    const out = [{ key: '_core', name: st.app.name.trim() || 'NumPlay', bytes: own(ordered(), st.roms), color: '#3a3a3c', icon: iconUrl() }];
     for (const id of ordered()) {
       const g = byId[id];
       out.push({ key: id, id, name: g.title, bytes: flash(id), color: hex(g.top), icon: g.icon ? KIT + 'icons/' + id + '.png' : null });
@@ -198,25 +217,31 @@
     $('#battery').style.width = 'calc(' + Math.min(100, 100 * used / cap) + '% - 2px)';
 
     // the icons, in the order they go in the launcher
+    const s0 = solo(), picks = ordered();
     for (const [id, b] of buttons) {
-      const g = byId[id], on = st.picked.has(id), english = !g.xl || st.lang === 'en' || alone(id);
-      const fits = english && (alone(id) || used + flash(id) <= cap);
+      const g = byId[id], on = st.picked.has(id);
+      const fits = alone(id) || (!s0 && total(picks.concat([id])) <= cap);
       b.classList.toggle('on', on);
       b.classList.toggle('off', !on && fits);
       b.classList.toggle('nofit', !on && !fits);
       b.setAttribute('aria-pressed', on);
-      b.dataset.tip = g.title + '|' + (alone(id) ? size(g.alone.size) + ', on its own' : english ? size(flash(id)) + ' · drag to move' : 'in English NumPlays only');
+      b.dataset.tip = g.title + '|' + (alone(id) ? size(game(id).alone.size) + ', on its own' : size(flash(id)) +
+        (g.xl && st.lang !== 'en' ? ' · in English' : '') + ' · drag to move');
     }
     for (const box of [$('#small'), $('#big')]) {
       const want2 = st.order.map((id) => buttons.get(id)).filter((b) => b && b.parentNode === box);
       if ([...box.children].some((c, i) => c !== want2[i])) for (const b of want2) box.appendChild(b);
     }
-    for (const b of document.querySelectorAll('.cap button')) b.setAttribute('aria-checked', b.dataset.cap === st.cap);
+    $('#space-chip-label').textContent = mb(cap);
+    $('#space-chip').dataset.tip = SPACES[space().id] + '|your calculator\'s space for apps';
+    $('#dock-used').textContent = (used / MiB).toFixed(2) + ' of ' + mb(cap);
+    $('#dock').classList.toggle('over', over);
     // (a game on its own has its own icon, name and language)
-    const s = solo(), file = s ? byId[s].alone.file : 'NumPlay.nwa';
+    const s = solo(), file = s ? game(s).alone.file : 'NumPlay.nwa';
     for (const c of [$('#app-chip'), $('#lang-chip')]) c.disabled = !!s;
     $('#download').setAttribute('aria-label', 'Download ' + file);
     $('#download').dataset.tip = 'Download ' + file;
+    $('#dock-download').setAttribute('aria-label', 'Download ' + file);
     $('#app-chip-icon').src = iconUrl();
     $('#app-chip-icon').classList.toggle('custom', st.app.icon === 'custom');
     $('#app-chip').dataset.tip = (s ? byId[s].title : st.app.name.trim() || 'No name') + '|its icon and name on your calculator, and how it opens';
@@ -281,7 +306,7 @@
     b.addEventListener('animationend', () => b.classList.remove(cls), { once: true });
   }
   function overflow(bytes) {
-    toast("That doesn't fit: " + size(bytes) + ' too much' + (st.cap === 'std' ? '. 6 MB can take more' : ''));
+    toast("That doesn't fit: " + size(bytes) + ' too much' + (st.cap === 'std' ? '. Epsilon 26 and Nwagra give more space' : ''));
     $('#screen').classList.add('over');
     setTimeout(() => render(), 500);
   }
@@ -301,8 +326,7 @@
       }
     } else {
       if (s) { if (!quiet) { bump(b, 'shake'); toast(byId[s].title + ' takes the whole calculator. Pick it again to take it out'); } return; }
-      if (byId[id].xl && st.lang !== 'en') { bump(b, 'shake'); toast('The big games are in English: pick English to add them'); return; }
-      const over = usedBytes() + flash(id) - capacity();
+      const over = total(ordered().concat([id])) - capacity();
       if (over > 0) { if (!quiet) { bump(b, 'shake'); overflow(over); } return; }
       st.picked.add(id);
       bump(b, 'pop-on');
@@ -322,8 +346,7 @@
       }
       const bytes = new Uint8Array(await f.arrayBuffer());
       const r = { key: ++romKey, sys, bytes, name: romName(f.name) };
-      const extra = (st.roms.length ? 0 : flash(rg.id) + ROM_HEAD) + romBytes(r);
-      const over = usedBytes() + extra - capacity();
+      const over = total(ordered(), st.roms.concat([r])) - capacity();
       if (over > 0) { bump($('#drop'), 'shake'); overflow(over); continue; }
       st.roms.push(r);
       fetchObj(objPath(rg.id)).catch(() => {});
@@ -440,7 +463,7 @@
   function save() {
     const a = st.app, p = new URLSearchParams();
     p.set('games', ordered().join(','));
-    if (st.cap === 'xl') p.set('space', 'xl');
+    if (st.cap !== 'std') p.set('space', st.cap);
     if (st.lang !== 'en') p.set('lang', st.lang);
     if (a.icon !== 'NumPlay') p.set('icon', a.icon);
     if (a.name !== (PRESETS[a.icon] || [0, 'NumPlay'])[1]) p.set('name', a.name);
@@ -460,7 +483,7 @@
     // the order: the link's picks first, in its order, then the rest as last time, then the kit's
     st.order = [...new Set([...(linked || []), ...saved, ...known])];
     st.picked = new Set(linked || kit.games.filter((g) => g.default).map((g) => g.id));
-    st.cap = p.get('space') === 'xl' ? 'xl' : 'std';
+    st.cap = spaces().some((x) => x.id === p.get('space')) ? p.get('space') : 'std';
     st.lang = LANGS[p.get('lang')] && kit.langs.includes(p.get('lang')) ? p.get('lang') : 'en';
     const icon = p.get('icon');
     st.app.icon = PRESETS[icon] ? icon : icon === 'custom' && custom ? 'custom' : 'NumPlay';
@@ -469,7 +492,6 @@
     st.app.open = open[0] === 'matrices' ? 'matrices' : 'numplay';
     st.app.secret = Math.min(SECRETS.length - 1, Math.max(0, parseInt(open[1], 10) || 0));
     st.app.hint = !open.includes('nohint');
-    if (st.lang !== 'en') for (const id of [...st.picked]) if (byId[id].xl && !alone(id)) st.picked.delete(id);  // (English only)
     if (solo()) st.picked = new Set([solo()]);
     // a pick that no longer fits the calculator (the kit grew): drop the biggest games until it does
     const big = ordered().sort((a, b) => flash(a) - flash(b));
@@ -491,7 +513,11 @@
   }
   const fetchObj = (rel) => fetchBytes(KIT + rel + '.gz');
   // a game's object in the app's language, or English when that language's kit hasn't got it
-  const objPath = (id) => (st.lang !== 'en' && kits[st.lang] && kits[st.lang].byId[id] ? st.lang + '/' : '') + 'games/' + id + '.o';
+  // (a big game's is the English one: kit.json "en")
+  const objPath = (id) => {
+    const g = st.lang !== 'en' && kits[st.lang] && kits[st.lang].byId[id];
+    return (g && !g.en ? st.lang + '/' : '') + 'games/' + id + '.o';
+  };
   async function loadKit(lang) {
     if (lang === 'en' || kits[lang]) return;
     const k = await fetch(KIT + lang + '/kit.json').then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
@@ -657,7 +683,7 @@
 
   async function build() {
     const one = solo();
-    if (one) return { bytes: await fetchBytes(KIT + 'apps/' + one + '.nwa.gz'), file: byId[one].alone.file };
+    if (one) return { bytes: await fetchBytes(KIT + 'apps/' + one + '.nwa.gz'), file: game(one).alone.file };
     await loadKit(st.lang);
     const k = langKit();
     const sel = ordered();
@@ -677,8 +703,11 @@
     // the launcher shows the games in the order of their entries: yours, not the kit's
     const entries = sel.map((id) => 'KEEP(*(.rodata.np_games.' + String((k.byId[id] || byId[id]).index).padStart(2, '0') + '))').join('\n    ');
     const head = k.script.head.replace('KEEP(*(SORT_BY_NAME(.rodata.np_games.*)))', entries);
+    // ...and the games' blocks in the kit's order: NumPlay's own games first, in the app area, then the big ones,
+    // which find the calculator's files past it too (Enlarged Extra Apps)
     const block = (id) => k.script.blocks[id] || kit.script.blocks[id];
-    files['numplay.ld'] = head + sel.map(block).join('') + k.script.tail;
+    const index = (id) => (k.byId[id] || byId[id]).index;
+    files['numplay.ld'] = head + sel.slice().sort((a, b) => index(a) - index(b)).map(block).join('') + k.script.tail;
     const l = await run(t.ld, args.concat(['-o', 'out.nwa']), files);
     if (l.code) throw new Error(l.log || 'ld ' + l.code);
     const s = await run(t.oc, ['--strip-unneeded', 'in.nwa', 'out.nwa'], { 'in.nwa': l.m.FS.readFile('out.nwa') });
@@ -698,17 +727,18 @@
   async function go(btn, sheet) {
     if (btn.classList.contains('busy')) return;
     btn.classList.add('busy');
-    btn.parentNode.classList.add('down');  // (its key stays in while NumPlay is made)
+    const key = btn.closest('.key3d, .fkey');
+    if (key) key.classList.add('down');  // (its key stays in while NumPlay is made)
     try {
       const out = await build();
       download(out.bytes, out.file);
       if (sheet) openSheet(out.file);
     } catch (e) {
       console.error(e);
-      toast(/more than/.test(e.message) ? e.message : solo() ? "Couldn't get " + byId[solo()].alone.file + ', try again' : "Couldn't make NumPlay.nwa, try again");
+      toast(/more than/.test(e.message) ? e.message : solo() ? "Couldn't get " + game(solo()).alone.file + ', try again' : "Couldn't make NumPlay.nwa, try again");
     } finally {
       btn.classList.remove('busy');
-      btn.parentNode.classList.remove('down');
+      if (key) key.classList.remove('down');
     }
   }
   function prefetch() {
@@ -723,13 +753,18 @@
   }
 
   // ------------------------------------------------------------------ the app's own settings
-  let popOpen = null;
+  let popOpen = null, popAt = null;
   function openPop(pop, chip, side) {
     if (popOpen === pop) return closePops();
     closePops();
     pop.hidden = false;
     popOpen = pop;
+    popAt = [chip, side];
     chip.setAttribute('aria-expanded', 'true');
+    placePop();
+  }
+  function placePop() {
+    const pop = popOpen, [chip, side] = popAt;
     const r = chip.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
     if (side && r.right + 16 + w < innerWidth - 12) {  // (beside it, over the calculator, not over the games)
       pop.style.left = (r.right + 16) + 'px';
@@ -741,7 +776,7 @@
   }
   function closePops() {
     for (const p of document.querySelectorAll('.pop')) p.hidden = true;
-    for (const c of document.querySelectorAll('.chip, .cap button')) c.setAttribute('aria-expanded', 'false');
+    for (const c of document.querySelectorAll('.chip, .space-chip')) c.setAttribute('aria-expanded', 'false');
     popOpen = null;
   }
   function renderApp() {
@@ -779,33 +814,52 @@
       const b = el('button', '', { type: 'button', role: 'radio', 'aria-checked': st.lang === l });
       b.textContent = LANGS[l][1];
       b.addEventListener('click', async () => {
-        if (l !== 'en' && ordered().some((id) => byId[id].xl && !alone(id))) { toast('The big games are in English: take them out first'); return; }
         try { await loadKit(l); } catch (e) { toast("That language didn't load, try again"); return; }
+        const was = st.lang;
         st.lang = l;
+        const over = usedBytes() - capacity();  // (NumPlay in another language is a little bigger or smaller)
+        if (over > 0) { st.lang = was; toast('In ' + LANGS[l][1] + ' that\'s ' + size(over) + ' too much: take a game out first'); return; }
         closePops(); renderApp(); render();
       });
       langs.appendChild(b);
     }
   }
 
-  // the 6 MB of Enlarged Extra Apps: what it is and how, before switching to it
-  function askXL(btn) {
-    let pop = $('#xl-pop');
-    if (!pop) {
-      pop = el('div', 'pop', { id: 'xl-pop', role: 'dialog', 'aria-label': 'Enlarged Extra Apps' });
-      pop.innerHTML = '<b class="xl-title">6 MB with Enlarged Extra Apps</b>' +
-        '<p class="xl-text">The calculator\'s installer gives apps 1.94 MB. nwagyu\'s <b>Nwagra</b> bookmark makes it use the rest of the flash, 6 MB in all, so several big games fit in one NumPlay.</p>' +
-        '<ol class="xl-steps"><li>Add the Nwagra bookmark from nwagyu\'s guide</li><li>Update your calculator twice on my.numworks.com</li><li>On the installer page, click the bookmark, then drop NumPlay.nwa</li></ol>' +
-        '<p class="xl-warn">It only works on older calculator software. On the newest, the calculator shows exam mode.</p>' +
-        '<div class="xl-buttons"><a class="xl-guide" href="' + NWAGRA + '" target="_blank" rel="noopener">nwagyu\'s guide</a><button type="button" class="install xl-ok">Use 6 MB</button></div>';
-      document.body.appendChild(pop);
-      pop.querySelector('.xl-ok').addEventListener('click', () => {
-        st.cap = 'xl';
-        if (before) { st.picked = new Set([...before, ...st.picked]); before = null; }  // (6 MB has room for it all)
-        store('numplay-xl-seen', '1'); closePops(); render();
+  // ------------------------------------------------------------------ the calculator's space for apps
+  // Pick yours: its name and size, the installer's figure on each; with Nwagra, how to get it
+  function renderSpaces() {
+    const box = $('#spaces');
+    box.textContent = '';
+    for (const sp of spaces()) {
+      const b = el('button', '', { type: 'button', role: 'radio', 'aria-checked': st.cap === sp.id,
+        'data-tip': Math.round(sp.size / 1024) + ' KB in NumWorks\' installer' });
+      b.appendChild(el('span')).textContent = SPACES[sp.id] || sp.id;
+      b.appendChild(el('b')).textContent = mb(sp.size);
+      b.addEventListener('click', () => {
+        if (!setSpace(sp.id)) return;
+        if (nwagra()) { renderSpaces(); placePop(); } else closePops();
       });
+      box.appendChild(b);
     }
-    openPop(pop, btn, true);
+    $('#nwagra').hidden = !nwagra();
+  }
+  function setSpace(id) {
+    if (id === st.cap) return true;
+    const was = st.cap, picked = new Set(st.picked), had = before;
+    st.cap = id;
+    const one = ordered().find(alone);
+    if (one && ordered().length > 1) {  // (it goes on its own here: the rest come back when it's out)
+      before = ordered().filter((x) => x !== one);
+      st.picked = new Set([one]);
+      toast(byId[one].title + ' goes on its own in ' + mb(capacity()) + '. Pick it again to get your other games back');
+    } else if (before && !solo()) {  // (room beside it here: your other games come back, as many as fit)
+      for (const x of before) if (total(ordered().concat([x])) <= capacity()) st.picked.add(x);
+      before = null;
+    }
+    const over = usedBytes() - capacity();
+    if (over > 0) { st.cap = was; st.picked = picked; before = had; toast('Take ' + size(over) + ' of games out first'); return false; }
+    render();
+    return true;
   }
 
   // ------------------------------------------------------------------ the calculator in 3D, and its sticker
@@ -949,6 +1003,7 @@
     for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]])
       gl.texParameteri(gl.TEXTURE_2D, k, v);
     const upload = (data) => gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, ART, ART, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+    sticker.lose = () => { const e = gl.getExtension('WEBGL_lose_context'); if (e) e.loseContext(); };
     upload(stickerMap());
     sticker.remap = () => upload(stickerMap());
     const u = (n) => gl.getUniformLocation(prog, n);
@@ -1183,13 +1238,15 @@
   // the foil comes from where the pointer is, and under the pointer the part of the sticker round the edge
   // peels up off the side.
   function depth() {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || light.on) return;
     const calc = $('#calc'), star = $('#star'), dev = document.querySelector('.device');
     let mx = innerWidth * 0.6, my = innerHeight * 0.2, tx = 0, ty = 0, x = 0, y = 0;
     let over = false, lift = 0, raf = 0;
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    const draw = () => {
+    const draw = (now) => {
       raf = 0;
+      if (light.on) return;
+      frameTime(now);
       x += (tx - x) * 0.07; y += (ty - y) * 0.07;
       calc.style.setProperty('--ry', (x * 18).toFixed(2) + 'deg');
       calc.style.setProperty('--rx', (-y * 10).toFixed(2) + 'deg');
@@ -1204,7 +1261,7 @@
       shadeStar(lift);
       if (Math.abs(tx - x) + Math.abs(ty - y) > 0.0005 || Math.abs(want - lift) > 0.002) raf = requestAnimationFrame(draw);
     };
-    const kick = () => { if (!raf) raf = requestAnimationFrame(draw); };
+    const kick = () => { if (!raf && !light.on) raf = requestAnimationFrame(draw); };
     addEventListener('pointermove', (e) => {
       if (e.pointerType === 'touch') return;
       mx = e.clientX; my = e.clientY;
@@ -1217,6 +1274,130 @@
     star.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') { over = true; kick(); } });
     star.addEventListener('pointerleave', () => { over = false; kick(); });
     kick();
+  }
+
+  // ------------------------------------------------------------------ the light calculator
+  // The 3D calculator is heavy for slow computers and phones. The light one is the same photo, flat: OK and Back
+  // go in when pressed, and the sticker is drawn once, as the 3D one looks from the front. It's the light one from
+  // the start on small or touch screens, with reduced motion, or with ?flat in the address (?3d: never); otherwise
+  // the page times its frames while things move, in its first seconds and as the calculator turns, and goes light
+  // for the rest of the visit when they're slow.
+  const light = { on: false, later: false, list: [], last: 0 };
+  const flag = (f) => new RegExp('[?&]' + f + '(=|&|$)').test(location.search);
+  function lightFromStart() {
+    if (flag('3d')) return false;
+    if (flag('flat')) return true;
+    try { if (sessionStorage.getItem('numplay-flat')) return true; } catch (e) { /* (no storage) */ }
+    return innerWidth < 900 || matchMedia('(pointer: coarse)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+  // each frame drawn while something moves: when half of 30 in a row take over 30 ms (fewer than 33 a second), slow
+  function frameTime(now) {
+    if (light.on || flag('3d') || now - light.last < 1) return;
+    if (document.hidden) { light.last = 0; return; }
+    if (light.last && now - light.last < 500) light.list.push(now - light.last);
+    light.last = now;
+    if (light.list.length < 30) return;
+    const median = light.list.sort((a, b) => a - b)[15];
+    light.list = [];
+    if (median > 30) goLight();
+  }
+  function watchFrames() {  // (the first seconds: the page coming up, and the intro the first time)
+    const t0 = performance.now();
+    const tick = (now) => {
+      if (light.on || now - t0 > 6000) { light.last = 0; return; }
+      if (now - t0 > 700) frameTime(now);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  function goLight() {
+    if (light.on) return;
+    if (introRun) { light.later = true; return; }  // (once the intro is over)
+    try { sessionStorage.setItem('numplay-flat', '1'); } catch (e) { /* (no storage: light until the page is left) */ }
+    // the 3D calculator goes: its sides, its keys (OK and Back keep their buttons), its sticker
+    const calc = $('#calc'), plate = calc.querySelector('.plate');
+    for (const b of [$('#install'), $('#download')]) { b.style.transform = ''; plate.appendChild(b); }
+    for (const e of calc.querySelectorAll('.key3d, .keybed')) e.remove();
+    document.querySelector('.body3d').textContent = '';
+    if (sticker.lose) sticker.lose();
+    Object.assign(sticker, { draw: null, remap: null, lose: null, leaves: [] });
+    const star = $('#star');
+    star.textContent = '';
+    star.removeAttribute('style');
+    for (const v of ['--plate-mask', '--rx', '--ry', '--lx']) calc.style.removeProperty(v);
+    buildFlat();
+  }
+  function buildFlat() {
+    light.on = true;
+    document.documentElement.classList.add('flat');
+    const plate = $('#calc').querySelector('.plate'), r = 57.5, cy = 924;
+    for (const [key, b, cx] of [['ok', $('#install'), 718.5], ['back', $('#download'), 858]]) {
+      const k = part(plate, 'div', 'fkey', { left: U(cx - r), top: U(cy - r), width: U(2 * r), height: U(2 * r) });
+      k.dataset.key = key;
+      const img = el('img', '', { src: 'calculator.webp', alt: '', draggable: 'false' });
+      Object.assign(img.style, { left: U(r - cx), top: U(r - cy), width: U(1018), height: U(2000) });
+      part(k, 'i', 'ftop', {}).appendChild(img);
+      k.appendChild(b);
+    }
+    flatStar();
+  }
+  // The sticker, flat: its picture (the white vinyl, the gold foil and the line embossed in it, the ink), then seen
+  // from the front as it lies on the calculator: over the screen's bezel, a little darker down in it, and round the
+  // edge, squeezed and darker as the edge turns away; the part on the side is out of sight.
+  function stickerArt() {
+    const c = el('canvas');
+    c.width = c.height = ART;
+    const x = c.getContext('2d'), k = ART / 100;
+    x.lineJoin = 'round';
+    x.save();
+    x.shadowColor = 'rgba(0, 0, 0, 0.3)'; x.shadowBlur = 1.4 * k; x.shadowOffsetY = 0.5 * k;
+    starPath(x, k, 1); x.lineWidth = 14 * k; x.fillStyle = x.strokeStyle = '#f7f6f2'; x.fill(); x.stroke();
+    x.restore();
+    const g = x.createLinearGradient(14 * k, 8 * k, 84 * k, 96 * k);
+    [[0, '#fff0b5'], [0.2, '#e8bd52'], [0.42, '#b47e14'], [0.6, '#f4d47c'], [0.78, '#c28b1c'], [1, '#f2d27a']]
+      .forEach(([o, col]) => g.addColorStop(o, col));
+    starPath(x, k, 1); x.lineWidth = 3 * k; x.fillStyle = x.strokeStyle = g; x.fill(); x.stroke();
+    for (const [d, col] of [[0.3, 'rgba(120, 76, 0, 0.55)'], [-0.3, 'rgba(255, 249, 222, 0.75)']]) {
+      x.save(); x.translate(d * k, d * k); starPath(x, k, 0.8); x.lineWidth = 0.7 * k; x.strokeStyle = col; x.stroke(); x.restore();
+    }
+    const [big, small] = sticker.text;
+    x.save();
+    x.translate(50 * k, 53 * k);
+    x.rotate(deg(-12));
+    x.textAlign = 'center';
+    x.fillStyle = 'rgba(52, 31, 4, 0.92)';
+    const font = (w, px) => w + ' ' + px + 'px -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif';
+    x.font = font(800, (big.length > 3 ? 11.5 : 14.5) * k);
+    x.fillText(big, 0, 2.5 * k);
+    x.font = font(750, 3.6 * k);
+    if ('letterSpacing' in x) x.letterSpacing = (0.5 * k) + 'px';
+    x.fillText(small, 0, 8.6 * k);
+    x.restore();
+    return c;
+  }
+  function flatStar() {
+    // (the step down into the bezel, which the front doesn't see, shifts it as much: its tip at the screen's edge)
+    const S = STAR, star = $('#star'), K = ART / S.size, x0 = S.from + S.step, x1 = 1018;
+    const art = stickerArt(), c = el('canvas'), w = Math.ceil((x1 - x0) * K);
+    c.width = w; c.height = ART;
+    const x = c.getContext('2d');
+    for (let i = 0; i < w; i++) {
+      const px = x0 + (i + 0.5) / K;  // (in the photo's pixels)
+      let u = px - S.step, du = 1, l = 1;
+      if (px < S.lip) l = px > S.lip - 1.6 ? 0.84 : 0.96;  // (down in the bezel, and its edge)
+      else if (px > S.edge) {  // (round the edge)
+        const a = Math.asin(Math.min(1, (px - S.edge) / EDGE_R));
+        u = S.edge - S.step + EDGE_R * a; du = 1 / Math.max(0.2, Math.cos(a)); l = lit([Math.sin(a), 0, Math.cos(a)]);
+      }
+      x.drawImage(art, (u - S.from) * K - du / 2, 0, du, ART, i, 0, 1, ART);
+      if (l < 1) {
+        x.save(); x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(20, 14, 0, ' + (1 - l).toFixed(3) + ')';
+        x.fillRect(i, 0, 1, ART); x.restore();
+      }
+    }
+    star.textContent = '';
+    Object.assign(star.style, { left: (100 * x0 / 1018) + '%', top: (100 * S.top / 2000) + '%', width: U(x1 - x0), height: U(S.size) });
+    star.appendChild(c);
   }
 
   // ------------------------------------------------------------------ GitHub's star count, for the sticker
@@ -1232,14 +1413,27 @@
       const v = +n, t = v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'k' : String(v);
       sticker.text = [t, v === 1 ? 'STAR' : 'STARS'];
       if (sticker.remap) { sticker.remap(); paintSticker(); }
+      if (light.on) flatStar();
     } catch (e) { /* (offline, or GitHub said no: the button still works) */ }
+  }
+
+  // ------------------------------------------------------------------ on a phone: install from under your thumb
+  // Once the calculator's keys are scrolled away, a bar at the bottom has them, with the space used.
+  function dock() {
+    const d = $('#dock'), keys = $('.legend.ok');
+    if (!window.IntersectionObserver) return;
+    new IntersectionObserver(([e]) => {
+      const below = !e.isIntersecting && e.boundingClientRect.top < 0;
+      d.classList.toggle('show', below);
+      document.body.classList.toggle('docked', below);
+    }).observe(keys);
   }
 
   // ------------------------------------------------------------------ the sheet, tips and toasts
   function openSheet(file) {
     const s = $('#sheet');
     for (const f of s.querySelectorAll('.sheet-file')) f.textContent = file;
-    for (const li of s.querySelectorAll('.xl-only')) li.hidden = st.cap !== 'xl';
+    for (const li of s.querySelectorAll('.xl-only')) li.hidden = !nwagra();
     s.hidden = false;
     s.querySelector('.sheet-card a.install').focus();
   }
@@ -1383,6 +1577,7 @@
       introRun = null;
       hidePreview();
       render();
+      if (light.later) goLight();
     }
     addEventListener('pointerdown', finish, true);
     addEventListener('keydown', finish, true);
@@ -1476,28 +1671,16 @@
     $('#app-chip').addEventListener('click', (e) => { renderApp(); openPop($('#app-pop'), e.currentTarget); });
     $('#lang-chip').addEventListener('click', (e) => { renderApp(); openPop($('#lang-pop'), e.currentTarget); });
     document.addEventListener('pointerdown', (e) => {
-      if (popOpen && !e.target.closest('.pop, .chip, .cap button')) closePops();
+      if (popOpen && !e.target.closest('.pop, .chip, .space-chip')) closePops();
     });
 
-    for (const b of document.querySelectorAll('.cap button'))
-      b.addEventListener('click', () => {
-        if (b.dataset.cap === 'std' && st.cap === 'xl') {
-          st.cap = 'std';
-          const one = solo();
-          if (one && ordered().length > 1) {  // (it goes on its own in 1.94 MB: the rest come back when it's out)
-            before = ordered().filter((id) => !alone(id));
-            st.picked = new Set([one]);
-            toast(byId[one].title + ' goes on its own in 1.94 MB. Pick it again to get your other games back');
-          }
-          const over = usedBytes() - kit.appSpace;
-          if (over > 0) { st.cap = 'xl'; toast('Take ' + size(over) + ' of games out first'); return; }
-          closePops(); render(); return;
-        }
-        if (b.dataset.cap === 'xl' && st.cap !== 'xl') askXL(b);
-      });
+    $('#space-chip').addEventListener('click', (e) => { renderSpaces(); openPop($('#space-pop'), e.currentTarget, true); });
     $('#install').addEventListener('click', (e) => go(e.currentTarget, true));
     $('#download').addEventListener('click', (e) => go(e.currentTarget, false));
-    for (const b of [$('#install'), $('#download'), $('#app-chip'), $('#lang-chip')]) {
+    $('#dock-install').addEventListener('click', (e) => go(e.currentTarget, true));
+    $('#dock-download').addEventListener('click', (e) => go(e.currentTarget, false));
+    dock();
+    for (const b of [$('#install'), $('#download'), $('#dock-install'), $('#dock-download'), $('#app-chip'), $('#lang-chip')]) {
       b.addEventListener('pointerenter', prefetch, { once: true });
       b.addEventListener('focus', prefetch, { once: true });
     }
@@ -1526,8 +1709,9 @@
       });
     }
     tips();
-    build3d();
-    depth();
+    if (lightFromStart()) buildFlat();
+    else { build3d(); depth(); watchFrames(); }
+    addEventListener('resize', () => { if (innerWidth < 900) goLight(); });
     restore();
     if (st.lang !== 'en') loadKit(st.lang).then(render).catch(() => { st.lang = 'en'; render(); });
     render();
