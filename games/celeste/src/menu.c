@@ -206,22 +206,24 @@ void menu_open_main(void) { go(S_MAIN, 0); }
 /* ---------------------------------------------------------------- the key sheet (as NumBlocks has it) */
 const char *key_label(int k) {
   static const char *const names[53] = {
-      [4] = "OK", [5] = "Back", [6] = "Home", [12] = "shift", [13] = "alpha", [14] = "x,n,t", [15] = "var", [16] = "toolbox",
+      [0] = "arrow", [1] = "arrow", [2] = "arrow", [3] = "arrow", [4] = "OK", [5] = "Back", [6] = "Home", [12] = "shift", [13] = "alpha", [14] = "x,n,t", [15] = "var", [16] = "toolbox",
       [17] = "<x", [18] = "e^x", [19] = "ln", [20] = "log", [21] = "i", [22] = ",", [23] = "x^y", [24] = "sin",
       [25] = "cos", [26] = "tan", [27] = "pi", [28] = "sqrt", [29] = "x^2", [30] = "7", [31] = "8", [32] = "9",
       [33] = "(", [34] = ")", [36] = "4", [37] = "5", [38] = "6", [39] = "x", [40] = "/", [42] = "1", [43] = "2",
       [44] = "3", [45] = "+", [46] = "-", [48] = "0", [49] = ".", [50] = "x10^x", [51] = "ans", [52] = "EXE"};
   return k < 53 && names[k] ? names[k] : "?";
 }
-static const char *const ACTION_KEYS[4] = {"KEY_CONFIG_JUMP", "KEY_CONFIG_DASH", "KEY_CONFIG_GRAB", "KEY_CONFIG_TALK"};
-static const char *action_on(int k) {   /* what a key does: its actions, or pause */
+static const char *const BIND_KEYS[BINDS] = {"KEY_CONFIG_JUMP", "KEY_CONFIG_DASH", "KEY_CONFIG_GRAB", "KEY_CONFIG_TALK",
+                                             "KEY_CONFIG_PAUSE", "KEY_CONFIG_LEFT", "KEY_CONFIG_RIGHT", "KEY_CONFIG_UP",
+                                             "KEY_CONFIG_DOWN"};
+static const uint8_t ARROW[4] = {0, 3, 1, 2};   /* the moves' own arrows (EADK keys): left, right, up, down */
+static const char *action_on(int k) {   /* what a key does: its actions, pause, a move */
   static char what[48];
-  if (k == KEY_BACKSPACE) return ui_str("KEY_CONFIG_PAUSE");
   what[0] = 0;
-  for (int a = 0; a < 4; a++)
-    if (g_bind[a] == k && strlen(what) + strlen(ui_str(ACTION_KEYS[a])) + 3 < sizeof what) {
+  for (int a = 0; a < BINDS; a++)
+    if (g_bind[a] == k && strlen(what) + strlen(ui_str(BIND_KEYS[a])) + 3 < sizeof what) {
       if (what[0]) strcat(what, ", ");
-      strcat(what, ui_str(ACTION_KEYS[a]));
+      strcat(what, ui_str(BIND_KEYS[a]));
     }
   return what[0] ? what : NULL;
 }
@@ -539,38 +541,54 @@ static void options_update(void) {
     else go(S_MAIN, 1);
   }
 }
-static bool bindable(int k) {   /* OK, Back and the keys under the arrows but backspace (pause) */
-  return k == 4 || k == KEY_BACK || (k >= 12 && k <= 51 && k != KEY_BACKSPACE && k != 35 && k != 41 && k != 47);
+/* a key for bind a: OK, Back or a key under the arrows; actions may share one, pause and the moves get their own */
+static bool bindable(int a, int k) {
+  if (a >= 5 && k == ARROW[a - 5]) return true;   /* (a move back on its arrow alone) */
+  if (!(k == 4 || k == KEY_BACK || (k >= 12 && k <= 51 && k != 35 && k != 41 && k != 47))) return false;
+  for (int b = 0; b < BINDS; b++)
+    if (b != a && g_bind[b] == k && (a >= 4 || b >= 4)) return false;
+  return true;
 }
+/* KeyboardConfigUI's list: MOVEMENT, ACTIONS, then pause under MENU, and Reset to Default; scrolled to the row chosen */
+static const int8_t KEY_ROWS[BINDS] = {5, 6, 7, 8, 0, 1, 2, 3, 4};
+static float key_row_y(int r) { return 420 + r * ITEM_H + (r >= 4) * 110 + (r >= 8) * 110 + (r >= 9) * 40; }
+
 static void keys_draw(void) {
   if (M.back == S_MAIN) backdrop();
   else box(0, 0, 1920, 1080, 0, 178);
-  say(ui_str("KEY_CONFIG_TITLE"), 960, 200, 0.5f, 0.5f, 2, GRAY, 255);
-  say(ui_str("KEY_CONFIG_GAMEPLAY"), 960, 330, 0.5f, 0.5f, 0.6f, GRAY, 255);
-  for (int a = 0; a < 4; a++) menu_item(ui_str(ACTION_KEYS[a]), M.binding == a ? "..." : key_label(g_bind[a]), a, 410 + a * ITEM_H, false);
-  menu_item(ui_str("KEY_CONFIG_RESET"), NULL, 4, 450 + ITEM_H * 4, false);
-  if (M.binding >= 0) {
+  if (M.binding >= 0) {   /* (KeyboardConfigUI: the key asked for, alone in the middle) */
     char w[48];
     strcpy(w, ui_str("KEY_CONFIG_CHANGING"));
     strcat(w, " ");
-    strcat(w, ui_str(ACTION_KEYS[M.binding]));
-    say(w, 960, 900, 0.5f, 0.5f, 0.8f, WHITE, 255);
+    strcat(w, ui_str(BIND_KEYS[M.binding]));
+    say(w, 960, 540, 0.5f, 0.5f, 1, WHITE, 255);
+    return;
   }
+  float o = fmaxf(0, key_row_y(M.sel) - 900);   /* (the row chosen stays on the screen) */
+  say(ui_str("KEY_CONFIG_TITLE"), 960, 180 - o, 0.5f, 0.5f, 2, GRAY, 255);
+  say(ui_str("KEY_CONFIG_MOVEMENT"), 960, key_row_y(0) - 80 - o, 0.5f, 0.5f, 0.6f, GRAY, 255);
+  say(ui_str("KEY_CONFIG_GAMEPLAY"), 960, key_row_y(4) - 80 - o, 0.5f, 0.5f, 0.6f, GRAY, 255);
+  say(ui_str("KEY_CONFIG_MENUS"), 960, key_row_y(8) - 80 - o, 0.5f, 0.5f, 0.6f, GRAY, 255);
+  for (int r = 0; r < BINDS; r++) {
+    int a = KEY_ROWS[r];
+    menu_item(ui_str(BIND_KEYS[a]), key_label(g_bind[a]), r, key_row_y(r) - o, false);
+  }
+  menu_item(ui_str("KEY_CONFIG_RESET"), NULL, BINDS, key_row_y(BINDS) - o, false);
 }
 static void keys_update(void) {
   if (M.binding >= 0) {   /* the next key pressed */
     int k = plat_key_pressed();
     if (k < 0) return;
-    if (bindable(k)) g_bind[M.binding] = (uint8_t)k, memcpy(g_save.bind, g_bind, 4), save_write();
+    if (bindable(M.binding, k)) g_bind[M.binding] = (uint8_t)k, save_keep_binds(), save_write();
     M.binding = -1;
     btn_consume(&g_in.confirm);
     return;
   }
   int d = dir_pressed(1);
-  if (d) M.sel = (int8_t)((M.sel + d + 5) % 5);
+  if (d) M.sel = (int8_t)((M.sel + d + BINDS + 1) % (BINDS + 1));
   if (confirm()) {
-    if (M.sel < 4) M.binding = M.sel, plat_key_pressed();
-    else plat_default_binds(), memcpy(g_save.bind, g_bind, 4), save_write();
+    if (M.sel < BINDS) M.binding = KEY_ROWS[M.sel], plat_key_pressed();
+    else plat_default_binds(), save_keep_binds(), save_write();
   } else if (cancel())
     go(S_OPTIONS, 0);
 }

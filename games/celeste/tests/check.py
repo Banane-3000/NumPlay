@@ -95,7 +95,19 @@ d = tempfile.mkdtemp(prefix="celeste_check_")
 run(["--chapter", "0", "--room", "-1", "--nowipe"], 400,
     "20-21:l,30-31:r,40-41:n,50-51:g,60-61:u,70-71:u,80-81:d,90-91:l,100-101:g,110-111:o", saves=d, what="the cheat code")
 sav = open(d + "/celeste.sav", "rb").read() if os.path.exists(d + "/celeste.sav") else b""
-check(len(sav) == 1680 and sav[1672] == 1 and sav[1066] == 10, "the cheat code did not turn cheat mode on")
+check(len(sav) == 1688 and sav[1672] == 1 and sav[1066] == 10, "the cheat code did not turn cheat mode on")
+
+# a save from before 1.15.1 (version 2, without pause and the moves' keys): its keys stay, pause and the moves get
+# their defaults
+v2 = bytearray(sav[:1674]) + bytes(2)
+struct.pack_into("<HH", v2, 4, 2, 1680)
+v2[1100:1104] = bytes([36, 5, 16, 5])
+v2 += struct.pack("<I", fnv(v2))
+d2 = tempfile.mkdtemp(prefix="celeste_check_")
+open(d2 + "/celeste.sav", "wb").write(v2)
+out2 = run([], 10, saves=d2, what="a 1.15.0 save's keys")
+check("keys 36 5 16 5 17 0 3 1 2" in out2, f"a 1.15.0 save's keys did not come back with pause and the moves: {out2[-80:]}")
+shutil.rmtree(d2, ignore_errors=True)
 out = run([], 700, "40-41:o,100-101:o,160-161:o," + ",".join("%d-%d:r" % (f, f + 1) for f in range(200, 360, 30))
           + ",380-381:o,420-421:u,440-441:o,470-471:d,490-491:d,510-511:r,540-541:o", saves=d, what="the room picker")
 check("room 07 " in out and "area 6 mode 0" in out, f"the room picker did not start 6A in room 07: {out[-200:]}")

@@ -7,9 +7,11 @@
 #define KEY(k) ((uint64_t)1 << (k))
 
 /* key bindings: one EADK key per game action (settings can change them) */
-uint8_t g_bind[4];   /* jump, dash, grab, talk */
+uint8_t g_bind[BINDS];   /* jump, dash, grab, talk, pause, left, right, up, down */
 void plat_default_binds(void) {
   g_bind[0] = eadk_key_ok, g_bind[1] = eadk_key_back, g_bind[2] = eadk_key_toolbox, g_bind[3] = eadk_key_back;
+  g_bind[4] = eadk_key_backspace;
+  g_bind[5] = eadk_key_left, g_bind[6] = eadk_key_right, g_bind[7] = eadk_key_up, g_bind[8] = eadk_key_down;
 }
 static uint64_t scan, scan_prev;
 /* the key that went down this frame (an EADK key), -1 if none */
@@ -22,17 +24,17 @@ uint32_t plat_keys(void) {
   uint64_t k = eadk_keyboard_scan();
   scan_prev = scan, scan = k;
   uint32_t r = 0;
-  if (k & KEY(eadk_key_left)) r |= K_LEFT;
-  if (k & KEY(eadk_key_right)) r |= K_RIGHT;
-  if (k & KEY(eadk_key_up)) r |= K_UP;
-  if (k & KEY(eadk_key_down)) r |= K_DOWN;
+  if (k & (KEY(eadk_key_left) | KEY(g_bind[5]))) r |= K_LEFT;   /* (the arrows, and the keys given to the moves) */
+  if (k & (KEY(eadk_key_right) | KEY(g_bind[6]))) r |= K_RIGHT;
+  if (k & (KEY(eadk_key_up) | KEY(g_bind[7]))) r |= K_UP;
+  if (k & (KEY(eadk_key_down) | KEY(g_bind[8]))) r |= K_DOWN;
   if (k & KEY(g_bind[0])) r |= K_JUMP;
   if (k & KEY(g_bind[1])) r |= K_DASH;
   if (k & KEY(g_bind[2])) r |= K_GRAB;
   if (k & KEY(g_bind[3])) r |= K_TALK;
   if (k & (KEY(eadk_key_ok) | KEY(eadk_key_exe))) r |= K_OK;
   if (k & KEY(eadk_key_back)) r |= K_BACK;   /* (menus: cancel) */
-  if (k & KEY(eadk_key_backspace)) r |= K_PAUSE;
+  if (k & KEY(g_bind[4])) r |= K_PAUSE;
   if (k & KEY(eadk_key_var)) r |= K_JOURNAL;   /* (Input.MenuJournal: only the cheat code reads it) */
   if (k & (KEY(eadk_key_home) | KEY(eadk_key_on_off))) r |= K_HOME;
   if (k) r |= K_ANY;
