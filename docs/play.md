@@ -551,6 +551,20 @@ Walk the monkey over the plants and animals to pick up what they make, carry it 
 
 <br clear="right">
 
+## Tomb of the Mask
+
+<img src="../games/tombofthemask/docs/shot.png" width="320" align="right" alt="Tomb of the Mask">
+
+| Key | What it does |
+| --- | --- |
+| **Arrows** | Dash until you hit a wall |
+| **OK** | Use a shield |
+| **Back** | Pause (with Restart, How to play and Quit) |
+
+Dash up the tomb ahead of the rising flood, picking up dots and coins and dodging spikes, bats and other traps. The arcade climb goes on forever; the 200 stages each have three stars to find. Coins buy powerups and masks. Your progress is saved.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">
