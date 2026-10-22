@@ -26,7 +26,6 @@ REPO = "https://github.com/Mason363/NumPlay"
 EXTRAS = set()
 # games too big to fit next to NumPlay on the calculator: only on their own, in a section of their own
 ALONE = {
-    "tombofthemask": ("Tomb of the Mask", "dash through 200 original stages or climb in arcade mode, with 16 masks; adapted by Bobydeluxe"),
     "celeste": ("Celeste", "the whole climb up Celeste Mountain"),
     "hollowknight": ("Hollow Knight", "from King's Pass to Hornet in Greenpath"),
     "undertale": ("Undertale", "the whole Underground, to the barrier and the neutral ending"),
@@ -48,6 +47,7 @@ ALONE = {
     "donkeykong": ("Donkey Kong", "the 1981 arcade game: barrels, pies, elevators and rivets, up to Pauline"),
     "dune": ("Dune", "roll down the dunes and fly over the line, with the shop's 26 balls and 7 landscapes"),
     "monkeymart": ("Monkey Mart", "run a grocery mart as a monkey, both marts: crops, animals, machines and workers"),
+    "tombofthemask": ("Tomb of the Mask", "dash through the tomb: the endless arcade climb and all 200 stages, with the 16 masks"),
 }
 VARIANTS = [
     ("NumPlay-Invisible.nwa", "The same app, hidden: a blank icon with no name"),

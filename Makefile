@@ -18,7 +18,7 @@ PY ?= python3
 CARGO ?= cargo
 B = build/data
 # Conventional games honor a configurable output directory; special layouts are kept local.
-GAMES_REDIRECT = balatro blockblast breakout buckshot celeste championisland chess connectfour cookieclicker coreball dinorun donkeykong doodlejump doom dune finalearth2 flappybird flappydunk fnaf g2048 hillclimb hollowknight invaders isaac jetpackjoyride leveldevil minesweeper monkeymart numblocks numpowder numvisuals pacman portal pvz snake sokoban solitaire sonic stickmanhook subway sudoku suika towerblock twoplayer undertale uttt
+GAMES_REDIRECT = balatro blockblast breakout buckshot celeste championisland chess connectfour cookieclicker coreball dinorun donkeykong doodlejump doom dune finalearth2 flappybird flappydunk fnaf g2048 hillclimb hollowknight invaders isaac jetpackjoyride leveldevil minesweeper monkeymart numblocks numpowder numvisuals pacman portal pvz snake sokoban solitaire sonic stickmanhook subway sudoku suika tombofthemask towerblock twoplayer undertale uttt
 GAMES_OUT = dinorun
 GAME_REDIRECT_ARG = $(if $(filter $(1),$(GAMES_OUT)),OUT=../../$(B)/games/$(1),BUILD_DIR=../../$(B)/games/$(1))
 # the RAM the oldest calculator software that runs apps gives them (23.2: 148928 bytes; 25.2 gives 153676).
@@ -320,7 +320,7 @@ APP_stickmanhook = $(B)/games/stickmanhook/stickmanhook.nwa:StickmanHook.nwa
 APP_donkeykong = $(B)/games/donkeykong/donkeykong.nwa:DonkeyKong.nwa
 APP_dune = $(B)/games/dune/dune.nwa:Dune.nwa
 APP_monkeymart = $(B)/games/monkeymart/monkeymart.nwa:MonkeyMart.nwa
-APP_tombofthemask = games/tombofthemask/output/tombofthemask.nwa:TombOfTheMask.nwa
+APP_tombofthemask = $(B)/games/tombofthemask/tombofthemask.nwa:TombOfTheMask.nwa
 # the big games' modules are made from these (the kit)
 $(foreach g,$(XL_GAMES),$(eval MOD_$(g) = $$(word 1,$$(subst :, ,$$(APP_$(g))))))
 
@@ -353,6 +353,7 @@ apps: | $(B)
 	$(MAKE) -C games/donkeykong build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/donkeykong
 	$(MAKE) -C games/dune build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/dune
 	$(MAKE) -C games/monkeymart build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/monkeymart
+	$(MAKE) -C games/tombofthemask build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/tombofthemask
 	cd games/tetris/tetris && NWLINK="$(NWLINK)" $(CARGO) build --release --quiet
 	cp $(word 1,$(subst :, ,$(APP_numdash))) $(B)/apps/$(word 2,$(subst :, ,$(APP_numdash)))
 	cp $(word 1,$(subst :, ,$(APP_crossyroad))) $(B)/apps/$(word 2,$(subst :, ,$(APP_crossyroad)))
@@ -383,14 +384,8 @@ apps: | $(B)
 	cp $(word 1,$(subst :, ,$(APP_donkeykong))) $(B)/apps/$(word 2,$(subst :, ,$(APP_donkeykong)))
 	cp $(word 1,$(subst :, ,$(APP_dune))) $(B)/apps/$(word 2,$(subst :, ,$(APP_dune)))
 	cp $(word 1,$(subst :, ,$(APP_monkeymart))) $(B)/apps/$(word 2,$(subst :, ,$(APP_monkeymart)))
+	cp $(word 1,$(subst :, ,$(APP_tombofthemask))) $(B)/apps/$(word 2,$(subst :, ,$(APP_tombofthemask)))
 	arm-none-eabi-strip --strip-unneeded $(B)/apps/Tetris.nwa
-
-# Tomb of the Mask installs separately, outside the launcher game list.
-apps: $(B)/apps/TombOfTheMask.nwa
-$(B)/apps/TombOfTheMask.nwa: FORCE | $(B)
-	$(MAKE) --no-print-directory -C games/tombofthemask build NWLINK="$(NWLINK)" PYTHON="$(PY)"
-	mkdir -p $(B)/apps
-	cp games/tombofthemask/output/tombofthemask.nwa $@
 
 STD_APPS = $(foreach g,$(STD_GAMES),$(B)/apps/$(NWA_$(g)))
 apps: $(STD_APPS)
