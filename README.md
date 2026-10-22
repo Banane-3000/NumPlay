@@ -27,7 +27,7 @@
 </p>
 
 <p align="center">
-  <a href="#how-to-install"><b>How to install</b></a> &nbsp;·&nbsp; <a href="docs/play.md"><b>How to play</b></a> &nbsp;·&nbsp; <a href="https://github.com/Mason363/NumPlay/releases/latest"><b>All downloads</b></a> &nbsp;·&nbsp; <a href="#roadmap"><b>Roadmap</b></a> &nbsp;·&nbsp; <a href="docs/make-a-game.md"><b>Make a game</b></a>
+  <a href="#how-to-install"><b>How to install</b></a> &nbsp;·&nbsp; <a href="docs/play.md"><b>How to play</b></a> &nbsp;·&nbsp; <a href="https://github.com/Mason363/NumPlay/releases/latest"><b>All downloads</b></a> &nbsp;·&nbsp; <a href="CHANGELOG.md"><b>What's new</b></a> &nbsp;·&nbsp; <a href="#roadmap"><b>Roadmap</b></a> &nbsp;·&nbsp; <a href="docs/make-a-game.md"><b>Make a game</b></a>
 </p>
 
 <p align="center">
@@ -291,6 +291,11 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] My Little Universe
 - [ ] Famidash, made for the calculator (not through an emulator)
 - [ ] Mr. Bullet
+- [ ] Hungry Shark Evolution and Hungry Shark World
+- [ ] Castle Crashers
+- [ ] Hotline Miami
+- [ ] Meowdoku
+- [ ] More of Retro-Go: Game & Watch, SNES, Mega Drive, SG-1000 and ColecoVision
 
 ## Credits
 
