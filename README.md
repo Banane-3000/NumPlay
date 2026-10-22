@@ -115,7 +115,7 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
     <td align="center"><a href="games/subway/README.md"><img src="docs/media/thumb_subway.png" width="200" alt="Subway Surfers"><br><b>Subway Surfers</b></a><br><sub>The endless run down the tracks, in 3D</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/SubwaySurfers.nwa">Download</a></td>
   </tr>
   <tr>
-    <td align="center"><a href="games/hillclimb/README.md"><img src="docs/media/thumb_hillclimb.png" width="200" alt="Hill Climb Racing"><br><b>Hill Climb Racing</b></a><br><sub>Ten stages, eight vehicles and all their upgrades</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/HillClimbRacing.nwa">Download</a></td>
+    <td align="center"><a href="games/hillclimb/README.md"><img src="docs/media/thumb_hillclimb.png" width="200" alt="Hill Climb Racing"><br><b>Hill Climb Racing</b></a><br><sub>Thirteen stages, thirteen vehicles and all their upgrades</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/HillClimbRacing.nwa">Download</a></td>
     <td align="center"><a href="games/cookieclicker/README.md"><img src="docs/media/thumb_cookieclicker.png" width="200" alt="Cookie Clicker"><br><b>Cookie Clicker</b></a><br><sub>The whole game with its own pictures: ascension, the dragon, the Grimoire and the Pantheon</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/CookieClicker.nwa">Download</a></td>
     <td align="center"><a href="games/leveldevil/README.md"><img src="docs/media/thumb_leveldevil.png" width="200" alt="Level Devil"><br><b>Level Devil</b></a><br><sub>Unept's troll platformer: the game's 80 rooms, with their own traps</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/LevelDevil.nwa">Download</a></td>
   </tr>
@@ -288,7 +288,7 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Temple Run
 - [ ] Deltarune: Chapter 1, and each later chapter as an app of its own
 - [ ] Hollow Knight: more of Hallownest after Greenpath
-- [ ] Hill Climb Racing: the rest of the stages and vehicles
+- [ ] Hill Climb Racing: the stages and vehicles added after version 1.10.2
 - [ ] Tower Destiny Survive
 - [ ] My Little Universe
 - [ ] Famidash, made for the calculator (not through an emulator)

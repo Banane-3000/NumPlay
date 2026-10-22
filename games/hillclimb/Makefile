@@ -41,10 +41,15 @@ LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
 .PHONY: build check clean host test data
 build: $(BUILD_DIR)/hillclimb.nwa
 
-# apps get 133652 bytes of RAM on custom builds of Epsilon 25.2 (148928 or more on official ones)
+# apps get 133652 bytes of RAM on custom builds of Epsilon 25.2 (148928 or more on official ones); installed on its
+# own, the app must fit the calculator's space for apps (0x90200000 to 0x903F0000 in its flash)
+RAM_LENGTH = 133652
+APP_SPACE = 2031616
 check: $(BUILD_DIR)/hillclimb.nwa
-	$(Q) $(NWLINK) nwa-bin --ram-length 133652 $< $(BUILD_DIR)/hillclimb.bin
-	@echo "BIN     $(BUILD_DIR)/hillclimb.bin: $$(wc -c < $(BUILD_DIR)/hillclimb.bin) bytes"
+	$(Q) $(NWLINK) nwa-bin --ram-length $(RAM_LENGTH) $< $(BUILD_DIR)/hillclimb.bin
+	@n=$$(wc -c < $(BUILD_DIR)/hillclimb.bin); \
+	  echo "BIN     $(BUILD_DIR)/hillclimb.bin: $$n bytes, $$(( $(APP_SPACE) - n )) to spare of the app space"; \
+	  [ $$n -le $(APP_SPACE) ] || { echo "hillclimb.nwa is bigger than the calculator's app space ($(APP_SPACE) bytes)"; exit 1; }
 
 $(BUILD_DIR)/data.o: src/data.S src/data.bin | $(BUILD_DIR)
 	$(Q) $(CC) -c -DDATA_BIN='"src/data.bin"' $< -o $@

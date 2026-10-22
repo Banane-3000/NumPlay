@@ -52,6 +52,15 @@ PICTURES = [
     ("SNOW", "Snow.png", None, ("w", 20), "c"),
     ("GRASS", "Countryside_Particle.png", None, ("w", 20), "c"),
     ("SLIME", "Alien-slime.png", None, ("w", 20), "c"),
+    ("DIRT_MUD", "game/dirt-mud.png", None, ("w", 20), "c"),
+    ("FIRE", "game/fire.png", None, ("w", 20), "c"),
+    # the new vehicles' parts on bodies of their own: the tractor's exhaust pipe (0.836571 x 1.67314 m), the snow
+    # mobile's ski (1.861818 x 0.930909 m across its two ski wheels), the bus' passengers' heads (0.96 m squares)
+    ("EXHAUST", "game/car-tractor-exhaust.png", None, ("ppm", 64 / 0.836571), "c"),
+    ("SKI", "Car-snowmobile-ski.png", None, ("ppm", 256 / 1.861818), "c"),
+    ("PASS1", "game/passanger1-head.png", None, ("ppm", 256 / 0.96), "c"),
+    ("PASS2", "game/passanger2-head.png", None, ("ppm", 256 / 0.96), "c"),
+    ("PASS3", "game/passanger3-head.png", None, ("ppm", 256 / 0.96), "c"),
     # skies (a column of colours from top to bottom) and the stages' ground
     ("SKY", "Sky-bg.png", None, ("size", 1, 32), "c"),
     ("SKY_CAVE", "Sky-bg-cave.png", None, ("size", 1, 32), "c"),
@@ -60,6 +69,9 @@ PICTURES = [
     ("SKY_ARCTIC_CAVE", "Sky-bg-arctic-cave.png", None, ("size", 1, 32), "c"),
     ("SKY_HIGHWAY", "Highway-sky-bg.png", None, ("size", 1, 32), "c"),
     ("SKY_MOON", "Moon-bg.png", None, ("size", 1, 64), "c"),
+    ("SKY_CLIFFS", "game/sky-bg-cliffs.png", None, ("size", 1, 32), "c"),
+    ("SKY_MUD", "game/sky-bg-mud.png", None, ("size", 1, 32), "c"),
+    ("SKY_VOLCANO", "game/sky-bg-volcano.png", None, ("size", 1, 32), "c"),
     ("SURF_COUNTRY", "Lowres-terrain-surface.png", None, ("size", 256, 16), "c"),
     ("GROUND_COUNTRY", "Lowres-terrain-ground.png", None, ("size", 128, 128), "c"),
     ("SURF_DESERT", "Lowres-desert-surface.png", None, ("size", 256, 16), "c"),
@@ -77,6 +89,14 @@ PICTURES = [
     ("GROUND_ALIEN", "Lowres-terrain-alien.png", None, ("size", 128, 128), "c"),
     ("SURF_FOREST", "Lowres-terrain-forest-surface.png", None, ("size", 256, 16), "c"),
     ("GROUND_FOREST", "Lowres-terrain-forest-ground.png", None, ("size", 128, 128), "c"),
+    ("GROUND_CLIFFS", "game/lowres-terrain-cliffs-ground.png", None, ("size", 128, 128), "c"),
+    ("SURF_MUD", "game/lowres-terrain-mud-surface.png", None, ("size", 256, 16), "c"),
+    ("GROUND_MUD", "game/lowres-terrain-mud.png", None, ("size", 128, 128), "c"),
+    ("SURF_VOLCANO", "game/lowres-terrain-volcano-surface.png", None, ("size", 256, 16), "c"),
+    ("GROUND_VOLCANO", "game/lowres-terrain-volcano.png", None, ("size", 128, 128), "c"),
+    # the pits' surfaces (Pit::draw: mud.png, lava.png)
+    ("PIT_MUD", "game/mud.png", None, ("size", 128, 32), "c"),
+    ("PIT_LAVA", "game/lava.png", None, ("size", 128, 16), "c"),
     # the menus
     ("STAGE_COUNTRY", "Stage-icon-countryside.png", None, ("size", 144, 72), "c"),
     ("STAGE_DESERT", "Stage-icon-desert.png", None, ("size", 144, 72), "c"),
@@ -88,6 +108,9 @@ PICTURES = [
     ("STAGE_ALIEN", "Stage-icon-alienplanet.png", None, ("size", 144, 72), "c"),
     ("STAGE_ARCTIC_CAVE", "Stage-icon-arctic-cave.png", None, ("size", 144, 72), "c"),
     ("STAGE_FOREST", "Stage-icon-forest.png", None, ("size", 144, 72), "c"),
+    ("STAGE_MOUNTAIN", "game/stage-icon-cliffs.png", None, ("size", 144, 72), "c"),
+    ("STAGE_MUDPOOL", "game/stage-icon-mud.png", None, ("size", 144, 72), "c"),
+    ("STAGE_VOLCANO", "game/stage-icon-volcano.png", None, ("size", 144, 72), "c"),
     ("STAGE_LOCKED", "Stage-icon-locked.png", None, ("size", 144, 72), "c"),
     ("ICON_JEEP", "Mission-vehicle-jeep.png", None, ("w", 112), "c"),
     ("ICON_BIKE", "Mission-vehicle-bike.png", None, ("w", 112), "c"),
@@ -97,6 +120,11 @@ PICTURES = [
     ("ICON_RALLY", "Mission-vehicle-rallycar.png", None, ("w", 112), "c"),
     ("ICON_BUGGY", "Mission-vehicle-dunebuggy.png", None, ("w", 112), "c"),
     ("ICON_TANK", "Mission-vehicle-tank.png", None, ("w", 112), "c"),
+    ("ICON_TRACTOR", "Mission-vehicle-tractor.png", None, ("w", 112), "c"),
+    ("ICON_BUS", "Mission-vehicle-touristbus.png", None, ("w", 112), "c"),
+    ("ICON_DIESEL", "Mission-vehicle-dieseltruck.png", None, ("w", 112), "c"),
+    ("ICON_SNOWMOBILE", "Mission-vehicle-snowmobile.png", None, ("w", 112), "c"),
+    ("ICON_TRUCK", "Mission-vehicle-truck.png", None, ("w", 112), "c"),
     ("UP_ENGINE", "MainMenuUpgradeEngine.png", None, ("w", 40), "c"),
     ("UP_SUSPENSION", "MainMenuUpgradeSuspension.png", None, ("w", 40), "c"),
     ("UP_TIRES", "MainMenuUpgradeTires.png", None, ("w", 40), "c"),
@@ -120,6 +148,16 @@ PICTURES = [
     ("START", "Icon-start.png", None, ("w", 30), "c"),
 ]
 
+# the pickers' strips: each vehicle's and stage's picture small (48 colours)
+THUMBS_V = ["jeep", "bike", "monster", "quadbike", "racecar", "rallycar", "dunebuggy", "tank", "tractor", "touristbus",
+            "dieseltruck", "snowmobile", "truck"]
+THUMBS_S = ["Stage-icon-countryside.png", "Stage-icon-desert.png", "Stage-icon-arctic.png", "Stage-icon-highway.png",
+            "Stage-icon-cave.png", "Stage-icon-moon.png", "Stage-icon-mars.png", "Stage-icon-alienplanet.png",
+            "Stage-icon-arctic-cave.png", "Stage-icon-forest.png", "game/stage-icon-cliffs.png",
+            "game/stage-icon-mud.png", "game/stage-icon-volcano.png"]
+PICTURES += [(f"THUMB_V{i}", f"Mission-vehicle-{n}.png", "trim", ("h", 18), "c", 48) for i, n in enumerate(THUMBS_V)]
+PICTURES += [(f"THUMB_S{i}", n, None, ("size", 34, 17), "c", 48) for i, n in enumerate(THUMBS_S)]
+
 # the fonts, from Teko: name, the height of its capitals in pixels, weight, outline width
 FONTS = [("FONT_S", 9, 560, 1), ("FONT_M", 13, 600, 1.5), ("FONT_L", 20, 620, 2), ("FONT_XL", 34, 640, 3)]
 
@@ -131,7 +169,17 @@ def ref_path(ref, name):
 def load(ref, name):
     if name == "buggy-tire":   # the Dune Buggy's tyre, from the picture of the whole buggy
         return Image.open(ref_path(ref, "Dune_Buggy_(Sprite).png")).convert("RGBA").crop((6, 133, 86, 213))
+    if name.startswith("game/"):   # the game's own files (tools/fetch.py: its 1.10.2 package's assets)
+        return Image.open(os.path.join(ref, name)).convert("RGBA")
     return Image.open(ref_path(ref, name)).convert("RGBA")
+
+
+def trimmed(im, piv):
+    """The picture without its fully clear margins, and its pivot moved with it."""
+    box = im.getbbox()
+    if not box:
+        return im, piv
+    return im.crop(box), (piv[0] - box[0], piv[1] - box[1])
 
 
 def premul_resize(im, w, h):
@@ -178,8 +226,8 @@ def rgb565(r, g, b):
     return (r >> 3) << 11 | (g >> 2) << 5 | b >> 3
 
 
-def picture(im, ppm, pivot, opaque=False):
-    cols, idx = quantize(im)
+def picture(im, ppm, pivot, opaque=False, colors=256):
+    cols, idx = quantize(im, colors)
     h, w = idx.shape
     flags = 1 if opaque else 0
     out = bytearray(struct.pack("<HHHHHhhH", w, h, len(cols), flags, int(round(ppm * 4)),
@@ -257,19 +305,33 @@ def vehicle_pictures(ref):
 
     for v in art.VEHICLES:
         cname, wname = "CH_" + v["id"].upper(), "WHEEL_" + v["id"].upper()
-        im, piv = sized_on(load(ref, v["chassis"]), v["size"])
+        cim = load(ref, v["chassis"])
+        for (upic, at) in v.get("under", []):   # pictures the game puts behind the chassis' (its children at z -1)
+            u = load(ref, upic)
+            back = Image.new("RGBA", cim.size)
+            back.alpha_composite(u, (round(at[0] - u.width / 2), round(at[1] - u.height / 2)))
+            back.alpha_composite(cim)
+            cim = back
+        im, piv = sized_on(cim, v["size"])
+        if v.get("trim"):
+            im, piv = trimmed(im, piv)
         pics.append((cname, im, VPPM, piv, False))
-        wim = load(ref, v["wheel"])
-        if "wheel_px" in v:   # a tyre cropped from a bigger picture: its radius in pixels is the wheel's 1.04 r
-            side = wim.width / v["wheel_px"] * 1.04 * v["wheel_r"]
+        if "wheel_reuse" in v:   # the same tyre picture as another vehicle's
+            wname = "WHEEL_" + v["wheel_reuse"].upper()
         else:
-            side = 2.15 * v["wheel_r"]
-        im, piv = sized_on(wim, (side, side * wim.height / wim.width))
-        pics.append((wname, im, VPPM, piv, False))
+            wim = load(ref, v["wheel"])
+            if "wheel_px" in v:   # a tyre cropped from a bigger picture: its radius in pixels is the wheel's 1.04 r
+                side = wim.width / v["wheel_px"] * 1.04 * v["wheel_r"]
+            else:
+                side = v.get("wheel_side", 2.15) * v["wheel_r"]
+            im, piv = sized_on(wim, (side, side * wim.height / wim.width))
+            pics.append((wname, im, VPPM, piv, False))
         layers = []
         for (lpic, size, at, front) in v.get("layers", []):
-            lname = "LAYER_" + lpic.split(".")[0].upper().replace("-", "_")
+            lname = "LAYER_" + lpic.split("/")[-1].split(".")[0].upper().replace("-", "_")
             im, piv = sized_on(load(ref, lpic), size)
+            if v.get("trim"):
+                im, piv = trimmed(im, piv)
             pics.append((lname, im, VPPM, piv, False))
             layers.append((lname, at, front))
         tubes = [(p[0], p[1], axi, col, r) for (p, axi, col, r) in v.get("tubes", [])]
@@ -367,17 +429,20 @@ def icon(ref):
 def main():
     ref = sys.argv[1]
     pics = []
-    for name, file, crop, how, pivot in PICTURES:
+    colors = {}
+    for name, file, crop, how, pivot, *more in PICTURES:
         im, k, ppm = sized(load(ref, file), how, crop)
         if pivot == "c":
             pv = (im.width / 2, im.height / 2)
         else:
             pv = (pivot[0] * k, pivot[1] * k)
-        opaque = name.startswith(("GROUND_", "SKY", "MENU_BG", "STAGE_"))
+        opaque = name.startswith(("GROUND_", "SKY", "MENU_BG", "STAGE_", "PIT_", "THUMB_S"))
         pics.append((name, im, ppm, pv, opaque))
+        if more:
+            colors[name] = more[0]
     vp, art_lines = vehicle_pictures(ref)
     pics += vp
-    blobs = [picture(im, ppm, pv, opaque) for _, im, ppm, pv, opaque in pics]
+    blobs = [picture(im, ppm, pv, opaque, colors.get(name, 256)) for name, im, ppm, pv, opaque in pics]
     ttf = os.path.join(ref, "fonts", "Teko.ttf")
     fonts = [font_data(ttf, cap, wt, ol) for _, cap, wt, ol in FONTS]
     head = 16 + 4 * (len(blobs) + len(fonts))

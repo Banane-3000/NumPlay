@@ -6,6 +6,9 @@
 - REF/wiki/*.png: the game's own pictures, as the Hill Climb Racing Wiki (hillclimbracing.fandom.com) keeps them:
   the vehicles' chassis and wheels, Bill, the coins and fuel, the stages' sky, surface and ground, their icons,
   the vehicles' and upgrades' icons, the pedals, the meters and the menus
+- REF/game/*.png: the pictures the wiki doesn't keep (the Tractor, Tourist Bus, Super Diesel 4x4 and Truck, the
+  bus' passengers, the Mountain's, Mudpool's and Volcano's sky, ground and icon, mud, lava and fire), from the game's
+  own files: the assets of its Android package 1.10.2, as archive.org keeps it (REF/game/hcr-1.10.2.apk, only read)
 - REF/fonts/Teko.ttf: Teko (SIL Open Font License), the closest free font to the game's own
 
 Files already there are kept: run it again to fetch only what is missing."""
@@ -16,10 +19,21 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+import zipfile
 
 API = "https://hillclimbracing.fandom.com/api.php"
 UA = {"User-Agent": "NumPlay-HillClimb/1.0 (fan port for the NumWorks calculator; one-time asset fetch)"}
 FONT = ("Teko.ttf", "https://raw.githubusercontent.com/google/fonts/main/ofl/teko/Teko%5Bwght%5D.ttf")
+GAME_APK = ("hcr-1.10.2.apk", "https://archive.org/download/hill-climb-racing-v.-1.10.2/Hill%20Climb%20Racing%20v.1.10.2%20MOD.apk",
+            "3f109505b18b4c707b9fd6570b2eeebb")
+GAME_FILES = [
+    "car-tractor.png", "car-tractor-tire.png", "car-tractor-exhaust.png", "car-tractor-steering-wheel.png",
+    "car-touristbus.png", "passanger1-head.png", "passanger2-head.png", "passanger3-head.png", "car-pickup.png",
+    "car-truck.png", "sky-bg-cliffs.png", "sky-bg-mud.png", "sky-bg-volcano.png", "lowres-terrain-cliffs-ground.png",
+    "lowres-terrain-mud.png", "lowres-terrain-mud-surface.png", "lowres-terrain-volcano.png",
+    "lowres-terrain-volcano-surface.png", "stage-icon-cliffs.png", "stage-icon-mud.png", "stage-icon-volcano.png",
+    "mud.png", "lava.png", "fire.png", "dirt-mud.png",
+]
 
 FILES = [
     # the vehicles: chassis, wheels, parts
@@ -52,7 +66,9 @@ FILES = [
     # the menus
     "Mission-vehicle-jeep.png", "Mission-vehicle-bike.png", "Mission-vehicle-monster.png",
     "Mission-vehicle-quadbike.png", "Mission-vehicle-racecar.png", "Mission-vehicle-rallycar.png",
-    "Mission-vehicle-dunebuggy.png", "Mission-vehicle-tank.png",
+    "Mission-vehicle-dunebuggy.png", "Mission-vehicle-tank.png", "Mission-vehicle-tractor.png",
+    "Mission-vehicle-touristbus.png", "Mission-vehicle-dieseltruck.png", "Mission-vehicle-snowmobile.png",
+    "Mission-vehicle-truck.png", "Car-snowmobile-body.png", "Car-snowmobile-ski.png",
     "MainMenuUpgradeEngine.png", "MainMenuUpgradeSuspension.png", "MainMenuUpgradeTires.png",
     "MainMenuUpgradeAWD.png", "MainMenuUpgradeBikeRotation.png", "MainMenuUpgradeDownforce.png",
     "MainMenuUpgradeFuel.png",
@@ -94,6 +110,22 @@ def main():
             with open(os.path.join(wiki, name), "wb") as f:
                 f.write(data)
             print("wiki", name)
+    game = os.path.join(ref, "game")
+    os.makedirs(game, exist_ok=True)
+    if any(not os.path.exists(os.path.join(game, n)) for n in GAME_FILES):
+        apk = os.path.join(game, GAME_APK[0])
+        if not os.path.exists(apk):
+            data = get(GAME_APK[1])
+            if hashlib.md5(data).hexdigest() != GAME_APK[2]:
+                raise SystemExit("fetch: the game's package differs from the one the port was made from")
+            with open(apk, "wb") as f:
+                f.write(data)
+            print("game", GAME_APK[0])
+        with zipfile.ZipFile(apk) as z:   # (only its pictures are read)
+            for n in GAME_FILES:
+                with open(os.path.join(game, n), "wb") as f:
+                    f.write(z.read("assets/" + n))
+                print("game", n)
     fonts = os.path.join(ref, "fonts")
     os.makedirs(fonts, exist_ok=True)
     if not os.path.exists(os.path.join(fonts, FONT[0])):

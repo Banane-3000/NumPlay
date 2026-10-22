@@ -2,7 +2,8 @@
  *
  * A stage's ground is the game's own formula (its Stage*::getHeightAtX: sums of sines that grow with the distance),
  * sampled every 0.5 m like the game's terrain. Rope bridges cross canyons every 70 to 210 m on most stages (the road
- * resumes after one at the height it had before it); caves have a ceiling over the ground; the Forest has pine trees.
+ * resumes after one at the height it had before it); caves have a ceiling over the ground; the Forest has pine trees;
+ * the Mudpool and the Volcano have pits of mud and lava (the road resumes after one as after a bridge).
  * Coins come in a chunk every 30 m, worth more the further you go, fuel cans every few chunks, all as the game's
  * GameContentLayer places them. Each stage has levels, kept from run to run, each with its bonus. */
 #ifndef HC_STAGE_H
@@ -14,8 +15,9 @@ extern "C" {
 #endif
 
 enum { ST_COUNTRYSIDE, ST_DESERT, ST_ARCTIC, ST_HIGHWAY, ST_CAVE, ST_MOON, ST_MARS, ST_ALIEN, ST_ARCTIC_CAVE,
-       ST_FOREST, NSTAGES };
+       ST_FOREST, ST_MOUNTAIN, ST_MUDPOOL, ST_VOLCANO, NSTAGES };
 enum { FEAT_NONE, FEAT_BRIDGES, FEAT_TREES, FEAT_ICICLES };
+enum { PIT_NONE, PIT_MUD, PIT_LAVA };
 
 typedef struct {
   const char *name;
@@ -30,6 +32,7 @@ typedef struct {
   uint16_t lvl_base, lvl_step;  /* the game's levels (StageInfo): level n (from 0) ends at base + step n */
   uint16_t lvl_mult;            /* and pays mult x that + 2500 */
   uint32_t surf_color;          /* the surface's colour (particles, the map) */
+  uint8_t pits;                 /* PIT_*: pits of mud or lava (then no bridges: they share their memory) */
 } Stage;
 
 extern const Stage stages[NSTAGES];
@@ -42,7 +45,7 @@ float stage_floor(float x);
 /* the ground as it is built: a point every 0.5 m (k: x = -40 + k / 2), lines between them */
 float stage_vertex(int k);
 float stage_ground(float x);
-/* the ground or a bridge's deck under x (getHeightWithBridgeOrPit) */
+/* the ground, a bridge's deck or a pit's surface under x (getHeightWithBridgeOrPit) */
 float stage_deck(float x);
 /* a cave's ceiling over x (GameContentLayer::getCeilingHeightAt), and as it is built (points every 0.5 m) */
 bool stage_ceiling(float x, float *y);
@@ -52,6 +55,12 @@ bool stage_roof(float x, float *y);
 /* bridges: the k-th one (from 0) starts at x0, is len meters long, at height y; false if none */
 bool stage_bridge_k(int k, float *x0, float *len, float *y);
 int stage_bridge_first(float x);   /* the first bridge that ends after x */
+
+/* pits (Mudpool, Volcano): the k-th one (from 0) starts at x0, is len meters long, its surface at y; false if
+ * none. Their depth (Pit::getDepth) */
+bool stage_pit_k(int k, float *x0, float *len, float *y);
+int stage_pit_first(float x);      /* the first pit that ends after x */
+float stage_pit_depth(void);
 
 /* trees (the Forest): the k-th one's foot; fallen ones are kept in a bit set */
 bool stage_tree(int k, float *x, float *y);

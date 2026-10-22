@@ -8,7 +8,7 @@
 
 #define SAVE_NAME "hillclimb.sav"
 #define COPY_NAME "hillclimb_saves.py"
-#define MAGIC 0x31524348u   /* "HCR1" */
+#define MAGIC 0x31524348u   /* "HCR1" (all versions; the size and the version tell them apart) */
 
 Save sv;
 
@@ -16,7 +16,32 @@ typedef struct {
   uint32_t magic, size;
   Save s;
 } SaveFile;
-_Static_assert(offsetof(Save, stage_level) == SAVE_V1_SIZE, "the old saves' part comes first");
+
+/* versions 1 and 2: 8 vehicles, 10 stages (version 1 without the stages' levels) */
+#define OLD_V 8
+#define OLD_S 10
+typedef struct {
+  uint32_t coins;
+  uint16_t vehicles, stages;
+  uint8_t level[OLD_V][4];
+  uint16_t best[OLD_S][OLD_V];
+  uint8_t vehicle, stage, seen_help, pad;
+  uint32_t runs, meters, flips, best_air_ms, coins_earned;
+  uint8_t stage_level[OLD_S];
+  uint8_t pad2[2];
+} SaveV2;
+#define SAVE_V1_SIZE 224
+_Static_assert(offsetof(SaveV2, stage_level) == SAVE_V1_SIZE, "version 1 is version 2 without the stages' levels");
+_Static_assert(sizeof(SaveV2) == 236, "version 2's size");
+/* (tests/check.py and NumPlay's tests/test_games.py read these) */
+_Static_assert(sizeof(Save) == 444 && offsetof(Save, best) == 64 && offsetof(Save, runs) == 408 &&
+               offsetof(Save, stage_level) == 428, "version 3's layout");
+/* the upgrades' last levels and prices before version 3 (they were not the game's: version 3 has the game's own) */
+static const uint8_t OLD_MAX[OLD_V][4] = {{13, 14, 16, 10}, {12, 14, 16, 10}, {13, 14, 15, 10}, {13, 14, 16, 10},
+                                         {12, 14, 16, 12}, {14, 14, 17, 10}, {15, 15, 15, 20}, {15, 15, 15, 20}};
+static const uint16_t OLD_COST[OLD_V][4] = {{1000, 1000, 1000, 1000}, {1500, 1000, 1000, 3000}, {1500, 1200, 1200, 1500},
+                                           {1500, 1200, 1200, 1200}, {1500, 1500, 1500, 2500}, {2000, 2000, 2000, 3000},
+                                           {3000, 3000, 3000, 3000}, {3000, 3000, 3000, 3000}};
 
 static const char copy_head[] =
   "# Hill Climb Racing keeps a copy of your progress here, so\n"
@@ -100,22 +125,61 @@ void save_restore_copy(void) {
 
 static void defaults(void) {
   memset(&sv, 0, sizeof sv);
+  sv.version = SAVE_VERSION;
   sv.vehicles = 1, sv.stages = 1;
   for (int v = 0; v < NVEHICLES; v++)
     for (int u = 0; u < 4; u++) sv.level[v][u] = 1;
+}
+
+/* a version 1 or 2 save into version 3: everything kept; an upgrade above its game's last level is brought down to it
+ * and what its levels above cost comes back as coins */
+static void from_v2(const SaveV2 *o, bool v1) {
+  sv.coins = o->coins;
+  sv.vehicles = o->vehicles & ((1 << OLD_V) - 1), sv.stages = o->stages & ((1 << OLD_S) - 1);
+  uint64_t refund = 0;
+  for (int v = 0; v < OLD_V; v++)
+    for (int u = 0; u < 4; u++) {
+      int l = o->level[v][u];
+      if (l < 1 || l > OLD_MAX[v][u]) l = 1;
+      for (; l > vehicles[v].max[u]; l--) refund += (uint64_t)OLD_COST[v][u] * (uint64_t)(l * l);
+      sv.level[v][u] = (uint8_t)l;
+    }
+  uint64_t c = sv.coins + refund;
+  sv.coins = c > 0xFFFFFFFFu ? 0xFFFFFFFFu : (uint32_t)c;
+  for (int st = 0; st < OLD_S; st++)
+    for (int v = 0; v < OLD_V; v++) sv.best[st][v] = o->best[st][v];
+  sv.vehicle = o->vehicle, sv.stage = o->stage, sv.seen_help = o->seen_help;
+  sv.runs = o->runs, sv.meters = o->meters, sv.flips = o->flips, sv.best_air_ms = o->best_air_ms;
+  sv.coins_earned = o->coins_earned;
+  if (!v1)
+    for (int st = 0; st < OLD_S; st++) sv.stage_level[st] = o->stage_level[st];
 }
 
 void save_load(void) {
   defaults();
   uint32_t len;
   const uint8_t *d = plat_load(SAVE_NAME, &len);
-  if (!d || (len != sizeof(SaveFile) && len != 8 + SAVE_V1_SIZE)) return;
-  SaveFile f;
-  memset(&f, 0, sizeof f);
-  memcpy(&f, d, len);
-  if (f.magic != MAGIC || f.size != len - 8) return;
-  sv = f.s;
+  if (!d || len < 8) return;
+  uint32_t magic, size;
+  memcpy(&magic, d, 4);
+  memcpy(&size, d + 4, 4);
+  if (magic != MAGIC || size != len - 8) return;
+  if (size == sizeof(Save)) {
+    Save s;
+    memcpy(&s, d + 8, sizeof s);
+    if (s.version != SAVE_VERSION) return;
+    sv = s;
+  } else if (size == sizeof(SaveV2) || size == SAVE_V1_SIZE) {
+    SaveV2 o;
+    memset(&o, 0, sizeof o);
+    memcpy(&o, d + 8, size);
+    from_v2(&o, size == SAVE_V1_SIZE);
+  } else {
+    return;
+  }
   /* (whatever the file says, the first vehicle and stage are owned and levels stay in range) */
+  sv.version = SAVE_VERSION;
+  sv.vehicles &= (1 << NVEHICLES) - 1, sv.stages &= (1 << NSTAGES) - 1;
   sv.vehicles |= 1, sv.stages |= 1;
   if (sv.vehicle >= NVEHICLES || !(sv.vehicles >> sv.vehicle & 1)) sv.vehicle = 0;
   if (sv.stage >= NSTAGES || !(sv.stages >> sv.stage & 1)) sv.stage = 0;
@@ -127,6 +191,7 @@ void save_load(void) {
 bool save_write(void) {
   SaveFile f;
   memset(&f, 0, sizeof f);
+  sv.version = SAVE_VERSION;
   f.magic = MAGIC, f.size = sizeof(Save), f.s = sv;
   bool ok = plat_save(SAVE_NAME, &f, sizeof f);
   copy_write();

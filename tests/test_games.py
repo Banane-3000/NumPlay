@@ -357,11 +357,11 @@ CHECKS = {
               lambda v: v[:4] == b"S1SV" and v[6] == 1 and struct.unpack_from("<I", v, 28)[0] > 600),
     # a simulation saved ("NPWD"); after the reinstall, from the copy, it goes on and is saved again
     "numpowder": (lambda v: v[:4] == b"NPWD",) * 2,
-    # a run banked ("HCR1", runs at 212) with a best on the Countryside (at 48); after the reinstall, from the copy,
-    # a second one
-    "hillclimb": (lambda v: v[:4] == b"HCR1" and struct.unpack_from("<I", v, 212)[0] == 1
-                  and struct.unpack_from("<H", v, 48)[0] > 0,
-                  lambda v: v[:4] == b"HCR1" and struct.unpack_from("<I", v, 212)[0] == 2),
+    # a run banked ("HCR1", save version 3 at 8, runs at 416) with a best on the Countryside (at 72); after the
+    # reinstall, from the copy, a second one
+    "hillclimb": (lambda v: v[:4] == b"HCR1" and struct.unpack_from("<H", v, 8)[0] == 3
+                  and struct.unpack_from("<I", v, 416)[0] == 1 and struct.unpack_from("<H", v, 72)[0] > 0,
+                  lambda v: v[:4] == b"HCR1" and struct.unpack_from("<I", v, 416)[0] == 2),
     # a game saved ("HKSV", then the play time at 152); after the reinstall, from the copy, it goes on
     "hollowknight": (lambda v: v[:4] == b"HKSV" and struct.unpack_from("<f", v, 152)[0] > 0,
                      lambda v: v[:4] == b"HKSV" and struct.unpack_from("<f", v, 152)[0] > 10),

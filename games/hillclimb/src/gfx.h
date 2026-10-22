@@ -55,9 +55,13 @@ typedef struct {
   uint8_t surf, ground, csurf, cground;   /* pictures: the strip and the ground, under it and over the ceiling */
   bool ceiling;
   uint16_t shade;             /* the ground darkens towards this colour, deeper (0: not) */
+  int16_t liquid[SCREEN_W];   /* a pit's surface's line x 8 (32000: none), its picture, its rows down a screen row */
+  uint8_t lpic;
+  int32_t ldv;                /* (16.16) */
 } Ground;
 extern Ground gfx_ground;
 void gfx_ground_draw(void);
+void gfx_liquid_draw(void);   /* the pits' mud or lava (after the vehicle), from gfx_ground's liquid and floor */
 
 /* screen points from a picture's own: where its pixel (u, v) lands */
 void gfx_image_point(int id, float x, float y, float scale, float angle, float u, float v, float *sx, float *sy);

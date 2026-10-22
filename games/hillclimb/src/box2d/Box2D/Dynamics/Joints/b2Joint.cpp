@@ -1,4 +1,5 @@
-/* Altered for NumPlay's Hill Climb Racing (NumWorks calculator): only the distance, revolute and wheel joints are made */
+/* Altered for NumPlay's Hill Climb Racing (NumWorks calculator): only the distance, revolute, prismatic and wheel joints
+ * are made */
 /*
 * Copyright (c) 2006-2007 Erin Catto http://www.box2d.org
 *
@@ -21,6 +22,7 @@
 #include <Box2D/Dynamics/Joints/b2DistanceJoint.h>
 #include <Box2D/Dynamics/Joints/b2WheelJoint.h>
 #include <Box2D/Dynamics/Joints/b2RevoluteJoint.h>
+#include <Box2D/Dynamics/Joints/b2PrismaticJoint.h>
 #include <Box2D/Dynamics/b2Body.h>
 #include <Box2D/Dynamics/b2World.h>
 #include <Box2D/Common/b2BlockAllocator.h>
@@ -54,6 +56,13 @@ b2Joint* b2Joint::Create(const b2JointDef* def, b2BlockAllocator* allocator)
 		}
 		break;
 
+	case e_prismaticJoint:
+		{
+			void* mem = allocator->Allocate(sizeof(b2PrismaticJoint));
+			joint = new (mem) b2PrismaticJoint((b2PrismaticJointDef*)def);
+		}
+		break;
+
 	default:
 		b2Assert(false);
 		break;
@@ -77,6 +86,10 @@ void b2Joint::Destroy(b2Joint* joint, b2BlockAllocator* allocator)
 
 	case e_wheelJoint:
 		allocator->Free(joint, sizeof(b2WheelJoint));
+		break;
+
+	case e_prismaticJoint:
+		allocator->Free(joint, sizeof(b2PrismaticJoint));
 		break;
     
 	default:
