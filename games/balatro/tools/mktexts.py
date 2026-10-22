@@ -46,7 +46,7 @@ def main():
     for a, b in pairs:
         packed += bytes([a & 255, a >> 8 | (b & 15) << 4, b >> 4])
     c = ["/* Made by tools/mktexts.py from src/texts.h (translated): Balatro's texts in this language. */",
-         '#include "../src/data.h"', ""]
+         '#include "data.h"', ""]
     c.append("static const uint8_t lang_blob[%d] = {" % len(blob))
     for i in range(0, len(blob), 24):
         c.append("  " + ",".join(str(v) for v in blob[i:i + 24]) + ",")

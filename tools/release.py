@@ -10,7 +10,7 @@ link to each file, and every file gets a label saying what it is.
   then the list;
 - prints one `path#label` per line, the arguments of `gh release create`.
 
-Usage: release.py --tag v1.3.0 --notes build/release-notes.md
+Usage: release.py --tag v1.3.0 --notes build/data/release-notes.md --build build/compiled
 """
 import argparse
 import json

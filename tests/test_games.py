@@ -11,7 +11,7 @@ what used to crash calculators or lose saves:
   untouched, and a file added after the save does not stop the game from
   updating it on the second run.
 
-Usage: test_games.py build/apps [--game NAME] [--out DIR]
+Usage: test_games.py build/compiled/games [--game NAME] [--out DIR]
 """
 import argparse
 import json

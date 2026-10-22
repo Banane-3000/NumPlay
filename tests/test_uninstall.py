@@ -9,7 +9,7 @@ what happened to the flash and to the calculator's files.
   record lookup cache no longer points into moved data;
 - relaunching NumPlay shows the game gone and does not touch the flash again.
 
-Usage: test_uninstall.py build/NumPlay.nwa [--out DIR]
+Usage: test_uninstall.py build/compiled/NumPlay.nwa [--out DIR]
 """
 import argparse
 import json

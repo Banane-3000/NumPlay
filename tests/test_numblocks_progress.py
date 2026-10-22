@@ -11,7 +11,7 @@ numblocks_saves.py. In the ARM emulator:
 2. "install again" (every file but the scripts deleted): started again, the
    saves come back byte for byte and the other script is untouched.
 
-Usage: test_numblocks_progress.py build/apps/NumBlocks.nwa [--out DIR]
+Usage: test_numblocks_progress.py build/compiled/games/NumBlocks.nwa [--out DIR]
 """
 import argparse
 import base64
