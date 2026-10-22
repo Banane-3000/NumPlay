@@ -394,7 +394,12 @@ typedef struct { dk_state s; int score; uint8_t wp, parent, move; uint32_t hazar
 static bot_node beam[BEAM], kids[BEAM * MOVES];
 static uint8_t hist_parent[MAX_STEPS + 1][BEAM], hist_move[MAX_STEPS + 1][BEAM];
 static uint8_t bot_path[MAX_STEPS];
-static int cmp_node(const void *a, const void *b) { return ((const bot_node *)b)->score - ((const bot_node *)a)->score; }
+/* (best first; equal scores in the order they were made, so qsort orders them the same everywhere) */
+static int cmp_node(const void *a, const void *b) {
+  const bot_node *x = a, *y = b;
+  if (x->score != y->score) return y->score - x->score;
+  return (x->parent * 256 + x->move) - (y->parent * 256 + y->move);
+}
 static void hold(dk_state *s, uint8_t move) {
   for (int f = 0; f < 4; f++) dk_tick(s, f ? move & ~DK_JUMP : move);
 }
@@ -462,7 +467,7 @@ static void bots(void) {
   for (int level = 1; level <= 5; level += 2)
     for (int b = 1; b <= 4; b++) {
       int steps = -1;
-      for (uint32_t seed = 1; seed <= 4 && steps < 0; seed++) {
+      for (uint32_t seed = 1; seed <= 8 && steps < 0; seed++) {
         play_on(&s, seed * 2654435761u + (uint32_t)(b * 31 + level), level, b);
         steps = bot_board(&s);
       }
