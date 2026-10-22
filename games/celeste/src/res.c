@@ -1,3 +1,6 @@
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize("Os")   /* (loads and decodes at room changes: smaller over faster) */
+#endif
 /* data.bin: sections, textures, palettes, and the texture cache.
  *
  * Textures are either "direct" (row RLE in flash, drawn from there) or

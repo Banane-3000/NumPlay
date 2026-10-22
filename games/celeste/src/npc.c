@@ -207,7 +207,7 @@ Ent *hahaha_new(V2 at, const char *ifset) {
 /* ---------------------------------------------------------------- BirdTutorialGui */
 Tutorial g_tuts[2];   /* (one bird shows its bubbles at a time) */
 /* the calculator's keys (Input.GuiButton): a key cap with the name of the key bound */
-static const char *key_name(int action) { return key_label(action < 4 ? g_bind[action] : KEY_BACKSPACE); }
+static const char *key_name(int action) { return key_label(g_bind[action < 4 ? action : 4]); }
 /* the width of a control in interface pixels */
 static float control_width(const GuiControl *c) {
   switch (c->kind) {

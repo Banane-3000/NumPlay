@@ -30,7 +30,8 @@ build: $(BUILD_DIR)/celeste.nwa
 # 148928 on 23.2; checked against the least
 check: $(BUILD_DIR)/celeste.nwa
 	$(Q) $(NWLINK) nwa-bin --ram-length 148928 $< $(BUILD_DIR)/celeste.bin
-	@echo "BIN     $(BUILD_DIR)/celeste.bin: $$(wc -c < $(BUILD_DIR)/celeste.bin) bytes"
+	@n=$$(wc -c < $(BUILD_DIR)/celeste.bin); echo "BIN     $(BUILD_DIR)/celeste.bin: $$n bytes ($$((2031616 - n)) to spare)"; \
+	  [ $$n -le 2031616 ] || { echo "Celeste is bigger than the calculator's app space (2031616 bytes)"; exit 1; }
 
 $(BUILD_DIR)/data.o: src/data.S src/data.bin | $(BUILD_DIR)
 	$(Q) $(CC) -c -DDATA_BIN='"src/data.bin"' $< -o $@

@@ -192,7 +192,9 @@ typedef struct {
   /* since 1.6.1 */
   uint8_t cheat_mode;        /* CheatMode */
   uint8_t binds_set;         /* 1: bind holds 1.6.1's keys or the player's own (1.6.0's defaults are replaced) */
-  uint8_t pad_[2];
+  /* since 1.15.1 */
+  uint8_t bind2[5];          /* pause, left, right, up, down: EADK keys (0: the defaults, in older saves) */
+  uint8_t pad_[1];
   uint32_t checksum;
 } SaveData;
 #define OPT_ROOM 16
@@ -200,6 +202,7 @@ extern SaveData g_save;
 #define g_session (g_save.session)
 
 void save_load(void);
+void save_keep_binds(void);          /* g_bind into g_save (save_write writes it) */
 bool save_write(void);                 /* false: storage full */
 bool save_write_quick(void);           /* the same, without the copy in celeste_saves.py */
 ModeStats *save_mode(void);            /* the current side's */
