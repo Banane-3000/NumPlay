@@ -48,6 +48,8 @@ EXT_RAM_END = 0x24037000
 EXT_RAM_LEN = 153676
 EXT_RAM_START = EXT_RAM_END - EXT_RAM_LEN
 STACK_TOP = 0x2403F000
+# the software's app area: from where it ends (64 KiB aligned: 0x90200000, or 0x90180000 for Epsilon 26.4 on an
+# N0120, configure's apps_start) to 64 KiB before the end of its slot
 EXT_FLASH_START = 0x90200000
 EXT_FLASH_END = 0x903F0000
 # where installed apps may reach: the app area's end, or with Enlarged Extra Apps (nwagyu's Nwagra, which
@@ -58,16 +60,18 @@ CPU_HZ = 216_000_000
 MODEL, SYSTEM = "n0120", "epsilon"
 
 
-def configure(model="n0120", system="epsilon", ram_length=None, xl=False):
+def configure(model="n0120", system="epsilon", ram_length=None, xl=False, apps_start=None):
     """The calculator to emulate: the N0120 (RAM at 0x24000000, the userland after an extra data
     sector) or the N0110/N0115 (RAM at 0x20000000); Epsilon or Upsilon (its userland header has no
     device name, apps get 107674 bytes of RAM, its file system is Epsilon 15's and it has none of
     the system calls for Home, checksums or flash). ram_length: the RAM apps get, when another
     build of the software gives them another amount. xl: Enlarged Extra Apps, an app up to the
-    external flash's end (its userland header still says the app area ends at 0x903F0000)."""
+    external flash's end (its userland header still says the app area ends at 0x903F0000). apps_start: where
+    the app area starts, where the software ends (0x90200000, or 0x90180000 for Epsilon 26.4 on an N0120)."""
     global MODEL, SYSTEM, SRAM, USERLAND_HEADER, STORAGE, STORAGE_SIZE, EXT_RAM_END, EXT_RAM_LEN, EXT_RAM_START, \
-        STACK_TOP, APPS_END
+        STACK_TOP, APPS_END, EXT_FLASH_START
     MODEL, SYSTEM = model, system
+    EXT_FLASH_START = apps_start or 0x90200000
     APPS_END = XL_APPS_END if xl else EXT_FLASH_END
     SRAM = 0x20000000 if model == "n0110" else 0x24000000
     USERLAND_HEADER = 0x90010000 if model == "n0110" else 0x90020000
@@ -173,8 +177,12 @@ class Font:
 
 
 class Calculator:
-    def __init__(self, nwa, flash_start=EXT_FLASH_START, storage_file=None, nwlink="nwlink", external_data=None):
+    def __init__(self, nwa, flash_start=None, storage_file=None, nwlink="nwlink", external_data=None):
+        """The app installed at flash_start (by default, where the app area starts); an app below EXT_FLASH_START
+        moves the app area's start there, as a smaller software leaves it."""
+        flash_start = EXT_FLASH_START if flash_start is None else flash_start
         self.flash_start = flash_start
+        self.apps_start = min(EXT_FLASH_START, flash_start & ~0xFFFF)
         self.storage_file = storage_file
         with tempfile.TemporaryDirectory() as d:
             elf = os.path.join(d, "app.elf")
@@ -210,11 +218,11 @@ class Calculator:
         # userland header (Ion::Device::UserlandHeader) and slot info, as apps find them
         if SYSTEM == "upsilon":  # no device name; then Omega's and Upsilon's blocks
             hdr = struct.pack("<I8sIIIIIIII4sI8s16sII16sII", 0xDEC0EDFE, b"15.5.0\0\0", STORAGE, STORAGE_SIZE,
-                              EXT_FLASH_START, 0x907FFFFF, EXT_RAM_START, EXT_RAM_END, 0xDEC0EDFE, 0xEFBEADDE,
+                              self.apps_start, 0x907FFFFF, EXT_RAM_START, EXT_RAM_END, 0xDEC0EDFE, 0xEFBEADDE,
                               b"1.0\0", DRAW_STRING_HOOK | 1, bytes(8), bytes(16), 0xEFBEADDE, 0x55707369,
                               b"1.1.2", 0x79827178, 0x55707369)
         else:
-            hdr = struct.pack("<I8sIIIIIIIII", 0xDEC0EDFE, b"25.2.2\0\0", STORAGE, STORAGE_SIZE, EXT_FLASH_START,
+            hdr = struct.pack("<I8sIIIIIIIII", 0xDEC0EDFE, b"25.2.2\0\0", STORAGE, STORAGE_SIZE, self.apps_start,
                               EXT_FLASH_END, EXT_RAM_START, EXT_RAM_END, 0x903F0000, 0x903F0400, 0xDEC0EDFE)
         uc.mem_write(USERLAND_HEADER, hdr)
         uc.mem_write(SRAM, struct.pack("<IIII", 0xEFEEDBBA, 0x90000000, USERLAND_HEADER, 0xEFEEDBBA))
@@ -487,7 +495,7 @@ class Calculator:
             ret = 0
         elif n == 30:  # erase sector
             base, size = sector_range(r0)
-            ok = EXT_FLASH_START <= base and base + size <= EXT_FLASH_END
+            ok = self.apps_start <= base and base + size <= EXT_FLASH_END
             self.flash_log.append(("erase", r0, base, size, ok))
             if ok:
                 uc.mem_write(base, b"\xff" * size)
@@ -495,7 +503,7 @@ class Calculator:
             ret = 1 if ok else 0
         elif n == 32:  # write memory
             dst, src, length = r0, r1, r2
-            ok = EXT_FLASH_START <= dst and dst + length <= EXT_FLASH_END
+            ok = self.apps_start <= dst and dst + length <= EXT_FLASH_END
             self.flash_log.append(("write", dst, length, ok))
             if ok:
                 old = bytes(uc.mem_read(dst, length))
@@ -566,7 +574,9 @@ def main():
     ap.add_argument("--fps", type=int, default=25)
     ap.add_argument("--out", default=".")
     ap.add_argument("--storage", help="file keeping the calculator's storage between runs")
-    ap.add_argument("--flash-start", type=lambda s: int(s, 0), default=EXT_FLASH_START)
+    ap.add_argument("--flash-start", type=lambda s: int(s, 0), help="where the app is installed (default: the app area's "
+                    "start; one below 0x90200000 starts the app area there, as on Epsilon 26.4: 0x90180000)")
+    ap.add_argument("--apps-start", type=lambda s: int(s, 0), help="where the app area starts (default 0x90200000)")
     ap.add_argument("--nwlink", default="nwlink")
     ap.add_argument("--model", choices=["n0120", "n0110"], default="n0120")
     ap.add_argument("--system", choices=["epsilon", "upsilon"], default="epsilon")
@@ -577,7 +587,7 @@ def main():
     ap.add_argument("--profile", type=int, default=0,
                     help="print the N functions the CPU was found in most (build the .nwa without stripping it)")
     a = ap.parse_args()
-    configure(a.model, a.system, a.ram_length, a.xl)
+    configure(a.model, a.system, a.ram_length, a.xl, a.apps_start)
     os.makedirs(a.out, exist_ok=True)
     c = Calculator(a.nwa, a.flash_start, a.storage, a.nwlink)
     c.keys = parse_keys(a.keys)
