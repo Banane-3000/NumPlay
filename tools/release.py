@@ -6,11 +6,14 @@ them, so the notes carry the list in a useful order (NumPlay first, then its
 discreet versions, then each game on its own in the launcher's order) with a
 link to each file, and every file gets a label saying what it is.
 
-- --notes FILE: writes the notes, .github/release.md (the introduction) and
-  then the list;
+- --notes FILE: writes the notes, .github/release.md (the introduction), what's new in
+  this version (its section of CHANGELOG.md) and then the list;
+- --title FILE: writes the release's title, "NumPlay v1.3.0: " and the heading of
+  its section of CHANGELOG.md;
 - prints one `path#label` per line, the arguments of `gh release create`.
 
-Usage: release.py --tag v1.3.0 --notes build/data/release-notes.md --build build/compiled
+Usage: release.py --tag v1.3.0 --notes build/data/release-notes.md --title build/data/release-title.txt
+                  --build build/compiled
 """
 import argparse
 import json
@@ -67,10 +70,33 @@ def standalone_names():
     return names
 
 
+def changes(version):
+    """(the heading, the lines) of this version's section of CHANGELOG.md: "## 1.3.0: heading" and what's under it"""
+    path = os.path.join(ROOT, "CHANGELOG.md")
+    if not os.path.exists(path):
+        return None, []
+    heading, lines = None, []
+    for line in open(path).read().splitlines():
+        if line.startswith("## "):
+            if heading is not None:
+                break
+            v, _, rest = line[3:].partition(":")
+            if v.strip() == version:
+                heading = rest.strip()
+        elif heading is not None:
+            lines.append(line)
+    while lines and not lines[-1].strip():
+        lines.pop()
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    return heading, lines
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tag", required=True)
     ap.add_argument("--notes", required=True)
+    ap.add_argument("--title", help="where to write the release's title")
     ap.add_argument("--build", default="build/compiled")
     a = ap.parse_args()
     # (a game the default NumPlay.nwa leaves out, "default": false, comes from the customizer website)
@@ -119,8 +145,14 @@ def main():
     notes += ["", "<sub>The file list below is sorted A to Z by GitHub. Each file's label says what it is.</sub>"]
 
     intro = open(os.path.join(ROOT, ".github", "release.md")).read().rstrip()
+    heading, new = changes(a.tag.lstrip("v"))
+    if new:
+        intro += "\n\n### What's new\n\n" + "\n".join(new)
     with open(a.notes, "w") as f:
         f.write(intro + "\n\n" + "\n".join(notes) + "\n")
+    if a.title:
+        with open(a.title, "w") as f:
+            f.write(f"NumPlay {a.tag}" + (f": {heading}" if heading else "") + "\n")
     for path, label in files:
         if not os.path.exists(path):
             raise SystemExit(f"release: missing {path}")
