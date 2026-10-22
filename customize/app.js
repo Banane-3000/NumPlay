@@ -119,7 +119,7 @@
   }
 
   // ------------------------------------------------------------------ drawing
-  const tiles = new Map(), buttons = new Map();
+  const tiles = new Map(), segs = new Map(), buttons = new Map();
   let shownUsed = 0, previewing = null;
 
   function render() {
@@ -164,6 +164,30 @@
       seen.add(t.key);
     });
     for (const [k, e] of tiles) if (!seen.has(k)) { e.remove(); tiles.delete(k); }
+
+    // the bar beside it: the same blocks, stacked in the launcher's order
+    const bar = $('#bar'), keys = new Set();
+    list.forEach((it, i) => {
+      let e = segs.get(it.key);
+      if (!e) {
+        e = el('span', 'seg');
+        let next = null;  // (in its place among the blocks there already)
+        for (let j = i + 1; j < list.length && !next; j++) next = segs.get(list[j].key) || null;
+        segs.set(it.key, e);
+        bar.insertBefore(e, next);
+        void e.offsetHeight;  // (so its height grows from nothing)
+      }
+      e.style.height = Math.min(100, 100 * it.bytes / cap) + '%';
+      e.style.background = 'linear-gradient(90deg, ' + mix(it.color, 0.25) + ', ' + it.color + ' 55%, ' + mix(it.color, -0.3) + ')';
+      e.dataset.tip = it.name + '|' + size(it.bytes);
+      keys.add(it.key);
+    });
+    for (const [k, e] of segs) if (!keys.has(k)) { e.style.height = '0'; segs.delete(k); setTimeout(() => e.remove(), 260); }
+    const want = list.map((it) => segs.get(it.key));
+    if ([...bar.children].filter((c) => want.includes(c)).some((c, i) => c !== want[i])) for (const c of want) bar.appendChild(c);
+    bar.classList.toggle('over', over);
+    $('#used').textContent = (used / MiB).toFixed(2);
+    $('#cap-of').textContent = 'of ' + +(cap / MiB).toFixed(2) + ' MB';
 
     $('#screen').classList.toggle('over', over);
     $('#screen').setAttribute('aria-label', 'Space on the calculator: ' + size(used) + ' of ' + size(cap) + ', each game a block its size');
@@ -1278,6 +1302,7 @@
     // 1. the calculator, then the words, then the games in their places (a wave down the grid)
     anim($('.device'), [{ opacity: 0 }, { opacity: 1 }], { duration: 700, easing: 'linear' });
     anim($('#calc'), [{ translate: '0 80px', scale: '0.93' }, { translate: '0 0', scale: '1' }], { duration: 1400, easing: E.out });
+    anim($('.meter'), [{ opacity: 0, transform: 'translateY(24px)' }, { opacity: 1, transform: 'none' }], { duration: 900, delay: 500, easing: E.out });
     anim($('.title span'), [{ transform: 'translateY(108%)' }, { transform: 'none' }], { duration: 1000, delay: 180, easing: E.out });
     anim($('.lede'), [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 900, delay: 340, easing: E.out });
     anim($('.chips'), [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 800, delay: 420, easing: E.out });
@@ -1294,6 +1319,8 @@
       const id = key, gi = games.indexOf(id);
       const at = key === '_free' ? 700 : key === '_core' ? 980 : gi >= 0 ? T0 + gi * GAP + FLY * 0.82 : T0 + games.length * GAP + FLY;
       anim(e, [{ opacity: 0, scale: '0.55' }, { opacity: 1, scale: '1' }], { duration: key === '_free' ? 500 : 620, delay: at, easing: key === '_free' ? 'linear' : E.spring });
+      const sg = segs.get(key);
+      if (sg) anim(sg, [{ height: '0%' }, { height: sg.style.height }], { duration: 560, delay: at, easing: E.out });
       const it = list.find((x) => x.key === key);
       if (it) landed.push([at, it.bytes]);
     }
@@ -1330,6 +1357,7 @@
       const target = landed.reduce((a, [at, bytes]) => a + (t >= at ? bytes : 0), 0);
       shown += (target - shown) * 0.2;
       $('#status-line').textContent = (shown / MiB).toFixed(2) + ' OF ' + +(cap / MiB).toFixed(2) + ' MB';
+      $('#used').textContent = (shown / MiB).toFixed(2);
       $('#battery').style.width = 'calc(' + Math.min(100, 100 * shown / cap) + '% - 2px)';
       if (t < end) raf = requestAnimationFrame(frame); else finish();
     };
@@ -1359,6 +1387,23 @@
     addEventListener('pointerdown', finish, true);
     addEventListener('keydown', finish, true);
     introRun = finish;
+  }
+
+  // the games in NumPlay fill their column down to the bottom of the window: as many to a row, and as big, as fits
+  // (in the narrower layouts, where more comes under them, five to a row)
+  function fitGrid() {
+    const box = $('#small'), n = box.children.length;
+    if (!n || innerWidth <= 1180) { box.classList.remove('fit'); return; }
+    const W = box.clientWidth, H = innerHeight - (box.getBoundingClientRect().top + scrollY) - 34;
+    let best = null;
+    for (let c = 3; c <= 7; c++) {
+      const r = Math.ceil(n / c), s = Math.min(W / (c + (c - 1) * 0.22), H / (r + (r - 1) * 0.3));
+      if (!best || s > best.s) best = { c, s };
+    }
+    if (H < 160 || best.s < 36) { box.classList.remove('fit'); return; }
+    box.style.setProperty('--cols', best.c);
+    box.style.setProperty('--s', Math.floor(Math.min(best.s, 124)) + 'px');
+    box.classList.add('fit');
   }
 
   // ------------------------------------------------------------------ start
@@ -1404,6 +1449,9 @@
     }
     sortable(small);
     sortable(big);
+    fitGrid();
+    addEventListener('resize', () => requestAnimationFrame(fitGrid));
+    if (document.fonts) document.fonts.ready.then(fitGrid);
 
     // the app's settings
     const sec = $('#secret');
