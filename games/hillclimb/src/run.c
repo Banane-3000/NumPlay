@@ -146,7 +146,10 @@ static void pickups(void) {
       if (car_touches_box(c, cx[i], cy[i], half)) {
         run.got[k] |= (uint16_t)(1 << i);
         run.coins += (uint32_t)val[i];
-        for (int s = 0; s < 3; s++) particle(cx[i], cy[i], rndf() * 2 - 1, rndf() * 2 + 1, 0.4f, 0.5f, 2);
+        for (int s = 0; s < 3; s++) {
+          float vx = rndf() * 2 - 1, vy = rndf() * 2 + 1;   /* (one at a time: arguments have no order) */
+          particle(cx[i], cy[i], vx, vy, 0.4f, 0.5f, 2);
+        }
       }
     }
   }
@@ -173,12 +176,15 @@ void run_frame(uint32_t keys) {
   if (c->tree_broken >= 0) {
     float tx, ty;
     if (stage_tree(c->tree_broken, &tx, &ty))
-      for (int s = 0; s < 14; s++)
-        particle(tx, ty + 0.3f + rndf() * 2.0f, c->vx * 0.5f + rndf() * 4 - 1, rndf() * 4, 0.9f, 0.3f + rndf() * 0.2f, 0);
+      for (int s = 0; s < 14; s++) {
+        float py = ty + 0.3f + rndf() * 2.0f, vx = c->vx * 0.5f + rndf() * 4 - 1, vy = rndf() * 4, sz = 0.3f + rndf() * 0.2f;
+        particle(tx, py, vx, vy, 0.9f, sz, 0);
+      }
   }
-  /* fuel: 2.5 a second (and the vehicle's rate) out of 100; empty, the run ends 4 s later */
+  /* fuel: 2.5 a second (and the vehicle's rate) out of 100, and 0.02 a step for each part on fire (lava); empty,
+   * the run ends 4 s later */
   if (run.fuel > 0) {
-    run.fuel -= run.burn * DT;
+    run.fuel -= run.burn * DT + 0.02f * (float)c->burning;
     if (run.fuel <= 0) run.fuel = 0;
     run.empty_t = 0;
   } else if (!run.over && (run.empty_t += DT) > 4) {
@@ -211,9 +217,10 @@ void run_frame(uint32_t keys) {
   /* dust from the wheels that spin on the ground, smoke from the exhaust */
   for (int i = 0; i < c->nw; i++) {
     float sp = fabsf(c->vx);
-    if (c->ground[i] && (sp > 4 || gas) && (run.frame + (uint32_t)i) % 5 == 0)
-      particle(c->wh[i].x - c->wr[i] * 0.6f, c->wh[i].y - c->wr[i] * 0.8f, -c->vx * 0.2f - rndf() * 2,
-               1 + rndf() * 2, 0.5f, 0.22f + rndf() * 0.12f, 0);
+    if (c->ground[i] && (sp > 4 || gas) && (run.frame + (uint32_t)i) % 5 == 0) {
+      float vx = -c->vx * 0.2f - rndf() * 2, vy = 1 + rndf() * 2, sz = 0.22f + rndf() * 0.12f;
+      particle(c->wh[i].x - c->wr[i] * 0.6f, c->wh[i].y - c->wr[i] * 0.8f, vx, vy, 0.5f, sz, 0);
+    }
   }
   if (gas && run.fuel > 0 && !c->dead && run.frame % 9 == 0 && car_speed(c) < 6) {
     float ex, ey;
@@ -479,6 +486,20 @@ static void draw_bill(const VehArt *a) {
   body_image(IMG_BILL_HEAD, c->head.x, c->head.y, ha);
 }
 
+/* a rider on two bodies: a torso picture from his hips, a head picture on his head (the bus' passengers) */
+static void draw_rider(const CarBody *torso, const CarBody *head, int head_id) {
+  float ta = torso->a - PI;
+  float hx = torso->x + sinf(ta) * 0.3f, hy = torso->y - cosf(ta) * 0.3f;
+  body_image(IMG_BILL_BODY, hx, hy, ta);
+  body_image(head_id, head->x, head->y, head->a - PI);
+}
+
+static void draw_wheel(const VehArt *a, int i, float size) {
+  const Car *c = &run.car;
+  gfx_image(a->wheel, scr_x(c->wh[i].x), scr_y(c->wh[i].y), run.cam_s / (img(a->wheel)->ppm4 / 4.0f) * size, c->wh[i].a,
+            255);
+}
+
 static void draw_car(void) {
   const Car *c = &run.car;
   const VehArt *a = &veh_art[run.vehicle];
@@ -486,10 +507,11 @@ static void draw_car(void) {
   bool rider = a->legs;
   for (int i = 0; i < a->nlayers; i++)
     if (!a->layer[i][3]) car_image((int)a->layer[i][0], a->layer[i][1], a->layer[i][2], 0);
-  if (run.vehicle == V_TANK) {   /* the track around the wheels */
+  if (run.vehicle == V_TANK || run.vehicle == V_SNOWMOBILE) {   /* the track around the wheels */
+    int n = run.vehicle == V_TANK ? c->nw : 5;
     for (int pass = 0; pass < 2; pass++)
-      for (int i = 0; i < c->nw; i++) {
-        int j = (i + 1) % c->nw;
+      for (int i = 0; i < n; i++) {
+        int j = (i + 1) % n;
         gfx_tube(scr_x(c->wh[i].x), scr_y(c->wh[i].y), scr_x(c->wh[j].x), scr_y(c->wh[j].y),
                  (c->wr[0] + (pass ? -0.02f : 0.07f)) * s, rgb565(pass ? 0x4A4A4A : 0x2A2A2A), 255);
       }
@@ -501,12 +523,27 @@ static void draw_car(void) {
     gfx_tube(scr_x(tx), scr_y(ty), scr_x(c->wh[w].x), scr_y(c->wh[w].y), a->tube[0][4] * s,
              rgb565((uint32_t)a->tube[0][3]), 255);
   }
+  if (run.vehicle == V_TRACTOR && c->has_exhaust) body_image(IMG_EXHAUST, c->exhaust.x, c->exhaust.y, c->exhaust.a);
+  if (run.vehicle == V_BUS)   /* the passengers on the upper deck, behind its side */
+    for (int p = 0; p < CAR_PASS; p++) draw_rider(&c->pass[p][0], &c->pass[p][1], IMG_PASS1 + p);
   if (!rider) draw_bill(a);
-  car_image(a->chassis, 0, 0, 0);
+  car_image(a->chassis, 0, 0, run.vehicle == V_TRUCK ? 0.025f : 0);   /* (the truck's picture is turned a little) */
   if (rider) draw_bill(a);
-  for (int i = 0; i < c->nw; i++)
-    gfx_image(a->wheel, scr_x(c->wh[i].x), scr_y(c->wh[i].y), s / (img(a->wheel)->ppm4 / 4.0f) * c->wr[i] / a->wheel_r,
-              c->wh[i].a, 255);
+  if (run.vehicle == V_TRACTOR) {
+    /* the soft tire: its picture as round as its balls are far out (the balls are 0.135 R, R 1.09) */
+    float d = 0;
+    for (int i = 0; i < CAR_SEGS; i++) d += hypotf(c->seg[i][0] - c->wh[0].x, c->seg[i][1] - c->wh[0].y);
+    draw_wheel(a, 0, (d / CAR_SEGS + 1.09f * 0.135f) / a->wheel_r);
+    draw_wheel(a, 1, c->wr[1] / a->wheel_r);
+  } else if (run.vehicle == V_SNOWMOBILE) {
+    for (int i = 0; i < 5; i++) draw_wheel(a, i, c->wr[i] / a->wheel_r);
+    /* the ski across its two wheels (a multibody sprite), 0.1 ahead and 0.19 under their middle */
+    float dx = c->wh[6].x - c->wh[5].x, dy = c->wh[6].y - c->wh[5].y, an = atan2f(dy, dx), cs = cosf(an), sn = sinf(an);
+    float mx = (c->wh[5].x + c->wh[6].x) * 0.5f + 0.1f * cs + 0.19f * sn, my = (c->wh[5].y + c->wh[6].y) * 0.5f + 0.1f * sn - 0.19f * cs;
+    body_image(IMG_SKI, mx, my, an);
+  } else {
+    for (int i = 0; i < c->nw; i++) draw_wheel(a, i, c->wr[i] / a->wheel_r);
+  }
   for (int i = 1; i < a->ntubes; i++) {   /* the fork, in front */
     float tx, ty;
     car_point(c, a->tube[i][0], a->tube[i][1], &tx, &ty);
@@ -516,6 +553,28 @@ static void draw_car(void) {
   }
   for (int i = 0; i < a->nlayers; i++)
     if (a->layer[i][3]) car_image((int)a->layer[i][0], a->layer[i][1], a->layer[i][2], 0);
+}
+
+/* lava: fire on the parts that burn (the game's five counters: the back wheel, the front, Bill, the middle, the body) */
+static void draw_fire(void) {
+  const Car *c = &run.car;
+  if (!c->burning) return;
+  float px[5], py[5];
+  px[0] = c->wh[0].x, py[0] = c->wh[0].y;
+  px[1] = c->wh[c->nw > 2 && run.vehicle != V_SNOWMOBILE ? c->nw - 1 : 1].x;
+  py[1] = c->wh[c->nw > 2 && run.vehicle != V_SNOWMOBILE ? c->nw - 1 : 1].y;
+  px[2] = c->torso.x, py[2] = c->torso.y;
+  car_point(c, 0.8f, 0.2f, &px[3], &py[3]);
+  px[4] = c->ch.x, py[4] = c->ch.y;
+  for (int k = 0; k < 5; k++) {
+    if (!c->burn[k]) continue;
+    float grow = c->burn[k] > 99 ? 1 : 0.4f + 0.6f * (float)c->burn[k] / 99.0f;
+    for (int f = 0; f < 3; f++) {
+      uint32_t h = hash2(run.frame * 3u + (uint32_t)(k * 7 + f));
+      float fx = px[k] + ((float)(h & 255) / 255.0f - 0.5f) * 0.8f, fy = py[k] + (float)(h >> 8 & 255) / 255.0f * 0.9f;
+      gfx_image(IMG_FIRE, scr_x(fx), scr_y(fy), run.cam_s / (float)img(IMG_FIRE)->w * 1.1f * grow, 0, 200);
+    }
+  }
 }
 
 static void draw_particles(void) {
@@ -586,9 +645,9 @@ static void draw_hud(void) {
   gfx_image(pb, 23, 218, 1, 0, 255);
   gfx_image(pg, 297, 218, 1, 0, 255);
   /* (each vehicle's own scale: PlayerCar*::getEngineRev, getTurboPressure) */
-  float rk = run.vehicle == V_MONSTER ? 1.65f : run.vehicle == V_BUGGY ? 1.09f : 1;
-  float tk = run.vehicle == V_MONSTER ? 0.87f : run.vehicle == V_BUGGY ? 0.66f : run.vehicle == V_TANK ? 0.44f : 1;
-  float rpm = run.fuel > 0 && !c->dead ? needle(c->rev * rk, 23) : needle(0, 23);
+  float rk, rb, tk;
+  car_meters(run.vehicle, &rk, &rb, &tk);
+  float rpm = run.fuel > 0 && !c->dead ? needle(c->rev * rk + rb, 23) : needle(0, 23);
   float boost = needle(c->turbo * tk, 87);
   for (int m = 0; m < 2; m++) {
     float mx = m ? 186 : 134, my = 216;
@@ -622,6 +681,29 @@ static void draw_hud(void) {
   else if (run.fuel <= 0 && !run.over) gfx_text(FONT_XL, 160, 150, "OUT OF FUEL", rgb565(0xFFC21A), C_BLACK, 1);
 }
 
+/* the pits' mud or lava, over the car as in the game (Pit::draw comes after the car's pictures) */
+static void draw_pits(void) {
+  if (!stage->pits) return;
+  Ground *g = &gfx_ground;
+  float x0w = wld_x(0), x1w = wld_x(SCREEN_W);
+  bool any = false;
+  for (int x = 0; x < SCREEN_W; x++) g->liquid[x] = 32000;
+  for (int k = stage_pit_first(x0w);; k++) {
+    float p0, len, py;
+    if (!stage_pit_k(k, &p0, &len, &py) || p0 > x1w) break;
+    int a = (int)ceilf(scr_x(p0)), b = (int)floorf(scr_x(p0 + len));
+    if (a < 0) a = 0;
+    if (b > SCREEN_W) b = SCREEN_W;
+    float top = scr_y(py);
+    for (int x = a; x < b; x++) g->liquid[x] = (int16_t)(top > 4000 ? 32000 : top < -4000 ? -32000 : top * 8);
+    any = any || a < b;
+  }
+  if (!any) return;
+  g->lpic = stage->pits == PIT_LAVA ? IMG_PIT_LAVA : IMG_PIT_MUD;
+  g->ldv = (int32_t)((float)img(g->lpic)->h / (stage_pit_depth() * run.cam_s) * 65536.0f);
+  gfx_liquid_draw();
+}
+
 void run_draw(bool hud) {
   draw_sky();
   draw_ground();
@@ -630,6 +712,8 @@ void run_draw(bool hud) {
   draw_trees();
   draw_things();
   draw_car();
+  draw_pits();
+  draw_fire();
   draw_particles();
   if (hud) draw_hud();
 }

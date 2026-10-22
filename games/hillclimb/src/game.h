@@ -9,8 +9,11 @@
 
 enum { MODE_TITLE, MODE_HELP, MODE_GARAGE, MODE_STAGES, MODE_RUN, MODE_PAUSE, MODE_END };
 
-/* what is kept (save.c) */
+/* what is kept (save.c): hillclimb.sav, version 3 (13 vehicles and 13 stages); versions 1 and 2 (8 vehicles, 10
+ * stages) are read and carried over */
+#define SAVE_VERSION 3
 typedef struct {
+  uint16_t version, pad0;
   uint32_t coins;
   uint16_t vehicles, stages;            /* bits: owned */
   uint8_t level[NVEHICLES][4];          /* each upgrade's level (1 and up) */
@@ -18,9 +21,8 @@ typedef struct {
   uint8_t vehicle, stage, seen_help, pad;
   uint32_t runs, meters, flips, best_air_ms, coins_earned;
   uint8_t stage_level[NSTAGES];         /* each stage's level, from 0 (the game keeps them from run to run) */
-  uint8_t pad2[2];
+  uint8_t pad2[3];
 } Save;
-#define SAVE_V1_SIZE 224                /* (saves from before the levels were kept) */
 extern Save sv;
 
 enum { END_DRIVER_DOWN, END_OUT_OF_FUEL, END_QUIT };

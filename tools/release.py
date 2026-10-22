@@ -32,7 +32,7 @@ ALONE = {
     "undertale": ("Undertale", "the whole Underground, to the barrier and the neutral ending"),
     "subway": ("Subway Surfers", "the endless run down the subway's tracks, in 3D"),
     "fnaf": ("Five Nights at Freddy's", "five nights at Freddy Fazbear's Pizza, the 6th and the Custom Night"),
-    "hillclimb": ("Hill Climb Racing", "Newton Bill's ride up the hills: ten stages, eight vehicles"),
+    "hillclimb": ("Hill Climb Racing", "Newton Bill's ride up the hills: thirteen stages, thirteen vehicles"),
     "championisland": ("Champion Island", "the Doodle Champion Island Games"),
     "numpowder": ("NumPowder", "The Powder Toy on the calculator, with nearly 200 elements"),
     "finalearth2": ("The Final Earth 2", "build a city on floating islands in space"),

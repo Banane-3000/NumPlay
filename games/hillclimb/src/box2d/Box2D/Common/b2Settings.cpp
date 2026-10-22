@@ -1,4 +1,5 @@
-/* Altered for NumPlay's Hill Climb Racing (NumWorks calculator): b2Log prints nothing */
+/* Altered for NumPlay's Hill Climb Racing (NumWorks calculator): b2Log prints nothing; on a computer (tests) the
+ * memory in use is counted */
 /*
 * Copyright (c) 2006-2009 Erin Catto http://www.box2d.org
 *
@@ -24,6 +25,27 @@
 b2Version b2_version = {2, 2, 1};
 
 // Memory allocators. Modify these to use your own allocator.
+#ifdef HOST
+/* (tests: Box2D's memory in use and the most it has used, a word before each block keeping its size) */
+extern "C" { long b2_heap_now, b2_heap_peak; }
+void* b2Alloc(int32 size)
+{
+	long *p = (long *)malloc(size + sizeof(long) * 2);
+	if (!p) return NULL;
+	p[0] = size;
+	b2_heap_now += size;
+	if (b2_heap_now > b2_heap_peak) b2_heap_peak = b2_heap_now;
+	return p + 2;
+}
+
+void b2Free(void* mem)
+{
+	if (!mem) return;
+	long *p = (long *)mem - 2;
+	b2_heap_now -= p[0];
+	free(p);
+}
+#else
 void* b2Alloc(int32 size)
 {
 	return malloc(size);
@@ -33,6 +55,7 @@ void b2Free(void* mem)
 {
 	free(mem);
 }
+#endif
 
 // You can modify this to use your logging facility.
 void b2Log(const char* string, ...)
