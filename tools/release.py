@@ -10,7 +10,7 @@ link to each file, and every file gets a label saying what it is.
   then the list;
 - prints one `path#label` per line, the arguments of `gh release create`.
 
-Usage: release.py --tag v1.3.0 --notes build/release-notes.md
+Usage: release.py --tag v1.3.0 --notes build/data/release-notes.md --build build/compiled
 """
 import argparse
 import json
@@ -71,7 +71,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tag", required=True)
     ap.add_argument("--notes", required=True)
-    ap.add_argument("--build", default="build")
+    ap.add_argument("--build", default="build/compiled")
     a = ap.parse_args()
     games = json.load(open(os.path.join(ROOT, "games", "games.json")))
     apps = standalone_names()
@@ -100,7 +100,7 @@ def main():
         for gid in alone:
             title, what = ALONE[gid]
             name, what = apps[gid], f"{title}: {what}"
-            files.append((os.path.join(a.build, "apps", name), f"{name} · {what}"))
+            files.append((os.path.join(a.build, "games", name), f"{name} · {what}"))
             notes.append(f"| {link(name)} | {what} |")
     name, what = UPSILON
     notes += ["", "### On Upsilon", "", "| File | |", "| --- | --- |", f"| {link(name)} | {what} |"]
@@ -113,7 +113,7 @@ def main():
             continue
         tagline = g["tagline"][0].lower() + g["tagline"][1:]
         what = f"Only {g['title']}: {tagline}"
-        files.append((os.path.join(a.build, "apps", name), f"{name} · {what}"))
+        files.append((os.path.join(a.build, "games", name), f"{name} · {what}"))
         notes.append(f"| {link(name)} | {what} |")
     notes += ["", "<sub>The file list below is sorted A to Z by GitHub. Each file's label says what it is.</sub>"]
 

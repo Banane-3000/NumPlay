@@ -17,7 +17,7 @@ ifeq ($(shell grep -q 'define NP_TEXT_EXTRA 1' ../common/np_text.h && echo 1),1)
 SRC += $(BUILD_DIR)/texts.c
 endif
 
-CFLAGS = -std=c99 $(shell $(NWLINK) eadk-cflags-device)
+CFLAGS = -std=c99 -Isrc $(shell $(NWLINK) eadk-cflags-device)
 CFLAGS += -Os -Wall -fno-math-errno -fno-tree-loop-distribute-patterns -fno-reorder-functions -flto-partition=one
 CFLAGS += -flto -fno-fat-lto-objects -fwhole-program -fvisibility=internal $(EXTRA)
 LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs

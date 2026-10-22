@@ -6,7 +6,7 @@ with less, and its games use the RAM after it up to the end of what there is (to
 2. with 120000 bytes, NumBlocks doesn't fit: OK on its card doesn't start it (the card says how much it lacks),
    while NumDash, which fits, starts and makes no access outside the app's RAM.
 
-Usage: test_small_ram.py build/NumPlay.nwa [--out DIR]
+Usage: test_small_ram.py build/compiled/NumPlay.nwa [--out DIR]
 """
 import argparse
 import os

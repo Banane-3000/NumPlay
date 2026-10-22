@@ -13,7 +13,7 @@ numplay_saves.py. In the ARM emulator:
 4. holding OK resets the game, and the copy follows: after another update,
    the game starts over while the others keep their progress.
 
-Usage: test_progress.py build/NumPlay.nwa [--out DIR]
+Usage: test_progress.py build/compiled/NumPlay.nwa [--out DIR]
 """
 import argparse
 import base64
