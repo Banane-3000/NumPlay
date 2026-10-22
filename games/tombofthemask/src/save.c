@@ -1,7 +1,108 @@
-#include "game.h"
+/* The save (save.h): a bytes file with a magic, a version, its size and a checksum; anything else (damaged, cut
+ * short, from elsewhere) is not read: the copy in the Python script is tried, then a fresh start. */
+#include <stddef.h>
 #include <string.h>
-static void put(uint8_t*p,uint32_t n){for(int i=0;i<4;i++)p[i]=n>>(8*i);}
-static uint32_t get(const uint8_t*p){return (uint32_t)p[0]|(uint32_t)p[1]<<8|(uint32_t)p[2]<<16|(uint32_t)p[3]<<24;}
-static uint32_t crc(const uint8_t*p,unsigned n){uint32_t c=~0u;while(n--){c^=*p++;for(int b=0;b<8;b++)c=c&1?(c>>1)^0xedb88320u:c>>1;}return ~c;}
-void save_encode(const Progress*p,uint8_t*out){memset(out,0,SAVE_BYTES);memcpy(out,"TOTM",4);out[4]=3;put(out+8,p->coins);put(out+12,p->best);put(out+16,p->xp);put(out+20,p->runs);out[24]=p->unlocked;out[25]=p->mask;out[26]=p->shields;memcpy(out+28,p->upgrades,4);memcpy(out+32,p->stars,200);memcpy(out+232,p->dots,25);out[258]=p->owned;out[259]=p->owned>>8;memcpy(out+260,p->mission_step,8);for(unsigned i=0;i<8;i++)put(out+268+i*4,p->mission_counts[i]);put(out+300,p->playtime);put(out+304,p->next_chest);out[308]=p->chests;out[309]=p->chests>>8;out[310]=p->free_chest;put(out+SAVE_BYTES-4,crc(out,SAVE_BYTES-4));}
-bool save_decode(Progress*p,const uint8_t*in,unsigned n){if(!in||n!=SAVE_BYTES||memcmp(in,"TOTM",4)||(in[4]<1||in[4]>3)||get(in+n-4)!=crc(in,n-4))return false;if(!in[24]||in[24]>200||in[25]>=16||in[26]>10)return false;for(int i=0;i<4;i++)if(in[28+i]>9)return false;for(int i=0;i<200;i++)if(in[32+i]>3)return false;Progress v={0};v.coins=get(in+8);v.best=get(in+12);v.xp=get(in+16);v.runs=get(in+20);v.owned=in[4]>=2?((unsigned)in[258]|(unsigned)in[259]<<8):1u|(1u<<in[25]);if(!(v.owned&1)||!(v.owned&(1u<<in[25])))return false;v.unlocked=in[24];v.mask=in[25];v.shields=in[26];memcpy(v.upgrades,in+28,4);memcpy(v.stars,in+32,200);memcpy(v.dots,in+232,25);v.free_chest=1;if(in[4]>=3){for(unsigned i=0;i<8;i++){if(in[260+i]>7)return false;v.mission_step[i]=in[260+i];v.mission_counts[i]=get(in+268+i*4);}v.playtime=get(in+300);v.next_chest=get(in+304);v.chests=(unsigned)in[308]|(unsigned)in[309]<<8;v.free_chest=in[310];if(v.free_chest>1)return false;}*p=v;return true;}
+#include "plat.h"
+#include "save.h"
+
+uint32_t tm_sum(const void *data, uint32_t n) {
+  const uint8_t *p = data;
+  uint32_t h = 2166136261u;
+  for (uint32_t i = 0; i < n; i++) h = (h ^ p[i]) * 16777619u;
+  return h;
+}
+
+bool tm_file_ok(const tm_file *f) {
+  if (f->magic != TM_MAGIC || f->version != TM_VERSION || f->size != sizeof *f) return false;
+  if (f->sum != tm_sum(f, offsetof(tm_file, sum))) return false;
+  return tm_progress_ok(&f->p);
+}
+
+static const char head[] = "# Tomb of the Mask keeps a copy of your stages, coins and masks\n"
+                           "# here, so that installing it again doesn't erase them.\n";
+static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static uint8_t copy[1 + sizeof head + 2 + sizeof TM_SAVE_NAME + 1 + (sizeof(tm_file) + 2) / 3 * 4 + 2];
+
+/* the copy: the file in base 64, in a comment line of a script */
+static bool copy_write(const tm_file *f) {
+  const uint8_t *bytes = (const uint8_t *)f;
+  uint32_t len = sizeof *f, nl = sizeof TM_SAVE_NAME - 1;
+  uint8_t *p = copy;
+  *p++ = 0;   /* (a script's first byte: not imported) */
+  memcpy(p, head, sizeof head - 1), p += sizeof head - 1;
+  *p++ = '#', *p++ = '>';
+  memcpy(p, TM_SAVE_NAME, nl), p += nl;
+  *p++ = ':';
+  for (uint32_t i = 0; i < len; i += 3, p += 4) {
+    uint32_t left = len - i, v = (uint32_t)bytes[i] << 16 | (left > 1 ? (uint32_t)bytes[i + 1] << 8 : 0) | (left > 2 ? bytes[i + 2] : 0);
+    p[0] = (uint8_t)b64[v >> 18 & 63];
+    p[1] = (uint8_t)b64[v >> 12 & 63];
+    p[2] = left > 1 ? (uint8_t)b64[v >> 6 & 63] : '=';
+    p[3] = left > 2 ? (uint8_t)b64[v & 63] : '=';
+  }
+  *p++ = '\n';
+  return plat_save(TM_COPY_NAME, copy, (uint32_t)(p - copy));
+}
+
+static int b64v(uint8_t c) {
+  for (int i = 0; i < 64; i++)
+    if ((uint8_t)b64[i] == c) return i;
+  return -1;
+}
+
+static bool copy_read(tm_file *f) {
+  uint32_t n, nl = sizeof TM_SAVE_NAME - 1;
+  const uint8_t *c = plat_load(TM_COPY_NAME, &n);
+  if (!c) return false;
+  for (uint32_t i = 0; i + nl + 3 <= n; i++) {
+    if (c[i] != '#' || c[i + 1] != '>' || memcmp(c + i + 2, TM_SAVE_NAME, nl) || c[i + 2 + nl] != ':') continue;
+    const uint8_t *l = c + i + 3 + nl;
+    uint32_t m = 0;
+    while (l + m < c + n && l[m] != '\n' && l[m]) m++;
+    if (m != (sizeof *f + 2) / 3 * 4) return false;
+    uint8_t *bytes = (uint8_t *)f;
+    uint32_t o = 0;
+    for (uint32_t k = 0; k < m; k += 4) {
+      int v0 = b64v(l[k]), v1 = b64v(l[k + 1]), v2 = l[k + 2] == '=' ? 0 : b64v(l[k + 2]), v3 = l[k + 3] == '=' ? 0 : b64v(l[k + 3]);
+      if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0) return false;
+      uint32_t w = (uint32_t)(v0 << 18 | v1 << 12 | v2 << 6 | v3);
+      if (o < sizeof *f) bytes[o++] = (uint8_t)(w >> 16);
+      if (o < sizeof *f) bytes[o++] = (uint8_t)(w >> 8);
+      if (o < sizeof *f) bytes[o++] = (uint8_t)w;
+    }
+    return true;
+  }
+  return false;
+}
+
+static tm_file file;     /* (static: the stack stays small) */
+
+bool save_load(tm_progress *p) {
+  uint32_t n;
+  const uint8_t *d = plat_load(TM_SAVE_NAME, &n);
+  bool ok = false;
+  if (d && n == sizeof file) {
+    memcpy(&file, d, sizeof file);
+    ok = tm_file_ok(&file);
+  }
+  if (!ok && copy_read(&file) && tm_file_ok(&file)) {
+    ok = true;
+    plat_save(TM_SAVE_NAME, &file, sizeof file);   /* back where it belongs */
+  }
+  if (!ok) {
+    tm_new_progress(p);
+    return false;
+  }
+  *p = file.p;
+  return true;
+}
+
+bool save_write(const tm_progress *p) {
+  memset(&file, 0, sizeof file);
+  file.magic = TM_MAGIC, file.version = TM_VERSION, file.size = sizeof file;
+  file.p = *p;
+  file.sum = tm_sum(&file, offsetof(tm_file, sum));
+  bool ok = plat_save(TM_SAVE_NAME, &file, sizeof file);
+  copy_write(&file);
+  return ok;
+}
