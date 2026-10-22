@@ -211,7 +211,7 @@ def build(sprites, texts):
     out["TXT_NEXT"] = texts.add("Next", "MENU")
     out["TXT_HELP_LINES"] = texts.add("Strike enemies with your nail to gather Soul.\n"
                                       "Hold alpha to focus Soul and heal your masks.\n"
-                                      "Rest at a bench to heal and to save your game.\n"
+                                      "Rest at a bench to heal, save and change charms.\n"
                                       "If you fall, your shade keeps your geo:\n"
                                       "strike it down to win them back.\n"
                                       "Spend geo in Dirtmouth's shops, and find\n"

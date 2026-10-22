@@ -188,6 +188,8 @@ def build(sprites, texts, res, charms, charm_icon):
     out["TXT_CHARM_DESCS"] = "{%s}" % ", ".join(
         str(txt("UI", "CHARM_DESC_%d" % i, "MSG")) if i in charms else "-1" for i in range(41))
     out["TXT_KEY_OK"] = texts.add("OK", "MSG")
+    # (away from a bench, where Equip and its key would be)
+    out["TXT_CHARM_BENCH"] = texts.add("Rest at a bench", "MSG")
 
     # ---------------------------------------------------------------- the Inventory pane
     ip = by[ROOT + "Inv"]
