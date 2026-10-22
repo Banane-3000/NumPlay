@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>29 free games for your NumWorks calculator, in one app.</b><br>
-  Plus 18 big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
+  Plus 19 big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
 </p>
 
 <p align="center">
@@ -118,6 +118,7 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
     <td align="center"><a href="games/donkeykong/README.md"><img src="docs/media/thumb_donkeykong.png" width="200" alt="Donkey Kong"><br><b>Donkey Kong</b></a><br><sub>The 1981 arcade game: barrels, pies, elevators and rivets</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/DonkeyKong.nwa">Download</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="games/dune/README.md"><img src="docs/media/thumb_dune.png" width="200" alt="Dune"><br><b>Dune</b></a><br><sub>Roll down the dunes and fly over the line: 26 balls, 7 landscapes</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/Dune.nwa">Download</a></td>
     <td align="center"><a href="https://github.com/Mason363/NumWorks-Super-Mario-64"><b>Super Mario 64</b></a><br><sub>In a repository of its own: NumWorks-Super-Mario-64</sub></td>
     <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Minecraft 1.18.2, Retro-Go and more: see the roadmap</sub></td>
   </tr>
@@ -246,6 +247,7 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [x] Stickman Hook
 - [x] Donkey Kong
 - [x] Core Ball
+- [x] Dune
 - [ ] Full Minecraft 1.18.2 as a standalone app
 - [ ] A customizer website: pick the games you want in your launcher, with Enlarged Extra Apps support to fit several big games, or big and small ones together
 - [ ] [Retro-Go](https://github.com/ducalex/retro-go) for Game Boy, NES and more: upload your own ROMs on the website and get a .nwa app that plays them
@@ -264,6 +266,9 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Deltarune: Chapter 1, and each later chapter as an app of its own
 - [ ] Hollow Knight: more of Hallownest after Greenpath
 - [ ] Hill Climb Racing: the rest of the stages and vehicles
+- [ ] Tower Destiny Survive
+- [ ] My Little Universe
+- [ ] Famidash, made for the calculator (not through an emulator)
 
 ## Credits
 
@@ -295,6 +300,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 - **Jetpack Joyride** by Halfbrick inspired NumPlay's Jetpack Joyride, written in C for NumPlay with the game's own pictures (from Halfbrick's Facebook asset archive and the Android game) and its numbers, read from the game's files. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. Not affiliated with Halfbrick.
 - **Stickman Hook** by Madbox inspired NumPlay's Stickman Hook, written in C for NumPlay with the game's own pictures, levels and **JUNEGULL** font, read from its web version, and its physics checked step by step against the game's code. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. Not affiliated with Madbox.
 - **Donkey Kong** by Nintendo inspired NumPlay's Donkey Kong, which follows the arcade program's rules and numbers, studied in furrykef's [dkdasm](https://github.com/furrykef/dkdasm) disassembly and tcdev's annotated listing, with new pictures drawn for it. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay and drew its pictures. Not affiliated with Nintendo.
+- **Dune!** by Team Lava inspired NumPlay's Dune, which ports Dune Rider, Inlogic Software's web version: its pictures, Bango Pro lettering and numbers, and its physics, [p2.js](https://github.com/schteppe/p2.js) by Stefan Hedman (MIT License), written again in C. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. Not affiliated with Team Lava or Inlogic Software.
 - **[Level Devil](https://store.steampowered.com/app/3242750/)** by Unept: NumPlay's Level Devil is written in C with no code from the game, but its 80 rooms (their tiles, traps and timing) are the game's own, taken from its web build by games/leveldevil/tools/fetch.py, and its runner is drawn from the game's sprites.
 
 - **Pong** by Atari (1972) inspired NumPlay's 2 Players, with air hockey, tanks in a maze in the spirit of Tank Trouble and the light cycles of Tron. All four are written in C for NumPlay and drawn from shapes, with no code or art from them.
@@ -321,7 +327,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 
 NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyright (c) 2026 Mason Chen. Code and fonts from others keep their own licenses: the `UNLICENSE` files in the games' folders and the [LICENSES](LICENSES) folder. The names, artwork and music of the games NumPlay is inspired by belong to their makers and are not covered by it.
 
-<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Aladdin X (Suika Game), Voodoo (Flappy Dunk), Lima Sky (Doodle Jump), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Halfbrick (Jetpack Joyride), Madbox (Stickman Hook), Nintendo (Donkey Kong), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Chrome Dino, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Chrome of Google LLC, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog of SEGA, Space Invaders of Taito and Donkey Kong of Nintendo.</sub>
+<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Aladdin X (Suika Game), Voodoo (Flappy Dunk), Lima Sky (Doodle Jump), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Halfbrick (Jetpack Joyride), Madbox (Stickman Hook), Nintendo (Donkey Kong), Team Lava (Dune!), Inlogic Software (Dune Rider), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Chrome Dino, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper). Tetris is a trademark of The Tetris Company, Chrome of Google LLC, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog of SEGA, Space Invaders of Taito and Donkey Kong of Nintendo.</sub>
 
 ## Gallery
 
@@ -403,5 +409,6 @@ NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyri
   </tr>
   <tr>
     <td align="center"><img src="docs/media/donkeykong.gif" alt="Donkey Kong: Mario climbs the 25m girders past rolling barrels to Pauline"><br><a href="games/donkeykong/README.md"><b>Donkey Kong</b></a></td>
+    <td align="center"><img src="docs/media/dune.gif" alt="Dune: the ball rolls down the dunes, flies over the line for coins and lands Perfect Slides"><br><a href="games/dune/README.md"><b>Dune</b></a></td>
   </tr>
 </table>
