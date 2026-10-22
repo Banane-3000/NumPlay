@@ -29,7 +29,7 @@ RAM_LIMIT = 148928
 # custom builds of Epsilon 25.2's source give apps less: 133652 bytes; every game fits there too, in NumPlay and on
 # its own (their big buffers are on the stack, 32 KB apart from that RAM, or in the RAM the software has left)
 CUSTOM_RAM = 133652
-BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook DonkeyKong Dune MonkeyMart
+BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook DonkeyKong Dune MonkeyMart TombOfTheMask
 # the calculator's space for installed apps: from the end of its software (64 KiB aligned) to 64 KiB before the
 # end of its 4 MiB slot of flash, 0x903F0000. The software's size sets the start: 0x90200000 is the latest a
 # NumPlay counts on (1.94 MB, APP_SPACE); Epsilon 26.4 on an N0120 ends at 0x90180000 (2.44 MB, the
@@ -315,6 +315,7 @@ APP_stickmanhook = $(B)/games/stickmanhook/stickmanhook.nwa:StickmanHook.nwa
 APP_donkeykong = $(B)/games/donkeykong/donkeykong.nwa:DonkeyKong.nwa
 APP_dune = $(B)/games/dune/dune.nwa:Dune.nwa
 APP_monkeymart = $(B)/games/monkeymart/monkeymart.nwa:MonkeyMart.nwa
+APP_tombofthemask = games/tombofthemask/output/tombofthemask.nwa:TombOfTheMask.nwa
 # the big games' modules are made from these (the kit)
 $(foreach g,$(XL_GAMES),$(eval MOD_$(g) = $$(word 1,$$(subst :, ,$$(APP_$(g))))))
 
@@ -378,6 +379,13 @@ apps: | $(B)
 	cp $(word 1,$(subst :, ,$(APP_dune))) $(B)/apps/$(word 2,$(subst :, ,$(APP_dune)))
 	cp $(word 1,$(subst :, ,$(APP_monkeymart))) $(B)/apps/$(word 2,$(subst :, ,$(APP_monkeymart)))
 	arm-none-eabi-strip --strip-unneeded $(B)/apps/Tetris.nwa
+
+# Tomb of the Mask installs separately, outside the launcher game list.
+apps: $(B)/apps/TombOfTheMask.nwa
+$(B)/apps/TombOfTheMask.nwa: FORCE | $(B)
+	$(MAKE) --no-print-directory -C games/tombofthemask build NWLINK="$(NWLINK)" PYTHON="$(PY)"
+	mkdir -p $(B)/apps
+	cp games/tombofthemask/output/tombofthemask.nwa $@
 
 STD_APPS = $(foreach g,$(STD_GAMES),$(B)/apps/$(NWA_$(g)))
 apps: $(STD_APPS)
@@ -447,5 +455,6 @@ clean:
 	-$(MAKE) -C games/donkeykong clean
 	-$(MAKE) -C games/dune clean
 	-$(MAKE) -C games/monkeymart clean
+	-$(MAKE) -C games/tombofthemask clean
 	-cd games/tetris/tetris && $(CARGO) clean
 	-$(foreach g,$(STD_GAMES),$(MAKE) -C games/$(g) clean;)

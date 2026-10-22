@@ -1,0 +1,20 @@
+{
+  "reference_commit": "29006b0f11904704c390b457f7055c9fa1e53484",
+  "unity_version": "2018.3.9f1",
+  "stage_cache_sha256": "54c01169856ed1b0950960a343488f6ffdf222126511ee26e3da143a80140dfd",
+  "stage_cache_comparisons_passed": 200,
+  "stages": 200,
+  "arcade_sections": 517,
+  "sprites": 706,
+  "converted_sha256": {
+    "font-extra.json": "a8a19951ceabb4a43b2bd4d912ad518e1d78567d559c144aba429cbac7697d75",
+    "font.json": "7e91fd30f601f32bbfeb6a230e31cc61e644d92e8f999bf60d223289d924efa9",
+    "font.png": "5d2fad857445655bff85ac3d07abede9c693b84f78ae51dee4e115e1ef77fdf6",
+    "maps.bin": "b59fef5dc944d76f2b07f1d57ae2824efe1564aa5eab7f58f557f69010e2519d",
+    "maps.json": "a89e0713f41cae70fa593c54e89cf35a2cf3876a2723d63b5d2d7de4293c67ec",
+    "reference.json": "4360b21c70d0da7fd698db96d047a601d15039b89134616d25f6a3cc0918fbc1",
+    "rules.json": "c0db617c4ce79e9fb605db324b27db84d451f578f8c9d3de546e4914693bb337",
+    "sprites.json": "84da71651611913a70f5fcbc374dc164686f05241087f9abf3d7994b8aa55d3d",
+    "sprites.png": "f8752dce7a931b2c07c7dccbe63ad8fed33a8fca463a199af1a2654668f69641"
+  }
+}

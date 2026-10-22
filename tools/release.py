@@ -26,6 +26,7 @@ REPO = "https://github.com/Mason363/NumPlay"
 EXTRAS = set()
 # games too big to fit next to NumPlay on the calculator: only on their own, in a section of their own
 ALONE = {
+    "tombofthemask": ("Tomb of the Mask", "dash through 200 original stages or climb in arcade mode, with 16 masks; adapted by Bobydeluxe"),
     "celeste": ("Celeste", "the whole climb up Celeste Mountain"),
     "hollowknight": ("Hollow Knight", "from King's Pass to Hornet in Greenpath"),
     "undertale": ("Undertale", "the whole Underground, to the barrier and the neutral ending"),
