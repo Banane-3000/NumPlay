@@ -677,7 +677,7 @@
   },
   {
     "id": "championisland",
-    "rank": 16,
+    "rank": 17,
     "title": "Champion Island",
     "tagline": "Seven sports, one island",
     "credit": "Based on Google's Champion Island Games",
@@ -699,7 +699,7 @@
   },
   {
     "id": "finalearth2",
-    "rank": 17,
+    "rank": 18,
     "title": "The Final Earth 2",
     "tagline": "Build a city in space",
     "credit": "Based on the game by Florian van Strien",
@@ -721,7 +721,7 @@
   },
   {
     "id": "numpowder",
-    "rank": 12,
+    "rank": 13,
     "title": "NumPowder",
     "tagline": "Sand, water, fire and more",
     "credit": "Inspired by The Powder Toy",
@@ -775,7 +775,7 @@
   },
   {
     "id": "fnaf",
-    "rank": 10,
+    "rank": 11,
     "title": "Five Nights at Freddy's",
     "tagline": "Survive five nights",
     "credit": "Based on the game by Scott Cawthon",
@@ -797,7 +797,7 @@
   },
   {
     "id": "doom",
-    "rank": 9,
+    "rank": 10,
     "title": "Doom",
     "tagline": "Rip and tear",
     "credit": "Based on Doom by id Software",
@@ -836,7 +836,7 @@
   },
   {
     "id": "isaac",
-    "rank": 14,
+    "rank": 15,
     "title": "The Binding of Isaac",
     "tagline": "Cry through the basement",
     "credit": "Based on the game by Edmund McMillen",
@@ -858,7 +858,7 @@
   },
   {
     "id": "hillclimb",
-    "rank": 15,
+    "rank": 16,
     "title": "Hill Climb Racing",
     "tagline": "Drive up, don't flip",
     "credit": "Based on Hill Climb Racing by Fingersoft",
@@ -880,7 +880,7 @@
   },
   {
     "id": "pvz",
-    "rank": 6,
+    "rank": 7,
     "title": "Plants vs. Zombies",
     "tagline": "Plant your lawn",
     "credit": "Based on the game by PopCap Games",
@@ -902,7 +902,7 @@
   },
   {
     "id": "sonic",
-    "rank": 13,
+    "rank": 14,
     "title": "Sonic the Hedgehog",
     "tagline": "Run through six zones",
     "credit": "Based on the game by Sonic Team",
@@ -923,7 +923,7 @@
   },
   {
     "id": "cookieclicker",
-    "rank": 19,
+    "rank": 20,
     "title": "Cookie Clicker",
     "tagline": "Bake billions of cookies",
     "credit": "Based on Cookie Clicker by Orteil",
@@ -944,7 +944,7 @@
   },
   {
     "id": "leveldevil",
-    "rank": 18,
+    "rank": 19,
     "title": "Level Devil",
     "tagline": "Run to the door",
     "credit": "Based on Level Devil by Unept",
@@ -986,7 +986,7 @@
   },
   {
     "id": "stickmanhook",
-    "rank": 7,
+    "rank": 8,
     "title": "Stickman Hook",
     "tagline": "Swing from hook to hook",
     "credit": "Based on Stickman Hook by Madbox",
@@ -1007,7 +1007,7 @@
   },
   {
     "id": "donkeykong",
-    "rank": 11,
+    "rank": 12,
     "title": "Donkey Kong",
     "tagline": "Climb the girders and save Pauline",
     "credit": "Based on Donkey Kong by Nintendo",
@@ -1028,7 +1028,7 @@
   },
   {
     "id": "dune",
-    "rank": 8,
+    "rank": 9,
     "title": "Dune",
     "tagline": "Roll down the dunes and fly over the line",
     "credit": "Based on Dune! by Team Lava",
@@ -1044,6 +1044,27 @@
       "docs/title.png"
     ],
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/dune",
+    "default": false,
+    "xl": true
+  },
+  {
+    "id": "monkeymart",
+    "rank": 6,
+    "title": "Monkey Mart",
+    "tagline": "Run a grocery mart as a monkey",
+    "credit": "Based on Monkey Mart by TinyDobbins",
+    "top": "0x7DD86A",
+    "bottom": "0x2E8A3A",
+    "accent": "0xF2C230",
+    "colors": 16,
+    "records": [
+      "monkeymart.sav",
+      "monkeymart_saves.py"
+    ],
+    "shots": [
+      "docs/title.png"
+    ],
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/monkeymart",
     "default": false,
     "xl": true
   }
