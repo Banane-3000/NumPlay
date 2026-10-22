@@ -114,9 +114,10 @@ jobs:
             echo "$tag is already released"
             exit 0
           fi
-          python3 tools/release.py --tag "$tag" --notes build/data/release-notes.md --build build/compiled > build/data/release-files.txt
+          python3 tools/release.py --tag "$tag" --notes build/data/release-notes.md --title build/data/release-title.txt \
+            --build build/compiled > build/data/release-files.txt
           mapfile -t files < build/data/release-files.txt
           gh release create "$tag" "${files[@]}" --target "$GITHUB_SHA" \
-            --title "NumPlay $tag" --notes-file build/data/release-notes.md
+            --title "$(cat build/data/release-title.txt)" --notes-file build/data/release-notes.md
           # the README's version and downloads badges come from the site (docs/badges): deploy it again
           gh workflow run pages.yml --ref main || echo "(the site was not deployed again)"
