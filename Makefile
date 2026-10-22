@@ -17,7 +17,7 @@ PY ?= python3
 CARGO ?= cargo
 B = build/data
 # Conventional games honor a configurable output directory; special layouts are kept local.
-GAMES_REDIRECT = balatro blockblast breakout buckshot celeste championisland chess connectfour cookieclicker coreball dinorun donkeykong doodlejump doom finalearth2 flappybird flappydunk fnaf g2048 hillclimb hollowknight invaders isaac jetpackjoyride leveldevil minesweeper numblocks numpowder numvisuals pacman portal pvz snake sokoban solitaire sonic stickmanhook subway sudoku suika towerblock twoplayer undertale uttt
+GAMES_REDIRECT = balatro blockblast breakout buckshot celeste championisland chess connectfour cookieclicker coreball dinorun donkeykong doodlejump doom dune finalearth2 flappybird flappydunk fnaf g2048 hillclimb hollowknight invaders isaac jetpackjoyride leveldevil minesweeper numblocks numpowder numvisuals pacman portal pvz snake sokoban solitaire sonic stickmanhook subway sudoku suika towerblock twoplayer undertale uttt
 GAMES_OUT = dinorun
 GAME_REDIRECT_ARG = $(if $(filter $(1),$(GAMES_OUT)),OUT=../../$(B)/games/$(1),BUILD_DIR=../../$(B)/games/$(1))
 # the RAM the oldest calculator software that runs apps gives them (23.2: 148928 bytes; 25.2 gives 153676).
@@ -28,7 +28,7 @@ RAM_LIMIT = 148928
 # custom builds of Epsilon 25.2's source give apps less: 133652 bytes; every game fits there too, in NumPlay and on
 # its own (their big buffers are on the stack, 32 KB apart from that RAM, or in the RAM the software has left)
 CUSTOM_RAM = 133652
-BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook DonkeyKong
+BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook DonkeyKong Dune
 # the calculator's space for installed apps (0x90200000 to 0x903F0000 in its flash)
 APP_SPACE = 2031616
 # Upsilon, the N0110 and N0115's custom software, gives .nwa apps less RAM: NumPlay-Upsilon.nwa has
@@ -228,6 +228,7 @@ APP_leveldevil = $(B)/games/leveldevil/leveldevil.nwa:LevelDevil.nwa
 APP_jetpackjoyride = $(B)/games/jetpackjoyride/jetpackjoyride.nwa:JetpackJoyride.nwa
 APP_stickmanhook = $(B)/games/stickmanhook/stickmanhook.nwa:StickmanHook.nwa
 APP_donkeykong = $(B)/games/donkeykong/donkeykong.nwa:DonkeyKong.nwa
+APP_dune = $(B)/games/dune/dune.nwa:Dune.nwa
 
 apps: | $(B)
 	$(MAKE) -C games/numdash build NWLINK="node node_modules/nwlink/bin/nwlink"
@@ -256,6 +257,7 @@ apps: | $(B)
 	$(MAKE) -C games/jetpackjoyride build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/jetpackjoyride
 	$(MAKE) -C games/stickmanhook build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/stickmanhook
 	$(MAKE) -C games/donkeykong build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/donkeykong
+	$(MAKE) -C games/dune build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/dune
 	cd games/tetris/tetris && NWLINK="$(NWLINK)" $(CARGO) build --release --quiet
 	cp $(word 1,$(subst :, ,$(APP_numdash))) $(B)/apps/$(word 2,$(subst :, ,$(APP_numdash)))
 	cp $(word 1,$(subst :, ,$(APP_crossyroad))) $(B)/apps/$(word 2,$(subst :, ,$(APP_crossyroad)))
@@ -284,6 +286,7 @@ apps: | $(B)
 	cp $(word 1,$(subst :, ,$(APP_jetpackjoyride))) $(B)/apps/$(word 2,$(subst :, ,$(APP_jetpackjoyride)))
 	cp $(word 1,$(subst :, ,$(APP_stickmanhook))) $(B)/apps/$(word 2,$(subst :, ,$(APP_stickmanhook)))
 	cp $(word 1,$(subst :, ,$(APP_donkeykong))) $(B)/apps/$(word 2,$(subst :, ,$(APP_donkeykong)))
+	cp $(word 1,$(subst :, ,$(APP_dune))) $(B)/apps/$(word 2,$(subst :, ,$(APP_dune)))
 	arm-none-eabi-strip --strip-unneeded $(B)/apps/Tetris.nwa
 
 STD_APPS = $(foreach g,$(STD_GAMES),$(B)/apps/$(NWA_$(g)))
@@ -327,3 +330,31 @@ emu: $(B)/NumPlay.nwa
 
 clean:
 	rm -rf $(B) build/compiled
+	-$(MAKE) -C games/numdash clean
+	-$(MAKE) -C games/crossyroad clean
+	-$(MAKE) -C games/numdrive clean
+	-$(MAKE) -C games/balatro clean
+	-$(MAKE) -C games/buckshot clean
+	-$(MAKE) -C games/portal clean
+	-$(MAKE) -C games/chess clean
+	-$(MAKE) -C games/numvisuals clean
+	-$(MAKE) -C games/championisland clean
+	-$(MAKE) -C games/hollowknight clean
+	-$(MAKE) -C games/undertale clean
+	-$(MAKE) -C games/subway clean
+	-$(MAKE) -C games/fnaf clean
+	-$(MAKE) -C games/hillclimb clean
+	-$(MAKE) -C games/finalearth2 clean
+	-$(MAKE) -C games/numpowder clean
+	-$(MAKE) -C games/doom clean
+	-$(MAKE) -C games/isaac clean
+	-$(MAKE) -C games/pvz clean
+	-$(MAKE) -C games/sonic clean
+	-$(MAKE) -C games/cookieclicker clean
+	-$(MAKE) -C games/leveldevil clean
+	-$(MAKE) -C games/jetpackjoyride clean
+	-$(MAKE) -C games/stickmanhook clean
+	-$(MAKE) -C games/donkeykong clean
+	-$(MAKE) -C games/dune clean
+	-cd games/tetris/tetris && $(CARGO) clean
+	-$(foreach g,$(STD_GAMES),$(MAKE) -C games/$(g) clean;)
