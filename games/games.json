@@ -571,6 +571,25 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/sokoban"
   },
   {
+    "id": "uno",
+    "rank": 30,
+    "title": "UNO",
+    "tagline": "Empty your hand against up to three bots",
+    "credit": "Game made by Bobydeluxe",
+    "top": "0x347052",
+    "bottom": "0x0B2925",
+    "accent": "0xFFD75B",
+    "colors": 32,
+    "records": [
+      "uno.sav"
+    ],
+    "shots": [
+      "docs/gameplay.png"
+    ],
+    "app": "UNO.nwa",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/uno"
+  },
+  {
     "id": "retrogo",
     "rank": 30,
     "title": "Retro-Go",

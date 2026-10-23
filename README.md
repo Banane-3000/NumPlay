@@ -5,7 +5,7 @@
 <h1 align="center">NumPlay</h1>
 
 <p align="center">
-  <b>29 free games for your NumWorks calculator, in one app.</b><br>
+  <b>30 free games for your NumWorks calculator, in one app.</b><br>
   Plus 21 big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
 </p>
 
@@ -82,6 +82,7 @@ All of these come in one app, **NumPlay.nwa**.
     <td align="center"><a href="games/sudoku/README.md"><img src="docs/media/thumb_sudoku.png" width="120" alt="Sudoku"><br><b>Sudoku</b></a></td>
     <td align="center"><a href="games/uttt/README.md"><img src="docs/media/thumb_uttt.png" width="120" alt="Ultimate Tic-Tac-Toe"><br><b>Ultimate Tic-Tac-Toe</b></a></td>
     <td align="center"><a href="games/sokoban/README.md"><img src="docs/media/thumb_sokoban.png" width="120" alt="Sokoban"><br><b>Sokoban</b></a></td>
+    <td align="center"><a href="games/uno/README.md"><img src="docs/media/thumb_uno.png" width="120" alt="UNO"><br><b>UNO</b></a></td>
   </tr>
 </table>
 
@@ -305,6 +306,8 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Friday Night Funkin'
 
 ## Credits
+
+- **[Bobydeluxe](https://github.com/Bobydeluxe)** made **[UNO](games/uno/README.md)** for NumPlay: play against one to three bots, choose table rules, and win by emptying your hand. Card and table art by **[AlexDer](https://alexder.itch.io/uno-card-game-asset-pack)**. UNO belongs to Mattel; this is an unofficial fan adaptation.
 
 NumPlay is a fan project, made out of love for these games and for the NumWorks calculator. If you enjoy a game here, go play the original and support the people who made it. NumWorks also has a great community of people making games by hand: try [Numcraft](https://github.com/yannis300307/NumcraftRust), [Celeste Classic](https://github.com/BenchatonDev/Celeste-Numworks), [Tatone26's All the Apps](https://github.com/Tatone26/Numworks-games), the apps on [Nwagyu](https://nwagyu.org/guide/) and [yannis300307's list](https://gist.github.com/yannis300307/9123136f90877107ec0d49ba96b303e5).
 

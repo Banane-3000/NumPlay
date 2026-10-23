@@ -1,0 +1,53 @@
+name: UNO
+
+on:
+  pull_request:
+    paths:
+      - 'games/uno/**'
+      - 'games/common/**'
+      - 'launcher/src/**'
+      - 'games/games.json'
+      - 'Makefile'
+      - 'tools/emu.py'
+      - 'tools/gen_games.py'
+      - 'tools/npmodule.py'
+      - '.github/workflows/uno.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  game:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: ARM toolchain
+        run: |
+          v=15.2.1-1.1
+          curl -fsSL "https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v$v/xpack-arm-none-eabi-gcc-$v-linux-x64.tar.gz" | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/xpack-arm-none-eabi-gcc-$v/bin" >> "$GITHUB_PATH"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Tools
+        run: |
+          npm install -g nwlink@1.0.0
+          pip install pillow==11.3.0 numpy pyelftools unicorn==2.1.4
+      - name: Standalone and NumPlay module builds
+        run: make build/data/apps/UNO.nwa build/data/modules/uno.o NWLINK=nwlink
+      - name: Card rules, single-game wins and save migration
+        run: make -C games/uno test HOST_CC=gcc
+      - name: ARM controls and firmware memory guards
+        run: python3 games/uno/tests/test_arm.py --nwlink nwlink
+      - name: NumPlay launcher, shared saves and reinstall backup
+        run: python3 games/uno/tests/test_integration.py --nwlink nwlink
+      - name: Repository save-and-exit scenario
+        run: python3 tests/test_games.py build/data/apps --game uno
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UNO
+          path: build/data/apps/UNO.nwa

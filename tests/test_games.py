@@ -42,6 +42,10 @@ def every(t0, t1, step, key, d=80):
 
 # name: (nwa, save record, first run keys, home time, second run keys, home time)
 GAMES = {
+    # Create the three-step table, deal, then resume it after reinstall.
+    "uno": ("UNO.nwa", "uno.sav",
+            presses((700,"ok"),(1000,"up"),(1300,"ok"),(1600,"up"),(1900,"ok"),(2200,"ok")), 3200,
+            presses((700,"ok")), 1800),
     "crossyroad": ("CrossyRoad.nwa", "crossyroad.sav",
                    every(1500, 9000, 350, "up"), 12000, every(1500, 4000, 400, "up"), 6000),
     "chess": ("NumChess.nwa", "numchess.sav", presses((1500, "ok"), (2500, "ok")), 4000, [], 2500),
@@ -330,6 +334,8 @@ def dk_frames(v):
 
 
 CHECKS = {
+    "uno": (lambda v: len(v) == 768 and v[:5] == b"UNO\2\1" and not any(v[671:679]),
+            lambda v: len(v) == 768 and v[:5] == b"UNO\2\1" and not any(v[671:679])),
     # the island remembers where Lucky was; after the reinstall, from the copy
     "championisland": (lambda v: v[:3] == b"CI1" and b"PLAYER_LOC" in v,) * 2,
     "numdrive": (lambda v: v[27] == 1, lambda v: v[27] == 0),  # last played level
