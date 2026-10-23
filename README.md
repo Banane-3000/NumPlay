@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>29 free games for your NumWorks calculator, in one app.</b><br>
-  Plus 21 big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
+  Plus 22 big games that install on their own. For the N0110, N0115 and N0120, in English, French and Chinese.
 </p>
 
 <p align="center">
@@ -132,7 +132,7 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
   <tr>
     <td align="center"><a href="https://github.com/Mason363/NumWorks-Super-Mario-64"><b>Super Mario 64</b></a><br><sub>In a repository of its own: NumWorks-Super-Mario-64</sub></td>
     <td align="center"><a href="https://github.com/Mason363/NumWorks-Super-Mario-Bros"><b>Super Mario Bros.</b></a><br><sub>All 32 stages, in a repository of its own: NumWorks-Super-Mario-Bros</sub></td>
-    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Minecraft 1.18.2 and more: see the roadmap</sub></td>
+    <td align="center"><a href="games/fnf/README.md"><img src="games/fnf/docs/menu.png" width="200" alt="Friday Night Funkin'"><br><b>Friday Night Funkin'</b></a><br><sub>27 songs, 166 charts, without sound. By Bobydeluxe.</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/FridayNightFunkin.nwa">Download</a></td>
   </tr>
 </table>
 
@@ -302,9 +302,11 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] More of Retro-Go: Game & Watch, SNES, Mega Drive, SG-1000 and ColecoVision
 - [ ] Five Nights at Freddy's 2, 3, 4 and FNAF World
 - [ ] Brawl Stars, against bots
-- [ ] Friday Night Funkin'
+- [x] [Friday Night Funkin'](games/fnf/README.md): a silent standalone adaptation, with 27 songs and 166 charts
 
 ## Credits
+
+- **[Friday Night Funkin'](https://github.com/FunkinCrew/Funkin)** by **The Funkin' Crew and the original contributors**: original charts, characters and artwork. Silent native calculator adaptation by **[Bobydeluxe](https://github.com/Bobydeluxe)**, installed separately as **FridayNightFunkin.nwa**. Not affiliated with The Funkin' Crew. Source code and art/assets retain their separate upstream licenses; see [provenance and rights](games/fnf/ASSETS.md).
 
 NumPlay is a fan project, made out of love for these games and for the NumWorks calculator. If you enjoy a game here, go play the original and support the people who made it. NumWorks also has a great community of people making games by hand: try [Numcraft](https://github.com/yannis300307/NumcraftRust), [Celeste Classic](https://github.com/BenchatonDev/Celeste-Numworks), [Tatone26's All the Apps](https://github.com/Tatone26/Numworks-games), the apps on [Nwagyu](https://nwagyu.org/guide/) and [yannis300307's list](https://gist.github.com/yannis300307/9123136f90877107ec0d49ba96b303e5).
 

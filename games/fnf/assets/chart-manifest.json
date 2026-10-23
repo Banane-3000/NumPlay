@@ -1,0 +1,1520 @@
+{
+  "SPRITE_COUNT": 845,
+  "PALETTE_COUNT": 826,
+  "ART_BYTES": 1375375,
+  "NOTE_BYTES": 281891,
+  "ANIMATION_COUNT": 444,
+  "CHARACTER_COUNT": 46,
+  "KIND_COUNT": 36,
+  "TEMPO_COUNT": 75,
+  "EVENT_COUNT": 3638,
+  "CHART_COUNT": 166,
+  "TRACK_COUNT": 61,
+  "SONG_COUNT": 27,
+  "LEVEL_COUNT": 10,
+  "STAGE_COUNT": 21,
+  "UI_LOGO": 801,
+  "UI_MENU": 802,
+  "auxiliary_npc_notes": 1130,
+  "charts": [
+    {
+      "chart": 0,
+      "song": "tutorial",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 55,
+      "player_notes": 32,
+      "sha256": "23efe01582c7a6e2ca6f47aacd97df2823e935ef7815ac7174906394e80a982f"
+    },
+    {
+      "chart": 1,
+      "song": "tutorial",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 55,
+      "player_notes": 32,
+      "sha256": "23efe01582c7a6e2ca6f47aacd97df2823e935ef7815ac7174906394e80a982f"
+    },
+    {
+      "chart": 2,
+      "song": "tutorial",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 71,
+      "player_notes": 48,
+      "sha256": "c0e0b13fe6d8a3f981f9f6ae6dc5201d7d143768cca8917f59e56e546e5ce8bd"
+    },
+    {
+      "chart": 3,
+      "song": "bopeebo",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 88,
+      "player_notes": 44,
+      "sha256": "6e155c74c2d5a7e4d0c86d32018c332aa240860f6a391fa61e6c124414dc69a4"
+    },
+    {
+      "chart": 4,
+      "song": "bopeebo",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 102,
+      "player_notes": 51,
+      "sha256": "a052d468e8febb90b923150bb90bee3590f917afc228053a0b4b781c4fdbbbb5"
+    },
+    {
+      "chart": 5,
+      "song": "bopeebo",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 124,
+      "player_notes": 62,
+      "sha256": "95c0f61abb8c8bc5e9ce667ee63dbca48c2bb94120d2c6191d4391ede266755c"
+    },
+    {
+      "chart": 6,
+      "song": "bopeebo",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 532,
+      "player_notes": 410,
+      "sha256": "fd144636d04b4ac464460cafd7817ea81b3487ec3678f1818df3e76874c30097"
+    },
+    {
+      "chart": 7,
+      "song": "bopeebo",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 558,
+      "player_notes": 436,
+      "sha256": "cc26603f1ae857d76ae516a43b5c1a4bddd92fdfe15989e8eb8dbf461f1133d2"
+    },
+    {
+      "chart": 8,
+      "song": "bopeebo",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 220,
+      "player_notes": 122,
+      "sha256": "f9836b4a77a504a91bcb30fc905a2377f1506382edfd29c7ebc32c7f3109d640"
+    },
+    {
+      "chart": 9,
+      "song": "bopeebo",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 283,
+      "player_notes": 185,
+      "sha256": "6e44162ab49552568b91dd9aa0763425e4e734c1cd5870ae520a9c5f802de439"
+    },
+    {
+      "chart": 10,
+      "song": "bopeebo",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 343,
+      "player_notes": 243,
+      "sha256": "58180551eefca19eb9b50e1f7ca1ff67f305cb2de5c976cd74308e276bb87b23"
+    },
+    {
+      "chart": 11,
+      "song": "fresh",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 169,
+      "player_notes": 85,
+      "sha256": "bf6cfc12ea3007f0650a388f21f5ef60e5ce3beed95d5274697a5043edb0125d"
+    },
+    {
+      "chart": 12,
+      "song": "fresh",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 210,
+      "player_notes": 105,
+      "sha256": "c952af10d6891dfe5f2e035875ed53ab05762c2403773c0a748af49a8a4ea88d"
+    },
+    {
+      "chart": 13,
+      "song": "fresh",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 267,
+      "player_notes": 141,
+      "sha256": "09bf2beeed08c383c9ee077c065af1950567023b57c2103a77908565adfb55b9"
+    },
+    {
+      "chart": 14,
+      "song": "fresh",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 464,
+      "player_notes": 283,
+      "sha256": "cfef4c9b1dd205c8bf61c52f08204b1c295af65d0d575facb16838bea7d5d346"
+    },
+    {
+      "chart": 15,
+      "song": "fresh",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 473,
+      "player_notes": 289,
+      "sha256": "66b2c353eab89ed38b6da4168087f345e1b1f7f6c70b8a50a5c0de86f03f0356"
+    },
+    {
+      "chart": 16,
+      "song": "fresh",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 246,
+      "player_notes": 139,
+      "sha256": "24eafd07c4ed73d6b6adb7c601cc5236060536f57cf29ea39b3a082019bf0786"
+    },
+    {
+      "chart": 17,
+      "song": "fresh",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 318,
+      "player_notes": 207,
+      "sha256": "d73ba98ba74427139c660196eaca12efb8511f078f0b64cded51c524547e1176"
+    },
+    {
+      "chart": 18,
+      "song": "fresh",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 341,
+      "player_notes": 230,
+      "sha256": "3bd0abbea2744ed9b0d4df4efcba46b528cb542aeab9001d247c5d87e162c88b"
+    },
+    {
+      "chart": 19,
+      "song": "dadbattle",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 144,
+      "player_notes": 72,
+      "sha256": "bd43572c00838e6ed83653dcdc4e8b1d173a33bb72e59a403163381a28f3feb0"
+    },
+    {
+      "chart": 20,
+      "song": "dadbattle",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 263,
+      "player_notes": 131,
+      "sha256": "983ce3bf3f9e717d7260ef4e8951ae2d7588793a0e19d3029af2f257f93a161f"
+    },
+    {
+      "chart": 21,
+      "song": "dadbattle",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 327,
+      "player_notes": 164,
+      "sha256": "1f2057fcebb12229e150d606a3101ea354ec5f04092b4983941952bb0cee7176"
+    },
+    {
+      "chart": 22,
+      "song": "dadbattle",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 948,
+      "player_notes": 697,
+      "sha256": "69bcc99d8fe7e576cca83ebe307f4a7da49f87fb38bed89d1f39420e2d293855"
+    },
+    {
+      "chart": 23,
+      "song": "dadbattle",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 951,
+      "player_notes": 700,
+      "sha256": "e0d647789e14ec79d2596a4cf8da41dcbf6639f941fe05ee55953a786e475ca5"
+    },
+    {
+      "chart": 24,
+      "song": "dadbattle",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 398,
+      "player_notes": 231,
+      "sha256": "3c42f266e123fccb78535be6018c007430ac7fab50269d4e6b723a5c2f38245a"
+    },
+    {
+      "chart": 25,
+      "song": "dadbattle",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 499,
+      "player_notes": 332,
+      "sha256": "52e15313636e275c671229c32572a6fa26dfd9634dc5e4802d3c0be83c435d35"
+    },
+    {
+      "chart": 26,
+      "song": "dadbattle",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 526,
+      "player_notes": 359,
+      "sha256": "8d3ba3a82f1f393df498ad9ab9b0f4db313340cbbba2b5c5b7d4f04ed87da535"
+    },
+    {
+      "chart": 27,
+      "song": "spookeez",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 273,
+      "player_notes": 136,
+      "sha256": "9fdb7906880ae71c22cb858a306f5c9d69398cabd8fcbcdb8c40e82284fd3376"
+    },
+    {
+      "chart": 28,
+      "song": "spookeez",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 347,
+      "player_notes": 172,
+      "sha256": "2542849396a8a3191b1b10e9eebf50e75758549115cff45681ae5de89505b2e4"
+    },
+    {
+      "chart": 29,
+      "song": "spookeez",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 406,
+      "player_notes": 202,
+      "sha256": "637abd0857c2c3ce92d4e47b08111265564d57b28eed9eed2fd880f056440b07"
+    },
+    {
+      "chart": 30,
+      "song": "spookeez",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 1190,
+      "player_notes": 887,
+      "sha256": "2bcaa1bb2bf006fc69e1121849960e04a67b0efcca69a25d57a928e365101d6d"
+    },
+    {
+      "chart": 31,
+      "song": "spookeez",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 1216,
+      "player_notes": 913,
+      "sha256": "f3e6621a22845f89943eb969fe8227c2a3c0c2ba45b05de59cde7ec226736dcf"
+    },
+    {
+      "chart": 32,
+      "song": "spookeez",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 408,
+      "player_notes": 197,
+      "sha256": "60ed50efc0401c6465f893a7698c49b7e99499fc233ecdd3f301a297a17e6dd4"
+    },
+    {
+      "chart": 33,
+      "song": "spookeez",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 443,
+      "player_notes": 232,
+      "sha256": "2589eff341bd781b73bebdfddcfbf6e9aa3428c7786acac6b70deec76036d632"
+    },
+    {
+      "chart": 34,
+      "song": "spookeez",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 497,
+      "player_notes": 286,
+      "sha256": "244331b599af217e751ca13b9ea2161c04bfeb85dfbea6b61f26e75521a09d40"
+    },
+    {
+      "chart": 35,
+      "song": "south",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 206,
+      "player_notes": 103,
+      "sha256": "26ca9a79c889a47da9d547cf57f218a17646590cd23455143fbc5b8245349bba"
+    },
+    {
+      "chart": 36,
+      "song": "south",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 312,
+      "player_notes": 156,
+      "sha256": "85fed66542cf5e286f55c7a30e70d119d0aabcff869655c74effd6c143545f73"
+    },
+    {
+      "chart": 37,
+      "song": "south",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 350,
+      "player_notes": 175,
+      "sha256": "71e5f24185a0bebdf1e5faeea57dc454d50c93c1b47168188977bf05362229ff"
+    },
+    {
+      "chart": 38,
+      "song": "south",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 742,
+      "player_notes": 522,
+      "sha256": "539ca86b76981f5a67bd9024a6e5bcd0365b2dc645981c3ae5a197ae51b0cd2c"
+    },
+    {
+      "chart": 39,
+      "song": "south",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 746,
+      "player_notes": 526,
+      "sha256": "5d8afa2a29d97500943d61db308f7d592af6244874842f6e95fdbc03ee76fffe"
+    },
+    {
+      "chart": 40,
+      "song": "south",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 283,
+      "player_notes": 146,
+      "sha256": "5e346851f1bc7d578414b6bfe5cadf4df38af8986aba9c493419c22fc4a64b39"
+    },
+    {
+      "chart": 41,
+      "song": "south",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 391,
+      "player_notes": 211,
+      "sha256": "2a4a7d7d83ccaa5d5635e5689effa17d56302b773ffef15c538ca8fba8f0d0f2"
+    },
+    {
+      "chart": 42,
+      "song": "south",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 439,
+      "player_notes": 256,
+      "sha256": "1fd6748ab54eb10baa1dfa28a857c860d6330e6d7d9dafcfbb03a43dd3a57cca"
+    },
+    {
+      "chart": 43,
+      "song": "monster",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 395,
+      "player_notes": 169,
+      "sha256": "e405d812801a0889c184ef34a7b70571f9b33629bdb26f990ff63d7f55fa29be"
+    },
+    {
+      "chart": 44,
+      "song": "monster",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 419,
+      "player_notes": 193,
+      "sha256": "3192f3013a65959fbaeab3047f278b7b1ef299473f40fc69032cf42009863446"
+    },
+    {
+      "chart": 45,
+      "song": "monster",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 443,
+      "player_notes": 217,
+      "sha256": "70cd53fff7883e3833bdeda36adb8f1ba6411bdd454fa6cfe294bc5fe4afbadd"
+    },
+    {
+      "chart": 46,
+      "song": "pico",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 170,
+      "player_notes": 92,
+      "sha256": "7e6354ab4360781dba424035f41004f8901a9959af917069b123947d680184d4"
+    },
+    {
+      "chart": 47,
+      "song": "pico",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 263,
+      "player_notes": 142,
+      "sha256": "a35b38366f9a40193405a71191bae1008883d336db77fc7883da4128d2e152cf"
+    },
+    {
+      "chart": 48,
+      "song": "pico",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 327,
+      "player_notes": 175,
+      "sha256": "0f2c8c1372bf16d526611a1d05483e613928679bfd6f9ad012d2a5bc60002c3a"
+    },
+    {
+      "chart": 49,
+      "song": "pico",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 702,
+      "player_notes": 459,
+      "sha256": "c3a33836a000a0e6acf6138f5188c07fb73e1c41631e6fa60555dd727c8f2758"
+    },
+    {
+      "chart": 50,
+      "song": "pico",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 827,
+      "player_notes": 576,
+      "sha256": "636e14376c1564333acd06e8357eb01f8b767ed026754b3dfc375ef45a170d19"
+    },
+    {
+      "chart": 51,
+      "song": "pico",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 349,
+      "player_notes": 206,
+      "sha256": "c5239f5a7a2d8837d3074d23452c233f82606d91e369a5957c9dcbdf92d19c1a"
+    },
+    {
+      "chart": 52,
+      "song": "pico",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 369,
+      "player_notes": 217,
+      "sha256": "de69ff53326f0288ba2f8d7b126c06e2aedfd831ee92fe4d59703ad31f62f07b"
+    },
+    {
+      "chart": 53,
+      "song": "pico",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 423,
+      "player_notes": 255,
+      "sha256": "ea4fc020dc723362a55bc2d652098e3b9976b3b8d188a0497f34365393923889"
+    },
+    {
+      "chart": 54,
+      "song": "philly-nice",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 227,
+      "player_notes": 114,
+      "sha256": "fe01a4c0c270fbdf41f84ebd5a73777f5256d25e6701acc87e9b0d6600f318f0"
+    },
+    {
+      "chart": 55,
+      "song": "philly-nice",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 323,
+      "player_notes": 162,
+      "sha256": "3a9ca0a6980c5017905913de9d28cd0c002c6b0d6b128e54fc6a19ac99df8177"
+    },
+    {
+      "chart": 56,
+      "song": "philly-nice",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 451,
+      "player_notes": 224,
+      "sha256": "99ef299d6eb96f630349648f42644455cf01f823c040281d690e3dabd6e203fa"
+    },
+    {
+      "chart": 57,
+      "song": "philly-nice",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 782,
+      "player_notes": 474,
+      "sha256": "395e750ff7a4ad667c0181c070bf18648274d154400f97885db2486c81b1a575"
+    },
+    {
+      "chart": 58,
+      "song": "philly-nice",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 792,
+      "player_notes": 484,
+      "sha256": "d08c001a63f8843f0561ebe0940ded088f5f13809ca3aeece7c4681fe22a117d"
+    },
+    {
+      "chart": 59,
+      "song": "philly-nice",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 423,
+      "player_notes": 177,
+      "sha256": "2e2d5aab9dc6a0ea290b0c3ef3d4d2b50bb26dc11763d3871b28bdf2dda785b2"
+    },
+    {
+      "chart": 60,
+      "song": "philly-nice",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 533,
+      "player_notes": 287,
+      "sha256": "12bc056216f10cccf58e350ae00475f4fe7ab6ce7096bf37e5914f5bde2acae7"
+    },
+    {
+      "chart": 61,
+      "song": "philly-nice",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 570,
+      "player_notes": 324,
+      "sha256": "13b5cdc568fbb0b18cfcd1ae720ed0acfc6ebf487d9681754effd591d794bae8"
+    },
+    {
+      "chart": 62,
+      "song": "blammed",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 235,
+      "player_notes": 115,
+      "sha256": "594c9e7331f6398ca6cce02db327aae42c0120d9f7598c85ef1d8d469dc2cf15"
+    },
+    {
+      "chart": 63,
+      "song": "blammed",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 301,
+      "player_notes": 147,
+      "sha256": "445217a15ed13a9c32900feb299bdd4eb92600a1df6eed32e379d40cadf218cc"
+    },
+    {
+      "chart": 64,
+      "song": "blammed",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 398,
+      "player_notes": 196,
+      "sha256": "e175de1f6a8169c38dc2559d77790f0b89fe6730841dfc2dff6820f949fb596f"
+    },
+    {
+      "chart": 65,
+      "song": "blammed",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 575,
+      "player_notes": 318,
+      "sha256": "ba43e0728ad4988a1e68ecdd4a83e0aca52f51caf3d21f9e51ca783dd477cab4"
+    },
+    {
+      "chart": 66,
+      "song": "blammed",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 649,
+      "player_notes": 392,
+      "sha256": "f40f2fd4fa2a7ca123cbd6d4a57f34fda64bee1b99acd9add9cc78d5deeccee1"
+    },
+    {
+      "chart": 67,
+      "song": "blammed",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 508,
+      "player_notes": 208,
+      "sha256": "ae05946877451d5ea8c26e39204b23b505d580183f7c7ea52dfa6fc5cc5de0f3"
+    },
+    {
+      "chart": 68,
+      "song": "blammed",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 629,
+      "player_notes": 322,
+      "sha256": "efa370704e68722eafa662b156a039bf8a21525b6d7d38a318d8186ce9a9b2af"
+    },
+    {
+      "chart": 69,
+      "song": "blammed",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 674,
+      "player_notes": 367,
+      "sha256": "0a05c1402f27467fe7669eaa51f7fd60fc519e13b33867c678ff7e12fb0cc680"
+    },
+    {
+      "chart": 70,
+      "song": "satin-panties",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 313,
+      "player_notes": 156,
+      "sha256": "73cce9d298be7b847c8770599968c3566facf0e85f61d49bc6e02422e99ecddc"
+    },
+    {
+      "chart": 71,
+      "song": "satin-panties",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 428,
+      "player_notes": 216,
+      "sha256": "d9389abea12a00114ea7a5268036175e3da52846ec41e69ffe7a954e7c07d827"
+    },
+    {
+      "chart": 72,
+      "song": "satin-panties",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 525,
+      "player_notes": 266,
+      "sha256": "516e4077115d938f8ca693ef22009133f770d5f1ffafab26e2402809e0e56d1c"
+    },
+    {
+      "chart": 73,
+      "song": "satin-panties",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 1125,
+      "player_notes": 693,
+      "sha256": "7eeb7ddab90d285463cceff4d6dadf4b0915193866d610904da08a40697e19f3"
+    },
+    {
+      "chart": 74,
+      "song": "satin-panties",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 1151,
+      "player_notes": 719,
+      "sha256": "e8faa0c3d4b4b76689dd716a54f069d066c2b2888b7c410e6467ee08b95555fa"
+    },
+    {
+      "chart": 75,
+      "song": "high",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 319,
+      "player_notes": 154,
+      "sha256": "83767196bf2ad27d8ed496943adc45cb0ac78506dd296ea7197b624b59b24b18"
+    },
+    {
+      "chart": 76,
+      "song": "high",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 382,
+      "player_notes": 183,
+      "sha256": "462b6acf80e24c46502a9f36ca53a65c23eed83986fc17d0d43e3a8de880dbfa"
+    },
+    {
+      "chart": 77,
+      "song": "high",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 491,
+      "player_notes": 236,
+      "sha256": "d9bd1c6591faca6c6a41bede057f8ce80d9331c49187dbdbea71372e4e0c2b20"
+    },
+    {
+      "chart": 78,
+      "song": "high",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 636,
+      "player_notes": 381,
+      "sha256": "30cad0cd8ab597a04c849194c8e0cc08a1274573d4effd1868a762c3d5de3f76"
+    },
+    {
+      "chart": 79,
+      "song": "high",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 641,
+      "player_notes": 386,
+      "sha256": "2524c4ffdfcbbd339bd399adb8ce100ef2d8a30aab1b3050cdd08f00a233ea51"
+    },
+    {
+      "chart": 80,
+      "song": "milf",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 397,
+      "player_notes": 187,
+      "sha256": "443af8b70fbbc6af244d49cd03b7cffe5ca22f1901f1a3f224828546e5daecf6"
+    },
+    {
+      "chart": 81,
+      "song": "milf",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 518,
+      "player_notes": 247,
+      "sha256": "c30b592deb76385b9bb99b29be2154557371346a9f89c7627e3a7660bfa6506a"
+    },
+    {
+      "chart": 82,
+      "song": "milf",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 674,
+      "player_notes": 326,
+      "sha256": "c2b481ef808d214d3fb684c34f2851a994f75aed91396470f777507c0fa572ab"
+    },
+    {
+      "chart": 83,
+      "song": "cocoa",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 279,
+      "player_notes": 139,
+      "sha256": "02f82582fe9a4c4ca98b022e35ac8fb8491559ea616390d8df2a912eed9e341e"
+    },
+    {
+      "chart": 84,
+      "song": "cocoa",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 324,
+      "player_notes": 162,
+      "sha256": "543b63e293a9091938d815dabac4757c9a4ae54523170995dc73b2aa59de9783"
+    },
+    {
+      "chart": 85,
+      "song": "cocoa",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 447,
+      "player_notes": 223,
+      "sha256": "ddd85cc9153f50040e63386c75c13cbb02283951d4bd1f146c6336ce3b8d31a1"
+    },
+    {
+      "chart": 86,
+      "song": "cocoa",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 617,
+      "player_notes": 410,
+      "sha256": "8c1686eeb7475c76f9ea1cdbf424378d74e750c6ffdef31f7ccb6c320f0eb4f2"
+    },
+    {
+      "chart": 87,
+      "song": "cocoa",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 647,
+      "player_notes": 440,
+      "sha256": "74e8b9998e15b4ecd5c5dd07e2b8fc27edbb612d4221fa2fd4381894e1655744"
+    },
+    {
+      "chart": 88,
+      "song": "cocoa",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 597,
+      "player_notes": 277,
+      "sha256": "f009d8c513215de5daf687336ba66bc657579cd1f9e288716d58c2757e193f83"
+    },
+    {
+      "chart": 89,
+      "song": "cocoa",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 705,
+      "player_notes": 385,
+      "sha256": "28fe85404389ac85b6ac131ec967a4c514327e5600d329352e83a1314202b771"
+    },
+    {
+      "chart": 90,
+      "song": "cocoa",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 762,
+      "player_notes": 442,
+      "sha256": "0de5b874973cf2dce1f7be6d631959a3cc5cb3966d859cf422578e67ff68ebae"
+    },
+    {
+      "chart": 91,
+      "song": "eggnog",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 288,
+      "player_notes": 153,
+      "sha256": "8c6f547ef06e663296449041df7975ec4f4a75152be0f0f95e423c1411b68c3b"
+    },
+    {
+      "chart": 92,
+      "song": "eggnog",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 354,
+      "player_notes": 185,
+      "sha256": "a2783db88c1bd295043166b7d97a516cc3597b50dac6ba0df862907db50d3655"
+    },
+    {
+      "chart": 93,
+      "song": "eggnog",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 458,
+      "player_notes": 240,
+      "sha256": "e1d4be1e007c9eee548175950f7683ca21998b593fd350d4d501530dc20cf172"
+    },
+    {
+      "chart": 94,
+      "song": "eggnog",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 809,
+      "player_notes": 441,
+      "sha256": "60d7523d90a6d0430aa8b5744ac8952b1c038da076d34f1fc2dfa3d92fdc74b6"
+    },
+    {
+      "chart": 95,
+      "song": "eggnog",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 814,
+      "player_notes": 446,
+      "sha256": "b860095e948002e9395594f00770e2a3c96ff69c8c2fe09449ade76576a50300"
+    },
+    {
+      "chart": 96,
+      "song": "eggnog",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 441,
+      "player_notes": 196,
+      "sha256": "0788caa79e33315a9d4fa4636bf5a171f1a90d52510e75b551363698dc033d99"
+    },
+    {
+      "chart": 97,
+      "song": "eggnog",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 568,
+      "player_notes": 323,
+      "sha256": "0e4e60f827097bb4b768b4490be9bab3e31635215b1cf2bcf765e13c1b544b72"
+    },
+    {
+      "chart": 98,
+      "song": "eggnog",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 640,
+      "player_notes": 390,
+      "sha256": "9ad9ba0942c2d2aca3acc7747ee377313b42a28170df3fe44a932071eee65b0c"
+    },
+    {
+      "chart": 99,
+      "song": "winter-horrorland",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 372,
+      "player_notes": 151,
+      "sha256": "8446c4af44b3645eeda65e32052e619d6b6bc9302ff2c7646795e821c9e2d07a"
+    },
+    {
+      "chart": 100,
+      "song": "winter-horrorland",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 414,
+      "player_notes": 193,
+      "sha256": "cabae9a7dd6648f5bee64b92334519645dbf0f50996ab1167a670e45b3f2f520"
+    },
+    {
+      "chart": 101,
+      "song": "winter-horrorland",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 445,
+      "player_notes": 224,
+      "sha256": "ba4a7f6b76b0f9d18ac8fd424da50ed192f3e0ec46ab3b0e820f5d496891bae7"
+    },
+    {
+      "chart": 102,
+      "song": "senpai",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 285,
+      "player_notes": 150,
+      "sha256": "ef5604d17af24b7ec8bb46fedb86dfe4aa1b0d154f425771d6cd6cfc81e05eb6"
+    },
+    {
+      "chart": 103,
+      "song": "senpai",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 341,
+      "player_notes": 177,
+      "sha256": "d98fed6e88d8873a0f9b16d052e1a94932f71b5ce5f4647c7727d765f897f409"
+    },
+    {
+      "chart": 104,
+      "song": "senpai",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 385,
+      "player_notes": 200,
+      "sha256": "c3894ce5cf38614c9ec3e850e5389883559bf39a71e6c83e4fc0017b61e11a53"
+    },
+    {
+      "chart": 105,
+      "song": "senpai",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 598,
+      "player_notes": 358,
+      "sha256": "d79837cf3110de59cafba3783b2bc4079d63f49b905ec3d037fd93e2f4ac1797"
+    },
+    {
+      "chart": 106,
+      "song": "senpai",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 661,
+      "player_notes": 412,
+      "sha256": "502bb8407bbff6b3a2107135c41be20f849e113d4ee2653f2c8a24053c112467"
+    },
+    {
+      "chart": 107,
+      "song": "senpai",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 440,
+      "player_notes": 192,
+      "sha256": "4a650a214bc0fe120c814ab472a01c47721ea837168436d74ba13bf48a729aee"
+    },
+    {
+      "chart": 108,
+      "song": "senpai",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 514,
+      "player_notes": 266,
+      "sha256": "ef8ccd1a311ff297aab9ec462c1af6bc56fb917698db54a8743c73e63b2fe3d0"
+    },
+    {
+      "chart": 109,
+      "song": "senpai",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 559,
+      "player_notes": 311,
+      "sha256": "3c2e744f3cecd6cb54c263ce2325334252407186e8e3214ba6923c21fdfbb724"
+    },
+    {
+      "chart": 110,
+      "song": "roses",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 255,
+      "player_notes": 127,
+      "sha256": "31d2bb637ce92262acf594ed59cd0e0616592ab47b2916228bb830896c6dd93c"
+    },
+    {
+      "chart": 111,
+      "song": "roses",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 382,
+      "player_notes": 191,
+      "sha256": "10d0c1b07671a08b3ba474cfddb065c7ca72bcaf6ba66a43844dc7bcf479106a"
+    },
+    {
+      "chart": 112,
+      "song": "roses",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 465,
+      "player_notes": 234,
+      "sha256": "9b0356d40f01fc451c7a98de1cccb50d56e36e7adce8012b3dcfbc23dc94f192"
+    },
+    {
+      "chart": 113,
+      "song": "roses",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 720,
+      "player_notes": 365,
+      "sha256": "c4227c8e50281dc030972c446d4b2a2a0548d39647fbdca375d14a43706b2cc7"
+    },
+    {
+      "chart": 114,
+      "song": "roses",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 744,
+      "player_notes": 389,
+      "sha256": "98c1651a48770f4bbc47a9035cbaae8e28ea7ca17b58470b33770e87fcf0820c"
+    },
+    {
+      "chart": 115,
+      "song": "roses",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 562,
+      "player_notes": 188,
+      "sha256": "09306d0bcb755bd9900c2e466058632c67d7a5bbfcc4f6f802aa611bbd101e37"
+    },
+    {
+      "chart": 116,
+      "song": "roses",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 622,
+      "player_notes": 248,
+      "sha256": "08cbc7159a2f6766a5207a2a5e8af91c8823878cebb59799cb69a198b68b6464"
+    },
+    {
+      "chart": 117,
+      "song": "roses",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 641,
+      "player_notes": 267,
+      "sha256": "3c601cdedcb7dfcd879f9c94ca023022af40a5eb4254b44ef6664f8943343221"
+    },
+    {
+      "chart": 118,
+      "song": "thorns",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 309,
+      "player_notes": 155,
+      "sha256": "0a42f5edb6791b2876a3e8bce7b015364b9063fd53233646c701d1f572645f51"
+    },
+    {
+      "chart": 119,
+      "song": "thorns",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 417,
+      "player_notes": 210,
+      "sha256": "f66a28c88d70a9ba34bcbbbf43fde9abf5f992e9ffedf668ff85dd53e87f6ebf"
+    },
+    {
+      "chart": 120,
+      "song": "thorns",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 557,
+      "player_notes": 280,
+      "sha256": "0877f792bd1568151bafb2398573fa76c0e722e365993a32598cb83ae09c1ca0"
+    },
+    {
+      "chart": 121,
+      "song": "thorns",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 859,
+      "player_notes": 491,
+      "sha256": "f7cf7ee99ea04d90b73fcd451a946ef592fc9b3bcedabbf2656f5700eacfca5f"
+    },
+    {
+      "chart": 122,
+      "song": "thorns",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 876,
+      "player_notes": 508,
+      "sha256": "4929b7aa1cc14ba5e4570c3142ef3183e616ce5e2a2b56d4bb2892270eaff0e6"
+    },
+    {
+      "chart": 123,
+      "song": "ugh",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 284,
+      "player_notes": 135,
+      "sha256": "9e7082430a4ce677ad0be2ff9d21315cba429348a0b76650ea18468857bf8bcf"
+    },
+    {
+      "chart": 124,
+      "song": "ugh",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 469,
+      "player_notes": 227,
+      "sha256": "d78bc95776f63692ef9daf35eda931b8cb7a262d7e73ba3e1881ec25b8eb02a7"
+    },
+    {
+      "chart": 125,
+      "song": "ugh",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 525,
+      "player_notes": 254,
+      "sha256": "e9514394085472849c47f3c5e87d82fce7325ce9f2124be626a64d7e69a3d248"
+    },
+    {
+      "chart": 126,
+      "song": "ugh",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 673,
+      "player_notes": 362,
+      "sha256": "461c9202ccfdbdf77d337b4de7171f72479ae7f5407d5d3d8de1a74b30248f2f"
+    },
+    {
+      "chart": 127,
+      "song": "ugh",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 695,
+      "player_notes": 384,
+      "sha256": "6c134445c32bd61105a8324ef16c446a66fc48ad78e0f5f65b0533cd4bfeefc1"
+    },
+    {
+      "chart": 128,
+      "song": "ugh",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 543,
+      "player_notes": 237,
+      "sha256": "b0eb8e207957415cb9c311cb95c0055dc56cf90342bd41024b753b9142fe6914"
+    },
+    {
+      "chart": 129,
+      "song": "ugh",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 697,
+      "player_notes": 344,
+      "sha256": "ef3e9af009b77004723ec637c6902f78ba39fe07a093e22b68cf4b823e90f6dc"
+    },
+    {
+      "chart": 130,
+      "song": "ugh",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 781,
+      "player_notes": 428,
+      "sha256": "fade9887b8c9461bd22a8cf26456976a4b4b6dd150bcadfd27e4fb9feae92f7d"
+    },
+    {
+      "chart": 131,
+      "song": "guns",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 488,
+      "player_notes": 247,
+      "sha256": "2ace2f2c4b5214ce586d912394aa7fb2a28ee1d65739f8fa3b452787d38a27dc"
+    },
+    {
+      "chart": 132,
+      "song": "guns",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 766,
+      "player_notes": 388,
+      "sha256": "d81aa830c1ead0bb0533e9c87d6c575f4c76f3428ade289e4fe619ab4dec75b2"
+    },
+    {
+      "chart": 133,
+      "song": "guns",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 903,
+      "player_notes": 456,
+      "sha256": "f38619b98003ed49f98e39408988a8406264640e85d731171053d1a1b157cf7a"
+    },
+    {
+      "chart": 134,
+      "song": "guns",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 796,
+      "player_notes": 303,
+      "sha256": "8ed05a09188f2727b11d2c658f8cc2696386802b4346484ab1a54077d2c1723d"
+    },
+    {
+      "chart": 135,
+      "song": "guns",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 890,
+      "player_notes": 397,
+      "sha256": "82a1802a556642d8516431b13b41cfa657eac10d7ae096e294b34c74c058290e"
+    },
+    {
+      "chart": 136,
+      "song": "guns",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 972,
+      "player_notes": 476,
+      "sha256": "d8e0fc0ba7f7f243cacd2264cbc331eeb6a71caa82d252523606dab67e09bea5"
+    },
+    {
+      "chart": 137,
+      "song": "stress",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 715,
+      "player_notes": 264,
+      "sha256": "4f528280e15db8eb597fc5929b512d33deb3b7c63625f1ba70587432849ba82b"
+    },
+    {
+      "chart": 138,
+      "song": "stress",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 830,
+      "player_notes": 379,
+      "sha256": "c5e9942a13d905d5df3761b2d24871239c390ccc261b3b28c84183f7c3c046b3"
+    },
+    {
+      "chart": 139,
+      "song": "stress",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 905,
+      "player_notes": 453,
+      "sha256": "826a1abb9d0bcf73d1e325242206aae16a39ffc362088c3855cc32156530f39c"
+    },
+    {
+      "chart": 140,
+      "song": "stress",
+      "variation": "pico",
+      "difficulty": "easy",
+      "notes": 898,
+      "player_notes": 431,
+      "sha256": "53905d39b84c16a209063ae0b35859dbd0089ef87a624279bc5795c4d81ea2c0"
+    },
+    {
+      "chart": 141,
+      "song": "stress",
+      "variation": "pico",
+      "difficulty": "normal",
+      "notes": 954,
+      "player_notes": 487,
+      "sha256": "b2241979296366cabcb293c6b3081cbecaf791da9aa4464c53d09defa042ddee"
+    },
+    {
+      "chart": 142,
+      "song": "stress",
+      "variation": "pico",
+      "difficulty": "hard",
+      "notes": 1024,
+      "player_notes": 557,
+      "sha256": "5384c1891fc8edbcaa86cf59507a33bfb14d452e1823e394322d30953c5fe3a9"
+    },
+    {
+      "chart": 143,
+      "song": "darnell",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 550,
+      "player_notes": 260,
+      "sha256": "937cce388f1de4e390f8af9df08662fd2510be32d07d43bb70ef7fc527a7c348"
+    },
+    {
+      "chart": 144,
+      "song": "darnell",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 620,
+      "player_notes": 310,
+      "sha256": "f70e810c14105fe7e731f7a5ccc6ddd320d4952092037e1f89dcf1976c9d6e71"
+    },
+    {
+      "chart": 145,
+      "song": "darnell",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 725,
+      "player_notes": 363,
+      "sha256": "808f48d9b51a73c7342da75f00f2399f814cde9951362ed3eb4c002e85fc055a"
+    },
+    {
+      "chart": 146,
+      "song": "darnell",
+      "variation": "erect",
+      "difficulty": "erect",
+      "notes": 917,
+      "player_notes": 451,
+      "sha256": "2555d3ccf6cbd527d6ab492ee45d6ab566b66edfcebe5697fa39f7b3a06ece0b"
+    },
+    {
+      "chart": 147,
+      "song": "darnell",
+      "variation": "erect",
+      "difficulty": "nightmare",
+      "notes": 978,
+      "player_notes": 512,
+      "sha256": "ceadb2355fa32f9f2245331487e9414a5449b0b7d34cb572a9768bc0fc6bd016"
+    },
+    {
+      "chart": 148,
+      "song": "darnell",
+      "variation": "bf",
+      "difficulty": "easy",
+      "notes": 637,
+      "player_notes": 284,
+      "sha256": "669ea4d05f2d84234f529d594cdf8272d2d78a49b7232a7bad314e836f55bfbc"
+    },
+    {
+      "chart": 149,
+      "song": "darnell",
+      "variation": "bf",
+      "difficulty": "normal",
+      "notes": 728,
+      "player_notes": 375,
+      "sha256": "e54b122e14abd76634bf345fae1dc1edbb7abe32b0c617cdc8f84e11ada2ea7d"
+    },
+    {
+      "chart": 150,
+      "song": "darnell",
+      "variation": "bf",
+      "difficulty": "hard",
+      "notes": 773,
+      "player_notes": 420,
+      "sha256": "180864e8179e48ce7837d8b231760c9bc220ee140f1452cc7ec89ee9dbdc9751"
+    },
+    {
+      "chart": 151,
+      "song": "lit-up",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 663,
+      "player_notes": 301,
+      "sha256": "1328e851d804f36e1d040807f1f5aa0245554998d3465dc9af7116c544575555"
+    },
+    {
+      "chart": 152,
+      "song": "lit-up",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 756,
+      "player_notes": 394,
+      "sha256": "19c72f0492a7a2757a2d88054b1ca08ce7be2ab43afa7969eef5dc7a2faf9d49"
+    },
+    {
+      "chart": 153,
+      "song": "lit-up",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 830,
+      "player_notes": 468,
+      "sha256": "474a11c329d6713344046ee4291d4fb8d2a173dda2ad7fe6717d032f0c65a4b2"
+    },
+    {
+      "chart": 154,
+      "song": "lit-up",
+      "variation": "bf",
+      "difficulty": "easy",
+      "notes": 893,
+      "player_notes": 420,
+      "sha256": "dd97c7f79d02b34912176387e28b6e71fbdb185a3e189fb970b3440bf70a868e"
+    },
+    {
+      "chart": 155,
+      "song": "lit-up",
+      "variation": "bf",
+      "difficulty": "normal",
+      "notes": 982,
+      "player_notes": 509,
+      "sha256": "c22546d01c5d706d562f5b37dd131bc701ecea6c6652aaf7357c826e49c604b8"
+    },
+    {
+      "chart": 156,
+      "song": "lit-up",
+      "variation": "bf",
+      "difficulty": "hard",
+      "notes": 1072,
+      "player_notes": 599,
+      "sha256": "c80f63ffd2d8245f8427c41d812ae54e2aa1a7c3fb1825f3aad0b858590aafbb"
+    },
+    {
+      "chart": 157,
+      "song": "2hot",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 821,
+      "player_notes": 371,
+      "sha256": "a6eff8698bca8537159af9493fa851fd469cb339b5a643fd6c1c7e07092aa608"
+    },
+    {
+      "chart": 158,
+      "song": "2hot",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 906,
+      "player_notes": 456,
+      "sha256": "d46ba7382f98fed62f40029a20d20065ffc41993c016e234c97b9e622c973ce4"
+    },
+    {
+      "chart": 159,
+      "song": "2hot",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 1035,
+      "player_notes": 585,
+      "sha256": "8d7c19f5a72fb04506207705a92c7648717b4f2057f169d3b7ee1488d78940a8"
+    },
+    {
+      "chart": 160,
+      "song": "blazin",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 422,
+      "player_notes": 368,
+      "sha256": "948120d38ea695ca0396acee2cc778d05fbeb98256d0ee18502a2762f32459eb"
+    },
+    {
+      "chart": 161,
+      "song": "blazin",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 426,
+      "player_notes": 372,
+      "sha256": "ab1ed50dce99f5e1a91665bd48eb839a746194a02a2655a8b752dd8a8872561a"
+    },
+    {
+      "chart": 162,
+      "song": "blazin",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 440,
+      "player_notes": 386,
+      "sha256": "bb61753d6fb856be0bcd2d820e8619242f02cf17fe762c86c4157ea525841b2c"
+    },
+    {
+      "chart": 163,
+      "song": "spaghetti",
+      "variation": "default",
+      "difficulty": "easy",
+      "notes": 435,
+      "player_notes": 434,
+      "sha256": "0dd8723d94856e25ec1d6d765177383c144057f925c4dcb4605ee99934535314"
+    },
+    {
+      "chart": 164,
+      "song": "spaghetti",
+      "variation": "default",
+      "difficulty": "normal",
+      "notes": 559,
+      "player_notes": 558,
+      "sha256": "e7071f3232880f128f7deff4dc9504a4e453b2402010851e52fb0355c22003ba"
+    },
+    {
+      "chart": 165,
+      "song": "spaghetti",
+      "variation": "default",
+      "difficulty": "hard",
+      "notes": 707,
+      "player_notes": 706,
+      "sha256": "9ae21cee2ac2c62382145e3af0d61bd9c73eb8bff0174f109c3a02aaf4da46d8"
+    }
+  ],
+  "refs": {
+    "Funkin": "d05659bbdcf0d83073c900207cf410472afbbede",
+    "funkin.art": "429ab728b19272dca834c83d97b1646455b22579",
+    "funkin.assets": "724eba9de9e76761d9cefd52169926bc51c760a5"
+  }
+}

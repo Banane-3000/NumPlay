@@ -1,0 +1,53 @@
+name: Friday Night Funkin
+
+on:
+  pull_request:
+    paths:
+      - 'games/fnf/**'
+      - 'games/common/**'
+      - 'launcher/src/font*'
+      - 'tools/emu.py'
+      - 'Makefile'
+      - '.github/workflows/fnf.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'games/fnf/**'
+      - 'games/common/**'
+      - 'launcher/src/font*'
+      - '.github/workflows/fnf.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  game:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: ARM toolchain
+        run: |
+          v=15.2.1-1.1
+          curl -fsSL "https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v$v/xpack-arm-none-eabi-gcc-$v-linux-x64.tar.gz" | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/xpack-arm-none-eabi-gcc-$v/bin" >> "$GITHUB_PATH"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Tools
+        run: |
+          npm install -g nwlink@1.0.0
+          pip install pillow==11.3.0 numpy pyelftools unicorn==2.1.4
+      - name: Standalone build and all 166 charts
+        run: |
+          make build/data/apps/FridayNightFunkin.nwa NWLINK=nwlink
+          make -C games/fnf check test test-assets NWLINK=nwlink
+      - name: ARM controls, saves and firmware safety
+        run: python3 games/fnf/tests/test_arm.py --nwlink nwlink
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Friday Night Funkin
+          path: build/data/apps/FridayNightFunkin.nwa
