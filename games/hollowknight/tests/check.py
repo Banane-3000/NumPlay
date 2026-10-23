@@ -16,6 +16,8 @@
   overcharmed on the fifth try and off again, kept by Home in the inventory and a load
 - the stag stations: each seen (their blanker faded out), come in by its gate, by the stag (called by its bell) and
   loaded at its bench
+- the way to the False Knight, played room by room as one game (the Knight unhurt): from a new game's fall into King's
+  Pass, and from the Aspid Hunters' arena by the hot spring, to his arena, where he comes down
 - every room played with its enemies hit, in a new game and after the bosses, drawn whole and fast (as a slow
   calculator draws it): the sanitizers stop on any fault
 """
@@ -78,6 +80,8 @@ def main():
     with tempfile.TemporaryDirectory() as saves:
         rc, out = play("--gates", "stations", env={"HKSAVES": saves})
     results.append(report("stag stations: seen, the rides", rc, out, ("FAIL",)))
+    rc, out = play("--gates", "way")
+    results.append(report("the way to the False Knight", rc, out, ("FAIL",)))
     with ThreadPoolExecutor(JOBS) as pool:
         walks = list(pool.map(lambda w: play("--gates", "wander:all:%d:%d" % w, env={"HKFAST": "1"} if w[0] % 2 else None), WALKS))
     for (seed, ticks), (rc, out) in zip(WALKS, walks):

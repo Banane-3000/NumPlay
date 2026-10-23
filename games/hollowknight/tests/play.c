@@ -653,7 +653,128 @@ static int texts_test(void) {
   return text_fails ? 1 : 0;
 }
 
+/* the way to the False Knight (Mason363/NumPlay#172), played as one game, room by room, each room's keys from when the
+ * Knight comes into it: from the new game's fall into King's Pass, through Dirtmouth and down its well, past the Temple of
+ * the Black Egg, down through the tollbooth into Crossroads_03 (its lever's gates open: the game's Knight opens them from
+ * below, by rooms this port leaves out), along the Husk Guard's corridor and up into the arena, where the False Knight
+ * must come down; and from the Aspid Hunters' arena by the hot spring back up to the well and on the same way. Nothing
+ * hurts the Knight: the way is what is checked, not the fights. (Each room's keys, as --play has them, were found by
+ * trying moves on the computer.) */
+typedef struct { int room; const char *keys; } Leg;
+#define WAY_KINGS_PASS \
+  "_*400,R*300,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12," \
+  "RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4," \
+  "R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,RA*4,R*12,L*8,_*1,L*8,_*1,R*25," \
+  "_*1,RJ*30,_*1,R*25,_*1,RJ*30,_*1,RA*6,_*1,R*8,_*1,R*36,RJ*30,R*4,_*20,R*12,RJ*30,R*2,_*20,J*6," \
+  "RJ*24,_*20,L*8,_*1,LJ*30,_*1,L*8,_*1,LJ*30,_*1,L*8,_*1,R*8,_*1,L*8,_*1,LJ*30,_*1,L*8,_*1,L*8,_*1," \
+  "J*22,LJ*8,L*10,_*1,LJ*30,_*1,LJ*30,_*1,LJ*30,_*1,LJ*30,_*1,LJ*30,_*1,LJ*30,_*1,L*25,_*1,LJ*30," \
+  "_*1,LJ*30,_*1,LJ*30,_*1,J*30,_*1,J*22,RJ*8,R*10,_*1,LJ*30,_*1,L*8,_*1,R*8,_*1,J*16,RJ*14,_*1," \
+  "J*22,RJ*8,R*10,_*1,RJ*30,_*1,R*8,_*1,J*16,LJ*14,_*1,LJ*30,_*1,L*8,_*1,LJ*30,_*1,L*8,_*1,LJ*30," \
+  "_*1,L*8,_*1,R*8,_*1,J*22,LJ*8,L*10,_*1,RJ*30,_*1,R*25,_*1,R*8,_*1,R*25,_*1,R*25,_*1,L*8,_*1,L*8," \
+  "_*1,L*8,_*1,RJ*30,_*1,R*25,_*1,RJ*30,_*1,R*25,_*1,RA*6,_*1,R*8,_*1,R*25,_*1,RJ*30,_*1,RJ*30,_*1," \
+  "L*8,_*1,L*8,_*1,R*25,_*1,R*8,_*1,RJ*30,_*1,R*8,_*1,RJ*30,_*1,R*25,_*1,L*8,_*1,L*8,_*1,J*22,RJ*8," \
+  "R*10,_*1,R*25,_*1,RJ*12,_*1,RJ*30,_*1,R*25,_*1,RJ*30,_*1,J*8,RJ*22,_*1,J*22,RJ*8,R*10,_*1,RJ*30," \
+  "_*1,LJ*12,_*1,J*22,LJ*8,L*10,_*1,LJ*30,_*1,L*25,_*1,LJ*30,_*1,_*40,R*12,_*5,J*10,UA*4,_*30,J*10," \
+  "UA*4,_*30,J*10,UA*4,_*30,R*12,_*10,J*16,RJ*14,R*20,_*20,R*300,R*8,RA*4,_*8,R*8,RA*4,_*8,R*8,RA*4," \
+  "_*8,R*8,RA*4,_*8,R*8,RA*4,_*8,R*8,RA*4,_*8,R*8,RA*4,_*8,R*8,RA*4,_*8,R*8,RA*4,_*8,R*8,RA*4,_*8," \
+  "R*8,RA*4,_*8,R*8,RA*4,_*8,R*8,RA*4,_*8,R*8,RA*4,_*8,R*8,RA*4,_*8,R*8,RA*4,_*8,R*8,RA*4,_*8,R*8," \
+  "RA*4,_*8,R*8,RA*4,_*8,R*8,RA*4,_*8"
+#define WAY_TOWN "_*30,R*1300"
+#define WAY_08 \
+  "_*60,L*8,_*1,L*8,_*1,L*8,_*1,L*8,_*1,LJ*30,_*1,LJ*30,_*1,LJ*30,_*1,J*8,LJ*22,_*1,LJ*30,_*1,LJ*30," \
+  "_*1,LJ*30,_*1,L*8,_*1,LJ*30,_*1,LJ*30,_*1,LJ*30,_*1,LJ*30,_*1"
+#define WAY_33 \
+  "_*60,LJ*30,_*1,J*22,LJ*8,L*10,_*1,J*22,LJ*8,L*10,_*1,RJ*30,_*1,J*30,_*1,LJ*30,_*1,L*8,_*1,LJ*30," \
+  "_*1,L*8,_*1,L*8,_*1,J*22,RJ*8,R*10,_*1,LJ*30,_*41,LJ*12,L*14,_*20,L*12,_*10,J*16,RJ*8,_*30," \
+  "J*8,RJ*22,_*30,J*30,_*60"
+#define WAY_07 \
+  "_*60,R*25,_*1,R*25,_*1,J*22,RJ*8,R*10,_*1,LJ*30,_*1,L*25,_*1,L*25,_*1,RJ*30,_*1,LJ*30,_*1,L*8," \
+  "_*1,L*8,_*1,R*25,_*1,RJ*30,_*1,R*25,_*1,J*22,RJ*8,R*10,_*1,LJ*30,_*1,LJ*30,_*1,L*8,_*1,R*25,_*1," \
+  "R*25,_*1,J*22,RJ*8,R*10,_*1,J*22,LJ*8,L*10,_*1,J*22,RJ*8,R*10,_*1,J*22,LJ*8,L*10,_*1,LJ*30,_*1," \
+  "J*30,_*1,J*22,LJ*8,L*10,_*1,J*22,RJ*8,R*10,_*1,LJ*30,_*1,L*8,_*1,R*25,_*1,J*22,RJ*8,R*10,_*1," \
+  "LJ*30,_*1,L*8,_*1,LJ*30,_*1,L*25,_*1,LJ*30,_*1,L*8,_*1,RJ*30,_*1,R*8,_*1,LJ*30,_*1,L*8,_*1,L*8," \
+  "_*1,L*25,_*1,RJ*30,_*1,R*8,_*1,RJ*30,_*1,R*25,_*1,RJ*30,_*1,R*25,_*1,RJ*30,_*1,L*8,_*1,LJ*30,_*1," \
+  "RJ*30,_*1,R*25,_*1,R*25,_*1,RJ*30,_*1"
+#define WAY_01_LEFT \
+  "_*60,L*8,_*1,R*8,_*1,L*3,_*1,RJ*30,_*1,RJ*30,_*1,RJ*30,_*1,R*8,_*1,RJ*30,_*1,RJ*30,_*1,RJ*30,_*1," \
+  "RJ*30,_*1,RJ*30,_*1,RJ*30,_*1,RJ*30,_*1,RJ*30,_*1,RJ*30,_*1,_*30,R*2,RJ*30,R*40,_*20,J*14,RJ*16," \
+  "R*6,_*20,R*12,RJ*30,R*4,_*20,R*8,RJ*40,R*120"
+#define WAY_14 "_*30,R*150,L*12,_*30,L*300"
+#define WAY_03 "_*60,L*90,R*12,_*30,R*12,_*30,R*70,L*8,_*30,R*8,L*30,_*20,L*37,_*30,LJ*30,L*60"
+#define WAY_21 "_*30,L*500,_*10,LJ*30,L*260,_*10,LJ*30,L*100"
+#define WAY_10 "_*30,L*152,_*20,J*10,LJ*14,_*20,RJ*30,_*20,RJ*30,_*20,RJ*30,_*20,R*60,_*20,RJ*12,R*6,_*20,LJ*40,L*20,_*20,LJ*30,L*300"
+#define WAY_TEMPLE \
+  {ROOM_CROSSROADS_02, "_*30,R*600"}, {ROOM_CROSSROADS_39, "_*30,R*700"}, {ROOM_CROSSROADS_14, WAY_14}, \
+  {ROOM_CROSSROADS_16, "_*30,L*200"}, {ROOM_CROSSROADS_03, WAY_03}, {ROOM_CROSSROADS_21, WAY_21}, \
+  {ROOM_CROSSROADS_10, WAY_10}
+static const Leg way_new_game[] = {
+  {ROOM_TUTORIAL_01, WAY_KINGS_PASS}, {ROOM_TOWN, WAY_TOWN},
+  {ROOM_CROSSROADS_01, "_*150,R*58,RJ*30,R*40,_*20,J*14,RJ*16,R*6,_*20,R*12,RJ*30,R*4,_*20,R*8,RJ*40,R*120"}, WAY_TEMPLE};
+static const Leg way_hot_spring[] = {
+  {ROOM_CROSSROADS_08, WAY_08}, {ROOM_CROSSROADS_33, WAY_33}, {ROOM_CROSSROADS_07, WAY_07},
+  {ROOM_CROSSROADS_01, WAY_01_LEFT}, WAY_TEMPLE};
+static int way_run(const char *name, const Leg *legs, int n) {
+  extern bool enemies_fk_awake(void);
+  int leg = 0, t = 0, idle = 0;
+  const char *p = legs[0].keys;
+  for (int tick = 0; tick < 30000; tick++) {
+    if (leg + 1 < n && g_room.id == legs[leg + 1].room) leg++, p = legs[leg].keys, t = idle = 0;
+    if (g_room.id == ROOM_CROSSROADS_10 && enemies_fk_awake()) {
+      printf("ok   way %s: the False Knight comes down after %.0f s\n", name, tick * 0.02f);
+      return 0;
+    }
+    /* (the leg's keys: "KEYS*TICKS,...", as --play has them) */
+    uint32_t keys = 0;
+    if (*p) {
+      const char *q = p;
+      for (; *q && *q != '*'; q++)
+        keys |= *q == 'L' ? K_LEFT : *q == 'R' ? K_RIGHT : *q == 'U' ? K_UP : *q == 'D' ? K_DOWN : *q == 'J' ? K_JUMP
+              : *q == 'A' ? K_ATTACK : 0;
+      int k = *q == '*' ? atoi(q + 1) : 1;
+      if (++t >= k) {
+        while (*q && *q != ',') q++;
+        p = *q == ',' ? q + 1 : q, t = 0;
+      }
+    } else if (++idle > 400) {
+      printf("FAIL way %s: stuck in %s at %.2f,%.2f after its keys\n", name, room_name(g_room.id), g_hero.body.x, g_hero.body.y);
+      return 1;
+    }
+    if (g_room.id != legs[leg].room && !game_changing_room()) {
+      printf("FAIL way %s: in %s at %.2f,%.2f, not %s\n", name, room_name(g_room.id), g_hero.body.x, g_hero.body.y,
+             room_name(leg + 1 < n ? legs[leg + 1].room : legs[leg].room));
+      return 1;
+    }
+    run_ticks(1, keys);
+  }
+  printf("FAIL way %s: the False Knight never came down (in %s at %.2f,%.2f)\n", name, room_name(g_room.id), g_hero.body.x,
+         g_hero.body.y);
+  return 1;
+}
+static int way_test(void) {
+  int fails = 0;
+  /* (a new game, as the menu starts one: the Knight falling into King's Pass from its top) */
+  game_new();
+  shielded = true;
+  game_enter_gate(ROOM_TUTORIAL_01, "top1");
+  g_game.fade = 1, g_screen_fade = 255;
+  game_fade_scene_in();
+  fails += way_run("from King's Pass", way_new_game, sizeof way_new_game / sizeof way_new_game[0]);
+  /* (the Aspid Hunters beaten, the Knight back from the hot spring) */
+  game_new();
+  room_load(ROOM_CROSSROADS_08);
+  int ne;
+  const Ent *es = room_ents(&ne);
+  for (int i = 0; i < ne; i++)
+    if (es[i].type == ENT_OBJ && es[i].flags == OK_ARENA) persist_set(es[i].persist);
+  game_enter_gate(ROOM_CROSSROADS_08, "right1");
+  fails += way_run("from the Aspid Hunters' arena", way_hot_spring, sizeof way_hot_spring / sizeof way_hot_spring[0]);
+  shielded = false;
+  printf("way: %d failing\n", fails);
+  return fails ? 1 : 0;
+}
+
 static int gates_test(const char *which) {
+  if (!strcmp(which, "way")) return way_test();
   if (!strcmp(which, "texts")) return texts_test();
   if (!strcmp(which, "seams")) return seams_test();
   if (!strcmp(which, "markers")) return markers_test();
@@ -879,6 +1000,11 @@ int main(int argc, char **argv) {
       while (*f && *f != ',') f++;
       if (*f) f++;
     }
+    for (const char *f = getenv("HKPERSIST"); f && *f;) {   /* (objects' states in the save on, by bit: "134") */
+      persist_set(atoi(f));
+      while (*f && *f != ',') f++;
+      if (*f) f++;
+    }
     /* (HKMENU: from the title screen, as the calculator starts; HKSAVES: the saves' folder) */
     bool menu = getenv("HKMENU") != NULL;
     if (getenv("HKSAVES")) {
@@ -927,6 +1053,7 @@ int main(int argc, char **argv) {
         /* (HKREENTER=tick: the room entered again then, as it was left) */
         if (getenv("HKREENTER") && atoi(getenv("HKREENTER")) == tick) game_enter(id, px, py, true);
         if (getenv("HKGOD")) g_pd.health = g_pd.max_health;
+        if (getenv("HKSHIELD")) g_hero.cs.invulnerable = true;   /* (nothing hurts him: the way, not the fights) */
         if (getenv("HKHIT") && atoi(getenv("HKHIT")) <= tick && (!getenv("HKHITEND") || tick < atoi(getenv("HKHITEND"))) &&
             tick % (getenv("HKHITN") ? atoi(getenv("HKHITN")) : 10) == 0) {
           extern void enemies_debug_hit(int damage);
