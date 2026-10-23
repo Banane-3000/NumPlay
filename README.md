@@ -256,7 +256,7 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [x] Plants vs. Zombies: the whole Adventure, from the front lawn to the roof and Dr. Zomboss
 - [x] Doom: Knee-Deep in the Dead, the shareware episode
 - [x] Five Nights at Freddy's: all five nights, the 6th and the Custom Night
-- [x] [2 Players](games/twoplayer/README.md): fifteen mini-games, with local two-player controls or three computer difficulties
+- [x] Pong and more two-player games: 2 Players, with Pong, Air Hockey, Tanks and Light Cycles
 - [x] Cookie Clicker
 - [x] Level Devil
 - [x] Sonic the Hedgehog: the whole 1991 game, Green Hill to the Final Zone, with the Special Stages
@@ -309,8 +309,6 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Friday Night Funkin'
 
 ## Credits
-
-- **[Bobydeluxe](https://github.com/Bobydeluxe)** added eleven mini-games to **[2 Players](games/twoplayer/README.md)** and updated its controls, readability and computer opponents while retaining the original four games and red/blue style.
 
 NumPlay is a fan project, made out of love for these games and for the NumWorks calculator. If you enjoy a game here, go play the original and support the people who made it. NumWorks also has a great community of people making games by hand: try [Numcraft](https://github.com/yannis300307/NumcraftRust), [Celeste Classic](https://github.com/BenchatonDev/Celeste-Numworks), [Tatone26's All the Apps](https://github.com/Tatone26/Numworks-games), the apps on [Nwagyu](https://nwagyu.org/guide/) and [yannis300307's list](https://gist.github.com/yannis300307/9123136f90877107ec0d49ba96b303e5).
 

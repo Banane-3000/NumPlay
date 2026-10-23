@@ -466,9 +466,9 @@ CHECKS = {
             and struct.unpack_from("<H", v, 682)[0] == 1,) * 2,
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
-    # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies kept
-    "twoplayer": (lambda v: len(v) == 128 and v[:4] == b"P\3\1\1",
-                  lambda v: len(v) == 128 and v[:4] == b"P\3\2\2"),
+    # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies of the six games kept
+    "twoplayer": (lambda v: len(v) == 52 and v[:4] == b"P\1\1\1",
+                  lambda v: len(v) == 52 and v[:4] == b"P\1\2\2"),
     # a game kept (Easy, the guide read) with the two digits the hints wrote (the digits at 109); then three
     "sudoku": (lambda v: len(v) == 352 and v[:4] == b"S\1\3\0" and sum(1 <= b <= 9 for b in v[109:190]) == 2,
                lambda v: v[2] & 1 and sum(1 <= b <= 9 for b in v[109:190]) == 3),

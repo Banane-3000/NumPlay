@@ -1,17 +1,16 @@
-/* 2 Players: fifteen mini-games for two people on one calculator.
+/* 2 Players: Pong and more games for two people on one calculator.
  *
- * Player 1 holds the left of the keyboard (the arrows, and OK for action), player 2 the right
- * (the keys around +, and EXE to fire), both at once; or player 2 is the computer, easy, normal
- * or hard. Pong plays as the 1972 arcade game does; then Air Hockey, Tanks in a maze with
- * shells that bounce off the walls, and Light Cycles. A match is first to a few points, and the
+ * Player 1 holds the left of the keyboard (the arrows, and OK to act), player 2 the right (the keys
+ * around +, and EXE to act), both at once; or player 2 is the computer, easy, normal or hard. Pong
+ * plays as the 1972 arcade game does; then Air Hockey, Tanks in a maze with shells that bounce off
+ * the walls, Light Cycles, and Bobydeluxe's party games. A match is first to a few points, and the
  * matches each side has won are kept for every game.
  *
  * Inside NumPlay it draws with the launcher's strips, shapes and fonts (launcher/src/gfx.c) and
  * saves through its file functions, like Block Blast; on its own (TwoPlayers.nwa) it brings them
  * along. Positions are in 256ths of a pixel and time in milliseconds, but for the round things
- * of Air Hockey. */
+ * of Air Hockey and the party games, in pixels and seconds. */
 #include <eadk.h>
-#include <string.h>
 #include "../../../launcher/src/gfx.h"
 #include "../../common/np_text.h"
 
@@ -34,35 +33,24 @@ void np_push(int x, int y, int w, int h, const color_t *px) {
 #define INK HEX(0x161A33) /* the menus' night blue */
 #define GOLD HEX(0xFFC93C)
 
-/* IDs 0..3 are the original games and remain stable in existing saves. */
-enum { PONG, HOCKEY, TANKS, CYCLES, QUICK, TUG, FOOTBALL, VOLLEY,
-       ARCHERY, DODGE, METEORS, ROCKETS, SUMO, FISHING, MEMORY, NG };
-static const char *const NAME[NG] = {T("Pong"), T("Air Hockey"), T("Tanks"), T("Light Cycles"),
-  T("Quick Draw"), T("Tug of War"), T("Football"), T("Volley Ball"),
-  T("Archery"), T("Dodge Ball"), T("Meteor Run"), T("Rocket Race"),
-  T("Sumo"), T("Fishing"), T("Memory Duel")};
-static const uint8_t TARGET[NG] = {11, 7, 5, 5, 5, 5, 5, 7, 5, 5, 5, 5, 5, 5, 5};
-/* left=1, up=2, down=4, right=8, action=16; used by the keyboard tutorial. */
-static const uint8_t CONTROL[NG] = {6,15,31,15,16,16,31,27,22,31,9,18,31,25,15};
+/* (in the menu's order, and the saves': a new game goes last) */
+enum { PONG, HOCKEY, TANKS, CYCLES, QUICK, TUG, NG };
+static const char *const NAME[NG] = {T("Pong"), T("Air Hockey"), T("Tanks"), T("Light Cycles"), T("Quick Draw"),
+                                     T("Tug of War")};
+static const uint8_t TARGET[NG] = {11, 7, 5, 5, 5, 5}; /* first to */
+/* the keys each game uses, for its keyboard: left 1, up 2, down 4, right 8, the action 16 */
+static const uint8_t KEYS_USED[NG] = {6, 15, 31, 15, 16, 16};
 static const char *const RULES[NG] = {
   T("Return the ball with your paddle: its middle sends the ball back straight, its ends at a steep angle. The longer a rally lasts, the faster the ball."),
   T("Knock the puck into the other goal. Your mallet stays in your half; hit the puck on the move to send it flying."),
-  T("Up/Down drive; Left/Right turn. OK (player 1) or EXE (player 2) fires. Shells bounce off walls and can hit your own tank!"),
+  T("Drive through the maze and hit the other tank. Shells bounce off the walls: watch out for your own!"),
   T("Steer your light cycle and make the other one crash into a wall or a trail. It never stops and never turns back."),
-  T("Wait for DRAW, then press your action key. A false start loses the round. Simultaneous shots draw."),
-  T("Tap your action key to pull the rope. Release between pulls: holding does not repeat. Drag the flag past your line."),
-  T("Move around the pitch and kick with your action key. Push the ball into the other goal; rebounds stay in play."),
-  T("Move left and right; Up or your action key jumps. Keep the ball off your floor and send it over the net."),
-  T("Aim with Up and Down. Hold OK (player 1) or EXE (player 2) to charge; release to shoot. The dotted arc shows your shot. Three hits win the round."),
-  T("Move in your half and throw with your action key. Dodge incoming balls. Three hits knock a player out."),
-  T("Move left and right to dodge the falling rocks. Both lanes get the same obstacles. Stay alive longer than your rival."),
-  T("Tap Up or your action key to boost your rocket. Fly through the gaps; avoid the walls. Both pilots face the same course."),
-  T("Move inside the ring. Your action key dashes and pushes your rival. Stay inside: the ring gradually shrinks."),
-  T("Move your rod left and right. Hold your action key to lower the hook; release to reel in a fish. Catch five first."),
-  T("Watch the arrow sequence, then repeat it with your direction keys. The first correct sequence wins; a wrong arrow loses."),
+  T("Wait for DRAW!, then press your key: the first one wins. Too soon loses the round."),
+  T("Tap your key fast to pull the rope. Pull the flag past your line."),
 };
 
-/* twoplayer.sav: the game last chosen, who player 2 is, and the matches won */
+/* twoplayer.sav: the game last chosen, who player 2 is, and the matches won (version 1 had four
+   games: a shorter file of the same layout, read as it is) */
 static struct {
   uint8_t magic, version, game, cpu; /* cpu: 0 a second player, 1 to 3 the computer, easy to hard */
   uint16_t wins[NG][2][2];           /* [game][against the computer][player 1, player 2] */
@@ -73,10 +61,11 @@ static color_t strip[SCREEN_W * STRIP_H];
 static color_t team[2], light[2], dark[2]; /* player 1 red, player 2 blue */
 static uint32_t now, seed, phase_t;        /* now: the game's clock, stopped while paused */
 static int ms;                             /* this frame's milliseconds */
+static float dt;                           /* ...in seconds */
 static int game, cpu, score[2], phase, winner; /* phase: 0 playing, 1 a point just won, 2 the match over */
 static int pad[2], tap[2];                 /* each player's keys held, and just pressed */
 enum { B_LEFT = 1, B_UP = 2, B_DOWN = 4, B_RIGHT = 8, B_FIRE = 16 };
-/* the keys: left, up, down, right, fire */
+/* the keys: left, up, down, right, action */
 static const uint8_t KEYS[2][5] = {
   {eadk_key_left, eadk_key_up, eadk_key_down, eadk_key_right, eadk_key_ok},
   {eadk_key_three, eadk_key_multiplication, eadk_key_ans, eadk_key_minus, eadk_key_exe}};
@@ -91,20 +80,12 @@ static int clampi(int v, int a, int b) { return v < a ? a : v > b ? b : v; }
 static float clampf(float v, float a, float b) { return v < a ? a : v > b ? b : v; }
 static float len(float x, float y) { return __builtin_sqrtf(x * x + y * y); }
 static uint32_t ago(uint32_t t) { return now - t; }
+static bool due(uint32_t t) { return (int32_t)(now - t) >= 0; }
 static bool down(uint64_t keys, int k) { return (uint32_t)(keys >> (k & 32)) >> (k & 31) & 1; }
 static bool is_cpu(int p) { return p && cpu; }
 static int dirx(int p) { return !!(pad[p] & B_RIGHT) - !!(pad[p] & B_LEFT); }
 static int diry(int p) { return !!(pad[p] & B_DOWN) - !!(pad[p] & B_UP); }
-/* CPU intentions are sampled, never recomputed with perfect reflexes every tick.
- * Each round starts with a short observation delay, and harder still leaves
- * a human reaction window. The two-human input path never uses this state. */
-static struct { uint32_t next; float x,y; int pad; } bot;
-static bool bot_due(void) {
-  if((int32_t)(now-bot.next)<0)return false;
-  bot.next=now+(cpu==1?340:cpu==2?240:160)+rn(cpu==1?140:cpu==2?100:70);
-  return true;
-}
-static void bot_input(void) { pad[1]=bot.pad;tap[1]=0; }
+static int acted(int p) { return tap[p] >> 4 & 1; } /* the action key just pressed */
 /* sine of a 64th of a turn, times 127 */
 static const int8_t SINQ[17] = {0, 12, 25, 37, 49, 60, 71, 81, 90, 98, 106, 112, 117, 122, 125, 126, 127};
 static int sin64(int a) {
@@ -112,6 +93,18 @@ static int sin64(int a) {
   return a & 32 ? -v : v;
 }
 static int cos64(int a) { return sin64(a + 16); }
+/* The computer sees and thinks at a human's pace: it decides again every so often, not every
+   frame, and holds its keys in between. */
+static struct {
+  uint32_t next;
+  float x, y;
+} bot;
+static bool bot_due(void) {
+  static const uint16_t EVERY[4] = {0, 340, 240, 160};
+  if (!due(bot.next)) return false;
+  bot.next = now + EVERY[cpu] + rn(EVERY[cpu] / 2);
+  return true;
+}
 
 static char *num(char *o, uint32_t v) { /* v in o, then the end of it */
   char t[10];
@@ -157,26 +150,26 @@ static uint32_t serve_at; /* the ball waits in the middle until then (0: in play
 static int pong_speed(void) { return hits >= 12 ? clampi(46 + hits, 58, 84) : hits >= 4 ? 48 : 38; }
 static void pong_start(void) { /* the ball is served towards the one who lost the point */
   int to = winner < 2 ? 1 - winner : rn(2);
-  hits = aim = 0;bot.y=120<<8;
+  hits = aim = 0;
   bx = (160 - BS / 2) << 8, by = (70 + rn(100)) << 8, bvx = to ? 1 : -1, bvy = rn(9) - 4;
-  serve_at = now + 900;
+  serve_at = now + 900, bot.y = 120 << 8;
   if (!score[0] && !score[1]) py[0] = py[1] = (120 - PH / 2) << 8;
 }
-/* the computer's paddle (player 2): to where the ball will come, off centre by its aim */
+/* the computer's paddle (player 2): to where it sees the ball will come, off centre by its aim
+   and by how much it misjudges, slower than a player's */
 static int pong_cpu(void) {
-  static const uint8_t SPEED[4]={0,20,30,40};
-  if(bot_due()){
-    int to=120<<8;
-    if(bvx>0&&!serve_at&&bx>(cpu==1?190<<8:cpu==2?145<<8:90<<8)){
-      int span=(PBOT-BS-PTOP)<<8,y=by-(PTOP<<8)+bvy*(((PX[1]-BS)<<8)-bx)/bvx;
-      for(int i=0;i<8&&(y<0||y>span);i++)y=y<0?-y:2*span-y;
-      to=y+((PTOP+BS/2)<<8)-aim;
+  static const uint8_t SPEED[4] = {0, 20, 30, 40}, MISS[4] = {0, 20, 12, 7};
+  static const int16_t SEES[4] = {0, 190, 145, 90}; /* where the ball must be before it looks */
+  if (bot_due()) {
+    int to = 120 << 8;
+    if (bvx > 0 && !serve_at && bx > SEES[cpu] << 8) {
+      int span = (PBOT - BS - PTOP) << 8, y = by - (PTOP << 8) + bvy * (((PX[1] - BS) << 8) - bx) / bvx;
+      for (int i = 0; i < 8 && (y < 0 || y > span); i++) y = y < 0 ? -y : 2 * span - y;
+      to = y + ((PTOP + BS / 2) << 8) - aim;
     }
-    int error=cpu==1?20:cpu==2?12:7;
-    bot.y=clampi(to+(rn(error*2+1)-error)*256,PTOP<<8,PBOT<<8);
+    bot.y = (float)(to + (rn(2 * MISS[cpu] + 1) - MISS[cpu]) * 256);
   }
-  int delta=(int)bot.y-py[1]-(PH<<7);
-  return clampi(delta/40,-SPEED[cpu],SPEED[cpu]);
+  return clampi(((int)bot.y - py[1] - (PH << 7)) / 40, -SPEED[cpu], SPEED[cpu]);
 }
 static void pong_step(void) {
   for (int p = 0; p < 2; p++)
@@ -192,7 +185,10 @@ static void pong_step(void) {
       bvx = p ? -s : s, bvy = SEG[clampi((y + BS - top) * 8 / (PH + BS), 0, 7)] * s / 10;
       bx = (p ? PX[p] - BS : PX[p] + PW) << 8;
       /* where the computer means to take the next one: off centre, by how much it misjudges */
-      if (!p) aim = cpu == 3 ? (rn(2) ? 2816 : -2816) + rn(1536) - 768 : (rn(512) - 256) * (cpu == 1 ? 25 : 14);
+      if (!p) {
+        aim = rn(1536) - 768;
+        aim = cpu == 3 ? aim + (rn(2) ? 2816 : -2816) : aim / 3 * (cpu == 1 ? 25 : 14);
+      }
     }
     if (x < -BS - 10 || x > SCREEN_W + 10) {
       point(x < 0);
@@ -210,6 +206,7 @@ static void pong_paint(void) {
   gfx_fill(0, PTOP - 4, SCREEN_W, 4, WHITE);
   gfx_fill(0, PBOT, SCREEN_W, 4, WHITE);
   for (int y = PTOP + 4; y < PBOT; y += 16) gfx_fill(158, y, 4, 8, WHITE);
+  gfx_text_center(&np_font_small, 80, 227, T("Back  pause"), HEX(0x6E6E6E), 256); /* (under the paddles and the ball) */
   for (int p = 0; p < 2; p++) {
     gfx_fill(PX[p], py[p] >> 8, PW, PH, WHITE);
     for (int v = score[p], n = v > 9, d = n; d >= 0; d--, v /= 10)
@@ -234,8 +231,8 @@ static float mx[2], my[2], mvx[2], mvy[2], qx, qy, qvx, qvy, qaim;
 static void hockey_start(void) { /* the puck to the one who was scored on */
   int to = winner < 2 ? 1 - winner : rn(2);
   for (int p = 0; p < 2; p++) mx[p] = p ? RX1 - 40 : RX0 + 40, my[p] = RYM, mvx[p] = mvy[p] = 0;
-  bot.x=RX1-40;bot.y=RYM;
   qx = to ? 220 : 100, qy = RYM, qvx = qvy = 0, qaim = (float)(rn(44) - 22); /* where the computer aims */
+  bot.x = RX1 - 40, bot.y = RYM;
 }
 /* the puck off something round at (x, y) moving at (vx, vy) */
 static void knock(float x, float y, float vx, float vy, float r) {
@@ -246,26 +243,31 @@ static void knock(float x, float y, float vx, float vy, float r) {
   float vn = (qvx - vx) * dx + (qvy - vy) * dy;
   if (vn < 0) qvx -= 1.85f * vn * dx, qvy -= 1.85f * vn * dy;
 }
-static void hockey_step(void) {
+/* the computer's mallet (player 2): behind the puck to shoot it at the other goal, or guarding
+   its own, where it saw them last; its speed (tx, ty) */
+static void hockey_cpu(float *tx, float *ty) {
   static const float V[4] = {0, 90, 130, 175};
+  static const uint8_t MISS[4] = {0, 18, 11, 6};
+  if (bot_due()) {
+    float x = RX1 - 36, y = RYM + (qy - RYM) / 2;
+    if (qx > 160 - QR && !phase) {
+      float ax = RX0 - qx, ay = RYM + qaim - qy, l = len(ax, ay);
+      ax /= l, ay /= l;
+      x = qx - ax * (MR + QR + 3), y = qy - ay * (MR + QR + 3);
+      if (mx[1] < qx + 2) x = qx + MR + QR + 10, y = qy + (qy > RYM ? -28 : 28); /* in front of it: go round */
+      else if (len(x - mx[1], y - my[1]) < 7) x = qx + ax * 24, y = qy + ay * 24; /* strike */
+      if (x > RX1 - MR || y < RY0 + MR || y > RY1 - MR) x = qx, y = qy; /* it can't get behind it: at it */
+    }
+    bot.x = x, bot.y = y + (float)(rn(2 * MISS[cpu] + 1) - MISS[cpu]);
+  }
+  float x = bot.x - mx[1], y = bot.y - my[1], l = len(x, y) + 0.01f, v = V[cpu] * (l < 16 ? l / 16 : 1) / l;
+  *tx = x * v, *ty = y * v;
+}
+static void hockey_step(void) {
   for (int p = 0; p < 2; p++) {
     float tx, ty, k = clampf(ms * 0.014f, 0, 1);
-    if (is_cpu(p)) { /* behind the puck to shoot it at the other goal, or guarding its own */
-      if(bot_due()) {
-      tx = RX1 - 36, ty = RYM + (qy - RYM) / 2;
-      if (qx > 160 - QR && !phase) {
-        float ax = RX0 - qx, ay = RYM + qaim - qy, l = len(ax, ay);
-        ax /= l, ay /= l;
-        tx = qx - ax * (MR + QR + 3), ty = qy - ay * (MR + QR + 3);
-        if (mx[1] < qx + 2) tx = qx + MR + QR + 10, ty = qy + (qy > RYM ? -28 : 28); /* in front of it: go round */
-        else if (len(tx - mx[1], ty - my[1]) < 7) tx = qx + ax * 24, ty = qy + ay * 24; /* strike */
-      }
-      bot.x=tx;bot.y=ty+(rn(cpu==1?37:cpu==2?23:13)-(cpu==1?18:cpu==2?11:6));
-      }
-      tx=bot.x-mx[1];ty=bot.y-my[1];
-      float l = len(tx, ty) + 0.01f, v = V[cpu] * (l < 16 ? l / 16 : 1) / l;
-      tx *= v, ty *= v;
-    } else {
+    if (is_cpu(p)) hockey_cpu(&tx, &ty);
+    else {
       int x = dirx(p), y = diry(p);
       float s = x && y ? 175 : 245;
       tx = x * s, ty = y * s;
@@ -277,6 +279,8 @@ static void hockey_step(void) {
   if (phase) return;
   for (int i = 0; i < ms; i++) {
     qx += qvx / 1000, qy += qvy / 1000;
+    for (int k = 0; k < 4; k++) knock(k & 1 ? RX1 : RX0, k & 2 ? GY1 : GY0, 0, 0, 0); /* the goal posts */
+    for (int p = 0; p < 2; p++) knock(mx[p], my[p], mvx[p], mvy[p], MR);
     /* the boards: back on their edge, and off them only when moving into them (a mallet can push the
        puck into a board, and a slow puck flipped back and forth there stayed in it) */
     if (qy < RY0 + QR) qy = RY0 + QR, qvy = qvy < 0 ? -qvy * 0.9f : qvy;
@@ -289,8 +293,10 @@ static void hockey_step(void) {
       point(qx < 160);
       return;
     }
-    for (int k = 0; k < 4; k++) knock(k & 1 ? RX1 : RX0, k & 2 ? GY1 : GY0, 0, 0, 0); /* the goal posts */
-    for (int p = 0; p < 2; p++) knock(mx[p], my[p], mvx[p], mvy[p], MR);
+    for (int p = 0; p < 2; p++) { /* and a mallet pressing it into a corner gives way */
+      float dx = mx[p] - qx, dy = my[p] - qy, d = len(dx, dy) + .01f;
+      if (d < MR + QR) mx[p] = qx + dx / d * (MR + QR), my[p] = qy + dy / d * (MR + QR);
+    }
   }
   float s = len(qvx, qvy), f = 1 - 0.00035f * ms;
   if (s * f > 560) f = 560 / s;
@@ -428,17 +434,17 @@ static bool shot_finds(int a, int b) {
   }
   return false;
 }
-/* the computer's tank: a shot when there is one to take, else the way to the player, cell by
-   cell through the maze (found breadth first from the player) */
+/* the computer's tank: a shot when it sees one, a little off, else the way to the player, cell
+   by cell through the maze (found breadth first from the player) */
 static void tanks_cpu(int *v, int *turn) {
-  static const int16_t RELOAD[4] = {0, 2300, 1700, 1200};
+  static const int16_t RELOAD[4] = {0, 2300, 1700, 1200}, LOOK[4] = {0, 700, 500, 350};
   static const int8_t BOUNCES[4] = {0, 0, 0, 1};
   int dir = ta[1] >> 8, want = dir;
-  if (ago(ai_t) > (uint32_t)(cpu==1?700:cpu==2?500:350)) {
+  if (ago(ai_t) > (uint32_t)LOOK[cpu]) {
     ai_t = now, ai_aim = -1;
     for (int i = 0; i < 64 && ai_aim < 0; i++) { /* the nearest to where it faces first */
       int a = (dir + (i & 1 ? 1 : -1) * ((i + 1) / 2)) & 63;
-      if (shot_finds(a, BOUNCES[cpu])) ai_aim = (a + rn(cpu==1?11:cpu==2?7:3) - (cpu==1?5:cpu==2?3:1)) & 63;
+      if (shot_finds(a, BOUNCES[cpu])) ai_aim = (a + rn(9 - 2 * cpu) - (4 - cpu)) & 63;
     }
   }
   if (ai_aim >= 0) {
@@ -460,10 +466,10 @@ static void tanks_cpu(int *v, int *turn) {
       int d = (gx >> 8) * cos64(a) + (gy >> 8) * sin64(a);
       if (d > best) best = d, want = a;
     }
-    *v = clampi(6 - (((want - dir + 32) & 63) - 32) * (((want - dir + 32) & 63) - 32), 0, 1) * (cpu==1?45:cpu==2?55:64);
+    *v = clampi(6 - (((want - dir + 32) & 63) - 32) * (((want - dir + 32) & 63) - 32), 0, 1) * (36 + 9 * cpu);
   }
   int d = ((want - dir + 32) & 63) - 32;
-  *turn = d > 0 ? 4+cpu : d < 0 ? -4-cpu : 0;
+  *turn = d > 0 ? 4 + cpu : d < 0 ? -4 - cpu : 0;
 }
 static void tanks_step(void) {
   for (int p = 0; p < 2; p++) {
@@ -472,7 +478,7 @@ static void tanks_step(void) {
     if (is_cpu(p)) tanks_cpu(&v, &turn);
     else {
       v = diry(p) < 0 ? 70 : diry(p) * -50, turn = dirx(p) * 8;
-      if (tap[p] & B_FIRE) fire(p);
+      if (acted(p)) fire(p);
     }
     ta[p] = (ta[p] + turn * ms) & 0x3FFF; /* 8 a ms: half a turn a second */
     int x = tx_[p], y = ty_[p], dx = cos64(ta[p] >> 8) * v * ms / 496, dy = sin64(ta[p] >> 8) * v * ms / 496;
@@ -573,18 +579,16 @@ static int room(int x, int y, int cap) {
     }
   return n;
 }
-/* Choose space at human reaction intervals, without predicting the player's
-   future cells. Look a little ahead so slower decisions can still avoid a wall. */
+/* the computer's way, at a human's pace: the turn that leaves it the most room and the longest
+   way ahead, without guessing the player's next move */
 static int cycles_cpu(void) {
-  if(!bot_due())return hd[1];
   static const int16_t CAP[4] = {0, 12, 70, 220};
+  if (!bot_due()) return hd[1];
   int best = hd[1], bv = -(1 << 30);
   for (int t = 0; t < 3; t++) {
-    int d = (hd[1] + t + (t == 2)) & 3, x = hx[1] + DX[d], y = hy[1] + DY[d], r = room(x, y, CAP[cpu]);
-    int v = r * 8 + (t ? 0 : 6) + rn(cpu == 1 ? 120 : 6);
-    int ahead=0;
-    while(ahead<7&&free_at(x+ahead*DX[d],y+ahead*DY[d]))ahead++;
-    v+=ahead*48;
+    int d = (hd[1] + t + (t == 2)) & 3, x = hx[1] + DX[d], y = hy[1] + DY[d], r = room(x, y, CAP[cpu]), a = 0;
+    while (a < 7 && free_at(x + a * DX[d], y + a * DY[d])) a++;
+    int v = r * 8 + a * 48 + (t ? 0 : 6) + rn(cpu == 1 ? 120 : 6);
     if (!r) v = -(1 << 29);
     if (v > bv) bv = v, best = d;
   }
@@ -635,76 +639,92 @@ static void cycles_paint(void) {
   }
 }
 
-#include "party.h"
-static void (*const START[NG])(void) = {pong_start,hockey_start,tanks_start,cycles_start,
-  quick_start,tug_start,football_start,volley_start,archery_start,dodge_start,
-  meteors_start,rockets_start,sumo_start,fishing_start,memory_start};
-static void (*const STEP_[NG])(void) = {pong_step,hockey_step,tanks_step,cycles_step,
-  quick_step,tug_step,football_step,volley_step,archery_step,dodge_step,
-  meteors_step,rockets_step,sumo_step,fishing_step,memory_step};
-static void (*const PAINT[NG])(void) = {pong_paint,hockey_paint,tanks_paint,cycles_paint,
-  quick_paint,tug_paint,football_paint,volley_paint,archery_paint,dodge_paint,
-  meteors_paint,rockets_paint,sumo_paint,fishing_paint,memory_paint};
+/* ------------------------------------------------------------ the party games
+   Bobydeluxe's: short rounds, a key each. */
+static struct {
+  float rope;            /* Tug of War: -100 (player 1's side) to 100 */
+  uint32_t t0, at, next; /* the round's start, the signal (Quick Draw), the computer's next press */
+} pg;
+static void party(void) { /* a new round */
+  pg.rope = 0, pg.t0 = now, pg.next = now + 600;
+}
+static uint32_t round_ms(void) { return now - pg.t0; }
+static void arena(uint32_t bg) {
+  gfx_fill(0, 22, SCREEN_W, SCREEN_H - 22, INK);
+  box(6, 28, 308, 206, 12, gfx_rgb(bg));
+}
+static void person(int x, int feet, int p) { /* a player seen from the side, its key under it */
+  disc(x, feet, 9, HEX(0x232944));
+  box(x - 7, feet - 19, 14, 17, 5, team[p]);
+  disc(x, feet - 25, 7, light[p]);
+  disc(x + (p ? -3 : 3), feet - 26, 1, INK);
+  if (!is_cpu(p)) gfx_text_center(&np_font_body, clampi(x, 30, 290), 222, p ? "EXE" : "OK", light[p], 256);
+}
+
+/* Quick Draw: the first to press after the signal wins; before it, loses */
+static void quick_start(void) {
+  static const uint16_t REACT[4] = {0, 360, 280, 210};
+  party();
+  pg.at = now + 1500 + rn(2500);
+  if (cpu) pg.next = pg.at + REACT[cpu] + rn(REACT[cpu] / 2);
+}
+static void quick_step(void) {
+  if (phase) return;
+  if (cpu && due(pg.next)) tap[1] = B_FIRE;
+  int a = acted(0), b = acted(1);
+  if (a | b) point(a & b ? 2 : due(pg.at) ? b : a);
+}
+static void quick_paint(void) {
+  bool go = due(pg.at);
+  arena(go ? 0x3A2F1C : 0x262D52);
+  for (int p = 0; p < 2; p++) person(80 + 160 * p, 196, p);
+  say(go ? &np_font_title : &np_font_body, 160, 130, go ? T("DRAW!") : T("Wait..."), go ? GOLD : WHITE);
+}
+
+/* Tug of War: every tap pulls; the rope slides back to the middle a little */
+static void tug_step(void) {
+  static const uint16_t EVERY[4] = {0, 300, 200, 150};
+  if (phase) return;
+  if (cpu && due(pg.next)) tap[1] = B_FIRE, pg.next = now + EVERY[cpu] + rn(EVERY[cpu] / 5);
+  float r = pg.rope + (acted(1) - acted(0)) * 7.5f, d = 3 * dt;
+  pg.rope = r > d ? r - d : r < -d ? r + d : 0;
+  if (pg.rope < -67 || pg.rope > 67 || round_ms() > 30000) point(pg.rope < -1 ? 0 : pg.rope > 1 ? 1 : 2);
+}
+static void tug_paint(void) {
+  int x = 160 + (int)pg.rope;
+  char s[8], *e = num(s, round_ms() < 30000 ? (30999 - round_ms()) / 1000 : 0); /* the seconds left */
+  arena(0x262D52);
+  e[0] = 's', e[1] = 0;
+  say(&np_font_body, 160, 56, s, GOLD);
+  for (int p = 0; p < 2; p++) gfx_fill(p ? 227 : 91, 96, 2, 100, team[p]);
+  gfx_fill(x - 86, 150, 172, 4, HEX(0xC5CBE4));
+  for (int p = 0; p < 2; p++) person(x + (p ? 86 : -86), 186, p);
+  box(x - 6, 140, 12, 20, 3, GOLD);
+}
+
+static void (*const START[NG])(void) = {pong_start, hockey_start, tanks_start, cycles_start, quick_start, party};
+static void (*const STEP_[NG])(void) = {pong_step, hockey_step, tanks_step, cycles_step, quick_step, tug_step};
+static void (*const PAINT[NG])(void) = {pong_paint, hockey_paint, tanks_paint, cycles_paint, quick_paint, tug_paint};
 
 /* ------------------------------------------------------------ screens */
-enum { S_MENU, S_RULES, S_PLAY, S_PAUSE, S_ASK, S_OVER, S_SAVE_ERROR };
-static int screen, sel, back_to;
+enum { S_MENU, S_RULES, S_PLAY, S_PAUSE, S_ASK, S_OVER };
+static int screen, sel, back_to, top; /* top: the first game the menu shows */
+static uint32_t shown;                /* when the screen came (the clock's time) */
 
-#define SAVE_BYTES (8+NG*8)
-static uint32_t save_crc(const uint8_t*d,unsigned n) {
-  uint32_t c=~0u;while(n--){c^=*d++;for(int k=0;k<8;k++)c=c>>1^((c&1)?0xEDB88320u:0);}return ~c;
-}
-static void save_encode(uint8_t*out) {
-  out[0]='P';out[1]=3;out[2]=(uint8_t)game;out[3]=(uint8_t)cpu;
-  for(unsigned g=0;g<NG;g++)for(unsigned m=0;m<2;m++)for(unsigned p=0;p<2;p++){
-    unsigned i=g*4+m*2+p;uint16_t count=sv.wins[g][m][p];
-    out[4+i*2]=(uint8_t)count;out[5+i*2]=(uint8_t)(count>>8);
-  }
-  uint32_t crc=save_crc(out,SAVE_BYTES-4);for(int i=0;i<4;i++)out[SAVE_BYTES-4+i]=(uint8_t)(crc>>(8*i));
-}
-static bool save_decode(const uint8_t*d,unsigned n) {
-  if(!d||n<4||d[0]!='P'||d[3]>3)return false;
-  unsigned count;
-  if(d[1]==1&&n==36&&d[2]<4)count=4;
-  else if((d[1]==2&&n==136&&d[2]<16)||(d[1]==3&&n==SAVE_BYTES&&d[2]<NG)){
-    uint32_t crc=0;for(int i=0;i<4;i++)crc|=(uint32_t)d[n-4+i]<<(8*i);
-    if(crc!=save_crc(d,n-4))return false;
-    count=d[1]==2?16:NG;
-  }else return false;
-  memset(&sv,0,sizeof sv);sv.magic='P';sv.version=3;sv.game=d[1]==2?(d[2]==14?PONG:d[2]==15?MEMORY:d[2]):d[2];sv.cpu=d[3];
-  for(unsigned g=0;g<count;g++)for(unsigned m=0;m<2;m++)for(unsigned p=0;p<2;p++){
-    if(d[1]==2&&g==14)continue;
-    unsigned dest=d[1]==2&&g==15?MEMORY:g;
-    unsigned i=g*4+m*2+p;sv.wins[dest][m][p]=(uint16_t)(d[4+i*2]|d[5+i*2]<<8);
-  }
-  return true;
-}
-static bool save(void) {
-  uint8_t packed[SAVE_BYTES];save_encode(packed);
-  return np_file_write(SAVE_NAME,packed,sizeof packed);
-}
-static void start_round(void) {
-  memset(&bot,0,sizeof bot);bot.next=now+(cpu==1?750:cpu==2?600:450);START[game]();
-}
-static int page_game(int direction) {
-  int page=(game/4+direction+(NG+3)/4)%((NG+3)/4);
-  return clampi(page*4+game%4,0,NG-1);
+static void save(void) {
+  sv.magic = 'P', sv.version = 1, sv.game = (uint8_t)game, sv.cpu = (uint8_t)cpu;
+  np_file_write(SAVE_NAME, &sv, sizeof sv);
 }
 static void new_match(void) {
-  score[0] = score[1] = 0, phase = 0, winner = 2, screen = S_PLAY;
-  start_round();
+  score[0] = score[1] = 0, phase = 0, winner = 2, screen = S_PLAY, bot.next = now + 450;
+  START[game]();
 }
-static void match_step(void) {
-  if(cpu)pad[1]=tap[1]=0; /* EXE is a solo action alias, never an input to the bot. */
+static void play(void) { /* a frame of the match */
   STEP_[game]();
-  if(phase==1&&ago(phase_t)>1500){
-    phase=0;
-    if(score[0]<TARGET[game]&&score[1]<TARGET[game])start_round();
-    else{
-      phase=2;screen=S_OVER;sel=0;
-      uint16_t*w=&sv.wins[game][cpu>0][score[1]>score[0]];if(*w<65535)(*w)++;
-      save();
-    }
+  if (phase == 1 && ago(phase_t) > 1500) {
+    phase = 0;
+    if (score[0] < TARGET[game] && score[1] < TARGET[game]) bot.next = now + 450, START[game]();
+    else phase = 2, screen = S_OVER, sel = 0, sv.wins[game][cpu > 0][score[1] > score[0]]++, save();
   }
 }
 static const char *opponent(void) {
@@ -720,7 +740,7 @@ static void tri(int x, int y, int d, color_t c) { /* a little arrow, pointing ri
   }
 }
 /* The calculator's keyboard, the keys of this game in each player's colour: arrows on the keys
-   that move, a dot on the one that fires. */
+   that move, a dot on the one that acts. */
 static void keyboard(int x0, int y0) {
   static const int8_t ARROW[4][2] = {{0, 9}, {13, 0}, {13, 18}, {26, 9}}, DIR[4] = {2, 3, 1, 0};
   box(x0 - 4, y0 - 4, 132, 136, 10, HEX(0x0E1124));
@@ -734,8 +754,7 @@ static void keyboard(int x0, int y0) {
     else x += (k - 30) % 6 * 24, y += 74 + (k - 30) / 6 * 14, w = 20, h = 10;
     for (int q = 0; q < 2; q++)
       for (int i = 0; i < 5; i++)
-        if (KEYS[q][i] == k && (CONTROL[game] & (1<<i)) && !is_cpu(q))
-          p = q, b = i;
+        if (KEYS[q][i] == k && KEYS_USED[game] >> i & 1 && !is_cpu(q)) p = q, b = i;
     box(x, y, w, h, 3, p < 0 ? HEX(0x3A4268) : team[p]);
     if (p >= 0 && b == 4) disc(x + w / 2, y + h / 2, 2, WHITE);
     else if (p >= 0) tri(x + w / 2, y + h / 2, DIR[b], WHITE);
@@ -746,11 +765,15 @@ static void button(int x, int y, int w, const char *s, bool on) {
   box(x, y, w, 26, 13, on ? GOLD : HEX(0x3A4372));
   gfx_text_center(&np_font_body, x + w / 2, y + 18, s, on ? INK : WHITE, 256);
 }
-/* a card over the game: its title, then its buttons from by down. Over a game it is drawn in that game's
-   look: Pong's black court and white walls with its square ball, the air hockey rink with a mallet, the tanks' grey maze, the light cycles' blue grid; over the menu, in the menu's */
-static void card(int y, int h, const char *title, const char *const *items, int n, int by) {
+static void keys_line(int y, const char *s) { say(&np_font_small, 160, y, s, HEX(0xD6DCF5)); }
+/* a card over the game: its title, then its buttons from by down, and its keys under it. Over
+   the first four games it is drawn in that game's look: Pong's black court and white walls with
+   its square ball, the air hockey rink with a mallet, the tanks' grey maze, the light cycles' blue
+   grid; over the menu and the party games, in the menu's */
+static void card(int y, int h, const char *title, const char *const *items, int n, int by, const char *keys) {
   gfx_fill_alpha(0, 0, SCREEN_W, SCREEN_H, 0, 130);
-  if (screen <= S_RULES || (screen == S_ASK && back_to == S_MENU) || game>=QUICK || screen==S_SAVE_ERROR) {
+  keys_line(232, keys);
+  if (screen <= S_RULES || (screen == S_ASK && back_to == S_MENU) || game > CYCLES) {
     box(60, y, 200, h, 14, HEX(0x262D52));
     gfx_rrect_outline(60, y, 200, h, 14, 2, HEX(0x56619A), 256);
     say(&np_font_title, 160, y + 30, title, WHITE);
@@ -758,7 +781,7 @@ static void card(int y, int h, const char *title, const char *const *items, int 
     return;
   }
   static const uint32_t LOOK[4][3] = {{0x000000, 0xFFFFFF, 0xFFFFFF}, {0xF4F6FA, 0x9AA3B8, 0x161A33},
-                                       {0xE6E6EA, 0x3A3D4F, 0x3A3D4F}, {0x0B1230, 0x3E8BFF, 0xFFFFFF}};
+                                      {0xE6E6EA, 0x3A3D4F, 0x3A3D4F}, {0x0B1230, 0x3E8BFF, 0xFFFFFF}};
   color_t bg = gfx_rgb(LOOK[game][0]), edge = gfx_rgb(LOOK[game][1]), ink = gfx_rgb(LOOK[game][2]);
   gfx_fill(57, y - 3, 206, h + 6, edge);
   gfx_fill(60, y, 200, h, bg);
@@ -775,80 +798,74 @@ static void card(int y, int h, const char *title, const char *const *items, int 
   }
 }
 
-/* the little picture of each game in the menu: x, y, w, h, roundness, colour (red, blue, white) */
+/* the little picture of each game in the menu: x, y, w, h, roundness, colour (red, blue, white, gold) */
 static const int8_t ICON[][6] = {
   {4, 6, 3, 10, 0, 0}, {19, 10, 3, 10, 0, 1}, {12, 11, 3, 3, 0, 2},                       /* Pong */
   {3, 8, 10, 10, 5, 0}, {14, 6, 10, 10, 5, 1}, {10, 16, 6, 6, 3, 2},                      /* Air Hockey */
   {0, 0, 0, 0, 0, 0},                                                                     /* (a tank) */
   {4, 7, 12, 3, 0, 0}, {13, 7, 3, 12, 0, 0}, {10, 19, 12, 3, 0, 1}, {10, 12, 3, 9, 0, 1}, /* Light Cycles */
+  {3, 8, 10, 10, 5, 0}, {13, 8, 10, 10, 5, 1}, {11, 5, 4, 16, 2, 3},                      /* Quick Draw */
+  {3, 12, 20, 3, 0, 2}, {11, 8, 5, 11, 2, 3},                                             /* Tug of War */
 };
-static const uint8_t ICON_AT[5] = {0, 3, 6, 7, 11};
+static const uint8_t ICON_AT[NG + 1] = {0, 3, 6, 7, 11, 14, 16};
 static void icon(int g, int x, int y) {
-  const color_t C[3] = {team[0], team[1], WHITE};
+  const color_t C[4] = {team[0], team[1], WHITE, GOLD};
   box(x, y, 26, 26, 6, INK);
-  if(g>=QUICK){
-    int cx=x+13,cy=y+13;
-    switch(g){
-      case QUICK:disc(cx-5,cy,5,team[0]);disc(cx+5,cy,5,team[1]);box(cx-2,cy-8,4,16,2,GOLD);break;
-      case TUG:gfx_fill(x+3,cy,20,3,WHITE);box(cx-2,cy-5,5,11,2,GOLD);break;
-      case FOOTBALL:case VOLLEY:disc(cx,cy,8,g==FOOTBALL?WHITE:GOLD);disc(cx-2,cy-2,3,g==FOOTBALL?INK:WHITE);break;
-      case ARCHERY:gfx_fill(cx-8,cy,17,2,WHITE);gfx_fill(cx+5,cy-3,2,8,team[0]);break;
-      case DODGE:disc(cx-5,cy+3,5,team[0]);disc(cx+6,cy-5,5,team[1]);break;
-      case METEORS:disc(cx+3,cy-4,6,HEX(0xA5AFCB));box(cx-7,cy+6,11,4,2,team[0]);break;
-      case ROCKETS:box(cx-8,cy-4,16,9,4,team[1]);gfx_fill(cx-11,cy-2,5,5,GOLD);break;
-      case SUMO:disc(cx,cy,10,GOLD);disc(cx-4,cy,4,team[0]);disc(cx+4,cy,4,team[1]);break;
-      case FISHING:gfx_fill(cx,cy-9,1,14,WHITE);box(cx-6,cy+3,13,7,3,GOLD);break;
-      default:tri(cx,cy-3,3,team[0]);gfx_fill(cx-1,cy-2,3,11,team[1]);break;
-    }
-  }else if (g == TANKS) tank(x + 13, y + 14, 54, 0);
+  if (g == TANKS) tank(x + 13, y + 14, 54, 0);
   else
     for (int i = ICON_AT[g]; i < ICON_AT[g + 1]; i++)
       box(x + ICON[i][0], y + ICON[i][1], ICON[i][2], ICON[i][3], ICON[i][4], C[ICON[i][5]]);
 }
 
+#define ROWS 5 /* the games the menu shows at once */
 static void scene(void *ctx) {
-  char s[48];
+  char s[24];
   if (screen <= S_RULES || (screen == S_ASK && back_to == S_MENU)) {
     gfx_vgrad(0, 0, 160, SCREEN_H, 0xB8323A, 0x3A0F24); /* the two players' colours */
     gfx_vgrad(160, 0, 160, SCREEN_H, 0x2A5FD0, 0x0F1A44);
     say(&np_font_title, 160, 28, T("2 Players"), WHITE);
-    char*page_end=num(s,(uint32_t)(game/4+1));*page_end++='/';num(page_end,(NG+3)/4);
-    gfx_text_right(&np_font_small,301,28,s,WHITE,256);
-    for (int g = game/4*4; g < NG && g < game/4*4+4; g++) {
-      int y = 46 + 39 * (g%4), on = g == game;
-      gfx_rrect(24, y, 272, 32, 10, on ? WHITE : INK, on ? 256 : 170);
-      icon(g, 27, y + 3);
-      gfx_text(&np_font_body, 62, y + 21, NAME[g], on ? INK : WHITE, 256);
+    for (int i = 0; i < ROWS; i++) {
+      int g = top + i, y = 38 + 33 * i, on = g == game;
+      gfx_rrect(24, y, 272, 30, 10, on ? WHITE : INK, on ? 256 : 170);
+      icon(g, 26, y + 2);
+      gfx_text(&np_font_body, 62, y + 20, NAME[g], on ? INK : WHITE, 256);
       for (int p = 0; p < 2; p++) { /* the matches each side has won */
-        unsigned wins=sv.wins[g][cpu > 0][p];char*e=num(s,wins>999?999:wins);if(wins>999)*e++='+',*e=0;
-        gfx_text_center(&np_font_body, 246 + 36 * p, y + 21, s, team[p], 256);
+        num(s, sv.wins[g][cpu > 0][p]);
+        gfx_text_center(&np_font_body, 248 + 30 * p, y + 20, s, team[p], 256);
       }
-      gfx_text_center(&np_font_body, 263, y + 21, "-", on ? INK : WHITE, 256);
+      gfx_text_center(&np_font_body, 263, y + 20, "-", on ? INK : WHITE, 256);
     }
+    if (top) tri(306, 44, 3, WHITE); /* more above, more below */
+    if (top < NG - ROWS) tri(306, 194, 1, WHITE);
+    keys_line(207, T("OK  play   Back  quit"));
     gfx_rrect(40, 212, 240, 24, 12, INK, 200);
     tri(52, 224, 2, WHITE), tri(268, 224, 0, WHITE);
     gfx_text_center(&np_font_body, 160, 229, opponent(), WHITE, 256);
-    gfx_text_center(&np_font_small,160,207,T("7 / 9: page"),WHITE,256);
     if (screen == S_RULES) {
+      static const char *const KEY[2][5] = {{"", "", "", "", "OK"}, {"3", "x", "Ans", "-", "EXE"}};
       gfx_fill_alpha(0, 0, SCREEN_W, SCREEN_H, 0, 140);
-      box(8, 8, 304, 224, 14, HEX(0x262D52));
+      box(8, 8, 304, 232, 14, HEX(0x262D52));
       say(&np_font_title, 160, 34, NAME[game], WHITE);
-      gfx_paragraph(&np_font_small, 160, 52, 284, 11, RULES[game], HEX(0xD6DCF5), 256);
+      gfx_paragraph(&np_font_small, 160, 54, 284, 12, RULES[game], HEX(0xD6DCF5), 256);
+      keyboard(26, 100);
+      for (int p = 0; p < 2; p++) { /* who plays, and with which keys */
+        int y = 100 + 36 * p, u = KEYS_USED[game], x = 188;
+        box(166, y, 14, 14, 4, team[p]);
+        gfx_text(&np_font_body, 188, y + 12, p ? opponent() : who(0), WHITE, 256);
+        if (!p && u & 15) x = gfx_text(&np_font_small, x, y + 27, T("arrows"), light[p], 256) + 6;
+        for (int i = 0; i < 5; i++)
+          if (u >> i & 1 && !is_cpu(p)) x = gfx_text(&np_font_small, x, y + 27, KEY[p][i], i < 4 ? light[p] : GOLD, 256) + 6;
+      }
       char *e = s;
       for (const char *q = T("First to "); *q; q++) *e++ = *q;
       num(e, TARGET[game]);
-      gfx_text_center(&np_font_body, 231, 184, s, GOLD, 256);
-      keyboard(26, 100);
-      gfx_text_center(&np_font_small,231,101,CONTROL[game]&16?T("Action: OK / EXE"):T("Use direction keys"),GOLD,256);
-      for (int p = 0; p < 2; p++) {
-        box(166, 110 + 30 * p, 14, 14, 4, team[p]);
-        gfx_text(&np_font_body, 188, 122 + 30 * p, p ? opponent() : who(0), WHITE, 256);
-      }
-      button(166, 196, 130, T("Play"), true);
+      gfx_text_center(&np_font_body, 231, 182, s, GOLD, 256);
+      button(166, 190, 130, T("Play"), true);
+      say(&np_font_small, 231, 233, T("Back  games"), HEX(0xD6DCF5));
     }
   } else {
     PAINT[game]();
-    if (game != PONG) { /* the score bar: each side's name and points */
+    if (game != PONG) { /* the score bar: each side's name and points, and the pause key */
       gfx_fill(0, 0, SCREEN_W, 22, INK);
       for (int p = 0; p < 2; p++) {
         box(p ? 214 : 4, 3, 102, 17, 8, team[p]);
@@ -857,6 +874,7 @@ static void scene(void *ctx) {
         gfx_text_right(&np_font_body, p ? 308 : 98, 16, s, WHITE, 256);
       }
     }
+    if (game) gfx_text_center(&np_font_small, 160, 15, T("Back  pause"), HEX(0xD6DCF5), 256);
     if (phase == 1 && screen == S_PLAY) {
       int t = (int)ago(phase_t), y = 120 - (t < 200 ? (200 - t) / 10 : 0);
       gfx_rrect(70, y - 26, 180, 62, 14, INK, 200);
@@ -865,11 +883,11 @@ static void scene(void *ctx) {
     }
     if (screen == S_PAUSE) {
       static const char *const ITEM[4] = {T("Resume"), T("Restart"), T("Other games"), T("Quit game")};
-      card(40, 172, T("Paused"), ITEM, 4, 82);
+      card(40, 172, T("Paused"), ITEM, 4, 82, T("OK  choose   Back  resume"));
     } else if (screen == S_OVER) {
       static const char *const WON[2][2] = {{T("Player 1 wins!"), T("Player 2 wins!")}, {T("You win!"), T("The computer wins")}};
       static const char *const ITEM[2] = {T("Rematch"), T("Other games")};
-      card(46, 158, WON[cpu > 0][score[1] > score[0]], ITEM, 2, 140);
+      card(46, 158, WON[cpu > 0][score[1] > score[0]], ITEM, 2, 140, T("OK  choose   Back  games"));
       for (int p = 0; p < 2; p++) {
         num(s, (uint32_t)score[p]);
         say(&np_font_title, 124 + 72 * p, 118, s, light[p]);
@@ -879,86 +897,81 @@ static void scene(void *ctx) {
   }
   if (screen == S_ASK) {
     static const char *const ITEM[2] = {T("No"), T("Yes")};
-    card(60, 120, T("Quit game?"), ITEM, 2, 104);
-  }else if(screen==S_SAVE_ERROR){
-    static const char*const ITEM[2]={T("Retry saving"),T("Exit without saving")};
-    card(45,158,T("Save failed"),ITEM,2,113);
+    card(60, 120, T("Quit game?"), ITEM, 2, 104, T("OK  choose   Back  no"));
   }
 }
 
 int main(void) {
   np_app_begin();
-  color_t *their_strip=gfx_buf;gfx_buf=strip;
-  static const uint32_t TEAM[2]={0xEF4136,0x2E7CF6};
-  for(int p=0;p<2;p++)team[p]=gfx_rgb(TEAM[p]),light[p]=gfx_rgb(gfx_lerp888(TEAM[p],0xFFFFFF,120)),dark[p]=gfx_rgb(gfx_lerp888(TEAM[p],0,110));
-  uint32_t last=(uint32_t)eadk_timing_millis(),n=0,accum=0,draw_at=last;
-  seed=eadk_random()^last;if(!seed)seed=1;
-  const uint8_t*d=np_file_read(SAVE_NAME,&n);save_decode(d,n);
-  game=sv.game%NG;cpu=sv.cpu&3;screen=S_MENU;sel=0;now=0;
-  uint64_t held=eadk_keyboard_scan(),stale=held;int previous_pad[2]={0},queued[2]={0};
-  bool dirty=true;
-  for(bool quit=false;!quit;){
-    uint32_t t=(uint32_t)eadk_timing_millis(),elapsed=t-last;last=t;
-    uint64_t k=eadk_keyboard_scan();stale&=k;k&=~stale;uint64_t hit=k&~held;held=k;
-    bool ok=down(hit,eadk_key_ok)||down(hit,eadk_key_exe),back=down(hit,eadk_key_back);
-    int dx=down(hit,eadk_key_right)-down(hit,eadk_key_left),dy=down(hit,eadk_key_down)-down(hit,eadk_key_up),before=screen;
-    if(hit)dirty=true;
-    if(screen!=S_SAVE_ERROR&&(down(k,eadk_key_home)||down(k,eadk_key_on_off))){
-      if(save())break;
-      screen=S_SAVE_ERROR;sel=0;stale|=k;ok=back=false;dx=dy=0;dirty=true;
-    }
-    pad[0]=pad[1]=0;
-    for(int i=0;i<10;i++)pad[i/5]|=down(k,KEYS[i/5][i%5])<<(i%5);
-    if(cpu&&(down(k,eadk_key_ok)||down(k,eadk_key_exe)))pad[0]|=B_FIRE;
-    for(int p=0;p<2;p++){tap[p]=pad[p]&~previous_pad[p];previous_pad[p]=pad[p];queued[p]|=tap[p];}
-    switch(screen){
+  color_t *their_strip = gfx_buf;
+  gfx_buf = strip;
+  static const uint32_t TEAM[2] = {0xEF4136, 0x2E7CF6};
+  for (int p = 0; p < 2; p++)
+    team[p] = gfx_rgb(TEAM[p]), light[p] = gfx_rgb(gfx_lerp888(TEAM[p], 0xFFFFFF, 120)), dark[p] = gfx_rgb(gfx_lerp888(TEAM[p], 0, 110));
+  uint32_t last = (uint32_t)eadk_timing_millis(), n = 0;
+  seed = eadk_random() ^ last;
+  if (!seed) seed = 1;
+  const uint8_t *d = np_file_read(SAVE_NAME, &n);
+  if (d && n >= 4 && n <= sizeof sv && d[0] == 'P' && d[1] == 1) /* (a save with fewer games: the first ones) */
+    for (uint32_t i = 0; i < n; i++) ((uint8_t *)&sv)[i] = d[i];
+  game = sv.game % NG, cpu = sv.cpu & 3;
+  top = clampi(game - 2, 0, NG - ROWS);
+  uint64_t held = eadk_keyboard_scan(), stale = held; /* keys still down from the launcher wait to be let go */
+  for (bool quit = false; !quit;) {
+    uint32_t t = (uint32_t)eadk_timing_millis();
+    ms = t - last < 40 ? (int)(t - last) : 40, last = t, dt = ms * .001f;
+    if (screen == S_PLAY) now += (uint32_t)ms;
+    uint64_t k = eadk_keyboard_scan();
+    if (cpu) k |= (uint64_t)down(k, eadk_key_exe) << eadk_key_ok; /* alone, EXE is OK: one key, either */
+    stale &= k, k &= ~stale;
+    uint64_t hit = k & ~held;
+    held = k;
+    if (down(k, eadk_key_home) || down(k, eadk_key_on_off)) break;
+    bool ok = down(hit, eadk_key_ok) || down(hit, eadk_key_exe), back = down(hit, eadk_key_back);
+    pad[0] = pad[1] = tap[0] = tap[1] = 0;
+    for (int i = 0; i < 10; i++)
+      pad[i / 5] |= down(k, KEYS[i / 5][i % 5]) << i % 5, tap[i / 5] |= down(hit, KEYS[i / 5][i % 5]) << i % 5;
+    if (cpu) pad[1] = tap[1] = 0; /* (player 2's keys are the computer's) */
+    int dx = down(hit, eadk_key_right) - down(hit, eadk_key_left), dy = down(hit, eadk_key_down) - down(hit, eadk_key_up);
+    int was = screen;
+    switch (screen) {
       case S_MENU:
       case S_RULES:
-        if(dx){cpu=(cpu+dx+4)%4;save();}
-        if(screen==S_RULES){if(ok)new_match();else if(back)screen=S_MENU;}
-        else if(dy)game=(game+dy+NG)%NG;
-        else if(down(hit,eadk_key_seven))game=page_game(-1);
-        else if(down(hit,eadk_key_nine))game=page_game(1);
-        else if(ok){screen=S_RULES;save();}
-        else if(back){back_to=S_MENU;screen=S_ASK;sel=0;}
+        if (dx) cpu = (cpu + dx) & 3, save();
+        if (screen == S_RULES) {
+          if (ok) new_match();
+          else if (back) screen = S_MENU;
+        } else if (dy) {
+          game = (game + dy + NG) % NG, top = clampi(top, game - ROWS + 1, game);
+        } else if (ok) screen = S_RULES, save();
+        else if (back) back_to = S_MENU, screen = S_ASK, sel = 0;
         break;
       case S_PLAY:
-        if(back){screen=S_PAUSE;sel=0;break;}
-        /* A fixed eight-millisecond simulation, independent of LCD frame rate.
-         * A tap is queued until a tick consumes it; held keys keep moving. */
-        accum+=elapsed>160?160:elapsed;
-        for(int steps=0;accum>=8&&steps<20&&screen==S_PLAY;steps++){
-          ms=8;now+=8;tap[0]=queued[0];tap[1]=queued[1];queued[0]=queued[1]=0;
-          match_step();accum-=8;
+        if (back) {
+          screen = S_PAUSE, sel = 0;
+          break;
         }
+        play();
         break;
-      case S_SAVE_ERROR:
-        if(dy)sel^=1;
-        if(back||(ok&&sel))quit=true;else if(ok&&save())quit=true;
-        break;
-      default:
-        sel=(sel+dy)&(screen==S_PAUSE?3:1);
-        if(screen==S_ASK){
-          if(back||(ok&&!sel))screen=back_to;
-          else if(ok){if(save())quit=true;else screen=S_SAVE_ERROR,sel=0;}
-        }else if(back&&screen==S_PAUSE)screen=S_PLAY;
-        else if(ok){
-          int a=screen==S_PAUSE?sel:sel?2:1;
-          if(a==1)new_match();
-          else{screen=a?(a==2?S_MENU:S_ASK):S_PLAY;back_to=S_PAUSE;sel=0;}
+      default: /* the cards: Paused, the match over, Quit game? */
+        sel = (sel + dy) & (screen == S_PAUSE ? 3 : 1);
+        if (screen == S_OVER && t - shown < 700) break; /* (a key still being mashed doesn't choose) */
+        if (screen == S_ASK) {
+          if (back || (ok && !sel)) screen = back_to;
+          else quit = ok;
+        } else if (back) {
+          screen = screen == S_PAUSE ? S_PLAY : S_MENU;
+        } else if (ok) { /* Resume, Restart, Other games, Quit game; Rematch, Other games */
+          int a = screen == S_PAUSE ? sel : sel ? 2 : 1;
+          if (a == 1) new_match();
+          else screen = a ? a == 2 ? S_MENU : S_ASK : S_PLAY, back_to = S_PAUSE, sel = 0;
         }
-        break;
     }
-    if(screen!=S_PLAY)accum=0,queued[0]=queued[1]=0;
-    if(before!=screen){
-      dirty=true;accum=0;queued[0]=queued[1]=0;previous_pad[0]=previous_pad[1]=0;stale|=k;
-      last=(uint32_t)eadk_timing_millis();
-    }
-    if(dirty||(screen==S_PLAY&&t-draw_at>=30)){
-      eadk_display_wait_for_vblank();gfx_render(scene,0,0,SCREEN_H);draw_at=t;dirty=false;
-    }
-    eadk_timing_msleep(2);
+    if (screen != was) shown = t;
+    eadk_display_wait_for_vblank();
+    gfx_render(scene, 0, 0, SCREEN_H);
   }
-  gfx_buf=their_strip;
+  save();
+  gfx_buf = their_strip;
   return np_app_end();
 }

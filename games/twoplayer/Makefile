@@ -1,6 +1,7 @@
-# 2 Players — fifteen mini-games inside the existing NumPlay app/module.
+# 2 Players: Pong, Air Hockey, Tanks, Light Cycles, Quick Draw and Tug of War, for two on one calculator.
 #   make          build output/twoplayer.nwa
 #   make check    link the app like the calculator does (output/twoplayer.bin)
+#   make test     the tests on a computer (tests/play.c)
 #
 # In NumPlay the game draws with the launcher's strips, shapes and fonts and saves through its
 # file functions (module.o leaves them to the launcher); on its own it brings them along.
@@ -10,27 +11,22 @@ NWLINK ?= npx --yes -- nwlink@1.0.0
 BUILD_DIR = output
 SRC = src/main.c
 HEADERS = ../common/epsilon_app.h ../common/epsilon_files.h ../common/np_text.h ../../launcher/src/gfx.h \
-  ../../launcher/src/np.h ../../launcher/src/font.h src/party.h
-HOST_CC ?= cc
-PYTHON ?= python3
+  ../../launcher/src/np.h ../../launcher/src/font.h
 
 CFLAGS = -std=c11 $(shell $(NWLINK) eadk-cflags-device)
 CFLAGS += -Os -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant
 # (smaller still: NumPlay has little room left)
 CFLAGS += -fno-schedule-insns2 -fno-reorder-blocks -fno-tree-loop-optimize
 CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fwhole-program -fvisibility=internal
-CFLAGS += -ffunction-sections -fdata-sections -fstack-usage
 LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
 LDFLAGS += -Wl,-e,main -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
 LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
 
-.PHONY: build check clean host test test-arm test-integration
+.PHONY: build check clean host test
 build: $(BUILD_DIR)/twoplayer.nwa
 
 check: $(BUILD_DIR)/twoplayer.nwa
-	$(Q) $(NWLINK) nwa-bin --ram-length 107674 $< $(BUILD_DIR)/twoplayer.bin
-	$(Q) $(NWLINK) nwa-bin --ram-length 107674 $(BUILD_DIR)/twoplayer-debug.nwa $(BUILD_DIR)/twoplayer-debug.bin
-	$(Q) cmp $(BUILD_DIR)/twoplayer.bin $(BUILD_DIR)/twoplayer-debug.bin
+	$(Q) $(NWLINK) nwa-bin $< $(BUILD_DIR)/twoplayer.bin
 	@echo "BIN     $(BUILD_DIR)/twoplayer.bin: $$(wc -c < $(BUILD_DIR)/twoplayer.bin) bytes"
 
 # compiled, then linked (the link options would upset the compiler)
@@ -44,22 +40,23 @@ $(BUILD_DIR)/font_data.o: ../../launcher/src/font_data.c ../../launcher/src/font
 $(BUILD_DIR)/xfont.o: ../../launcher/src/xfont.c ../../launcher/src/np_xfont.h $(HEADERS) | $(BUILD_DIR)
 	$(Q) $(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/twoplayer-debug.nwa: $(BUILD_DIR)/main.o $(BUILD_DIR)/gfx.o $(BUILD_DIR)/font_data.o $(BUILD_DIR)/xfont.o \
+$(BUILD_DIR)/twoplayer.nwa: $(BUILD_DIR)/main.o $(BUILD_DIR)/gfx.o $(BUILD_DIR)/font_data.o $(BUILD_DIR)/xfont.o \
   $(BUILD_DIR)/icon.o
 	@echo "LD      $@"
 	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
-$(BUILD_DIR)/twoplayer.nwa: $(BUILD_DIR)/twoplayer-debug.nwa
-	$(Q) cp $< $@
 	$(Q) arm-none-eabi-strip --strip-unneeded $@
 
-host: test
-test: | $(BUILD_DIR)
-	$(HOST_CC) -std=c11 -O2 -Wall -Wextra -Wno-unused-parameter -Wno-misleading-indentation -ffunction-sections -fdata-sections -Itests tests/test.c ../../launcher/src/gfx.c ../../launcher/src/font_data.c ../../launcher/src/xfont.c -Wl,--gc-sections -lm -o $(BUILD_DIR)/test
-	cd $(BUILD_DIR) && ./test
-test-arm: build test
-	$(PYTHON) tests/test_arm.py --nwlink "$(NWLINK)"
-test-integration: module
-	$(PYTHON) tests/test_integration.py --nwlink "$(NWLINK)"
+# on a computer, with the sanitizers: the rules, bots against bots, random sessions, old saves (tests/play.c)
+HOST_FLAGS = -std=gnu11 -O1 -g -Wall -Wextra -Wno-unused-parameter -DPLATFORM_DEVICE=1 -DHOST -ffp-contract=off \
+  $(shell $(NWLINK) eadk-cflags-simulator) -fsanitize=address,undefined -fno-sanitize-recover=undefined
+host: output/play
+output/play: $(SRC) tests/play.c $(HEADERS)
+	$(Q) mkdir -p output
+	$(Q) cc $(HOST_FLAGS) tests/play.c ../../launcher/src/gfx.c ../../launcher/src/font_data.c \
+	  ../../launcher/src/xfont.c -lm -o $@
+	@echo "HOST    $@"
+test: output/play
+	output/play test
 
 $(BUILD_DIR)/icon.o: src/icon.png | $(BUILD_DIR)
 	@echo "ICON    $<"

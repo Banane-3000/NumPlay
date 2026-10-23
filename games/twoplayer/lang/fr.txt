@@ -3,72 +3,64 @@ Pong	Pong
 Air Hockey	Air hockey
 Tanks	Tanks
 Light Cycles	Motos de lumière
+Quick Draw	Duel éclair
+Tug of War	Tir à la corde
+Volleyball	Volley
+Sumo	Sumo
+Rocket Race	Course de fusées
+Archery	Tir à l'arc
+Dodgeball	Balle aux prisonniers
+Football	Football
+Meteor Run	Pluie de météores
+Fishing	Pêche
+Memory Duel	Duel de mémoire
 Return the ball with your paddle: its middle sends the ball back straight, its ends at a steep angle. The longer a rally lasts, the faster the ball.	Renvoie la balle avec ta raquette : son milieu la renvoie tout droit, ses bouts en biais. Plus l'échange dure, plus la balle va vite.
 Knock the puck into the other goal. Your mallet stays in your half; hit the puck on the move to send it flying.	Envoie le palet dans l'autre but. Ton maillet reste dans ta moitié ; frappe le palet en bougeant pour qu'il file.
+Drive through the maze and hit the other tank. Shells bounce off the walls: watch out for your own!	Roule dans le labyrinthe et touche l'autre tank. Les obus rebondissent sur les murs : gare aux tiens !
 Steer your light cycle and make the other one crash into a wall or a trail. It never stops and never turns back.	Pilote ta moto de lumière et fais percuter l'autre contre un mur ou une traînée. Elle ne s'arrête et ne recule jamais.
+Wait for DRAW!, then press your key: the first one wins. Too soon loses the round.	Attends FEU !, puis appuie sur ta touche : le premier gagne. Trop tôt, tu perds la manche.
+Tap your key fast to pull the rope. Pull the flag past your line.	Appuie vite sur ta touche pour tirer la corde. Fais passer le drapeau derrière ta ligne.
+Jump with up or your key. Hit the ball over the net and don't let it land on your side.	Saute avec haut ou ta touche. Renvoie la balle par-dessus le filet sans la laisser tomber de ton côté.
+Push the other one out of the ring. Your key dashes. The ring shrinks.	Pousse l'autre hors du cercle. Ta touche fonce. Le cercle rétrécit.
+Tap up or your key to fly through the gaps. Don't touch the walls or the edges.	Appuie sur haut ou ta touche pour passer dans les trous. Ne touche ni les murs ni les bords.
+Up and down aim. Hold your key to draw the bow, let go to shoot. Three hits win.	Haut et bas visent. Maintiens ta touche pour bander l'arc, relâche pour tirer. Trois touches gagnent.
+Your key throws at the other one. Dodge their balls. Three hits win.	Ta touche lance sur l'autre. Évite ses balles. Trois touches gagnent.
+Push the ball into the other goal. Near it, your key kicks it at the goal.	Pousse le ballon dans l'autre but. Tout près, ta touche le tire vers le but.
+Dodge the falling rocks. Both lanes get the same ones. Last one standing wins.	Évite les rochers qui tombent : les mêmes dans les deux couloirs. Le dernier debout gagne.
+Hold your key to lower the hook, let go to reel in. Land a fish first.	Maintiens ta touche pour descendre l'hameçon, relâche pour remonter. Attrape un poisson le premier.
+Watch the arrows, then repeat them. First to finish without a mistake wins.	Regarde les flèches, puis refais-les. Le premier à finir sans erreur gagne.
 Computer	IA
 Player 2	Joueur 2
 You	Toi
 Player 1	Joueur 1
+Back  pause	Retour  pause
+DRAW!	FEU !
+Wait...	Attends...
+Your turn!	À toi !
+Watch	Regarde
 Computer: easy	IA : facile
 Computer: normal	IA : normale
 Computer: hard	IA : difficile
 2 Players	2 joueurs
+OK  play   Back  quit	OK  jouer   Retour  quitter
+arrows	flèches
 First to 	Premier à 
 Play	Jouer
+Back  games	Retour  jeux
 Draw!	Égalité !
 Resume	Reprendre
 Restart	Recommencer
 Other games	Autres jeux
 Quit game	Quitter
 Paused	Pause
+OK  choose   Back  resume	OK  choisir   Retour  reprendre
 Player 1 wins!	Joueur 1 gagne !
 Player 2 wins!	Joueur 2 gagne !
 You win!	Gagné !
 The computer wins	L'IA gagne
 Rematch	Revanche
+OK  choose   Back  games	OK  choisir   Retour  jeux
 No	Non
 Yes	Oui
 Quit game?	Quitter ?
-
-# Additional mini-games
-Quick Draw	Duel éclair
-Tug of War	Tir à la corde
-Football	Football
-Volley Ball	Volley
-Archery	Tir à l'arc
-Dodge Ball	Balle au prisonnier
-Meteor Run	Météores
-Rocket Race	Fusées
-Sumo	Sumo
-Fishing	Pêche
-Memory Duel	Duel de mémoire
-Wait for DRAW, then press your action key. A false start loses the round. Simultaneous shots draw.	Attends le signal, puis appuie sur Action. Un faux départ perd la manche. Tirs simultanés : égalité.
-Tap your action key to pull the rope. Release between pulls: holding does not repeat. Drag the flag past your line.	Appuie puis relâche Action pour tirer. Maintenir ne répète pas. Fais passer le drapeau derrière ta ligne.
-Move around the pitch and kick with your action key. Push the ball into the other goal; rebounds stay in play.	Déplace-toi et tire avec Action. Envoie le ballon dans le but adverse. Les rebonds restent en jeu.
-Move left and right; Up or your action key jumps. Keep the ball off your floor and send it over the net.	Va à gauche ou à droite ; Haut ou Action fait sauter. Renvoie la balle au-dessus du filet sans la laisser tomber.
-Move in your half and throw with your action key. Dodge incoming balls. Three hits knock a player out.	Déplace-toi dans ta moitié et lance avec Action. Évite les balles. Trois impacts éliminent un joueur.
-Move left and right to dodge the falling rocks. Both lanes get the same obstacles. Stay alive longer than your rival.	Va à gauche ou à droite pour éviter les rochers. Les deux pistes sont identiques. Survis plus longtemps que ton rival.
-Tap Up or your action key to boost your rocket. Fly through the gaps; avoid the walls. Both pilots face the same course.	Haut ou Action propulse ta fusée. Vole dans les ouvertures sans toucher les murs. Le parcours est le même pour les deux.
-Move inside the ring. Your action key dashes and pushes your rival. Stay inside: the ring gradually shrinks.	Bouge dans le cercle. Action fait charger pour pousser ton rival. Reste à l'intérieur : le cercle rétrécit.
-Move your rod left and right. Hold your action key to lower the hook; release to reel in a fish. Catch five first.	Déplace ta canne. Maintiens Action pour descendre le crochet ; relâche pour remonter un poisson. Premier à cinq.
-Watch the arrow sequence, then repeat it with your direction keys. The first correct sequence wins; a wrong arrow loses.	Observe les flèches, puis répète la suite avec les directions. Le premier sans faute gagne ; une erreur fait perdre.
-DRAW!	GO !
-Wait...	Attends...
-Too soon loses the round	Trop tôt : manche perdue
-Tap, release, pull!	Appuie, relâche, tire !
-Repeat the arrows!	Répète les flèches !
-Watch the arrows	Observe les flèches
-7 / 9: page	7 / 9 : page
-Use direction keys	Touches de direction
-Retry saving	Réessayer
-Exit without saving	Quitter sans sauver
-Save failed	Échec de sauvegarde
-Aim with Up and Down. Hold OK (player 1) or EXE (player 2) to charge; release to shoot. The dotted arc shows your shot. Three hits win the round.	Haut/Bas pour viser. Maintiens OK (J1) ou EXE (J2), puis relâche pour tirer. Les pointillés montrent le tir. Trois impacts gagnent.
-Power	Puissance
-Hold OK / EXE, release to shoot	Maintiens OK / EXE, relâche pour tirer
-Action: OK / EXE	Action : OK / EXE
-Up/Down drive; Left/Right turn. OK (player 1) or EXE (player 2) fires. Shells bounce off walls and can hit your own tank!	Haut/Bas pour avancer ou reculer, Gauche/Droite pour tourner. OK (J1) ou EXE (J2) tire. Les obus rebondissent : gare aux tiens !
-Release!	Relâche !
-Hold OK	Maintiens OK
-Hold EXE	Maintiens EXE
+OK  choose   Back  no	OK  choisir   Retour  non

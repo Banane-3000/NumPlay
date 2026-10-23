@@ -136,5 +136,3 @@ Needs 	Il manque
 Sokoban	Sokoban
 Push every box home	Pousse chaque caisse à sa place
 Levels: Microban by David W. Skinner	Niveaux : Microban de David W. Skinner
-Fifteen mini-games, side by side	Quinze mini-jeux, côte à côte
-Additional mini-games by Bobydeluxe	Mini-jeux supplémentaires par Bobydeluxe
