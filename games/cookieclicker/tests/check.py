@@ -78,9 +78,20 @@ try:
     for f in os.listdir(kept):
         if not f.endswith(".py"):
             os.remove(os.path.join(kept, f))
+    copy = open(os.path.join(kept, "cookieclicker_saves.py"), "rb").read()
     s = play(kept, presses(10, "ok", 2) + ",60:home", 100, "from the copy")
     if s:
         check(s["clicks"] == 22 and s["buildings"] == 1, f"the copy did not bring the bakery back: {s}")
+    # a copy written by 1.16.0 and before (another head over the same line) too
+    old = tempfile.mkdtemp(prefix="cc_old_")
+    line = copy[copy.index(b"#>cookieclicker.sav:"):]
+    open(os.path.join(old, "cookieclicker_saves.py"), "wb").write(
+        b"\0# Cookie Clicker keeps a copy of your bakery here, so that\n# reinstalling it doesn't erase it. If you "
+        b"delete this file,\n# the game writes it again: your bakery stays.\n" + line)
+    s = play(old, presses(10, "ok", 2) + ",60:home", 100, "from an old copy")
+    if s:
+        check(s["clicks"] == 22 and s["buildings"] == 1, f"an old copy did not bring the bakery back: {s}")
+    shutil.rmtree(old, ignore_errors=True)
 
     # every screen: the store (arrows, bulk, sell), the menu and its pages, statistics' tabs, the rows
     keys = ",".join([

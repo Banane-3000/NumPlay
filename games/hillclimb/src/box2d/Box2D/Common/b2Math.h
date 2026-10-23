@@ -306,6 +306,21 @@ struct b2Mat33
 	b2Vec3 ex, ey, ez;
 };
 
+/// (changed for NumPlay: sinf and cosf take a slow path past 201 radians, which a wheel's angle passes after a few
+/// hundred meters, and each step asks for the same angles several times; those far ones are remembered, the same
+/// angle giving the very same values)
+void b2SinCosFar(float32 angle, float32* s, float32* c);
+inline void b2SinCos(float32 angle, float32* s, float32* c)
+{
+	if (angle > 201.0f || angle < -201.0f)
+	{
+		b2SinCosFar(angle, s, c);
+		return;
+	}
+	*s = sinf(angle);
+	*c = cosf(angle);
+}
+
 /// Rotation
 struct b2Rot
 {
@@ -314,17 +329,13 @@ struct b2Rot
 	/// Initialize from an angle in radians
 	explicit b2Rot(float32 angle)
 	{
-		/// TODO_ERIN optimize
-		s = sinf(angle);
-		c = cosf(angle);
+		b2SinCos(angle, &s, &c);
 	}
 
 	/// Set using an angle in radians.
 	void Set(float32 angle)
 	{
-		/// TODO_ERIN optimize
-		s = sinf(angle);
-		c = cosf(angle);
+		b2SinCos(angle, &s, &c);
 	}
 
 	/// Set to the identity rotation

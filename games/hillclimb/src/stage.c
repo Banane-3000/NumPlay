@@ -221,7 +221,15 @@ static float gp_x0[MAXGAP], gp_len[MAXGAP], gp_y[MAXGAP], gp_shift[MAXGAP];
 static int gp_n;   /* worked out so far */
 
 /* the stage's own height with the bridges or pits so far taken out */
-static float base_height(float x) { return heights[stage_id](x); }
+#ifdef HOST
+long stage_evals;   /* (tests: how often it was worked out) */
+#endif
+static float base_height(float x) {
+#ifdef HOST
+  stage_evals++;
+#endif
+  return heights[stage_id](x);
+}
 
 static float gap_start(void) { return stage->pits ? 110 : 120; }
 
@@ -427,10 +435,17 @@ static float coin_floor(float x) {
   return h;
 }
 
+/* the coins' heights cost the stage's formula three times a coin, and the run asks for the chunks near the car every
+ * step and every frame: they are kept for the last few chunks */
+#define CCACHE 8
+static int ckey[CCACHE];
+static float cval[CCACHE][14];
+
 int stage_coin_group(int k, float *xs, float *ys, int *vals) {
   if (k < 1 || k >= COIN_GROUPS) return 0;
   float X = (float)k * COIN_SPACING;
-  int left = (int)(X * stage->coin_mult), n = 0, cols = 0, row = 1;
+  int left = (int)(X * stage->coin_mult), n = 0, cols = 0, row = 1, slot = k & (CCACHE - 1);
+  bool have = ckey[slot] == k;
   while (left > 0) {
     int v = left > 500 ? 500 : left > 100 ? 100 : left > 25 ? 25 : left > 5 ? 5 : 0;
     if (!v) break;
@@ -439,9 +454,11 @@ int stage_coin_group(int k, float *xs, float *ys, int *vals) {
     else if (row == 1) cols = 1, col = 0, row = 2;
     else break;
     float x = X + 4.5f + (float)col * 1.5f;
-    xs[n] = x, ys[n] = coin_floor(x) + ((float)row + stage->coin_off) * 1.5f, vals[n] = v, n++;
+    if (!have) cval[slot][n] = coin_floor(x) + ((float)row + stage->coin_off) * 1.5f;
+    xs[n] = x, ys[n] = cval[slot][n], vals[n] = v, n++;
     left -= v;
   }
+  ckey[slot] = k;
   return n;
 }
 
@@ -459,10 +476,14 @@ static int fuel_density(int n) {
 
 #define MAXCAN 512
 static int can_chunk[MAXCAN], can_n, can_scan, can_count, can_dens;
+/* (the last cans' heights, as the coins') */
+#define FCACHE 4
+static int fkey[FCACHE];
+static float fval[FCACHE];
 
-bool stage_fuel(int k, float *x, float *y) {
-  if (k < 0 || k >= MAXCAN) return false;
-  while (can_n <= k && can_scan < COIN_GROUPS) {
+/* the cans up to the k-th worked out, or all there are */
+static void cans_upto(int k) {
+  while (can_n <= k && can_n < MAXCAN && can_scan < COIN_GROUPS) {
     can_scan++;   /* the chunk at 30 can_scan m */
     can_count = (can_count + 1) % can_dens;
     if (can_count == 0) {
@@ -470,10 +491,33 @@ bool stage_fuel(int k, float *x, float *y) {
       can_dens = fuel_density(can_n);
     }
   }
+}
+
+bool stage_fuel(int k, float *x, float *y) {
+  if (k < 0 || k >= MAXCAN) return false;
+  cans_upto(k);
   if (k >= can_n) return false;
   float cx = (float)can_chunk[k] * COIN_SPACING + 1.5f;
-  *x = cx, *y = coin_floor(cx) + (1 + stage->coin_off) * 1.5f;
+  int slot = k & (FCACHE - 1);
+  if (fkey[slot] != k) fkey[slot] = k, fval[slot] = coin_floor(cx) + (1 + stage->coin_off) * 1.5f;
+  *x = cx, *y = fval[slot];
   return true;
+}
+
+int stage_fuel_first(float x) {
+  /* (a can is 1.5 m into its chunk) */
+  int lo = 0, hi;
+  for (;;) {
+    cans_upto(can_n);
+    hi = can_n;
+    if (!hi || (float)can_chunk[hi - 1] * COIN_SPACING + 1.5f >= x || hi >= MAXCAN || can_scan >= COIN_GROUPS) break;
+  }
+  while (lo < hi) {
+    int m = (lo + hi) / 2;
+    if ((float)can_chunk[m] * COIN_SPACING + 1.5f < x) lo = m + 1;
+    else hi = m;
+  }
+  return lo;
 }
 
 /* ------------------------------------------------------------------ levels */
@@ -489,4 +533,6 @@ void stage_set(int s) {
   tr_n = 0, tr_count = 0, tr_group = 0, tr_next = 30;
   can_n = 0, can_scan = 0, can_count = 0, can_dens = fuel_density(0);
   for (int i = 0; i < VCACHE; i++) vkey[i] = rkey[i] = 0x7FFFFFFF;
+  for (int i = 0; i < CCACHE; i++) ckey[i] = -1;
+  for (int i = 0; i < FCACHE; i++) fkey[i] = -1;
 }

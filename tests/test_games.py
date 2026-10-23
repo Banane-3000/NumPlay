@@ -246,6 +246,10 @@ GAMES = {
     "tombofthemask": ("TombOfTheMask.nwa", "tombofthemask.sav",
                       presses((1500, "ok"), (2500, "ok"), (3200, "up"), (3800, "left"), (4400, "back")), 5500,
                       presses((1500, "ok"), (2500, "up"), (3200, "back")), 4500),
+    # the title, New game, Deal, how to play (the first time: Back skips it), then the table: the bots play; Home
+    # keeps the game. Next time, from the copy, Continue: back at the table, quit with On/Off
+    "uno": ("UNO.nwa", "uno.sav", presses((1500, "ok"), (2200, "ok"), (2900, "back")), 6000,
+            presses((1500, "ok")), 4000),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -311,7 +315,7 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "cookieclicker": "cookieclicker_saves.py", "leveldevil": "leveldevil_saves.py",
           "jetpackjoyride": "jetpackjoyride_saves.py", "stickmanhook": "stickmanhook_saves.py",
           "donkeykong": "donkeykong_saves.py", "dune": "dune_saves.py", "monkeymart": "monkeymart_saves.py",
-          "tombofthemask": "tombofthemask_saves.py"}
+          "tombofthemask": "tombofthemask_saves.py", "uno": "uno_saves.py"}
 
 
 def dk_frames(v):
@@ -456,6 +460,10 @@ CHECKS = {
     # progress at 268); after the reinstall, from the copy, twice
     "tombofthemask": (lambda v: len(v) == 296 and v[:4] == b"TOTM" and v[288] & 1 and struct.unpack_from("<I", v, 268)[0] == 1,
                       lambda v: len(v) == 296 and v[:4] == b"TOTM" and struct.unpack_from("<I", v, 268)[0] == 2),
+    # "UNO1", version 1, its size (728): how to play shown (guide at 12) and a game going (has_game at 13), four at
+    # the table (16) in its first hand (hands at 682); after the reinstall, from the copy, the same game goes on
+    "uno": (lambda v: len(v) == 728 and v[:4] == b"UNO1" and v[12] == 1 and v[13] == 1 and v[16] == 4
+            and struct.unpack_from("<H", v, 682)[0] == 1,) * 2,
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
     # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies kept

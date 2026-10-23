@@ -2,15 +2,16 @@
  *
  *   play [--frames N] [--keys "10-40:right,50:ok,..."] [--shots 30,60|every:N] [--out DIR] [--saves DIR]
  *        [--run STAGE,VEHICLE] [--levels E,S,T,A] [--coins N] [--auto] [--trace N] [--fuzz SEED]
- *        [--numbers VEHICLE] [--ground STAGE]
+ *        [--numbers VEHICLE] [--ground STAGE] [--draw]
  *
  * Keys: left right up down ok back home. "a-b:key" holds the key from frame a to b, "a:key" for one frame.
  * --run starts a run on that stage with that vehicle, past the menus; --auto then drives it like a player would
  * (gas, and the pedals to land on the wheels). Screenshots are DIR/shot_<frame>.ppm.
  * --fuzz presses random keys (its own generator, the same on every computer) through menus and runs; --numbers
  * prints the numbers a vehicle is built with (at --levels); --ground checks a stage's ground, bridges, pits and
- * coins over 6 km.
- * At the end it prints the state: END mode M dist D coins C total T over O end E level L flips F. */
+ * coins over 6 km; --draw draws every frame (without saving it), as the calculator does.
+ * At the end it prints how often the stage's ground formula was worked out (EVALS N), then the state: END mode M
+ * dist D coins C total T over O end E level L flips F. */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -155,7 +156,7 @@ static int ground_check(int s) {
 int main(int argc, char **argv) {
   int frames = 600, run_stage = -1, run_vehicle = 0, trace = 0, numbers = -1;
   bool fuzz = false;
-  bool autop = false;
+  bool autop = false, draw_all = false;
   const char *out = "build/shots";
   int levels[4] = {1, 1, 1, 1};
   long coins = -1;
@@ -179,6 +180,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "--coins")) coins = atol(argv[++i]);
     else if (!strcmp(argv[i], "--auto")) autop = true;
     else if (!strcmp(argv[i], "--nohud")) g_nohud = true;
+    else if (!strcmp(argv[i], "--draw")) draw_all = true;
     else if (!strcmp(argv[i], "--flips")) autop = flipper = true;
     else if (!strcmp(argv[i], "--trace")) trace = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--fuzz")) fuzz = true, fuzz_state = (uint32_t)atol(argv[++i]);
@@ -248,6 +250,7 @@ int main(int argc, char **argv) {
     host_time += 17;
     bool shot = every && f >= every_from && f <= every_to ? (f - every_from) % every == 0 : false;
     for (int i = 0; i < nshots; i++) shot |= shots[i] == f;
+    if (draw_all && !shot) game_draw();
     if (shot) {
       game_draw();
       char p[512];
@@ -259,8 +262,9 @@ int main(int argc, char **argv) {
              run.car.ch.y, run.car.ch.a, car_speed(&run.car), run.fuel, run.car.air, run.car.dead,
              run.dist, (unsigned)run_total());
   }
-  extern long b2_heap_peak;
+  extern long b2_heap_peak, stage_evals;
   fprintf(stderr, "heap peak %ld\n", b2_heap_peak);
+  printf("EVALS %ld\n", stage_evals);
   printf("END mode %d dist %d coins %u total %u over %d end %d level %d flips %u saved %u running %d\n", g_mode,
          (int)run.dist, (unsigned)run.coins, (unsigned)run_total(), run.over, run.end, run.level, (unsigned)run.flips,
          (unsigned)sv.coins, g_running);

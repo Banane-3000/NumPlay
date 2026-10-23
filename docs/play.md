@@ -565,6 +565,22 @@ Dash up the tomb ahead of the rising flood, picking up dots and coins and dodgin
 
 <br clear="right">
 
+## UNO
+
+<img src="../games/uno/docs/shot.png" width="320" align="right" alt="UNO">
+
+| Key | What it does |
+| --- | --- |
+| **Left, Right** | Pick a card |
+| **OK** | Play it |
+| **Up** | Draw |
+| **shift** | Say UNO, or catch a bot that didn't |
+| **Back** | Pause (with New game, How to play and Quit) |
+
+Match the top card by colour or number, or play a Wild. Skip, Reverse, Draw Two and Wild Draw Four work as in the official rules, and you can challenge a Wild Draw Four. Say UNO when you're down to one card. The first to empty their hand scores the others' cards; the first to 500 wins. Your game is saved.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">
