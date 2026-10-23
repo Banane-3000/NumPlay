@@ -48,6 +48,7 @@ ALONE = {
     "dune": ("Dune", "roll down the dunes and fly over the line, with the shop's 26 balls and 7 landscapes"),
     "monkeymart": ("Monkey Mart", "run a grocery mart as a monkey, both marts: crops, animals, machines and workers"),
     "tombofthemask": ("Tomb of the Mask", "dash through the tomb: the endless arcade climb and all 200 stages, with the 16 masks"),
+    "uno": ("UNO", "the card game against one to three bots, with the official rules and scoring to 500"),
 }
 VARIANTS = [
     ("NumPlay-Invisible.nwa", "The same app, hidden: a blank icon with no name"),
