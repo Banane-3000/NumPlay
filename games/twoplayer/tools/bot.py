@@ -138,7 +138,7 @@ class Bot:
         if abs(d) < 0.6 and math.hypot(x1 - x0, y1 - y0) > 50:
             keys.append("up")
         if abs(d) < 0.15 and self.c.now_ms - self.fired > 700:
-            keys.append("shift")
+            keys.append("ok")
             self.fired = self.c.now_ms
         self.hold(keys)
 

@@ -5,7 +5,6 @@ Tanks	坦克大战
 Light Cycles	光速摩托
 Return the ball with your paddle: its middle sends the ball back straight, its ends at a steep angle. The longer a rally lasts, the faster the ball.	用球拍把球打回去：拍子中间把球直直打回，两端打出斜角。来回越久，球越快。
 Knock the puck into the other goal. Your mallet stays in your half; hit the puck on the move to send it flying.	把冰球打进对方球门。你的球槌只能在自己半场；边移动边击球，球就会飞出去。
-Drive through the maze and hit the other tank. Shells bounce off the walls: watch out for your own!	在迷宫里开坦克，击中对方。炮弹会在墙上反弹：小心别打到自己！
 Steer your light cycle and make the other one crash into a wall or a trail. It never stops and never turns back.	驾驶你的光速摩托，让对方撞上墙壁或光轨。摩托从不停下，也不能掉头。
 Computer	电脑
 Player 2	玩家 2
@@ -31,3 +30,45 @@ Rematch	再来一局
 No	否
 Yes	是
 Quit game?	退出游戏？
+
+# Additional mini-games
+Quick Draw	极速对决
+Tug of War	拔河
+Football	足球
+Volley Ball	排球
+Archery	射箭
+Dodge Ball	躲避球
+Meteor Run	陨石闪避
+Rocket Race	火箭竞速
+Sumo	相扑
+Fishing	钓鱼
+Memory Duel	记忆对决
+Wait for DRAW, then press your action key. A false start loses the round. Simultaneous shots draw.	等待开枪信号，再按行动键。抢先开枪会输；同时开枪则平局。
+Tap your action key to pull the rope. Release between pulls: holding does not repeat. Drag the flag past your line.	反复按下并松开行动键来拉绳。长按不会重复。把旗子拉过你的线。
+Move around the pitch and kick with your action key. Push the ball into the other goal; rebounds stay in play.	在球场移动，用行动键踢球。把球踢进对方球门；球会在边线反弹。
+Move left and right; Up or your action key jumps. Keep the ball off your floor and send it over the net.	左右移动，用上键或行动键跳跃。把球打过球网，别让它落在己方地上。
+Move in your half and throw with your action key. Dodge incoming balls. Three hits knock a player out.	在己方半场移动，用行动键投球。躲避来球，被击中三次就出局。
+Move left and right to dodge the falling rocks. Both lanes get the same obstacles. Stay alive longer than your rival.	左右移动躲避陨石。两条赛道的障碍完全相同，比对手坚持更久。
+Tap Up or your action key to boost your rocket. Fly through the gaps; avoid the walls. Both pilots face the same course.	按上键或行动键推进火箭。穿过空隙，避开墙壁。两位飞行员面对同一赛道。
+Move inside the ring. Your action key dashes and pushes your rival. Stay inside: the ring gradually shrinks.	在圆环里移动。行动键冲刺并推开对手。别出界，圆环会逐渐缩小。
+Move your rod left and right. Hold your action key to lower the hook; release to reel in a fish. Catch five first.	左右移动鱼竿。按住行动键放下鱼钩，松开收竿。先钓到五条鱼获胜。
+Watch the arrow sequence, then repeat it with your direction keys. The first correct sequence wins; a wrong arrow loses.	先记住箭头顺序，再用方向键重复。先正确完成者获胜，按错就输。
+DRAW!	开枪！
+Wait...	等等……
+Too soon loses the round	抢先行动会输
+Tap, release, pull!	按下、松开、拉！
+Repeat the arrows!	重复箭头！
+Watch the arrows	记住箭头
+7 / 9: page	7 / 9：翻页
+Use direction keys	使用方向键
+Retry saving	重试保存
+Exit without saving	不保存退出
+Save failed	保存失败
+Aim with Up and Down. Hold OK (player 1) or EXE (player 2) to charge; release to shoot. The dotted arc shows your shot. Three hits win the round.	用上下键瞄准。玩家1按住OK，玩家2按住EXE蓄力，松开射箭。虚线显示轨迹，命中三次获胜。
+Power	力度
+Hold OK / EXE, release to shoot	按住OK / EXE，松开射箭
+Action: OK / EXE	行动：OK / EXE
+Up/Down drive; Left/Right turn. OK (player 1) or EXE (player 2) fires. Shells bounce off walls and can hit your own tank!	上下键前后移动，左右键转向。玩家1按OK，玩家2按EXE开火。炮弹会反弹，小心自己的炮弹！
+Release!	松开！
+Hold OK	按住OK
+Hold EXE	按住EXE

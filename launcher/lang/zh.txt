@@ -135,3 +135,5 @@ Needs 	内存还差
 Sokoban	推箱子
 Push every box home	把每个箱子推到位
 Levels: Microban by David W. Skinner	关卡：David W. Skinner 的 Microban
+Fifteen mini-games, side by side	十五款小游戏，并肩对战
+Additional mini-games by Bobydeluxe	新增小游戏：Bobydeluxe
