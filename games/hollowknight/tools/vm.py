@@ -168,6 +168,10 @@ SKIP_NAMES = {"Dream Dialogue", "Dream Dialogue Flower", "Flower", "Flower Give"
 # (the Mender House's door: its inspect region, for a key there is none of, never on; the False Knight's arena wall's
 # battle gate: src/obj.c's, which FindChild finds)
 SKIP_PATHS = {("Crossroads_04", "_Transition Gates/Mender Door/Inspect"), ("Crossroads_10", "Fk Break Wall/Battle Gate 1")}
+# levers pulled from the start (their PersistentBoolItem's Activated on): Crossroads_03's toll switch opens, from below, the
+# tollbooth Crossroads_16 drops into; the game's Knight comes up to it first by rooms this port leaves out, so here the
+# tollbooth is the way on to Crossroads_21 and the False Knight
+PULLED = {("Crossroads_03", "_Props/Toll Gate Switch")}
 MAX_OBJS, MAX_FSMS, MAX_VARS, MAX_ANIMS = 48, 29, 232, 20   # (src/vm.c)
 # map pieces of their own a script marks visited (AddToScenesVisited), as their room's (src/map.c: after the rooms)
 MAP_SCENES = {"Crossroads_21_b": "Crossroads_21"}
@@ -1616,6 +1620,8 @@ def prepare(rooms, sprites, texts):
                     continue
                 cp = Compiler(rm, o, f)
                 body, init = cp.compile()
+                if (name, o["path"]) in PULLED and "Activated" in cp.slots:
+                    init[cp.slots["Activated"][0]] = 1
                 if body not in DEF_INDEX:
                     DEF_INDEX[body] = len(DEFS)
                     DEFS.append(body)

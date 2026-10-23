@@ -6938,6 +6938,12 @@ void enemies_debug_hit(int damage) {
     enemy_hit(e, dx > 0 ? 0 : 180, damage);
   }
 }
+
+/* (tests: the False Knight come down from his roof, his fight begun) */
+bool enemies_fk_awake(void) {
+  const Enemy *e = fk_body();
+  return e && e->st != FK_DORMANT;
+}
 #endif
 
 /* her Hornet Saver (walls round her arena): ActivateAllChildren */
