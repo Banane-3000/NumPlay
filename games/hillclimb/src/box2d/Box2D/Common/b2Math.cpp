@@ -20,6 +20,24 @@
 
 const b2Vec2 b2Vec2_zero(0.0f, 0.0f);
 
+/// (NumPlay: see b2SinCos)
+void b2SinCosFar(float32 angle, float32* s, float32* c)
+{
+	static struct { float32 a, s, c; } memo[64];	// (a is 0 in the empty ones: never a far angle)
+	union { float32 f; uint32 u; } bits;
+	bits.f = angle;
+	int32 i = (int32)((bits.u * 2654435761u) >> 26);
+	if (memo[i].a != angle)
+	{
+		float32 sa = sinf(angle), ca = cosf(angle);	// (as b2Rot did: some compilers make it one sincosf)
+		memo[i].a = angle;
+		memo[i].s = sa;
+		memo[i].c = ca;
+	}
+	*s = memo[i].s;
+	*c = memo[i].c;
+}
+
 /// Solve A * x = b, where b is a column vector. This is more efficient
 /// than computing the inverse in one-shot cases.
 b2Vec3 b2Mat33::Solve33(const b2Vec3& b) const

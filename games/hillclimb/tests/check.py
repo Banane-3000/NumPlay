@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Checks of Hill Climb Racing on a computer (make test): the host build, with AddressSanitizer and UBSan, through
-the menus, buying, every stage's ground, every stage with every vehicle, each vehicle's numbers, the ends of a run,
-the saves (and the old versions' carried over) and random keys.
+the menus, buying, every stage's ground, every stage with every vehicle, each vehicle's numbers, how often the ground
+is worked out, the ends of a run, the saves (and the old versions' carried over) and random keys.
 
     python3 tests/check.py build/play [--quick]"""
 import os
@@ -211,6 +211,15 @@ def main():
         for st, v, s in pool.map(lambda p: drive(*p, frames=5400, levels="12,12,12,10"), long):
             if s:
                 check(s["dist"] > 400, f"90 s on {STAGES[st]} with the {VEHICLES[v]}: only {s['dist']} m")
+
+    # the ground's formula (on the Volcano, sines of hundreds of radians: slow on the calculator) is worked out for new
+    # ground only, not for every coin and fuel can at every step and drawing as in 1.16.0 (140 times a frame); the
+    # player driving here asks for it twice a frame
+    d = fresh()
+    p = play(["--run", "12,8", "--levels", "12,12,12,10", "--auto", "--draw", "--frames", "3600"], d)
+    m = re.search(r"EVALS (\d+)", p.stdout)
+    check(m and int(m.group(1)) < 3600 * 4, f"the Volcano's ground worked out {m.group(1) if m else '?'} times in 3600 frames")
+    shutil.rmtree(d, ignore_errors=True)
 
     # the ends of a run: Bill's neck (the bike flipped on the Moon, gas held) and an empty tank (reversing)
     d = fresh()
