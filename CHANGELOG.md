@@ -2,6 +2,14 @@
 
 What's new in each version of NumPlay. Every file of every version is on the [downloads page](https://github.com/Mason363/NumPlay/releases).
 
+## 1.16.0: Monkey Mart, Tomb of the Mask and more Hill Climb Racing
+
+- **New on their own:** Monkey Mart and Tomb of the Mask, by Bobydeluxe.
+- **Hill Climb Racing:** the Tractor, Tourist Bus, Super Diesel 4x4, Snow Mobile and Truck, and the Mountain, Mudpool and Volcano.
+- **Celeste:** pause and the moves can go on any key.
+- **NumPlay Studio:** your calculator's real space (2.44 MB on Epsilon 26, 6.5 MB with Nwagra), big games in French and Chinese NumPlays, and a light calculator for slow computers and phones.
+- **Fixed:** the way to Hollow Knight's False Knight is open, and big games keep their saves in a 6 MB NumPlay.
+
 ## 1.15.0: Stickman Hook, Donkey Kong, Core Ball, Dune and NumPlay Studio
 
 - **New in NumPlay:** Core Ball, after Tower Blocks.
