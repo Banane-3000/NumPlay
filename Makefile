@@ -18,7 +18,7 @@ PY ?= python3
 CARGO ?= cargo
 B = build/data
 # Conventional games honor a configurable output directory; special layouts are kept local.
-GAMES_REDIRECT = balatro blockblast breakout buckshot celeste championisland chess connectfour cookieclicker coreball dinorun donkeykong doodlejump doom dune finalearth2 flappybird flappydunk fnaf g2048 hillclimb hollowknight invaders isaac jetpackjoyride leveldevil minesweeper monkeymart numblocks numpowder numvisuals pacman portal pvz snake sokoban solitaire sonic stickmanhook subway sudoku suika tombofthemask towerblock twoplayer undertale uttt
+GAMES_REDIRECT = balatro blockblast breakout buckshot celeste championisland chess connectfour cookieclicker coreball dinorun donkeykong doodlejump doom dune finalearth2 flappybird flappydunk fnaf g2048 hillclimb hollowknight invaders isaac jetpackjoyride leveldevil minesweeper monkeymart numblocks numpowder numvisuals pacman portal pvz snake sokoban solitaire sonic stickmanhook subway sudoku suika tombofthemask towerblock twoplayer undertale uno uttt
 GAMES_OUT = dinorun
 GAME_REDIRECT_ARG = $(if $(filter $(1),$(GAMES_OUT)),OUT=../../$(B)/games/$(1),BUILD_DIR=../../$(B)/games/$(1))
 # the RAM the oldest calculator software that runs apps gives them (23.2: 148928 bytes; 25.2 gives 153676).
@@ -29,7 +29,7 @@ RAM_LIMIT = 148928
 # custom builds of Epsilon 25.2's source give apps less: 133652 bytes; every game fits there too, in NumPlay and on
 # its own (their big buffers are on the stack, 32 KB apart from that RAM, or in the RAM the software has left)
 CUSTOM_RAM = 133652
-BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook DonkeyKong Dune MonkeyMart TombOfTheMask
+BIG_APPS = Celeste HollowKnight Undertale ChampionIsland FinalEarth2 NumPowder NumBlocks NumDrive SubwaySurfers FiveNightsAtFreddys Doom BindingOfIsaac HillClimbRacing PlantsVsZombies SonicTheHedgehog CookieClicker LevelDevil JetpackJoyride StickmanHook DonkeyKong Dune MonkeyMart TombOfTheMask UNO
 # the calculator's space for installed apps: from the end of its software (64 KiB aligned) to 64 KiB before the
 # end of its 4 MiB slot of flash, 0x903F0000. The software's size sets the start: 0x90200000 is the latest a
 # NumPlay counts on (1.94 MB, APP_SPACE); Epsilon 26.4 on an N0120 ends at 0x90180000 (2.44 MB, the
@@ -52,7 +52,7 @@ APP_SPACE_APPS = HillClimbRacing
 # the games that fit it (NumPlay draws their text there: see launcher/src/compat.c)
 UPSILON_RAM = 107674
 UPSILON_GAMES = crossyroad blockblast suika portal tetris dinorun doodlejump chess flappybird flappydunk towerblock coreball pacman \
-  snake connectfour solitaire g2048 minesweeper breakout twoplayer invaders sudoku uttt sokoban uno
+  snake connectfour solitaire g2048 minesweeper breakout twoplayer invaders sudoku uttt sokoban
 
 # NumPlay and its discreet versions: the same app, with another name and icon
 # on the calculator's home screen. Each one is a release file.
@@ -321,6 +321,7 @@ APP_donkeykong = $(B)/games/donkeykong/donkeykong.nwa:DonkeyKong.nwa
 APP_dune = $(B)/games/dune/dune.nwa:Dune.nwa
 APP_monkeymart = $(B)/games/monkeymart/monkeymart.nwa:MonkeyMart.nwa
 APP_tombofthemask = $(B)/games/tombofthemask/tombofthemask.nwa:TombOfTheMask.nwa
+APP_uno = $(B)/games/uno/uno.nwa:UNO.nwa
 # the big games' modules are made from these (the kit)
 $(foreach g,$(XL_GAMES),$(eval MOD_$(g) = $$(word 1,$$(subst :, ,$$(APP_$(g))))))
 
@@ -354,6 +355,7 @@ apps: | $(B)
 	$(MAKE) -C games/dune build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/dune
 	$(MAKE) -C games/monkeymart build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/monkeymart
 	$(MAKE) -C games/tombofthemask build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/tombofthemask
+	$(MAKE) -C games/uno build NWLINK="$(NWLINK)" BUILD_DIR=../../$(B)/games/uno
 	cd games/tetris/tetris && NWLINK="$(NWLINK)" $(CARGO) build --release --quiet
 	cp $(word 1,$(subst :, ,$(APP_numdash))) $(B)/apps/$(word 2,$(subst :, ,$(APP_numdash)))
 	cp $(word 1,$(subst :, ,$(APP_crossyroad))) $(B)/apps/$(word 2,$(subst :, ,$(APP_crossyroad)))
@@ -385,6 +387,7 @@ apps: | $(B)
 	cp $(word 1,$(subst :, ,$(APP_dune))) $(B)/apps/$(word 2,$(subst :, ,$(APP_dune)))
 	cp $(word 1,$(subst :, ,$(APP_monkeymart))) $(B)/apps/$(word 2,$(subst :, ,$(APP_monkeymart)))
 	cp $(word 1,$(subst :, ,$(APP_tombofthemask))) $(B)/apps/$(word 2,$(subst :, ,$(APP_tombofthemask)))
+	cp $(word 1,$(subst :, ,$(APP_uno))) $(B)/apps/$(word 2,$(subst :, ,$(APP_uno)))
 	arm-none-eabi-strip --strip-unneeded $(B)/apps/Tetris.nwa
 
 STD_APPS = $(foreach g,$(STD_GAMES),$(B)/apps/$(NWA_$(g)))
@@ -456,5 +459,6 @@ clean:
 	-$(MAKE) -C games/dune clean
 	-$(MAKE) -C games/monkeymart clean
 	-$(MAKE) -C games/tombofthemask clean
+	-$(MAKE) -C games/uno clean
 	-cd games/tetris/tetris && $(CARGO) clean
 	-$(foreach g,$(STD_GAMES),$(MAKE) -C games/$(g) clean;)

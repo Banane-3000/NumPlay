@@ -135,5 +135,3 @@ Needs 	内存还差
 Sokoban	推箱子
 Push every box home	把每个箱子推到位
 Levels: Microban by David W. Skinner	关卡：David W. Skinner 的 Microban
-Empty your hand against up to three bots	与一至三个电脑对手对战，先出完手牌获胜
-Game made by Bobydeluxe	游戏制作：Bobydeluxe

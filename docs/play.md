@@ -907,27 +907,3 @@ NumVisuals comes on its own, as NumVisuals.nwa (its backgrounds are also on NumP
 Game Boy, Game Boy Color, NES, Master System and Game Gear games you pick on NumPlay's customizer website. Open a game for New game, or Resume game from one of its 4 save slots. In a game, Backspace opens Retro-Go's menu: Save & Continue, Save & Quit, Load game, Reset and Options, where the picture can be 1x, Fit or Full screen. The cartridges' own saves are kept as well.
 
 <br clear="right">
-
-
-## UNO
-
-Play against one, two or three bots. Create a table in three steps: Players,
-Rules, then Ready. The first player with no cards wins; there are no points.
-Classic card effects are the default, with optional +2/+4 stacking, drawing until
-playable, forced drawn play and automatic UNO. Stacked +4 disables challenges.
-
-| Key | What it does |
-| --- | --- |
-| **Left / Right** | Select a card, including while bots play |
-| **OK / EXE** | Play the selected card or confirm a choice |
-| **Up / Down** | Action buttons / return to your hand |
-| **1** | Draw or accept a draw penalty |
-| **2** | Keep the drawn card, if allowed |
-| **0** | Call UNO or catch a bot that forgot |
-| **Back** | Pause; return from menus |
-| **Home / Power** | Save and quit |
-
-The turn banner and gold outline identify the current player. DRAW and DISCARD
-are separate piles; the color tile names the active color. Gold dots mark cards
-you can play. The selected card is enlarged, with its name and playability below.
-`Play again` keeps the same table rules. [Full rules and credits](../games/uno/README.md).

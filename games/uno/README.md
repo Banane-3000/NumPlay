@@ -1,135 +1,88 @@
-# UNO
+> **UNO is a [NumPlay](../../README.md) game that comes on its own.** It is too big to fit next to NumPlay on the calculator. Get `UNO.nwa` from the [latest release](https://github.com/Mason363/NumPlay/releases/latest).
 
-A native, English-language UNO game for NumPlay and NumWorks. One human plays
-against one, two or three bots on a 320 × 240 card table, using AlexDer's card art.
-No browser, sound files, full-screen framebuffer or runtime asset download is needed.
+<p align="center">
+  <img src="src/icon.png" width="84" alt="UNO icon">
+</p>
 
-This is an unofficial fan adaptation. Game made by **Bobydeluxe**; card and table
-art by **AlexDer**. See [ASSETS.md](ASSETS.md) for asset provenance.
+<h1 align="center">UNO</h1>
 
-## Play
+<p align="center">
+  <b>The card game against one to three bots, on the NumWorks calculator.</b><br>
+  The official rules, the 108-card deck and scoring to 500 points.
+</p>
 
-Install `output/UNO.nwa` with the usual NumWorks external-app installer.
-`Continue` restores the saved match; `New game` opens the table settings.
-The app asks before replacing an unfinished game. Changing settings does not
-alter the rules of an existing match.
+<p align="center">
+  <a href="https://github.com/Mason363/NumPlay/releases/latest/download/UNO.nwa"><b>Download UNO.nwa</b></a>
+  &nbsp;·&nbsp; <a href="#controls">Controls</a>
+</p>
 
-Creating a table has three visible steps: **Players**, **Rules**, then **Ready**.
-The first step previews your seat and the bot seats while you choose the player
-count and bot level. The second keeps all five variants on screen
-with On/Off switches and an explanation for the selected rule. The last step
-summarizes the whole table before `Deal cards`. Back returns to the previous
-step without discarding your choices.
+<p align="center">
+  <img src="../../docs/media/uno.gif" width="640" alt="UNO: the bots play their cards in turn, then you pick a card in your hand and play it">
+</p>
 
-During play, bots sit around the piles, with the current player outlined in
-gold. A turn banner stays at the top. `DRAW` and `DISCARD` label the separate
-piles, and a named color tile shows the active color, including after Wilds.
-Your hand stays in its own lower area; the selected card is enlarged and drawn
-in front of its neighbors. Its name, index and playability stay visible below.
-You can browse your hand while the bots take their turns. Action buttons show
-their shortcuts and keyboard focus skips unavailable actions.
+## Highlights
 
-| Key | Action |
+* **The official rules:** the 108-card deck, Skip, Reverse, Draw Two, Wild and Wild Draw Four, with the first card's effect, drawing a card you may play at once, and the two-player rules (Reverse and Skip let you play again).
+* **The Wild Draw Four challenge:** it's only allowed with no card of the colour in play, but anyone can bluff. Challenge it and see the hand: a bluffer draws 4, otherwise you draw 6.
+* **UNO!** Say it as you play your next-to-last card. Forget, and a bot may catch you for 2 cards. Catch a bot that forgot.
+* **Scoring to 500:** the winner of each hand scores the cards left in the others' hands, and the deal moves to the left, until someone has 500 points. Or play a single hand.
+* **Bots at three levels:** Easy plays any card that goes; Normal saves its Wilds and stops a player about to go out; Hard also counts the cards it has seen, plays to the colours you lack and may bluff.
+* **House rules, if you want them:** stacking Draw Twos or Wild Draw Fours, drawing until you can play, having to play a drawn card, and UNO said for everyone. All off by default.
+* **Saved as you go:** Home saves and quits, from anywhere. Your game is also copied into `uno_saves.py`, so installing the app again doesn't erase it.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/shot.png" width="390" alt="Your turn at a table of four"><br><sub>Your turn: the cards that go are lit</sub></td>
+    <td align="center"><img src="docs/colour.png" width="390" alt="Calling a colour"><br><sub>A Wild: call a colour</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/challenge.png" width="390" alt="A Wild Draw Four played on you"><br><sub>A Wild Draw Four: take it or challenge</sub></td>
+    <td align="center"><img src="docs/reveal.png" width="390" alt="The challenged hand"><br><sub>The challenged hand, shown to you</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/uno.png" width="390" alt="Two cards left"><br><sub>Two cards left: time to say UNO</sub></td>
+    <td align="center"><img src="docs/scores.png" width="390" alt="The scores after a hand"><br><sub>A hand won, on the way to 500</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/setup.png" width="390" alt="A new game"><br><sub>A new game: players, bots, length and house rules</sub></td>
+    <td align="center"><img src="docs/title.png" width="390" alt="The title screen"><br><sub>The title screen</sub></td>
+  </tr>
+</table>
+
+## How to play
+
+Match the top card of the discard pile by colour, number or symbol, or play a Wild, which goes on anything. You can also draw a card instead; if it goes, you may play it at once. The coloured frame round the discard pile shows the colour to match, also after a Wild.
+
+Skip makes the next player miss a turn, Reverse turns play round, and Draw Two makes the next player draw 2 and miss a turn. With a Wild you call the colour. A Wild Draw Four also makes the next player draw 4 and miss a turn, and it's only allowed when you have no card of the colour in play. The next player may challenge it: if it was a bluff, its player draws the 4; if not, the challenger draws 6.
+
+Press **shift** as you play your next-to-last card, to say UNO. If you forget, anyone who catches you before the next player starts makes you draw 2; say it in time and you're safe. When a bot forgets, **shift** catches it. The first to play all their cards wins the hand and scores the cards left in the others' hands: numbers at face value, Skip, Reverse and Draw Two 20, Wilds 50. The first to 500 points wins the game.
+
+## Controls
+
+| Key | What it does |
 | --- | --- |
-| Left / Right | Select a card; hold to scroll large hands |
-| OK / EXE | Play the selected card or confirm a menu item |
-| Up / Down | Enter the action buttons / return to your hand |
-| 1 | Draw a card, or accept a pending draw penalty |
-| 2 | Keep the card you just drew, if permitted |
-| 0 | Call UNO, prepare the call before playing from two cards, or catch a bot |
-| Back | Pause; return from menus |
-| Home / Power | Save and exit safely |
+| Left and Right | Pick a card in your hand |
+| OK | Play the card |
+| Up | Draw a card, keep the card you drew, or take the cards you have to |
+| shift | Say UNO, or catch a bot that forgot |
+| Back | Pause (Resume, New game, How to play, Quit game) |
+| Home | Save and quit |
 
-Gold dots mark playable cards. The lifted card has a readable native-text name.
-The hand scrolls to show every card; it is never truncated at a small hand limit.
-The color tile is the active color, including after a Wild. `S`, `R`, `+2`, `W`
-and `+4` in the card corners identify the special cards.
+## Good to know
 
-## Classic rules
+* **On its own:** UNO is too big to fit next to NumPlay. Installing it from the NumWorks website swaps out NumPlay and the other apps, and installing NumPlay again swaps it back out.
+* **The classic deck:** the 108 cards of the classic game, without the blank cards and Wild Shuffle Hands of newer decks.
+* **The table:** you and one to three bots. The original takes up to ten players.
 
-This version plays **one game, won by the first empty hand**, using the
-classic 108-card deck and Mattel's
-[classic instructions](https://service.mattel.com/instruction_sheets/B0001-Eng.pdf)
-and [two-player instructions](https://service.mattel.com/instruction_sheets/53641.pdf)
-for card effects. There is no point system or multi-round target. It excludes
-the extra customizable cards in some newer physical editions.
+## Credits
 
-- Deal seven cards each. A high-card draw selects the initial dealer; subsequent
-  rounds move the dealer clockwise. Opening action cards are applied, and an
-  opening +4 is returned to the shuffled draw pile.
-- Match color, number or symbol. You may draw instead of playing. After drawing,
-  you may only play the newly drawn card, or keep it and end the turn.
-- Skip skips the next player. Reverse changes direction; with two players it
-  acts as a Skip. +2 makes the next player draw two and miss their turn.
-- Wild chooses the color. +4 is legal only if its player holds no card of the
-  active color. Bluffing is possible: only the target may challenge. A guilty
-  offender draws four and the target keeps their turn; otherwise the challenger
-  draws six and loses their turn. A human challenge reveals the offender's hand.
-- Call UNO when playing down to one card. You can prepare the call with two
-  cards or call immediately afterward. A missed call is only penalized when
-  caught before the next player draws or plays; the penalty is two cards. Bots
-  have a reaction delay, and sometimes miss calls or fail to catch them.
-- The first player with no cards wins the game. A final +2/+4 and any challenge
-  are resolved before showing the winner. `Play again` starts a fresh game with
-  the same table rules, or you can return to the menu.
-- Exhausted draw piles recycle all discards except the top card. In the rare
-  finite-deck situation where everyone is blocked with nothing left to draw,
-  redeal the cards.
+Inspired by [UNO](https://www.mattel.com/brands/uno), the card game by Mattel, not affiliated with Mattel. Go play the original with your friends, or the official app.
 
-## Optional house rules
+* The rules and scoring follow Mattel's instruction sheet. The cards are drawn by the game itself, after the classic deck's look, and the text uses NumPlay's **Nunito** font (SIL Open Font License).
+* The calculator adaptation is by **[Bobydeluxe](https://github.com/Bobydeluxe)**, who brought it to NumPlay.
 
-Settings clearly label altered tables as **Custom**. Each option defaults to off.
+Made by Mason Chen as part of NumPlay.
 
-| Option | Behavior |
-| --- | --- |
-| Stack +2 | Play one +2 on a pending +2; the accumulated penalty passes on |
-| Stack +4 | Play one +4 on a pending +4; the last chosen color applies |
-| Draw until playable | Continue drawing until a playable card appears or the pile cannot refill |
-| Force drawn play | A playable drawn card must be played; a drawn Wild still requires a color choice |
-| Automatic UNO | Call UNO automatically for every player |
+## License
 
-Stacking never mixes +2 and +4, and stops after a last card: its penalty is paid
-before the win is confirmed. **Stacked +4 disables challenges**, a stated house-rule choice
-that avoids combining incompatible penalty/challenge interpretations.
-`Classic` resets all variants; player count and bot difficulty remain independent
-choices. Every table uses the same first-empty-hand winning condition.
-
-Casual bots choose less carefully. Normal bots favor their remaining colors and
-prioritize action cards. Clever bots also consider public opponent card counts and
-the direction of play when choosing action cards. Bots never inspect opponents'
-hidden hands to decide a play or challenge.
-
-## Build and validate
-
-Requires ARM GCC, nwlink 1.0.0, Python and pyelftools. Pillow is only needed to
-regenerate assets from the user's original ZIP. Generated assets are committed;
-the ZIP is not needed for a normal build.
-
-```sh
-python3 tools/build.py --toolchain /path/to/arm/bin --nwlink /path/to/nwlink
-python3 tools/test.py --cc cc
-python3 tests/test_arm.py --nwlink /path/to/nwlink
-python3 tests/test_integration.py --nwlink /path/to/nwlink
-```
-
-`make build`, `make test` and `make test-arm` wrap these commands. `HOST_CC`,
-`PYTHON`, `NWLINK` and `TOOLCHAIN` can be overridden.
-The build creates `output/UNO.nwa`, a symbol-bearing debug NWA, installed binaries
-for four firmware/RAM profiles, and `output/module.o` for NumPlay launcher
-integration. NumPlay includes UNO in its catalogue and exports the standalone
-app as `UNO.nwa`; the module uses the shared graphics, storage and backup.
-
-The engine uses a bounded 108-card deck and fixed-size hands, with no heap.
-Card sprites share a 31-color palette and use transparent row RLE; only a single
-44-byte row is decoded at a time. A small original table sample is smoothly
-scaled, and the native fonts draw the UI directly. LCD drawing uses 16-row
-strips, and an unchanged table sleeps instead of redrawing continuously.
-
-Saves use a versioned 768-byte record with explicit little-endian fields, CRC32
-and full deck/state validation before loading. Full-storage failures offer retry
-or an explicit exit without saving. Standalone builds use NumPlay's existing
-Epsilon/Upsilon safe-exit and storage helpers.
-Save version 2 also reads version 1: ongoing hands are retained, old point totals
-and targets are dropped, and a previously won round becomes a finished game.
-
-See [VALIDATION.md](VALIDATION.md) for measured size and validation limits.
+The game's code is licensed under the GNU General Public License v3.0: see the `LICENSE` file at the root of the repository. UNO is a trademark of Mattel.

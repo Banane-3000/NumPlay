@@ -136,5 +136,3 @@ Needs 	Il manque
 Sokoban	Sokoban
 Push every box home	Pousse chaque caisse à sa place
 Levels: Microban by David W. Skinner	Niveaux : Microban de David W. Skinner
-Empty your hand against up to three bots	Vide ta main face à un, deux ou trois bots
-Game made by Bobydeluxe	Jeu créé par Bobydeluxe

@@ -571,25 +571,6 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/sokoban"
   },
   {
-    "id": "uno",
-    "rank": 30,
-    "title": "UNO",
-    "tagline": "Empty your hand against up to three bots",
-    "credit": "Game made by Bobydeluxe",
-    "top": "0x347052",
-    "bottom": "0x0B2925",
-    "accent": "0xFFD75B",
-    "colors": 32,
-    "records": [
-      "uno.sav"
-    ],
-    "shots": [
-      "docs/gameplay.png"
-    ],
-    "app": "UNO.nwa",
-    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/uno"
-  },
-  {
     "id": "retrogo",
     "rank": 30,
     "title": "Retro-Go",
@@ -696,7 +677,7 @@
   },
   {
     "id": "championisland",
-    "rank": 18,
+    "rank": 19,
     "title": "Champion Island",
     "tagline": "Seven sports, one island",
     "credit": "Based on Google's Champion Island Games",
@@ -718,7 +699,7 @@
   },
   {
     "id": "finalearth2",
-    "rank": 19,
+    "rank": 20,
     "title": "The Final Earth 2",
     "tagline": "Build a city in space",
     "credit": "Based on the game by Florian van Strien",
@@ -740,7 +721,7 @@
   },
   {
     "id": "numpowder",
-    "rank": 14,
+    "rank": 15,
     "title": "NumPowder",
     "tagline": "Sand, water, fire and more",
     "credit": "Inspired by The Powder Toy",
@@ -794,7 +775,7 @@
   },
   {
     "id": "fnaf",
-    "rank": 12,
+    "rank": 13,
     "title": "Five Nights at Freddy's",
     "tagline": "Survive five nights",
     "credit": "Based on the game by Scott Cawthon",
@@ -855,7 +836,7 @@
   },
   {
     "id": "isaac",
-    "rank": 16,
+    "rank": 17,
     "title": "The Binding of Isaac",
     "tagline": "Cry through the basement",
     "credit": "Based on the game by Edmund McMillen",
@@ -877,7 +858,7 @@
   },
   {
     "id": "hillclimb",
-    "rank": 17,
+    "rank": 18,
     "title": "Hill Climb Racing",
     "tagline": "Drive up, don't flip",
     "credit": "Based on Hill Climb Racing by Fingersoft",
@@ -921,7 +902,7 @@
   },
   {
     "id": "sonic",
-    "rank": 15,
+    "rank": 16,
     "title": "Sonic the Hedgehog",
     "tagline": "Run through six zones",
     "credit": "Based on the game by Sonic Team",
@@ -942,7 +923,7 @@
   },
   {
     "id": "cookieclicker",
-    "rank": 21,
+    "rank": 22,
     "title": "Cookie Clicker",
     "tagline": "Bake billions of cookies",
     "credit": "Based on Cookie Clicker by Orteil",
@@ -963,7 +944,7 @@
   },
   {
     "id": "leveldevil",
-    "rank": 20,
+    "rank": 21,
     "title": "Level Devil",
     "tagline": "Run to the door",
     "credit": "Based on Level Devil by Unept",
@@ -1026,7 +1007,7 @@
   },
   {
     "id": "donkeykong",
-    "rank": 13,
+    "rank": 14,
     "title": "Donkey Kong",
     "tagline": "Climb the girders and save Pauline",
     "credit": "Based on Donkey Kong by Nintendo",
@@ -1105,6 +1086,27 @@
       "docs/title.png"
     ],
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/tombofthemask",
+    "default": false,
+    "xl": true
+  },
+  {
+    "id": "uno",
+    "rank": 12,
+    "title": "UNO",
+    "tagline": "Match the cards, shout UNO",
+    "credit": "Based on UNO by Mattel",
+    "top": "0x1F6B4A",
+    "bottom": "0x0B3324",
+    "accent": "0xE53935",
+    "colors": 16,
+    "records": [
+      "uno.sav",
+      "uno_saves.py"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/uno",
     "default": false,
     "xl": true
   }
