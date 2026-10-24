@@ -21,7 +21,7 @@ Drop fruit in the box and join two of a kind into the next one, all the way to t
 
 ## Credits
 
-Suika Game is **Aladdin X**'s game (2021). **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. This version is written in C for NumPlay with no code or art from the original. Its fruit sizes, colours, speeds and timings were measured on the Switch version, with the sizes checked against [kairess/suika-game](https://github.com/kairess/suika-game) and players' measurements.
+Suika Game is **Aladdin X**'s game (2021). **Bobydeluxe** brought it to NumPlay. This version is written in C for NumPlay with no code or art from the original. Its fruit sizes, colours, speeds and timings were measured on the Switch version, with the sizes checked against [kairess/suika-game](https://github.com/kairess/suika-game) and players' measurements.
 
 Inside NumPlay it draws with the launcher's own shapes and fonts and saves through its file functions, so the game itself is about 9 KB.
 

@@ -79,7 +79,7 @@ In the menus, the arrows choose, **OK** picks and **Back** goes back. 8, 4, 6, 2
 
 ## Credits
 
-A game by **[Bobydeluxe](https://github.com/Bobydeluxe)**, made for NumPlay.
+A game by **Bobydeluxe**, made for NumPlay, inspired by [Turbo Rush](https://jeux.w-production.fr/#/jeu/turborush) by W Production. Not affiliated with W Production.
 
 * The cars, the roadside and the four landscapes were made for the game by Bobydeluxe.
 * The text uses NumPlay's **Nunito** font (SIL Open Font License).

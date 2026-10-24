@@ -22,7 +22,7 @@ Bounce from platform to platform, as high as you can. Lima Sky's game for the Nu
 
 ## Credits
 
-Doodle Jump is **[Lima Sky](https://limasky.com)**'s game (2009). **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. This version is written in C for NumPlay with no code or art from the original, drawn in its style. Its French texts are the original's own where it has them.
+Doodle Jump is **[Lima Sky](https://limasky.com)**'s game (2009). **Bobydeluxe** brought it to NumPlay. This version is written in C for NumPlay with no code or art from the original, drawn in its style. Its French texts are the original's own where it has them.
 
 Inside NumPlay it draws with the launcher's own shapes and fonts and saves through its file functions, so the game itself is about 8 KB.
 

@@ -51,6 +51,7 @@ ALONE = {
     "uno": ("UNO", "the card game against one to three bots, with the official rules and scoring to 500"),
     "fnf": ("Friday Night Funkin'", "the Tutorial, Weeks 1 to 7, Weekend 1 and LE SSERAFIM, in story mode and freeplay"),
     "turborush": ("Turbo Rush", "an arcade racer by Bobydeluxe: six circuits, a Grand Prix, single races and Free Ride"),
+    "angrybirds": ("Angry Birds", "the 429 levels of the Chrome edition, its seven birds and the Mighty Eagle"),
     "polygt3d": ("PolyGT 3D", "a low-poly 3D racer by Boris-TH: three circuits against seven rivals, and the endless road"),
 }
 VARIANTS = [
