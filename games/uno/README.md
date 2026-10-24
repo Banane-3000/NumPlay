@@ -79,7 +79,7 @@ Press **shift** as you play your next-to-last card, to say UNO. If you forget, a
 Inspired by [UNO](https://www.mattel.com/brands/uno), the card game by Mattel, not affiliated with Mattel. Go play the original with your friends, or the official app.
 
 * The rules and scoring follow Mattel's instruction sheet. The cards are drawn by the game itself, after the classic deck's look, and the text uses NumPlay's **Nunito** font (SIL Open Font License).
-* The calculator adaptation is by **[Bobydeluxe](https://github.com/Bobydeluxe)**, who brought it to NumPlay.
+* The calculator adaptation is by **Bobydeluxe**, who brought it to NumPlay.
 
 Made by Mason Chen as part of NumPlay.
 

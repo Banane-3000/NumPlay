@@ -78,7 +78,7 @@ Inspired by [Jetpack Joyride](https://www.halfbrick.com/games/jetpack-joyride) b
 
 * The numbers come from the game's own files (its settings, level pacing, zapper, laser, missile, coin, vehicle and slot machine data), read by [tools/data.py](tools/data.py) into [src/data.h](src/data.h).
 * The pictures are Halfbrick's: from archive.org's [Jetpack Joyride Facebook assets](https://archive.org/details/jetpack-joyride-assets), and from the game's Android package for the Lil' Stomper, the Bad As Hog, the spin token, the distance font (New Athletic M54) and the Final Spin's prizes, packed by [tools/art.py](tools/art.py) into [src/art.h](src/art.h).
-* Brought to NumPlay by **[Bobydeluxe](https://github.com/Bobydeluxe)**, who chose the Facebook assets.
+* Brought to NumPlay by **Bobydeluxe**, who chose the Facebook assets.
 
 Made by Mason Chen as part of NumPlay.
 

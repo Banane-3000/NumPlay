@@ -595,6 +595,23 @@ Press each arrow as it reaches the line at the top. Sick, Good, Bad and Shit dep
 
 <br clear="right">
 
+## Turbo Rush
+
+<img src="../games/turborush/docs/shot.png" width="320" align="right" alt="Turbo Rush">
+
+| Key | What it does |
+| --- | --- |
+| **Up** | Accelerate |
+| **Down** | Brake |
+| **Left, Right** | Steer |
+| **OK** | Nitro |
+| **+, -** | Change gear (manual gearbox) |
+| **Back** | Pause (with Restart race, How to play and Quit game) |
+
+Three laps against seven rivals. A bend pulls you outwards, more the faster you go, so brake before the sharp ones. The grass slows you, and trees, lamps and buildings stop you and damage the car. Races pay credits for the engine, tires, nitro and armor in the garage. Play one race, the six circuits as a Grand Prix, or Free Ride. Home saves the race, and Continue picks it up.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">

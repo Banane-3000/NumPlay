@@ -76,7 +76,7 @@ A fall from any real height costs a life, and so does the bonus running out. Eac
 
 Inspired by [Donkey Kong](https://en.wikipedia.org/wiki/Donkey_Kong_(arcade_game)) by Nintendo (1981), not affiliated with them. Go play the original: it's on the Nintendo Switch in Arcade Archives.
 
-* Brought to NumPlay by **[Bobydeluxe](https://github.com/Bobydeluxe)**, who adapted it for the calculator and drew its pictures and its 5x7 lettering.
+* Brought to NumPlay by **Bobydeluxe**, who adapted it for the calculator and drew its pictures and its 5x7 lettering.
 * The rules and numbers follow the arcade's program, studied in furrykef's [dkdasm](https://github.com/furrykef/dkdasm) disassembly and tcdev's annotated listing. The program's data tables (the boards, Kong's poses, the levels) are read from the listing by [tools/rom.py](tools/rom.py) into [src/rom.h](src/rom.h). No graphics are taken from the arcade.
 
 Made by Mason Chen as part of NumPlay.
