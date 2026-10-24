@@ -1,7 +1,7 @@
-#ifndef ANGRY_INFLATE_H
-#define ANGRY_INFLATE_H
-#include <stdbool.h>
-#include <stddef.h>
+#ifndef FNF_INFLATE_H
+#define FNF_INFLATE_H
 #include <stdint.h>
-bool inflate_raw(const uint8_t *src,size_t length,uint8_t *out,size_t capacity);
+
+/* Unpacks n bytes of raw DEFLATE into out (cap bytes at most); returns the size unpacked, or -1 if damaged. */
+int32_t fnf_inflate(const uint8_t *in, uint32_t n, uint8_t *out, uint32_t cap);
 #endif

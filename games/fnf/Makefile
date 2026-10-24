@@ -1,52 +1,79 @@
-.DEFAULT_GOAL := build
+# Friday Night Funkin' on the NumWorks calculator.
+#   make            output/fnf.nwa
+#   make check      link it like the calculator does (output/fnf.bin)
+#   make host       build/play: the game on a computer, for tests and pictures
+#   make test       the rules against the game's own numbers (PBOT1, health, holds, ghost misses), every chart
+#                   played by a bot to a full combo, random keys, saves (with the sanitizers)
+#
+# The charts and pictures are the Funkin' Crew's, and are not in this repository: tools/fetch.py fetches the files
+# tools/ref.txt lists from their funkin.assets repository, at its pinned commit, into REF (git, nothing run), and
+# tools/data.py packs them into $(BUILD_DIR)/gen (Python 3 with Pillow and numpy; zopfli packs them smaller).
+# REF=DIR uses a copy of funkin.assets already there (its files are checked against tools/ref.txt).
+Q ?= @
 CC = arm-none-eabi-gcc
-NWLINK ?= nwlink
+NWLINK ?= npx --yes -- nwlink@1.0.0
 PYTHON ?= python3
-HOST_CC ?= cc
-ARM_LD ?= arm-none-eabi-ld
-OBJCOPY ?= arm-none-eabi-objcopy
-SRC = src/main.c src/game.c src/inflate.c src/save.c src/render.c src/font.c src/data.c
-OBJECTS = $(patsubst src/%.c,output/%.o,$(SRC))
-HEADERS = $(wildcard src/*.h) ../common/epsilon_app.h ../common/epsilon_files.h ../../launcher/src/font.h ../../launcher/src/font_data.c
-PACKER = tools/compact_nwa.py tools/standalone.ld
-ASSET_FILES = assets/model.json.zlib assets/art.json assets/art.bin
-src/data.c: tools/assets.py $(ASSET_FILES)
-	$(PYTHON) tools/assets.py
-src/ids.h: src/data.c
-	@test -f $@ || $(PYTHON) tools/assets.py
-$(OBJECTS): src/data.c src/ids.h
-CFLAGS = -std=c11 $(shell $(NWLINK) eadk-cflags-device) -Os -Wall -Wextra -Werror -Wno-misleading-indentation
-CFLAGS += -DEPSILON_XL=1 -ffunction-sections -fdata-sections -fstack-usage -fno-tree-loop-distribute-patterns
-CFLAGS += -flto -fno-fat-lto-objects -fvisibility=internal
-LINK = -nostartfiles --specs=nano.specs -Wl,--relocatable,--gc-sections,-e,main -flinker-output=nolto-rel
-.PHONY: build check test test-arm test-assets assets clean host
-build: output/fnf.nwa
-output:
-	mkdir -p $@
-output/%.o: src/%.c $(HEADERS) | output
-	$(CC) $(CFLAGS) -c $< -o $@
-output/icon.o: src/icon.png | output
-	$(NWLINK) png-icon-o $< $@
-output/icon-compact.o: output/icon.o $(PACKER)
-	$(PYTHON) tools/compact_nwa.py icon $< $@ --objcopy $(OBJCOPY)
-output/fnf-debug.nwa: $(OBJECTS) output/icon-compact.o $(PACKER)
-	$(CC) $(CFLAGS) $(LINK) -Wl,-u,eadk_app_name,-u,eadk_app_icon,-u,eadk_api_level $(OBJECTS) output/icon-compact.o -lm -o output/standalone.o
-	$(PYTHON) tools/compact_nwa.py app output/standalone.o $@ --ld $(ARM_LD)
-output/fnf.nwa: output/fnf-debug.nwa $(PACKER)
-	$(PYTHON) tools/compact_nwa.py release $< $@ --objcopy $(OBJCOPY)
-check: build
-	$(NWLINK) nwa-bin output/fnf.nwa output/fnf.bin --ram-length 107674
-	$(NWLINK) nwa-bin output/fnf-debug.nwa output/fnf-debug.bin --ram-length 107674
-	$(PYTHON) -c "from pathlib import Path; a=Path('output/fnf.bin').read_bytes(); assert a == Path('output/fnf-debug.bin').read_bytes(); assert len(a)<=2031616"
-host: test
-test: src/data.c src/ids.h | output
-	$(HOST_CC) -std=c11 -O2 -Wall -Wextra -Werror -Wno-misleading-indentation -DFNF_TEST -Isrc tests/test.c src/game.c src/save.c src/render.c src/font.c src/inflate.c src/data.c -lm -o output/test
-	cd output && ./test
-test-arm:
-	$(PYTHON) tests/test_arm.py --nwlink "$(NWLINK)"
-test-assets: src/data.c src/ids.h
-	$(PYTHON) tests/test_assets.py
-assets:
-	$(PYTHON) tools/assets.py
+BUILD_DIR = output
+REF ?= $(BUILD_DIR)/ref
+GEN = $(BUILD_DIR)/gen
+L = ../../launcher/src
+
+SRC = src/main.c src/app.c src/game.c src/draw.c src/screens.c src/save.c src/inflate.c src/plat_eadk.c \
+      $(L)/gfx.c $(L)/font_data.c $(L)/xfont.c $(GEN)/data.c
+HEADERS = $(wildcard src/*.h) $(GEN)/ids.h $(L)/gfx.h $(L)/font.h $(L)/np.h ../common/epsilon_app.h \
+          ../common/epsilon_files.h
+
+CFLAGS = -std=gnu11 $(shell $(NWLINK) eadk-cflags-device) -DPLATFORM_DEVICE=1 -DEPSILON_XL=1 -I$(L) -Isrc -I$(GEN)
+CFLAGS += -Os -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant
+CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fwhole-program -fvisibility=internal
+CFLAGS += -ffunction-sections -fdata-sections
+LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
+LDFLAGS += -Wl,-e,main -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
+LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
+
+.PHONY: build check clean host test data fetch
+build: $(BUILD_DIR)/fnf.nwa
+
+# apps get 133652 bytes of RAM on custom builds of Epsilon 25.2 (148928 or more on official ones)
+check: $(BUILD_DIR)/fnf.nwa
+	$(Q) $(NWLINK) nwa-bin --ram-length 133652 $< $(BUILD_DIR)/fnf.bin
+	@echo "BIN     $(BUILD_DIR)/fnf.bin: $$(wc -c < $(BUILD_DIR)/fnf.bin) bytes"
+
+$(BUILD_DIR)/fnf.nwa: $(SRC) $(HEADERS) $(BUILD_DIR)/icon.o
+	@echo "LD      $@"
+	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $(SRC) $(BUILD_DIR)/icon.o -lm -o $@
+	$(Q) arm-none-eabi-strip --strip-unneeded $@
+
+$(BUILD_DIR)/icon.o: src/icon.png | $(BUILD_DIR)
+	@echo "ICON    $<"
+	$(Q) $(NWLINK) png-icon-o $< $@
+
+$(BUILD_DIR):
+	$(Q) mkdir -p $@
+
+# the game's files: fetched (or checked), then packed
+$(GEN)/ref.ok: tools/fetch.py tools/ref.txt | $(BUILD_DIR)
+	@echo "FETCH   $(REF)"
+	$(Q) $(PYTHON) -I tools/fetch.py $(REF)
+	$(Q) mkdir -p $(GEN) && touch $@
+$(GEN)/data.c: tools/data.py tools/atlas.py $(GEN)/ref.ok
+	@echo "DATA    $(GEN)"
+	$(Q) $(PYTHON) -I tools/data.py $(REF) $(GEN)
+$(GEN)/ids.h: $(GEN)/data.c
+fetch: $(GEN)/ref.ok
+data: $(GEN)/data.c
+
+# on a computer: tests/play.c checks the rules, plays every chart with a bot, random keys, saves, and takes pictures
+HOST_SRC = tests/play.c src/app.c src/game.c src/draw.c src/screens.c src/save.c src/inflate.c \
+           $(L)/gfx.c $(L)/font_data.c $(L)/xfont.c $(GEN)/data.c
+HOST_FLAGS = -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -ffp-contract=off -Isrc -I$(L) -I$(GEN) -DHOST
+host: build/play
+build/play: $(HOST_SRC) src/main.c $(wildcard src/*.h) $(GEN)/ids.h
+	$(Q) mkdir -p build
+	$(Q) cc $(HOST_FLAGS) -fsanitize=address,undefined -fno-sanitize-recover=undefined $(HOST_SRC) -lm -o $@
+	@echo "HOST    $@"
+test: build/play
+	build/play test build
+
 clean:
-	rm -rf output
+	$(Q) rm -rf $(BUILD_DIR) build
