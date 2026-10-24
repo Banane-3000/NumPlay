@@ -816,16 +816,16 @@ Google's brick breaker: seven bricks across in blue, red, yellow and green, wall
 
 ## 2 Players
 
-<img src="../games/twoplayer/docs/games.png" width="320" align="right" alt="2 Players: Pong, Air Hockey, Tanks and Light Cycles">
+<img src="../games/twoplayer/docs/games.png" width="320" align="right" alt="2 Players: its six games">
 
 | Key | Player 1 | Player 2 |
 | --- | --- | --- |
 | **Move** (in Pong, up and down) | Arrows | **×** up, **Ans** down, **3** left, **−** right |
-| **Fire** (Tanks) | **shift** | **EXE** |
+| **Fire, draw, pull** | **OK** | **EXE** |
 
-On the menu, **Up / Down** pick a game and **Left / Right** who player 2 is: a friend, or the computer (easy, normal, hard). Against the computer, **OK** and **EXE** fire too. **Back** pauses (Resume, Restart, Other games, Quit game).
+On the menu, **Up / Down** pick a game and **Left / Right** who player 2 is: a friend, or the computer (easy, normal, hard). Against the computer, **EXE** works as OK too. **Back** pauses (Resume, Restart, Other games, Quit game).
 
-Pong (first to 11), Air Hockey (first to 7), Tanks in a new maze every round and Light Cycles (first to 5 rounds). Before each game, a map of the keyboard lights up each player's keys. The matches each side wins are kept for every game.
+Pong (first to 11), Air Hockey (first to 7), Tanks in a new maze every round, Light Cycles (first to 5 rounds), Quick Draw (draw first when the signal shows) and Tug of War (tap faster than the other side). Before each game, a map of the keyboard lights up each player's keys. The matches each side wins are kept for every game.
 
 <br clear="right">
 

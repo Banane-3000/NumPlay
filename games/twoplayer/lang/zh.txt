@@ -3,31 +3,64 @@ Pong	乒乓
 Air Hockey	桌上冰球
 Tanks	坦克大战
 Light Cycles	光速摩托
+Quick Draw	快枪对决
+Tug of War	拔河
+Volleyball	排球
+Sumo	相扑
+Rocket Race	火箭穿越
+Archery	射箭
+Dodgeball	躲避球
+Football	足球
+Meteor Run	流星雨
+Fishing	钓鱼
+Memory Duel	箭头对决
 Return the ball with your paddle: its middle sends the ball back straight, its ends at a steep angle. The longer a rally lasts, the faster the ball.	用球拍把球打回去：拍子中间把球直直打回，两端打出斜角。来回越久，球越快。
 Knock the puck into the other goal. Your mallet stays in your half; hit the puck on the move to send it flying.	把冰球打进对方球门。你的球槌只能在自己半场；边移动边击球，球就会飞出去。
 Drive through the maze and hit the other tank. Shells bounce off the walls: watch out for your own!	在迷宫里开坦克，击中对方。炮弹会在墙上反弹：小心别打到自己！
 Steer your light cycle and make the other one crash into a wall or a trail. It never stops and never turns back.	驾驶你的光速摩托，让对方撞上墙壁或光轨。摩托从不停下，也不能掉头。
+Wait for DRAW!, then press your key: the first one wins. Too soon loses the round.	等到出现「拔枪！」再按你的键，先按的获胜。按太快就输了这一局。
+Tap your key fast to pull the rope. Pull the flag past your line.	快速连按你的键，把旗子拉过你的线。
+Jump with up or your key. Hit the ball over the net and don't let it land on your side.	用上或你的键跳起。把球打过网，别让它落在你这边。
+Push the other one out of the ring. Your key dashes. The ring shrinks.	把对方推出场地。你的键是冲撞。场地会变小。
+Tap up or your key to fly through the gaps. Don't touch the walls or the edges.	按上或你的键飞过缺口。别碰到墙或上下边缘。
+Up and down aim. Hold your key to draw the bow, let go to shoot. Three hits win.	上下调整角度。按住你的键拉弓，松开射箭。命中三次获胜。
+Your key throws at the other one. Dodge their balls. Three hits win.	你的键向对方投球。躲开对方的球。命中三次获胜。
+Push the ball into the other goal. Near it, your key kicks it at the goal.	把球推进对方球门。靠近时，你的键把球踢向球门。
+Dodge the falling rocks. Both lanes get the same ones. Last one standing wins.	躲开落下的石头。两边落下的石头相同。最后留下的获胜。
+Hold your key to lower the hook, let go to reel in. Land a fish first.	按住你的键放下鱼钩，松开收线。先钓到鱼的获胜。
+Watch the arrows, then repeat them. First to finish without a mistake wins.	看好箭头，再照着按一遍。先全部按对的获胜，按错就输。
 Computer	电脑
 Player 2	玩家 2
 You	你
 Player 1	玩家 1
+Back  pause	返回  暂停
+DRAW!	拔枪！
+Wait...	等待…
+Your turn!	轮到你了！
+Watch	看好
 Computer: easy	电脑：简单
 Computer: normal	电脑：普通
 Computer: hard	电脑：困难
 2 Players	双人对战
+OK  play   Back  quit	OK  开始   返回  退出
+arrows	方向键
 First to 	先得 
 Play	开始
+Back  games	返回  游戏
 Draw!	平局！
 Resume	继续
 Restart	重新开始
 Other games	其他游戏
 Quit game	退出游戏
 Paused	暂停
+OK  choose   Back  resume	OK  选择   返回  继续
 Player 1 wins!	玩家 1 获胜！
 Player 2 wins!	玩家 2 获胜！
 You win!	你赢了！
 The computer wins	电脑获胜
 Rematch	再来一局
+OK  choose   Back  games	OK  选择   返回  游戏
 No	否
 Yes	是
 Quit game?	退出游戏？
+OK  choose   Back  no	OK  选择   返回  否

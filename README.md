@@ -431,7 +431,7 @@ NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyri
     <td align="center"><img src="docs/media/gallery/leveldevil.gif" alt="Level Devil: platforms give way, a saw comes out of the floor, the ice slides the runner onto a spring, gravity flips past the saws"><br><a href="games/leveldevil/README.md"><b>Level Devil</b></a></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/media/gallery/twoplayer.gif" alt="2 Players: Pong, Air Hockey, Tanks and Light Cycles against the computer"><br><a href="games/twoplayer/README.md"><b>2 Players</b></a></td>
+    <td align="center"><img src="docs/media/gallery/twoplayer.gif" alt="2 Players: Pong, Air Hockey, Tanks, Light Cycles, Quick Draw and Tug of War against the computer"><br><a href="games/twoplayer/README.md"><b>2 Players</b></a></td>
     <td align="center"><img src="docs/media/gallery/cookieclicker.gif" alt="Cookie Clicker: a golden cookie caught for a Frenzy, the store's upgrades, then an ascension: the cookie bursts and the heavens open"><br><a href="games/cookieclicker/README.md"><b>Cookie Clicker</b></a></td>
     <td align="center"><img src="docs/media/gallery/invaders.gif" alt="Space Invaders: the rack marches down, the saucer is hit for 100"><br><a href="games/invaders/README.md"><b>Space Invaders</b></a></td>
   </tr>
