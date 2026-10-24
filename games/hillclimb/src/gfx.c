@@ -114,6 +114,8 @@ static void blit(const Img *im, int x, int y, int alpha) {
 void gfx_image(int id, float x, float y, float scale, float angle, int alpha) {
   const Img *im = img(id);
   if (scale <= 0.01f) return;
+  /* (a wheel's angle grows with the distance, and sinf and cosf get slow past 200 or so) */
+  if (angle > 6.2831853f || angle < -6.2831853f) angle = fmodf(angle, 6.2831853f);
   if (angle == 0 && scale > 0.999f && scale < 1.001f) {
     blit(im, (int)floorf(x - im->px4 / 4.0f + 0.5f), (int)floorf(y - im->py4 / 4.0f + 0.5f), alpha);
     return;

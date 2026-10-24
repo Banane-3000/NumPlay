@@ -78,6 +78,7 @@ void stage_tree_fall(int k);
 int stage_coin_group(int k, float *x, float *y, int *value);
 /* fuel cans: the k-th one's place, k from 0; false past the last */
 bool stage_fuel(int k, float *x, float *y);
+int stage_fuel_first(float x);     /* the first can at or after x */
 /* levels (StageInfo::getLevelGoal, getLevelBonus): where level n (0, 1...) ends, and its bonus */
 uint32_t stage_level_goal(int n);
 uint32_t stage_level_bonus(int n);
