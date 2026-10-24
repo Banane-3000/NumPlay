@@ -88,6 +88,7 @@ jobs:
           make -C games/stickmanhook host test
           make -C games/coreball host test
           make -C games/uno host test
+          make -C games/fnf host test BUILD_DIR=../../build/data/games/fnf
 
 
 

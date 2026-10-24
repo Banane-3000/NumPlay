@@ -250,6 +250,10 @@ GAMES = {
     # keeps the game. Next time, from the copy, Continue: back at the table, quit with On/Off
     "uno": ("UNO.nwa", "uno.sav", presses((1500, "ok"), (2200, "ok"), (2900, "back")), 6000,
             presses((1500, "ok")), 4000),
+    # the title, Story Mode, Week 1, how to play (the first time: Back skips it), then Bopeebo plays; Home keeps the
+    # guide read. Next time, from the copy: Options, downscroll on (Back saves it), quit with On/Off
+    "fnf": ("FridayNightFunkin.nwa", "fnf.sav", presses((1500, "ok"), (2200, "ok"), (2900, "ok"), (3600, "back")), 7000,
+            presses((1500, "ok"), (2200, "down"), (2700, "down"), (3200, "ok"), (3900, "ok"), (4600, "back")), 6000),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -315,7 +319,8 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "cookieclicker": "cookieclicker_saves.py", "leveldevil": "leveldevil_saves.py",
           "jetpackjoyride": "jetpackjoyride_saves.py", "stickmanhook": "stickmanhook_saves.py",
           "donkeykong": "donkeykong_saves.py", "dune": "dune_saves.py", "monkeymart": "monkeymart_saves.py",
-          "tombofthemask": "tombofthemask_saves.py", "uno": "uno_saves.py"}
+          "tombofthemask": "tombofthemask_saves.py", "uno": "uno_saves.py",
+          "fnf": "fnf_saves.py"}
 
 
 def dk_frames(v):
@@ -464,6 +469,10 @@ CHECKS = {
     # the table (16) in its first hand (hands at 682); after the reinstall, from the copy, the same game goes on
     "uno": (lambda v: len(v) == 728 and v[:4] == b"UNO1" and v[12] == 1 and v[13] == 1 and v[16] == 4
             and struct.unpack_from("<H", v, 682)[0] == 1,) * 2,
+    # "FNFS", version 1, its size (1552): how to play read (guide at 9); after the reinstall, from the copy, downscroll
+    # on (at 8), the guide still read
+    "fnf": (lambda v: len(v) == 1552 and v[:4] == b"FNFS" and v[4] == 1 and v[9] == 1 and v[8] == 0,
+            lambda v: len(v) == 1552 and v[:4] == b"FNFS" and v[9] == 1 and v[8] == 1),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
     # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies of the six games kept
