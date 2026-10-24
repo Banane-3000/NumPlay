@@ -254,6 +254,10 @@ GAMES = {
     # guide read. Next time, from the copy: Options, downscroll on (Back saves it), quit with On/Off
     "fnf": ("FridayNightFunkin.nwa", "fnf.sav", presses((1500, "ok"), (2200, "ok"), (2900, "ok"), (3600, "back")), 7000,
             presses((1500, "ok"), (2200, "down"), (2700, "down"), (3200, "ok"), (3900, "ok"), (4600, "back")), 6000),
+    # the title's Play, Start, the first-run guide's OK, then the race: flat out, Back to pause, Home. Next time,
+    # from the copy, Continue: the race again (after a 3, 2, 1), quit with On/Off
+    "turborush": ("TurboRush.nwa", "turborush.sav", presses((1500, "ok"), (2200, "ok"), (2900, "ok"), (9500, "back"))
+                  + [(3500, 9000, K["up"])], 11000, presses((1500, "ok")) + [(3500, 6500, K["up"])], 7500),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -320,7 +324,7 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "jetpackjoyride": "jetpackjoyride_saves.py", "stickmanhook": "stickmanhook_saves.py",
           "donkeykong": "donkeykong_saves.py", "dune": "dune_saves.py", "monkeymart": "monkeymart_saves.py",
           "tombofthemask": "tombofthemask_saves.py", "uno": "uno_saves.py",
-          "fnf": "fnf_saves.py"}
+          "fnf": "fnf_saves.py", "turborush": "turborush_saves.py"}
 
 
 def dk_frames(v):
@@ -473,6 +477,12 @@ CHECKS = {
     # on (at 8), the guide still read
     "fnf": (lambda v: len(v) == 1552 and v[:4] == b"FNFS" and v[4] == 1 and v[9] == 1 and v[8] == 0,
             lambda v: len(v) == 1552 and v[:4] == b"FNFS" and v[9] == 1 and v[8] == 1),
+    # "TRU1", version 1, its size (492): the guide read (85), a race kept (114) and going (phase at 127), its clock
+    # (164) running; after the reinstall, from the copy, the same race goes on
+    "turborush": (lambda v: len(v) == 492 and v[:4] == b"TRU1" and v[85] == 1 and v[114] == 1 and v[127] == 1
+                  and struct.unpack_from("<I", v, 164)[0] >= 1000,
+                  lambda v: len(v) == 492 and v[:4] == b"TRU1" and v[114] == 1 and v[127] == 1
+                  and struct.unpack_from("<I", v, 164)[0] >= 4000),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
     # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies of the six games kept

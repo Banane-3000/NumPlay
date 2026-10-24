@@ -1,168 +1,482 @@
-#include <eadk.h>
+/* Turbo Rush, an arcade racer for the NumWorks calculator, by Bobydeluxe: six circuits, a Grand Prix, single
+ * races and Free Ride, rivals at three levels and a garage. The rules are in race.c and track.c, the view in
+ * view.c, the screens in draw.c and the save in save.c.
+ *
+ * Keys: Up accelerates, Down brakes, Left and Right steer, OK (or EXE) burns nitro, + and - change gear with the
+ * manual gearbox, Back pauses; Home saves and quits, from anywhere. */
 #include <string.h>
-#include "render.h"
-#include "../../common/epsilon_app.h"
-#if !NP_MODULE
-#include "../../common/epsilon_files.h"
-#define np_file_read ef_read
-#define np_file_write ef_write
-const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name")))="Turbo Rush";
-const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level")))=0;
-void np_push(int x,int y,int w,int h,const color_t*p){eadk_display_push_rect((eadk_rect_t){x,y,w,h},p);}
+#include "draw.h"
+#include "game.h"
+#include "plat.h"
+#include "save.h"
+#include "view.h"
+
+static tr_file sv;                  /* what's kept: your profile, a Grand Prix, the race going on */
+static tr_track track;              /* the circuit built (the race's, or the title's) */
+static tr_race prev, demo, demo_prev;
+static tr_ui ui;
+static uint32_t now, saved_at, hold_at, demo_at;
+static int32_t accum;
+static int pending_shift;
+static int shown_track = -1, shown_mood = -1, shown_rain = -1;
+static uint32_t frame_gap;          /* the least ms between frames (the tests draw fewer) */
+/* frames drawn, the slowest (ms) and those over 33 ms: read by tools/emu.py */
+#ifndef HOST
+__attribute__((used, externally_visible))
 #endif
-#define WHITE 0xffff
-#define INK HEX(0x101d29)
-#define GOLD HEX(0xffd052)
-#define MUTED HEX(0xc4d5d6)
-#define KEY(k) (UINT64_C(1)<<(k))
-enum { MENU,PLAY,PAUSE,GARAGE,HELP,RESULT,SAVE_ERROR,LEAVE,SETUP,RECORDS,CONFIRM };
-static TrProfile profile;
-static TrRace race,demo,previous_race,visual_race;
-static TrView view;
-static color_t strip[320*STRIP_H];
-static int screen,selected,help_page,error_return,garage_return,help_return,confirm_action;
-static bool dirty,quit_after_save;
-static unsigned prize,champ_round,points[8];
-static bool championship;
-static uint32_t ui_frame;
-static char garage_notice[54];
-uint32_t perf_frames,perf_max,perf_work,perf_race_frames,perf_race_max;
-static const char*const MOODS[]={"Day","Sunset","Night"};
-static const char*const DIFF[]={"Easy","Normal","Expert"};
-static const char*const MODES[]={"Grand Prix","Single race","Free Ride"};
-static const char*const UPGRADES[]={"Engine","Tires","Nitro","Armor"};
-static char* num(char*s,unsigned n){char a[10];int i=0;do{a[i++]='0'+n%10;n/=10;}while(n);while(i)*s++=a[--i];*s=0;return s;}
-static char* txt(char*s,const char*t){while(*t)*s++=*t++;*s=0;return s;}
-static void small(int x,int y,const char*s,color_t c){gfx_text(&np_font_small,x,y,s,c,256);}
-static void mid(int x,int y,const char*s,color_t c){gfx_text_center(&np_font_body,x,y,s,c,256);}
-static void heading(int y,const char*s){gfx_text_center(&np_font_title,160,y,s,WHITE,256);}
-static void logo(int offset,color_t color){
- const np_font_t*f=&np_font_title;const char*s="TURBO RUSH";int x=(320-gfx_text_width(f,s)*2)/2+offset,baseline=43+offset;
- while(*s){const np_glyph_t*g=&f->glyphs[(uint8_t)*s++-f->first];const uint8_t*m=f->data+g->offset;
-   for(int y=0;y<g->h;y++){int yy=baseline+(g->y+y)*2;if(yy+2<=gfx_y0||yy>=gfx_y1)continue;
-     for(int j=0;j<g->w;j++){int n=y*g->w+j,cov=(m[n/2]>>((n&1)*4))&15;if(cov)gfx_fill_alpha(x+(g->x+j)*2,yy,2,2,color,cov*17);}}
-   x+=g->advance*2;
- }
+uint32_t perf_frames, perf_max, perf_slow;
+
+static const uint16_t PRIZE[TR_CARS] = {500, 350, 250, 190, 140, 100, 75, 50};
+static const uint8_t POINTS[TR_CARS] = {15, 12, 10, 8, 6, 4, 2, 1};
+
+static char *cat(char *p, const char *s) {
+  while (*s) *p++ = *s++;
+  *p = 0;
+  return p;
 }
-static void button(int y,const char*s,bool focus){gfx_rrect(34,y,252,25,4,focus?GOLD:INK,250);mid(160,y+18,s,focus?INK:WHITE);}
-static bool save(void){if(!dirty)return true;uint8_t b[TR_SAVE_BYTES];tr_encode(&profile,b);if(!np_file_write("turborush.sav",b,sizeof b))return false;dirty=false;return true;}
-static void error(bool exit){error_return=screen;quit_after_save=exit;screen=SAVE_ERROR;selected=0;}
-static void begin_race(bool fresh){
- if(fresh){championship=profile.mode==0;champ_round=0;memset(points,0,sizeof points);}
- tr_new(&race,&profile,championship?champ_round:profile.track,eadk_random());previous_race=race;screen=PLAY;selected=0;
+static char *num(char *p, uint32_t v) {
+  char t[12];
+  int n = 0;
+  do t[n++] = (char)('0' + v % 10); while ((v /= 10) && n < 11);
+  while (n) *p++ = t[--n];
+  *p = 0;
+  return p;
 }
-static unsigned champ_rank(void){unsigned rank=1;for(int i=1;i<8;i++)if(points[i]>points[0])rank++;return rank;}
-static void finish(void){
- prize=tr_reward(&profile,&race);dirty=true;
- if(championship){
-   static const uint8_t scoring[]={15,12,10,8,6,4,2,1};
-   for(int i=0;i<8;i++){unsigned rank=tr_position(&race,i);
-     if(race.phase==TR_WRECKED){if(!i)continue;if(rank>race.rank)rank--;}
-     points[i]+=scoring[rank-1];}
-   if(champ_round==5){unsigned bonus=(9-champ_rank())*200;profile.money=NP_MIN(profile.money+bonus,999999u);prize+=bonus;}
- }
- screen=RESULT;selected=0;if(!save())error(false);
+
+static void save(void) {
+  ui.save_failed = !save_write(&sv);
+  saved_at = now;
 }
-static void money(void){char s[28];char*p=num(s,profile.money);txt(p," CR");gfx_text_right(&np_font_small,308,15,s,GOLD,256);}
-static void time_text(char*s,unsigned t){
- char*p=num(s,t/60000);*p++=':';*p++='0'+t/1000%60/10;*p++='0'+t/1000%10;*p++='.';*p++='0'+t/100%10;*p=0;
+
+/* the circuit and its colours, when they change */
+static void show(const tr_race *r) {
+  if (r->track != shown_track || track.id != r->track || track.n == 0) {
+    tr_build(&track, r->track);
+    shown_track = r->track, shown_mood = -1;
+  }
+  if (r->mood != shown_mood || r->rain != shown_rain) {
+    view_setup(&track, r->mood, r->rain);
+    shown_mood = r->mood, shown_rain = r->rain;
+  }
 }
-#include "ui.h"
-static void change(int dx){
- if(selected==0)profile.mode=(profile.mode+dx+3)%3;
- else if(selected==1&&profile.mode)profile.track=(profile.track+dx+6)%6;
- else if(selected==2)profile.mood=(profile.mood+dx+3)%3;
- else if(selected==3)profile.manual^=1;
- else if(selected==4)profile.difficulty=(profile.difficulty+dx+3)%3;
- else if(selected==5)profile.effects=profile.effects==2?1:2;
- dirty=true;
+
+static tr_setup setup_of(int mode, int id) {
+  tr_setup s;
+  memset(&s, 0, sizeof s);
+  s.track = (uint8_t)id, s.mode = (uint8_t)mode;
+  s.level = mode == MODE_FREE ? sv.p.traffic : sv.p.level;
+  s.mood = sv.p.mood, s.rain = sv.p.rain, s.manual = sv.p.manual, s.paint = sv.p.paint, s.style = sv.p.style;
+  memcpy(s.up, sv.p.up, 4);
+  s.skill = mode == MODE_GP ? sv.gp.skill : NULL;
+  return s;
 }
-int main(void){
- np_app_begin();color_t*old=gfx_buf;gfx_buf=strip;tr_defaults(&profile);
- uint32_t size=0;const uint8_t*b=np_file_read("turborush.sav",&size);tr_decode(&profile,b,size);
- screen=MENU;selected=0;dirty=false;championship=false;uint64_t prev=0,stale=eadk_keyboard_scan();bool quit=false,redraw=true;
- uint32_t now=eadk_timing_millis(),last=now,draw_at=now,accum=0,repeat_at=0;uint64_t repeating=0;int pending_shift=0;
- unsigned frame_ms=epsilon_slow_model()?33:20;
- while(!quit){
-   now=(uint32_t)eadk_timing_millis();unsigned dt=NP_MIN(now-last,200u);last=now;
-   uint64_t raw=eadk_keyboard_scan();stale&=raw;uint64_t keys=raw&~stale,hit=keys&~prev;prev=keys;
-   uint64_t arrows=keys&(KEY(eadk_key_left)|KEY(eadk_key_right)|KEY(eadk_key_up)|KEY(eadk_key_down));
-   if(arrows!=repeating){repeating=arrows;repeat_at=now+350;}else if(screen!=PLAY&&arrows&&(int32_t)(now-repeat_at)>=0){hit|=arrows;repeat_at=now+120;}
-   bool ok=hit&(KEY(eadk_key_ok)|KEY(eadk_key_exe)),back=hit&KEY(eadk_key_back);
-   int dx=!!(hit&KEY(eadk_key_right))-!!(hit&KEY(eadk_key_left)),dy=!!(hit&KEY(eadk_key_down))-!!(hit&KEY(eadk_key_up)),before=screen;
-   if(screen!=SAVE_ERROR&&(raw&(KEY(eadk_key_home)|KEY(eadk_key_on_off)))){if(save()){quit=true;continue;}error(true);ok=back=false;dx=dy=0;}
-   if(screen==MENU){
-     if(dy)selected=(selected+dy+4)%4;
-     if(back){screen=LEAVE;selected=0;}
-     else if(ok){
-       if(selected==0){screen=SETUP;selected=6;}
-       else if(selected==1){garage_return=MENU;screen=GARAGE;selected=0;garage_notice[0]=0;}
-       else if(selected==2){screen=RECORDS;}
-       else{help_return=MENU;screen=HELP;help_page=0;}
-     }
-   }else if(screen==SETUP){
-     if(dy){selected=(selected+dy+7)%7;if(selected==1&&!profile.mode)selected+=dy;}
-     if(dx&&selected<6)change(dx);
-     if(back){screen=MENU;selected=0;}
-     else if(ok){if(selected<6)change(1);else begin_race(true);}
-   }else if(screen==PLAY){
-     if(back){screen=PAUSE;selected=0;}
-     else{
-       unsigned in=(keys&KEY(eadk_key_up)?TR_THROTTLE:0)|(keys&KEY(eadk_key_down)?TR_BRAKE:0)|(keys&KEY(eadk_key_left)?TR_LEFT:0)|(keys&KEY(eadk_key_right)?TR_RIGHT:0)|(keys&(KEY(eadk_key_ok)|KEY(eadk_key_exe))?TR_BOOST:0);
-       int shift=!!(hit&KEY(eadk_key_seven))-!!(hit&KEY(eadk_key_four));if(shift)pending_shift=shift;accum+=dt;
-       while(accum>=20){previous_race=race;tr_step(&race,&profile,in,pending_shift);pending_shift=0;accum-=20;if(race.phase>=TR_FINISHED){finish();break;}}
-     }
-   }else if(screen==PAUSE){
-     if(dy)selected=(selected+dy+4)%4;
-     if(back||(ok&&selected==0))screen=PLAY;
-     else if(ok&&selected==1){help_return=PAUSE;screen=HELP;help_page=0;}
-     else if(ok){confirm_action=selected==3;screen=CONFIRM;selected=0;}
-   }else if(screen==CONFIRM){
-     if(dy)selected^=1;
-     if(back||(ok&&!selected)){screen=PLAY;}
-     else if(ok){if(confirm_action){screen=MENU;selected=0;}else begin_race(false);}
-   }else if(screen==GARAGE){
-     if(dy){selected=(selected+dy+5)%5;garage_notice[0]=0;}
-     if(selected==4&&(dx||ok)){profile.paint=(profile.paint+(dx?dx:1)+6)%6;dirty=true;}
-     else if(ok&&selected<4){
-       unsigned price=tr_price(&profile,selected);
-       if(tr_buy(&profile,selected)){dirty=true;txt(garage_notice,"Upgrade fitted!");}
-       else if(!price)txt(garage_notice,"Already fully upgraded");
-       else txt(num(txt(garage_notice,"Need "),price-profile.money)," more credits");
-     }
-     if(back){screen=garage_return;selected=screen==MENU?1:0;if(!save())error(false);}
-   }else if(screen==HELP){
-     help_page=(help_page+dx+4)%4;
-     if(back||ok){screen=help_return;selected=screen==MENU?3:1;}
-   }else if(screen==RECORDS){if(back||ok){screen=MENU;selected=2;}}
-   else if(screen==RESULT){
-     if(dy)selected=(selected+dy+3)%3;
-     if(back||(ok&&selected==2)){screen=MENU;selected=0;}
-     else if(ok&&selected==1){garage_return=RESULT;screen=GARAGE;selected=0;garage_notice[0]=0;}
-     else if(ok){if(championship&&champ_round<5){champ_round++;begin_race(false);}else begin_race(true);}
-   }else if(screen==LEAVE){
-     if(dy)selected^=1;
-     if(back||(ok&&!selected)){screen=MENU;selected=0;}
-     else if(ok){if(save())quit=true;else error(true);}
-   }else if(screen==SAVE_ERROR){
-     if(dy)selected=(selected+dy+3)%3;
-     if(ok){if(selected==2)quit=true;else if(selected==1){screen=error_return==PLAY?PAUSE:error_return;selected=0;}
-       else if(save()){if(quit_after_save)quit=true;else{screen=error_return;selected=0;}}}
-   }
-   if(screen!=PLAY)accum=0,pending_shift=0;
-   if(screen!=before){stale|=raw;prev=0;accum=0;redraw=true;last=(uint32_t)eadk_timing_millis();}
-   if(hit)redraw=true;
-   bool animated=screen==PLAY||screen==MENU;
-   if(redraw||(animated&&now-draw_at>=(screen==MENU?80:frame_ms))){
-     uint32_t start=(uint32_t)eadk_timing_millis();ui_frame++;
-     if(screen==MENU||screen==LEAVE){tr_new(&demo,&profile,profile.track,1);demo.cars[0].distance=(int32_t)((uint64_t)now*45*256/1000%(tr_length(demo.track)*256));demo.cars[0].speed=36*256;for(int i=1;i<8;i++)demo.cars[i].distance=demo.cars[0].distance+(80+i*90)*256;tr_prepare(&view,&demo,&profile,ui_frame);}
-     else{if(screen==PLAY)tr_interpolate(&visual_race,&previous_race,&race,accum*50);else visual_race=race;tr_prepare(&view,&visual_race,&profile,ui_frame);}
-     eadk_display_wait_for_vblank();gfx_render(scene,0,0,240);
-     unsigned spent=(uint32_t)eadk_timing_millis()-start;perf_work+=spent;if(spent>perf_max)perf_max=spent;perf_frames++;
-     if(screen==PLAY){perf_race_frames++;if(spent>perf_race_max)perf_race_max=spent;}
-     draw_at=now;redraw=false;
-   }
-   eadk_timing_msleep(2);
- }
- gfx_buf=old;return np_app_end();
+
+/* ------------------------------------------------------------------ the title's race */
+static void demo_start(void) {
+  tr_setup s = setup_of(MODE_RACE, sv.p.track);
+  s.level = LEVEL_EXPERT;
+  tr_new(&demo, &track, &s, 0x7A5Eu ^ now);
+  shown_track = demo.track, shown_mood = -1;
+  for (int i = 0; i < TR_CARS; i++) {
+    tr_car *c = &demo.car[i];
+    c->z = (40 + i * 22) * FX;
+    c->x = c->lane = (i % 3 - 1) * TR_LANE;
+    c->v = (44 + i) * FX;
+  }
+  demo.phase = PH_DONE, demo.end = END_FINISH, demo.countdown = 0, demo.time_ms = 2000;
+  demo_prev = demo;
+  demo_at = now;
+  show(&demo);
+}
+
+static void title_menu(void) {
+  int n = 0;
+  if (sv.has_race || sv.gp.on) ui.menu[n++] = MENU_CONTINUE;
+  ui.menu[n++] = MENU_PLAY, ui.menu[n++] = MENU_GARAGE, ui.menu[n++] = MENU_RECORDS, ui.menu[n++] = MENU_HELP;
+  ui.menu_n = (uint8_t)n;
+}
+
+static void to_title(void) {
+  ui.screen = V_TITLE, ui.sel = 0;
+  title_menu();
+  demo_start();
+}
+
+/* ------------------------------------------------------------------ races */
+static void race_begin(int mode, int id) {
+  tr_setup s = setup_of(mode, id);
+  tr_new(&sv.race, &track, &s, plat_random() ^ now);
+  shown_track = sv.race.track, shown_mood = -1;
+  show(&sv.race);
+  prev = sv.race;
+  sv.has_race = 1;
+  ui.screen = V_RACE, ui.sel = 0, ui.hold = 0;
+  accum = 0, pending_shift = 0;
+  save();
+}
+
+static void gp_new(void) {
+  memset(&sv.gp, 0, sizeof sv.gp);
+  sv.gp.on = 1;
+  uint32_t seed = plat_random() ^ now ^ 0x9E37u;
+  for (int i = 0; i < TR_CARS - 1; i++) sv.gp.skill[i] = (uint8_t)i;
+  for (int i = TR_CARS - 2; i > 0; i--) {
+    int j = (int)(tr_rng(&seed) % (uint32_t)(i + 1));
+    uint8_t x = sv.gp.skill[i];
+    sv.gp.skill[i] = sv.gp.skill[j], sv.gp.skill[j] = x;
+  }
+}
+
+/* what you picked on the race screen */
+static void start_new(void) {
+  sv.has_race = 0;
+  memset(&sv.gp, 0, sizeof sv.gp);
+  if (sv.p.mode == MODE_GP) gp_new(), race_begin(MODE_GP, 0);
+  else race_begin(sv.p.mode, sv.p.track);
+}
+
+static void start_or_guide(void) {
+  if (!sv.p.guide) {
+    ui.screen = V_GUIDE, ui.page = 0;
+    return;
+  }
+  start_new();
+}
+
+static void resume_saved(void) {
+  show(&sv.race);
+  prev = sv.race;
+  ui.screen = V_RACE, ui.hold = 3, accum = 0, pending_shift = 0;
+  hold_at = now + 500;
+}
+
+static void finish_race(void) {
+  tr_race *r = &sv.race;
+  tr_profile *p = &sv.p;
+  bool fin = r->end == END_FINISH;
+  int rank = tr_rank(r, 0);
+  ui.result_rank = (uint8_t)rank;
+  ui.prize = fin ? PRIZE[rank - 1] : 25;
+  p->credits = p->credits + ui.prize > TR_MAX_CREDITS ? TR_MAX_CREDITS : p->credits + ui.prize;
+  if (p->races < 999999) p->races++;
+  if (fin && rank == 1) p->wins++;
+  ui.new_best = ui.new_lap = 0;
+  int id = r->track;
+  if (fin && (!p->best_ms[id] || r->car[0].finish_ms < p->best_ms[id])) p->best_ms[id] = r->car[0].finish_ms, ui.new_best = 1;
+  if (r->best_lap_ms && (!p->best_lap_ms[id] || r->best_lap_ms < p->best_lap_ms[id]))
+    p->best_lap_ms[id] = r->best_lap_ms, ui.new_lap = 1;
+  memset(ui.gained, 0, sizeof ui.gained);
+  if (r->mode == MODE_GP && sv.gp.on) {
+    uint8_t order[TR_CARS];
+    tr_order(r, order);
+    int k = 0;
+    for (int i = 0; i < TR_CARS; i++) {
+      int car = order[i];
+      if (car == 0 && !fin) continue;   /* out of the race: no points, the others move up */
+      ui.gained[car] = POINTS[k++];
+    }
+    for (int i = 0; i < TR_CARS; i++) sv.gp.points[i] = (uint16_t)(sv.gp.points[i] + ui.gained[i]);
+    memcpy(ui.points, sv.gp.points, sizeof ui.points);
+    ui.round_done = (uint8_t)(sv.gp.round + 1);
+    if (ui.round_done >= TR_TRACKS) {
+      int place = 1;
+      for (int i = 1; i < TR_CARS; i++)
+        if (sv.gp.points[i] > sv.gp.points[0]) place++;
+      ui.final_rank = (uint8_t)place;
+      ui.bonus = (uint32_t)(9 - place) * 200;
+      p->credits = p->credits + ui.bonus > TR_MAX_CREDITS ? TR_MAX_CREDITS : p->credits + ui.bonus;
+      if (place == 1 && p->titles < p->races) p->titles++;
+      memset(&sv.gp, 0, sizeof sv.gp);
+    } else {
+      sv.gp.round++;
+    }
+  }
+  sv.has_race = 0;
+  ui.screen = V_RESULT, ui.sel = 0;
+  save();
+}
+
+/* ------------------------------------------------------------------ keys, screen by screen */
+static void set_change(int row, int d) {
+  tr_profile *p = &sv.p;
+  switch (row) {
+    case SET_MODE: p->mode = (uint8_t)((p->mode + 3 + d) % 3); break;
+    case SET_TRACK:
+      if (p->mode != MODE_GP) p->track = (uint8_t)((p->track + TR_TRACKS + d) % TR_TRACKS);
+      break;
+    case SET_RIVALS:
+      if (p->mode == MODE_FREE) p->traffic = (uint8_t)((p->traffic + 3 + d) % 3);
+      else p->level = (uint8_t)((p->level + 3 + d) % 3);
+      break;
+    case SET_TIME: p->mood = (uint8_t)((p->mood + 3 + d) % 3); break;
+    case SET_WEATHER: p->rain ^= 1; break;
+    case SET_GEARS: p->manual ^= 1; break;
+  }
+}
+
+static void garage_buy(int item) {
+  tr_profile *p = &sv.p;
+  static const char *const NAMES[4] = {"Engine", "Tires", "Nitro", "Armor"};
+  unsigned price = tr_price(p, item);
+  char *q = ui.note;
+  if (!price) {
+    cat(q, "Already at its best");
+  } else if (p->credits < price) {
+    q = cat(q, "You need ");
+    q = num(q, price - p->credits);
+    cat(q, " more credits");
+  } else {
+    p->credits -= price;
+    p->up[item]++;
+    q = cat(q, NAMES[item]);
+    q = cat(q, " level ");
+    num(q, p->up[item]);
+  }
+}
+
+static bool keys_menu(uint32_t hit) {
+  int n;
+  switch (ui.screen) {
+    case V_TITLE:
+      n = ui.menu_n;
+      if (hit & TK_UP) ui.sel = (uint8_t)((ui.sel + n - 1) % n);
+      if (hit & TK_DOWN) ui.sel = (uint8_t)((ui.sel + 1) % n);
+      if (hit & TK_BACK) ui.screen = V_QUIT, ui.sel = 0;
+      else if (hit & TK_OK) switch (ui.menu[ui.sel % n]) {
+          case MENU_CONTINUE:
+            if (sv.has_race) resume_saved();
+            else race_begin(MODE_GP, sv.gp.round);
+            break;
+          case MENU_PLAY: ui.screen = V_SETUP, ui.sel = SET_START; break;
+          case MENU_GARAGE: ui.screen = V_GARAGE, ui.sel = 0, ui.under = V_TITLE, ui.note[0] = 0; break;
+          case MENU_RECORDS: ui.screen = V_RECORDS; break;
+          default: ui.screen = V_HELP, ui.page = 0, ui.under = V_TITLE; break;
+        }
+      break;
+    case V_QUIT:
+      if (hit & (TK_UP | TK_DOWN)) ui.sel ^= 1;
+      if (hit & TK_BACK) ui.screen = V_TITLE, ui.sel = 0;
+      else if (hit & TK_OK) {
+        if (ui.sel) return true;
+        ui.screen = V_TITLE, ui.sel = 0;
+      }
+      break;
+    case V_SETUP: {
+      int d = (hit & TK_DOWN) ? 1 : (hit & TK_UP) ? -1 : 0;
+      if (d) {
+        ui.sel = (uint8_t)((ui.sel + SET_ROWS + d) % SET_ROWS);
+        if (ui.sel == SET_TRACK && sv.p.mode == MODE_GP) ui.sel = (uint8_t)((ui.sel + SET_ROWS + d) % SET_ROWS);
+      }
+      int dx = (hit & TK_RIGHT) ? 1 : (hit & TK_LEFT) ? -1 : 0;
+      if (dx && ui.sel < SET_START) set_change(ui.sel, dx);
+      if (hit & TK_BACK) {
+        save();
+        to_title();
+        ui.sel = (uint8_t)(ui.menu_n - 4);
+      } else if (hit & TK_OK) {
+        if (ui.sel < SET_START) set_change(ui.sel, 1);
+        else if (sv.has_race || sv.gp.on) ui.screen = V_NEWRUN, ui.sel = 0;
+        else start_or_guide();
+      }
+      break;
+    }
+    case V_NEWRUN:
+      if (hit & (TK_UP | TK_DOWN)) ui.sel ^= 1;
+      if ((hit & TK_BACK) || ((hit & TK_OK) && !ui.sel)) ui.screen = V_SETUP, ui.sel = SET_START;
+      else if (hit & TK_OK) {
+        sv.has_race = 0;
+        memset(&sv.gp, 0, sizeof sv.gp);
+        start_or_guide();
+      }
+      break;
+    case V_GUIDE:
+      if ((hit & TK_RIGHT) && ui.page + 1 < TR_HELP_PAGES) ui.page++;
+      if ((hit & TK_LEFT) && ui.page) ui.page--;
+      if (hit & TK_BACK) ui.screen = V_SETUP, ui.sel = SET_START;
+      else if (hit & TK_OK) sv.p.guide = 1, start_new();
+      break;
+    case V_HELP:
+      if ((hit & TK_RIGHT) && ui.page + 1 < TR_HELP_PAGES) ui.page++;
+      if ((hit & TK_LEFT) && ui.page) ui.page--;
+      if (hit & (TK_BACK | TK_OK)) {
+        if (ui.under == V_PAUSE) ui.screen = V_PAUSE, ui.sel = PAUSE_HELP;
+        else to_title(), ui.sel = (uint8_t)(ui.menu_n - 1);
+      }
+      break;
+    case V_RECORDS:
+      if (hit & (TK_BACK | TK_OK)) to_title(), ui.sel = (uint8_t)(ui.menu_n - 2);
+      break;
+    case V_GARAGE: {
+      int d = (hit & TK_DOWN) ? 1 : (hit & TK_UP) ? -1 : 0;
+      int dx = (hit & TK_RIGHT) ? 1 : (hit & TK_LEFT) ? -1 : 0;
+      if (d || dx) ui.note[0] = 0;
+      if (d) ui.sel = (uint8_t)((ui.sel + GAR_ROWS + d) % GAR_ROWS);
+      if (ui.sel == GAR_PAINT && (dx || (hit & TK_OK))) sv.p.paint = (uint8_t)((sv.p.paint + 8 + (dx ? dx : 1)) % 8);
+      if (ui.sel == GAR_BODY && (dx || (hit & TK_OK))) sv.p.style ^= 1;
+      if (ui.sel < 4 && (hit & TK_OK)) garage_buy(ui.sel);
+      if (hit & TK_BACK) {
+        save();
+        if (ui.under == V_RESULT || ui.under == V_STANDINGS) ui.screen = ui.under, ui.sel = 1;
+        else to_title(), ui.sel = (uint8_t)(ui.menu_n - 3);
+      }
+      break;
+    }
+    case V_PAUSE:
+      if (hit & TK_UP) ui.sel = (uint8_t)((ui.sel + PAUSE_ROWS - 1) % PAUSE_ROWS);
+      if (hit & TK_DOWN) ui.sel = (uint8_t)((ui.sel + 1) % PAUSE_ROWS);
+      if (hit & TK_BACK) ui.screen = V_RACE;
+      else if (hit & TK_OK) switch (ui.sel) {
+          case PAUSE_RESUME: ui.screen = V_RACE; break;
+          case PAUSE_RESTART: race_begin(sv.race.mode, sv.race.track); break;
+          case PAUSE_HELP: ui.screen = V_HELP, ui.page = 0, ui.under = V_PAUSE; break;
+          default: ui.screen = V_LEAVE, ui.sel = 0; break;
+        }
+      break;
+    case V_LEAVE:
+      if (hit & TK_UP) ui.sel = (uint8_t)((ui.sel + 2) % 3);
+      if (hit & TK_DOWN) ui.sel = (uint8_t)((ui.sel + 1) % 3);
+      if (hit & TK_BACK) ui.screen = V_PAUSE, ui.sel = PAUSE_QUIT;
+      else if (hit & TK_OK) {
+        if (ui.sel == 0) ui.screen = V_RACE;
+        else if (ui.sel == 1) save(), to_title();
+        else return true;
+      }
+      break;
+    case V_RESULT:
+      if (hit & TK_UP) ui.sel = (uint8_t)((ui.sel + 2) % 3);
+      if (hit & TK_DOWN) ui.sel = (uint8_t)((ui.sel + 1) % 3);
+      if (hit & TK_OK) {
+        if (ui.sel == 0) {
+          if (sv.race.mode == MODE_GP) ui.screen = V_STANDINGS, ui.sel = 0;
+          else race_begin(sv.race.mode, sv.race.track);
+        } else if (ui.sel == 1) {
+          ui.screen = V_GARAGE, ui.under = V_RESULT, ui.sel = 0, ui.note[0] = 0;
+        } else {
+          to_title();
+        }
+      }
+      break;
+    case V_STANDINGS: {
+      bool final = ui.round_done >= TR_TRACKS;
+      int nb = final ? 2 : 3;
+      if (hit & (TK_LEFT | TK_UP)) ui.sel = (uint8_t)((ui.sel + nb - 1) % nb);
+      if (hit & (TK_RIGHT | TK_DOWN)) ui.sel = (uint8_t)((ui.sel + 1) % nb);
+      if (hit & TK_OK) {
+        int b = ui.sel % nb;
+        if (b == 1) ui.screen = V_GARAGE, ui.under = V_STANDINGS, ui.sel = 0, ui.note[0] = 0;
+        else if (!final && b == 0 && sv.gp.on) race_begin(MODE_GP, sv.gp.round);
+        else to_title();
+      }
+      break;
+    }
+  }
+  return false;
+}
+
+/* ------------------------------------------------------------------ the loop */
+static unsigned race_input(uint32_t keys) {
+  unsigned in = 0;
+  if (keys & TK_UP) in |= IN_GAS;
+  if (keys & TK_DOWN) in |= IN_BRAKE;
+  if (keys & TK_LEFT) in |= IN_LEFT;
+  if (keys & TK_RIGHT) in |= IN_RIGHT;
+  if (keys & TK_OK) in |= IN_NITRO;
+  return in;
+}
+
+int main(void) {
+  plat_begin();
+  memset(&ui, 0, sizeof ui);
+  now = plat_millis();
+  save_load(&sv);
+  to_title();
+  uint32_t stale = plat_keys(), prev_keys = stale, rep_at = 0, last = now, frame_at = 0;
+  uint8_t shown = 0xFF;
+  bool dirty = true;
+  uint32_t min_frame = frame_gap ? frame_gap : plat_slow() ? 30 : 18;
+  for (;;) {
+    now = plat_millis();
+    uint32_t dt = now - last;
+    if (dt > 100) dt = 100;
+    last = now;
+    uint32_t keys = plat_keys();
+    stale &= keys;                  /* keys still held from the screen before don't count */
+    uint32_t live = keys & ~stale, hit = live & ~prev_keys;
+    if (ui.screen != V_RACE) {      /* in menus, a held arrow repeats */
+      uint32_t arrows = live & (TK_UP | TK_DOWN | TK_LEFT | TK_RIGHT);
+      if (hit & arrows) rep_at = now + 350;
+      else if (arrows && (int32_t)(now - rep_at) >= 0) hit |= arrows, rep_at = now + 110;
+    }
+    prev_keys = live;
+    if (keys & TK_HOME) break;      /* Home (or On/Off): saved below, then out */
+    if (hit) dirty = true;
+    bool quit = false;
+    if (ui.screen == V_RACE) {
+      if (hit & TK_BACK) {
+        ui.screen = V_PAUSE, ui.sel = PAUSE_RESUME;
+        save();
+      } else if (ui.hold) {
+        if ((int32_t)(now - hold_at) >= 0) ui.hold--, hold_at = now + 500, dirty = true;
+        prev = sv.race;
+      } else {
+        if (hit & TK_GEAR_UP) pending_shift = 1;
+        if (hit & TK_GEAR_DOWN) pending_shift = -1;
+        accum += (int32_t)dt;
+        unsigned in = race_input(live);
+        while (accum >= TR_TICK) {
+          prev = sv.race;
+          tr_step(&sv.race, &track, in, pending_shift);
+          pending_shift = 0;
+          accum -= TR_TICK;
+          if (sv.race.mode != MODE_FREE && sv.race.phase == PH_DONE && sv.race.done >= 3 * TR_HZ) {
+            finish_race();
+            break;
+          }
+        }
+        if (ui.screen == V_RACE && (int32_t)(now - saved_at) >= 30000) save();
+      }
+    } else {
+      quit = keys_menu(hit);
+    }
+    if (quit) break;
+    if (ui.screen == V_TITLE || ui.screen == V_QUIT) {
+      accum += (int32_t)dt;
+      while (accum >= TR_TICK) {
+        demo_prev = demo;
+        tr_step(&demo, &track, 0, 0);
+        accum -= TR_TICK;
+      }
+      if ((int32_t)(now - demo_at) >= 90000 || demo.finished == TR_CARS) demo_start();
+    }
+    if (ui.screen != shown) {
+      stale = keys, prev_keys = 0;  /* a new screen starts with all keys up */
+      if (ui.screen != V_RACE && ui.screen != V_TITLE && ui.screen != V_QUIT) accum = 0;
+      shown = ui.screen;
+      dirty = true;
+    }
+    bool moving = ui.screen == V_RACE || ui.screen == V_TITLE || ui.screen == V_QUIT;
+    if (dirty || (moving && now - frame_at >= min_frame)) {
+      uint32_t t0 = plat_millis();
+      ui.clock = now;
+      int alpha = accum >= TR_TICK ? 256 : accum * 256 / TR_TICK;
+      bool title = ui.screen == V_TITLE || ui.screen == V_QUIT;
+      if (title) show(&demo);
+      else if (ui.screen == V_RACE || ui.screen == V_PAUSE || ui.screen == V_LEAVE || ui.screen == V_RESULT ||
+               ui.screen == V_STANDINGS)
+        show(&sv.race);
+      if ((ui.screen != V_RACE && !title) || ui.hold) alpha = 256;
+      plat_vblank();
+      tr_render(&sv, &track, title ? &demo_prev : &prev, title ? &demo : &sv.race, alpha, &ui);
+      uint32_t spent = plat_millis() - t0;
+      perf_frames++;
+      if (spent > perf_max) perf_max = spent;
+      if (spent > 33) perf_slow++;
+      frame_at = now;
+      dirty = false;
+    } else {
+      plat_sleep(moving ? 2 : 10);
+    }
+  }
+  save();
+  return plat_end();
 }
