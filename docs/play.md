@@ -917,7 +917,7 @@ Push every crate onto a goal: the keeper pushes one at a time and can't pull, so
 | **OK / ⌫** (stopwatch, timer) | Start or stop / reset |
 | **OK, Up, +** / **Down, -** (counter) | Count up / down. **⌫** goes back to 0 |
 
-NumVisuals comes on its own, as NumVisuals.nwa (its backgrounds are also on NumPlay's home screen: press ⌫). 11 backgrounds and 5 add-ons: a clock, a stopwatch, a timer, a counter and your own text (press **Alpha** for letters). Everything is kept for next time.
+NumVisuals comes on its own, as NumVisuals.nwa, or in a NumPlay of your own from NumPlay Studio (its backgrounds are also on NumPlay's home screen: press ⌫). 11 backgrounds and 5 add-ons: a clock, a stopwatch, a timer, a counter and your own text (press **Alpha** for letters). Everything is kept for next time.
 
 <br clear="right">
 

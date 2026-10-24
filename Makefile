@@ -101,6 +101,7 @@ MOD_balatro = $(B)/games/balatro/module.o
 MOD_buckshot = $(B)/games/buckshot/module.o
 MOD_portal = $(B)/games/portal/module.o
 MOD_chess = $(B)/games/chess/module.o
+MOD_numvisuals = $(B)/games/numvisuals/module.o
 MOD_tetris = $(B)/tetris/raw.o
 ENTRY = main
 ENTRY_tetris = np_tetris_main
@@ -407,6 +408,7 @@ SIM_balatro = $(B)/games/balatro/sim-module.o
 SIM_buckshot = $(B)/games/buckshot/sim-module.o
 SIM_portal = $(B)/games/portal/sim-module.o
 SIM_chess = $(B)/games/chess/sim-module.o
+SIM_numvisuals = $(B)/games/numvisuals/sim-module.o
 SIM_tetris = $(B)/sim/tetris.o
 SIM_CFLAGS = -std=gnu11 -O2 -fPIC -DNP_SIMULATOR=1 -DNP_VERSION='"$(VERSION)"' $(EADK_SIM_CFLAGS) -Ilauncher/src -Wall -Wno-unused-parameter
 
