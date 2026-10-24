@@ -153,7 +153,7 @@ static void pickups(void) {
       }
     }
   }
-  for (int k = 0; k < 512; k++) {
+  for (int k = stage_fuel_first(xmin); k < 512; k++) {
     float fx, fy;
     if (!stage_fuel(k, &fx, &fy) || fx > xmax) break;
     if (fx < xmin || run.fuel_got[k >> 3] >> (k & 7) & 1) continue;
@@ -442,7 +442,7 @@ static void draw_things(void) {
     }
   }
   /* fuel cans */
-  for (int k = 0; k < 512; k++) {
+  for (int k = stage_fuel_first(x0); k < 512; k++) {
     float fx, fy;
     if (!stage_fuel(k, &fx, &fy) || fx > x1) break;
     if (fx < x0 || run.fuel_got[k >> 3] >> (k & 7) & 1) continue;

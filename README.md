@@ -131,11 +131,12 @@ These are too big to fit next to NumPlay, so each one is its own app. Install it
   </tr>
   <tr>
     <td align="center"><a href="games/uno/README.md"><img src="docs/media/thumb_uno.png" width="200" alt="UNO"><br><b>UNO</b></a><br><sub>The card game against one to three bots, to 500 points</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/UNO.nwa">Download</a></td>
+    <td align="center"><a href="games/fnf/README.md"><img src="docs/media/thumb_fnf.png" width="200" alt="Friday Night Funkin'"><br><b>Friday Night Funkin'</b></a><br><sub>Every week and its songs, on the beat, without the sound</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/FridayNightFunkin.nwa">Download</a></td>
     <td align="center"><a href="https://github.com/Mason363/NumWorks-Super-Mario-64"><b>Super Mario 64</b></a><br><sub>In a repository of its own: NumWorks-Super-Mario-64</sub></td>
-    <td align="center"><a href="https://github.com/Mason363/NumWorks-Super-Mario-Bros"><b>Super Mario Bros.</b></a><br><sub>All 32 stages, in a repository of its own: NumWorks-Super-Mario-Bros</sub></td>
   </tr>
   <tr>
-    <td align="center"><a href="games/turborush/README.md"><img src="games/turborush/docs/gameplay.png" width="200" alt="Turbo Rush"><br><b>Turbo Rush</b></a><br><sub>Six circuits, Grand Prix and Free Ride. By Bobydeluxe.</sub><br><a href="https://github.com/Mason363/NumPlay/releases/latest/download/TurboRush.nwa">Download</a></td>
+    <td align="center"><a href="https://github.com/Mason363/NumWorks-Super-Mario-Bros"><b>Super Mario Bros.</b></a><br><sub>All 32 stages, in a repository of its own: NumWorks-Super-Mario-Bros</sub></td>
+    <td align="center"><a href="#roadmap"><b>More on the way</b></a><br><sub>Minecraft 1.18.2 and more: see the roadmap</sub></td>
   </tr>
 </table>
 
@@ -278,6 +279,7 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [x] Monkey Mart
 - [x] Tomb of the Mask
 - [x] UNO
+- [x] Friday Night Funkin'
 - [x] [NumPlay Studio](https://mason363.github.io/NumPlay/customize/), the website where you pick the games in your NumPlay, with Enlarged Extra Apps to fit several big games
 - [ ] Full Minecraft 1.18.2 as a standalone app
 - [ ] Among Us, against bots
@@ -306,11 +308,8 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] More of Retro-Go: Game & Watch, SNES, Mega Drive, SG-1000 and ColecoVision
 - [ ] Five Nights at Freddy's 2, 3, 4 and FNAF World
 - [ ] Brawl Stars, against bots
-- [ ] Friday Night Funkin'
 
 ## Credits
-
-- **[Turbo Rush on Calcade / W Production](https://jeux.w-production.fr/#/jeu/turborush)** inspired this native arcade racer. Adaptation by **[Bobydeluxe](https://github.com/Bobydeluxe)**. Code, track layouts and artwork were recreated from the public screenshots and description; this is an unofficial interpretation, not an identical port. Not affiliated with the original's makers. See [credits and scope](games/turborush/README.md#credits-and-scope).
 
 NumPlay is a fan project, made out of love for these games and for the NumWorks calculator. If you enjoy a game here, go play the original and support the people who made it. NumWorks also has a great community of people making games by hand: try [Numcraft](https://github.com/yannis300307/NumcraftRust), [Celeste Classic](https://github.com/BenchatonDev/Celeste-Numworks), [Tatone26's All the Apps](https://github.com/Tatone26/Numworks-games), the apps on [Nwagyu](https://nwagyu.org/guide/) and [yannis300307's list](https://gist.github.com/yannis300307/9123136f90877107ec0d49ba96b303e5).
 
@@ -344,6 +343,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 - **Monkey Mart** by TinyDobbins inspired NumPlay's Monkey Mart, which follows the rules, timings and numbers of the game's web version and uses its pictures, its monkeys and animals and the **Riffic** font from it. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. Not affiliated with TinyDobbins.
 - **Tomb of the Mask** by Playgendary inspired NumPlay's Tomb of the Mask, which follows the rules of the game's web version and uses its stages, pictures and pixel font. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. Not affiliated with Playgendary.
 - **UNO** by Mattel inspired NumPlay's UNO, which plays by the official rules with cards drawn for the calculator. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. Not affiliated with Mattel.
+- **Friday Night Funkin'** by the Funkin' Crew (ninjamuffin99, PhantomArcade, evilsk8r, Kawai Sprite) inspired NumPlay's Friday Night Funkin', which follows the game's open source code (Apache-2.0) and builds its charts and pictures from the game's own files when it's built. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. Not affiliated with the Funkin' Crew.
 - **[Level Devil](https://store.steampowered.com/app/3242750/)** by Unept: NumPlay's Level Devil is written in C with no code from the game, but its 80 rooms (their tiles, traps and timing) are the game's own, taken from its web build by games/leveldevil/tools/fetch.py, and its runner is drawn from the game's sprites.
 
 - **Pong** by Atari (1972) inspired NumPlay's 2 Players, with air hockey, tanks in a maze in the spirit of Tank Trouble and the light cycles of Tron. All four are written in C for NumPlay and drawn from shapes, with no code or art from them.
@@ -372,7 +372,7 @@ NumPlay is a fan project, made out of love for these games and for the NumWorks 
 
 NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyright (c) 2026 Mason Chen. Code and fonts from others keep their own licenses: the `UNLICENSE` files in the games' folders and the [LICENSES](LICENSES) folder. The names, artwork and music of the games NumPlay is inspired by belong to their makers and are not covered by it.
 
-<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Aladdin X (Suika Game), Voodoo (Flappy Dunk), Lima Sky (Doodle Jump), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog, Master System, Game Gear), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Halfbrick (Jetpack Joyride), Madbox (Stickman Hook), Nintendo (Donkey Kong, Game Boy, NES), Team Lava (Dune!), Inlogic Software (Dune Rider), TinyDobbins (Monkey Mart), Playgendary (Tomb of the Mask), Mattel (UNO), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Chrome Dino, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper), ducalex (Retro-Go). Tetris is a trademark of The Tetris Company, Chrome of Google LLC, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog, Master System and Game Gear of SEGA, Space Invaders of Taito, UNO of Mattel, and Donkey Kong, Game Boy, Game Boy Color and NES of Nintendo.</sub>
+<sub>Unofficial fan games, not affiliated with NumWorks, RobTop Games (Geometry Dash), Hipster Whale (Crossy Road), the makers of Drive Mad, LocalThunk or Playstack (Balatro), Mike Klubnika or Critical Reflex (Buckshot Roulette), Hungry Studio (Block Blast!), Aladdin X (Suika Game), Voodoo (Flappy Dunk), Lima Sky (Doodle Jump), Mojang or Microsoft (Minecraft), Maddy Makes Games (Celeste), Team Cherry (Hollow Knight), Toby Fox (Undertale), id Software (Doom), Edmund McMillen, Florian Himsl or Nicalis (The Binding of Isaac), PopCap Games or Electronic Arts (Plants vs. Zombies), Scott Cawthon (Five Nights at Freddy's), SEGA (Sonic the Hedgehog, Master System, Game Gear), SYBO or Kiloo (Subway Surfers), Fingersoft (Hill Climb Racing), Unept (Level Devil), Halfbrick (Jetpack Joyride), Madbox (Stickman Hook), Nintendo (Donkey Kong, Game Boy, NES), Team Lava (Dune!), Inlogic Software (Dune Rider), TinyDobbins (Monkey Mart), Playgendary (Tomb of the Mask), Mattel (UNO), the Funkin' Crew (Friday Night Funkin'), Atari (Pong), Disney (Tron), Orteil or DashNet (Cookie Clicker), Taito or Midway (Space Invaders), Thinking Rabbit or Falcon (Sokoban), Florian van Strien (The Final Earth 2), The Powder Toy's developers (The Powder Toy), MateoConLechuga (Portal Returns), Valve (Portal), .GEARS (Flappy Bird), Bandai Namco (Pac-Man), Hasbro (Connect Four), Google (Snake, Solitaire, Block Breaker, Chrome Dino, Doodle Champion Island Games), STUDIO4°C or Microsoft (Minesweeper), ducalex (Retro-Go). Tetris is a trademark of The Tetris Company, Chrome of Google LLC, Minecraft of Mojang Synergies AB, Pac-Man of Bandai Namco, Connect Four of Hasbro, DOOM of ZeniMax Media, Sonic the Hedgehog, Master System and Game Gear of SEGA, Space Invaders of Taito, UNO of Mattel, and Donkey Kong, Game Boy, Game Boy Color and NES of Nintendo.</sub>
 
 ## Gallery
 
@@ -433,7 +433,7 @@ NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyri
     <td align="center"><img src="docs/media/gallery/leveldevil.gif" alt="Level Devil: platforms give way, a saw comes out of the floor, the ice slides the runner onto a spring, gravity flips past the saws"><br><a href="games/leveldevil/README.md"><b>Level Devil</b></a></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/media/gallery/twoplayer.gif" alt="2 Players: Pong, Air Hockey, Tanks and Light Cycles against the computer"><br><a href="games/twoplayer/README.md"><b>2 Players</b></a></td>
+    <td align="center"><img src="docs/media/gallery/twoplayer.gif" alt="2 Players: Pong, Air Hockey, Tanks, Light Cycles, Quick Draw and Tug of War against the computer"><br><a href="games/twoplayer/README.md"><b>2 Players</b></a></td>
     <td align="center"><img src="docs/media/gallery/cookieclicker.gif" alt="Cookie Clicker: a golden cookie caught for a Frenzy, the store's upgrades, then an ascension: the cookie bursts and the heavens open"><br><a href="games/cookieclicker/README.md"><b>Cookie Clicker</b></a></td>
     <td align="center"><img src="docs/media/gallery/invaders.gif" alt="Space Invaders: the rack marches down, the saucer is hit for 100"><br><a href="games/invaders/README.md"><b>Space Invaders</b></a></td>
   </tr>
@@ -461,5 +461,8 @@ NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyri
     <td align="center"><img src="docs/media/monkeymart.gif" alt="Monkey Mart: the monkey carries bananas and milk to the shelves while the customers shop"><br><a href="games/monkeymart/README.md"><b>Monkey Mart</b></a></td>
     <td align="center"><img src="docs/media/tombofthemask.gif" alt="Tomb of the Mask: dashing up the tomb ahead of the rising flood"><br><a href="games/tombofthemask/README.md"><b>Tomb of the Mask</b></a></td>
     <td align="center"><img src="docs/media/uno.gif" alt="UNO: a hand against three bots, a Draw Two and a colour called"><br><a href="games/uno/README.md"><b>UNO</b></a></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/media/fnf.gif" alt="Friday Night Funkin': Ready, Set, Go, then the first notes of a song"><br><a href="games/fnf/README.md"><b>Friday Night Funkin'</b></a></td>
   </tr>
 </table>

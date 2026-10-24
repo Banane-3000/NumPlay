@@ -50,6 +50,7 @@ ALONE = {
     "monkeymart": ("Monkey Mart", "run a grocery mart as a monkey, both marts: crops, animals, machines and workers"),
     "tombofthemask": ("Tomb of the Mask", "dash through the tomb: the endless arcade climb and all 200 stages, with the 16 masks"),
     "uno": ("UNO", "the card game against one to three bots, with the official rules and scoring to 500"),
+    "fnf": ("Friday Night Funkin'", "the Tutorial, Weeks 1 to 7, Weekend 1 and LE SSERAFIM, in story mode and freeplay"),
 }
 VARIANTS = [
     ("NumPlay-Invisible.nwa", "The same app, hidden: a blank icon with no name"),
