@@ -80,6 +80,7 @@ jobs:
           make -C games/sudoku host test
           make -C games/uttt host test
           make -C games/sokoban host test
+          make -C games/twoplayer host test
           make -C games/flappydunk host test
           make -C games/towerblock host test
           make -C games/suika host test
