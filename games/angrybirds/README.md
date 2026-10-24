@@ -80,7 +80,7 @@ Inspired by Angry Birds by [Rovio Entertainment](https://www.rovio.com), not aff
 
 * The pictures (the birds, pigs and blocks, the slingshot, the backgrounds, the episode pictures, the story comics and the logo) and the levels come from the Chrome edition's web build, read by [tools/art.py](tools/art.py) and [tools/pack.py](tools/pack.py) into `src/data.bin`. Its rules and numbers follow the game's own code.
 * The physics is [Box2D](https://box2d.org) 2.2.1 by Erin Catto (zlib license, see [src/box2d/License.txt](src/box2d/License.txt)), altered to fit the calculator's memory. The text uses NumPlay's **Nunito** font (SIL Open Font License).
-* The calculator adaptation is by **[Bobydeluxe](https://github.com/Bobydeluxe)**, who brought it to NumPlay.
+* The calculator adaptation is by **Bobydeluxe**, who brought it to NumPlay.
 
 Made by Mason Chen as part of NumPlay.
 
