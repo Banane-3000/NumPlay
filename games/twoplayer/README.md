@@ -34,7 +34,7 @@ Against the computer, EXE works as OK too.
 
 **Pong** is Atari's arcade game (1972, by Allan Alcorn), whose paddles and ball this one follows. Air hockey, tanks duelling in a maze in the spirit of Tank Trouble, and the light cycles of the film Tron (1982) are classics of two-player games. Everything here is written in C for NumPlay and drawn from shapes as it goes, with no code or art from any of them.
 
-**Quick Draw** and **Tug of War** are by [Bobydeluxe](https://github.com/Bobydeluxe), in the spirit of the short duels of 12 MiniBattles and GoBattle 2, with no code or art from them. Bobydeluxe also put player 1's key on OK and made the computer fairer.
+**Quick Draw** and **Tug of War** are by Bobydeluxe, in the spirit of the short duels of 12 MiniBattles and GoBattle 2, with no code or art from them. Bobydeluxe also put player 1's key on OK and made the computer fairer.
 
 Inside NumPlay it draws with the launcher's own shapes and fonts and saves through its file functions, so the six games take about 15 KB.
 

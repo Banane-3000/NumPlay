@@ -75,7 +75,7 @@ In the arcade the lava wakes up with your first dash and rises faster and faster
 Inspired by [Tomb of the Mask](https://www.playgendary.com) by Playgendary, not affiliated with them. Go play the original: it's free on Android and iOS, with music, sound and the newer modes.
 
 * The pictures (the characters and masks, the walls, traps, enemies, powerups and icons) and the pixel font come from the game's own web build, read by [tools/art.py](tools/art.py) into [src/art.c](src/art.c). The arcade's sections and the stages come from its own maps, read by [tools/data.py](tools/data.py) into [src/data.c](src/data.c). Its rules and numbers follow the game's own code.
-* The calculator adaptation is by **[Bobydeluxe](https://github.com/Bobydeluxe)**, who brought it to NumPlay.
+* The calculator adaptation is by **Bobydeluxe**, who brought it to NumPlay.
 
 Made by Mason Chen as part of NumPlay.
 

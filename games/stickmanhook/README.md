@@ -74,7 +74,7 @@ Inspired by [Stickman Hook](https://apps.apple.com/app/stickman-hook/id143580794
 
 * The levels, the skins and their pictures come from the game's web version, read by [tools/data.py](tools/data.py) into [src/levels.c](src/levels.c) and [src/art.c](src/art.c). Its physics are checked step by step against the game's own code ([tests/oracle.cjs](tests/oracle.cjs), which reads it from the web build).
 * The pictures (the stickmen and their dances, the hooks, bumpers, walls, finish platform, backgrounds and logo) and the JUNEGULL font are Madbox's, from the game.
-* Adapted for the calculator by **[Bobydeluxe](https://github.com/Bobydeluxe)**.
+* Adapted for the calculator by **Bobydeluxe**.
 
 Made by Mason Chen as part of NumPlay.
 
