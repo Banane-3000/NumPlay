@@ -26,7 +26,6 @@ REPO = "https://github.com/Mason363/NumPlay"
 EXTRAS = set()
 # games too big to fit next to NumPlay on the calculator: only on their own, in a section of their own
 ALONE = {
-    "fnf": ("Friday Night Funkin'", "silent native adaptation: 27 songs and 166 charts; by Bobydeluxe"),
     "celeste": ("Celeste", "the whole climb up Celeste Mountain"),
     "hollowknight": ("Hollow Knight", "from King's Pass to Hornet in Greenpath"),
     "undertale": ("Undertale", "the whole Underground, to the barrier and the neutral ending"),
@@ -50,6 +49,7 @@ ALONE = {
     "monkeymart": ("Monkey Mart", "run a grocery mart as a monkey, both marts: crops, animals, machines and workers"),
     "tombofthemask": ("Tomb of the Mask", "dash through the tomb: the endless arcade climb and all 200 stages, with the 16 masks"),
     "uno": ("UNO", "the card game against one to three bots, with the official rules and scoring to 500"),
+    "fnf": ("Friday Night Funkin'", "the Tutorial, Weeks 1 to 7, Weekend 1 and LE SSERAFIM, in story mode and freeplay"),
 }
 VARIANTS = [
     ("NumPlay-Invisible.nwa", "The same app, hidden: a blank icon with no name"),

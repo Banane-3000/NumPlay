@@ -1,64 +1,91 @@
-# Friday Night Funkin' — calculator adaptation
+> **Friday Night Funkin' is a [NumPlay](../../README.md) game that comes on its own.** It is too big to fit next to NumPlay on the calculator. Get `FridayNightFunkin.nwa` from the [latest release](https://github.com/Mason363/NumPlay/releases/latest).
 
-Native, silent adaptation by **Bobydeluxe** for the NumWorks N0110, N0115 and N0120. Standalone large-game download, outside the NumPlay launcher and customizer kit. English interface.
+<p align="center">
+  <img src="src/icon.png" width="84" alt="Friday Night Funkin' icon">
+</p>
 
-![Menu](docs/menu.png) ![Gameplay](docs/gameplay.png)
+<h1 align="center">Friday Night Funkin'</h1>
 
-From the repository root, build it with `make build/data/apps/FridayNightFunkin.nwa` or `python tools/build.py --game fnf`. The release catalogue lists it among the individual big games. This fan adaptation is not affiliated with The Funkin' Crew.
+<p align="center">
+  <b>Win the rap battles, note by note, on the NumWorks calculator.</b><br>
+  Every week of the game, from the Tutorial to Weekend 1, with its charts, characters and stages.
+</p>
 
-The pinned official content contains **27 songs and 166 playable charts**: Tutorial, Weeks 1–7, Weekend 1 and the LE SSERAFIM collaboration. Freeplay includes the original, Erect/Nightmare, Pico and Boyfriend variations wherever present in those source files. Story Mode runs each week's songs in sequence. All weeks and charts are selectable from the start.
+<p align="center">
+  <a href="https://github.com/Mason363/NumPlay/releases/latest/download/FridayNightFunkin.nwa"><b>Download FridayNightFunkin.nwa</b></a>
+  &nbsp;·&nbsp; <a href="#controls">Controls</a>
+</p>
 
-There is **no music, voice, sound effect, encoded silent audio or video** in the installed app. A clock, visual countdown and beat cue drive play. The app ends a song 1.2 seconds after its final charted note/hold or event; an audio file's uncharted tail is not included.
+<p align="center">
+  <img src="../../docs/media/fnf.gif" width="640" alt="Friday Night Funkin': Ready, Set, Go, then Daddy Dearest sings and Boyfriend hits the notes back on the beat">
+</p>
+
+## Highlights
+
+* **Every song and chart:** the Tutorial, Weeks 1 to 7, Weekend 1 and LE SSERAFIM: 27 songs with their Erect and Pico remixes, 166 charts with every note, at the game's own timing.
+* **Story mode and freeplay:** a week's songs one after the other, for the week's score, or any song at any difficulty, from Boyfriend's songs or Pico's.
+* **The game's own scoring:** points for how close each hit is, Sick, Good, Bad and Shit, the health bar, combos, long notes, misses, and the ranks from Loss to Perfect.
+* **The beat, without the music:** the characters bop and sing, the camera and the health icons bump on the beat, and Ready, Set, Go counts you in.
+* **The game's look:** its own characters, stages, notes, ratings and letters, with Week 6 in pixels.
+* **Saved as you go:** Home saves and quits. Your scores are also copied into `fnf_saves.py`, so installing the app again doesn't erase them.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/shot.png" width="390" alt="Bopeebo: Boyfriend against Daddy Dearest"><br><sub>Week 1: Daddy Dearest</sub></td>
+    <td align="center"><img src="docs/school.png" width="390" alt="Senpai at the school"><br><sub>Week 6, in pixels</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/mall.png" width="390" alt="Cocoa at the mall"><br><sub>Week 5: the mall at Christmas</sub></td>
+    <td align="center"><img src="docs/tankman.png" width="390" alt="Ugh against Tankman"><br><sub>Week 7: Tankman</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/pico.png" width="390" alt="Philly Nice, Pico's remix"><br><sub>Pico's remixes, in freeplay</sub></td>
+    <td align="center"><img src="docs/freeplay.png" width="390" alt="Freeplay"><br><sub>Freeplay: your best score and rank</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/story.png" width="390" alt="Story mode"><br><sub>Story mode, week by week</sub></td>
+    <td align="center"><img src="docs/results.png" width="390" alt="The results"><br><sub>The results</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/pause.png" width="390" alt="The pause menu"><br><sub>The pause menu</sub></td>
+    <td align="center"><img src="docs/title.png" width="390" alt="The title screen"><br><sub>The title screen</sub></td>
+  </tr>
+</table>
+
+## How to play
+
+The notes scroll up to the arrows at the top of the screen. Press each note's key as it reaches its arrow: **Left**, **Down**, **Up** or **Right**, or **7**, **8**, **(** and **)**. Keep the key down to the end of a long note. The closer to the beat, the better: Sick, Good, Bad or Shit, and Sick and Good keep your combo going.
+
+A missed note, or a key pressed with no note to hit, costs health: when the green side of the bar runs out, it's game over. The singer on the left sings first, then it's your turn: watch them, and the characters bopping, to keep the beat.
 
 ## Controls
 
-| Action | Keys |
+| Key | What it does |
 | --- | --- |
-| Left / Down / Up / Right notes | Left / Down / Up / Right arrows **or 7 / 8 / ( / )**, respectively |
-| Chords and holds | Press lanes together; keep the key down for a long note |
-| Select / Confirm | OK or EXE |
-| Pause / Back | Back |
-| Week or song | Up / Down |
-| Difficulty | Left / Right |
-| Freeplay variation | 1 |
-| Credits on title | 0 |
-| Save and leave | Home or Power |
+| Left, Down, Up, Right | Hit the notes (7, 8, ( and ) too) |
+| Up and Down | Choose a week or a song |
+| Left and Right | Choose the difficulty |
+| shift | In freeplay, Boyfriend's songs or Pico's |
+| OK | Choose |
+| Back | Pause (Resume, Restart song, Exit to menu, Options, How to play, Quit game) |
+| Home | Save and quit |
 
-Arrow and number aliases are combined before detecting presses. Pressing both aliases for a lane produces one hit; releasing one while keeping the other pressed preserves the hold. Menus use the arrow keys. Options provide downscroll, ghost tapping (off by default) and beat animation.
+## Good to know
 
-## Gameplay and fidelity
+* **On its own:** Friday Night Funkin' is too big to fit next to NumPlay. Installing it from the NumWorks website swaps out NumPlay and the other apps, and installing NumPlay again swaps it back out.
+* **Without sound:** the calculator has no speaker. The notes still come at the songs' exact times, and the countdown, the characters and the camera keep the beat. If your hits come out early or late, change the note offset in Options.
+* **Made to fit:** the camera shows the whole stage instead of following the singer, the stages are still pictures, the characters have fewer frames, and the cutscenes, the dialogue and the freeplay DJ are left out.
 
-The native engine retains **all 90,437 notes from the 166 player charts**, including opponent notes, chords, long notes, note kinds, difficulty, scroll speeds and BPM changes. Time and duration are quantized to 1/16 millisecond (at most 0.03125 ms error each). Notes are read from flash, with a bounded 64-note working queue. The PBOT1 scoring curve, 45/90/135/160 ms judgements, health, combo rules, hold rewards and drop penalties follow the pinned source. The source's two `picospeaker` charts are auxiliary NPC animation tracks, not additional player levels; their original data is retained in the source model but they are not playable chart entries.
+## Credits
 
-This is a C adaptation for a 320×240 calculator, **not the Haxe/Flixel runtime**. Original artwork is reduced to native display sizes and a 15-colour palette per sprite, with up to four selected frames per animation. All 21 referenced stages and 46 character configurations are converted. Stage backgrounds use one composited frame; framing, camera effects, character placement, scripted fights and collaboration lighting are simplified. Complex desktop cinematics, shaders, background actors' choreography, editor, online functions and video are not reproduced. It is not a pixel-for-pixel reproduction of the desktop game.
+Inspired by [Friday Night Funkin'](https://github.com/FunkinCrew/Funkin) by the Funkin' Crew (ninjamuffin99, PhantomArcade, evilsk8r and Kawai Sprite), not affiliated with them. Go play the original: it's free on itch.io and Newgrounds, with the music.
 
-Saved records contain each chart's best score, best completion and best combo, completed weeks and options. Completion follows the source's `(Sick + Good - Missed) / player notes`, clamped to 0–100%. Best records are updated on a successful clear. A failed run or retry does not erase them.
+* The charts, characters, stages, notes, ratings and letters come from the game's own files ([funkin.assets](https://github.com/FunkinCrew/funkin.assets)), which keep the Funkin' Crew's terms: they are not in this repository, and are fetched when the game is built. The rules and numbers follow the game's own code, under the Apache License 2.0.
+* The calculator adaptation is by **[Bobydeluxe](https://github.com/Bobydeluxe)**, who brought it to NumPlay.
+* The text uses NumPlay's **Nunito** font (SIL Open Font License).
 
-## Storage and RAM
+Made by Mason Chen as part of NumPlay.
 
-The final build sizes and hash are written to `output/build-report.json`. Both released and debug packages must produce identical installed bytes and fit the shared **2,031,616-byte flash budget**; compilation/install checks use the smaller **107,674-byte RAM allocation** too.
+## License
 
-Artwork and note streams remain in flash. RAM contains one 9,600-byte half-resolution background cache, one 5,120-byte LCD strip, the bounded note/input queues and small game/save state. There is no full framebuffer, dynamic allocation, whole-song note array, decoded atlas or on-device JSON parser. Keyboard transitions are sampled between LCD strips and judged using their wall-clock timestamps, independent of rendering frequency. Pausing freezes the chart clock; retry resets the stream and all per-run state.
-
-The `fnf.sav` record is versioned and CRC checked. An inert Python script `fnf_save.py` carries a comment-only hexadecimal backup so records can be recovered after reinstalling an app; its contents are parsed as data, never executed. Both files use about 4.1 KB including record names. Keep the backup if reinstalling. If storage is full, the app shows Retry / Return to menu / Exit without saving. It preserves unrelated calculator records.
-
-## Build and validation
-
-With ARM GCC, Python 3 (Pillow for importing art), Node and nwlink available:
-
-```sh
-python build.py --arm-bin /path/to/arm/bin --nwlink /path/to/nwlink
-make test HOST_CC=cc
-python tests/test_assets.py
-python tests/test_arm.py --nwlink /path/to/nwlink
-```
-
-The build needs only the checked-in packed inputs and original-art icon. To reimport the large reference assets, use `tools/import_reference.py --reference PATH`; the reference directory must contain the exact pinned repositories under `original/` and their license files. `tools/assets.py` builds deterministic C ROM tables from `assets/model.json.zlib`, `assets/art.json` and `assets/art.bin`. Generated `src/data.c` and `src/ids.h` are ignored build outputs; the Makefile generates them before parallel compilation. `assets/chart-manifest.json` is checked in for review. All three reproduce from the packed inputs.
-
-The artifact is `output/fnf.nwa`, also copied to the workspace's `build/apps/FridayNightFunkin.nwa`. See [VALIDATION.md](VALIDATION.md) for the measured checks and their limits.
-
-## Credits and rights
-
-Original game, characters, charts, logo and art: **The Funkin' Crew and the original contributors**, credited in the pinned projects. Native calculator adaptation: **Bobydeluxe**. The interface uses NumPlay's Nunito font (SIL OFL 1.1).
-
-See [ASSETS.md](ASSETS.md) for source revisions and conversion details. The upstream code is Apache 2.0; the separate art/assets license reserves copyright and explicitly restricts public redistribution. This local build does not grant redistribution rights. Original content is not relicensed under NumPlay's license. The PR records this upstream licensing limitation for maintainer review; no additional art redistribution permission is asserted.
+The game's code is licensed under the GNU General Public License v3.0: see the `LICENSE` file at the root of the repository. The game's charts and pictures keep the Funkin' Crew's own terms (see Credits). "Friday Night Funkin'" is a trademark of The Funkin' Crew Inc.
