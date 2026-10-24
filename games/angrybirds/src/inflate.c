@@ -34,7 +34,9 @@ bool inflate_raw(const uint8_t *src,size_t length,uint8_t *out,size_t capacity){
         else if(type==2){
             static const uint8_t order[]={16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15};
             nl=257+bits(&b,5);nd=1+bits(&b,5);unsigned nc=4+bits(&b,4);uint8_t cl[19]={0};Tree codes;
-            if(nl>286||nd>32)return false;for(unsigned i=0;i<nc;i++)cl[order[i]]=bits(&b,3);if(!tree(&codes,cl,19))return false;
+            if(nl>286||nd>32)return false;
+            for(unsigned i=0;i<nc;i++)cl[order[i]]=bits(&b,3);
+            if(!tree(&codes,cl,19))return false;
             unsigned n=0;while(n<nl+nd&&!b.bad){int s=symbol(&b,&codes);if(s<0)return false;if(s<16)lens[n++]=(uint8_t)s;else{unsigned repeat=s==16?3+bits(&b,2):s==17?3+bits(&b,3):11+bits(&b,7);if(s==16&&!n)return false;uint8_t value=s==16?lens[n-1]:0;if(n+repeat>nl+nd)return false;while(repeat--)lens[n++]=value;}}
         }else return false;
         if(!lens[256]||!tree(&lit,lens,nl)||!tree(&dist,lens+nl,nd))return false;
