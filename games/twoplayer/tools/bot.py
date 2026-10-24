@@ -2,9 +2,9 @@
 """Plays 2 Players in the ARM emulator for the README's pictures.
 
 Runs the calculator build (TwoPlayers.nwa) in tools/emu.py as player 1 against the hard computer,
-game after game: it reads the screen (the ball, the puck, the tanks, the light cycles) and presses
-the keys a player would. Saves the raw frames, then the gallery's GIF (a few seconds of each game)
-and a screenshot of each game.
+game after game: it reads the screen (the ball, the puck, the tanks, the light cycles, the signal)
+and presses the keys a player would. Saves the raw frames, then the gallery's GIF (a few seconds of
+each game) and a screenshot of each game.
 
 Usage: bot.py TwoPlayers.nwa OUT [--fps 25] [--seconds 8]   (needs NumPy; gifsicle for small GIFs)
 """
@@ -42,6 +42,7 @@ class Bot:
         self.last = None
         self.dir = 0
         self.fired = 0
+        self.seen = None
 
     def grab(self, calc):
         open(os.path.join(self.out, f"{self.frame:06d}_{int(calc.now_ms):06d}.raw"), "wb").write(bytes(calc.screen))
@@ -138,7 +139,7 @@ class Bot:
         if abs(d) < 0.6 and math.hypot(x1 - x0, y1 - y0) > 50:
             keys.append("up")
         if abs(d) < 0.15 and self.c.now_ms - self.fired > 700:
-            keys.append("shift")
+            keys.append("ok")
             self.fired = self.c.now_ms
         self.hold(keys)
 
@@ -183,6 +184,14 @@ class Bot:
                 best, bv = d, v
         self.hold([] if best == self.dir else [["right", "down", "left", "up"][best]])
 
+    def quick(self):  # Quick Draw: OK a quarter of a second after the ground turns at the signal
+        go = near(self.screen()[100:101, 20:21], 0x3A2F1C, 12).any()
+        self.seen = (self.seen or self.c.now_ms) if go else None
+        self.hold(["ok"] if go and self.c.now_ms - self.seen >= 250 else [])
+
+    def tug(self):  # Tug of War: OK, let go, OK...
+        self.hold(["ok"] if int(self.c.now_ms // STEP) % 4 == 0 else [])
+
     def play(self, game, seconds):
         self.tap("ok", 1400)  # the rules
         self.tap("ok", 300)  # play
@@ -190,7 +199,7 @@ class Bot:
         self.last = None
         end = self.c.now_ms + seconds * 1000
         while self.c.now_ms < end:
-            [self.pong, self.hockey, self.tanks, self.cycles][game]()
+            [self.pong, self.hockey, self.tanks, self.cycles, self.quick, self.tug][game]()
         self.marks.append((self.c.now_ms, -1))
         self.tap("back")  # Paused, Other games
         self.tap("down")
@@ -212,7 +221,7 @@ def main():
     for _ in range(3):  # the hard computer
         bot.tap("right", 150)
     bot.run(500)
-    for g in range(4):
+    for g in range(6):
         bot.play(g, a.seconds)
         bot.tap("down", 300)
     frames = record.load_frames(raw)

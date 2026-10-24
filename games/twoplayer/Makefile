@@ -1,6 +1,7 @@
-# 2 Players — Pong, Air Hockey, Tanks, Light Cycles and Quick Draw, for two on one calculator.
+# 2 Players: Pong, Air Hockey, Tanks, Light Cycles, Quick Draw and Tug of War, for two on one calculator.
 #   make          build output/twoplayer.nwa
 #   make check    link the app like the calculator does (output/twoplayer.bin)
+#   make test     the tests on a computer (tests/play.c)
 #
 # In NumPlay the game draws with the launcher's strips, shapes and fonts and saves through its
 # file functions (module.o leaves them to the launcher); on its own it brings them along.
@@ -21,7 +22,7 @@ LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
 LDFLAGS += -Wl,-e,main -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
 LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
 
-.PHONY: build check clean
+.PHONY: build check clean host test
 build: $(BUILD_DIR)/twoplayer.nwa
 
 check: $(BUILD_DIR)/twoplayer.nwa
@@ -44,6 +45,18 @@ $(BUILD_DIR)/twoplayer.nwa: $(BUILD_DIR)/main.o $(BUILD_DIR)/gfx.o $(BUILD_DIR)/
 	@echo "LD      $@"
 	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 	$(Q) arm-none-eabi-strip --strip-unneeded $@
+
+# on a computer, with the sanitizers: the rules, bots against bots, random sessions, old saves (tests/play.c)
+HOST_FLAGS = -std=gnu11 -O1 -g -Wall -Wextra -Wno-unused-parameter -DPLATFORM_DEVICE=1 -DHOST -ffp-contract=off \
+  $(shell $(NWLINK) eadk-cflags-simulator) -fsanitize=address,undefined -fno-sanitize-recover=undefined
+host: output/play
+output/play: $(SRC) tests/play.c $(HEADERS)
+	$(Q) mkdir -p output
+	$(Q) cc $(HOST_FLAGS) tests/play.c ../../launcher/src/gfx.c ../../launcher/src/font_data.c \
+	  ../../launcher/src/xfont.c -lm -o $@
+	@echo "HOST    $@"
+test: output/play
+	output/play test
 
 $(BUILD_DIR)/icon.o: src/icon.png | $(BUILD_DIR)
 	@echo "ICON    $<"
