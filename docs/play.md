@@ -629,6 +629,23 @@ Knock down the pigs' castles and pop every pig. Each bird has its own power: the
 
 <br clear="right">
 
+## PolyGT 3D
+
+<img src="../games/polygt3d/docs/shot.png" width="320" align="right" alt="PolyGT 3D">
+
+| Key | What it does |
+| --- | --- |
+| **Up** | Accelerate |
+| **Down** | Brake (steering hard: slide) |
+| **Left, Right** | Steer |
+| **OK** | Nitro |
+| **+, -** | Change gear (manual gearbox) |
+| **Back** | Pause (with Restart race, How to play and Quit game) |
+
+Race seven rivals on three circuits, or drive the endless road and reach each zone before the clock runs out. Brake before the bends, and brake while steering hard to slide round a hairpin. Follow close behind a car to catch its slipstream, and pick up the orbs for nitro. Home saves the race, and Continue picks it up.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">
