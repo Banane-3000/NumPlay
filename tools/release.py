@@ -26,7 +26,6 @@ REPO = "https://github.com/Mason363/NumPlay"
 EXTRAS = set()
 # games too big to fit next to NumPlay on the calculator: only on their own, in a section of their own
 ALONE = {
-    "angrybirds": ("Angry Birds", "experimental native adaptation with 429 campaign stages and 14 bonus maps; known bugs remain; by Bobydeluxe"),
     "celeste": ("Celeste", "the whole climb up Celeste Mountain"),
     "hollowknight": ("Hollow Knight", "from King's Pass to Hornet in Greenpath"),
     "undertale": ("Undertale", "the whole Underground, to the barrier and the neutral ending"),
@@ -51,6 +50,7 @@ ALONE = {
     "tombofthemask": ("Tomb of the Mask", "dash through the tomb: the endless arcade climb and all 200 stages, with the 16 masks"),
     "uno": ("UNO", "the card game against one to three bots, with the official rules and scoring to 500"),
     "fnf": ("Friday Night Funkin'", "the Tutorial, Weeks 1 to 7, Weekend 1 and LE SSERAFIM, in story mode and freeplay"),
+    "angrybirds": ("Angry Birds", "the 429 levels of the Chrome edition, its seven birds and the Mighty Eagle"),
 }
 VARIANTS = [
     ("NumPlay-Invisible.nwa", "The same app, hidden: a blank icon with no name"),
