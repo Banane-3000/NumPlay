@@ -581,6 +581,20 @@ Match the top card by colour or number, or play a Wild. Skip, Reverse, Draw Two 
 
 <br clear="right">
 
+## Friday Night Funkin'
+
+<img src="../games/fnf/docs/shot.png" width="320" align="right" alt="Friday Night Funkin'">
+
+| Key | What it does |
+| --- | --- |
+| **Left, Down, Up, Right** (or **7, 8, (, )**) | Hit the arrows |
+| **OK** | Choose |
+| **Back** | Pause (with Restart, Options and Quit) |
+
+Press each arrow as it reaches the line at the top. Sick, Good, Bad and Shit depend on how close you are; misses cost health, and the song is lost when it runs out. Play the weeks in story mode or any song in freeplay. There's no sound: the characters and the camera keep the beat. Your scores are saved.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">
