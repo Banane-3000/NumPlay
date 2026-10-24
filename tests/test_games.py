@@ -258,6 +258,10 @@ GAMES = {
     # from the copy, Continue: the race again (after a 3, 2, 1), quit with On/Off
     "turborush": ("TurboRush.nwa", "turborush.sav", presses((1500, "ok"), (2200, "ok"), (2900, "ok"), (9500, "back"))
                   + [(3500, 9000, K["up"])], 11000, presses((1500, "ok")) + [(3500, 6500, K["up"])], 7500),
+    # the title's Play, Start race, the first-run guide's OK, then the race: flat out, Back to pause, Home. Next time,
+    # from the copy, Continue: the race again (after a 3, 2, 1), quit with On/Off
+    "polygt3d": ("PolyGT3D.nwa", "polygt3d.sav", presses((1500, "ok"), (2200, "ok"), (2900, "ok"), (9500, "back"))
+                 + [(3500, 9000, K["up"])], 11000, presses((1500, "ok")) + [(3500, 6500, K["up"])], 7500),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -324,7 +328,7 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "jetpackjoyride": "jetpackjoyride_saves.py", "stickmanhook": "stickmanhook_saves.py",
           "donkeykong": "donkeykong_saves.py", "dune": "dune_saves.py", "monkeymart": "monkeymart_saves.py",
           "tombofthemask": "tombofthemask_saves.py", "uno": "uno_saves.py",
-          "fnf": "fnf_saves.py", "turborush": "turborush_saves.py"}
+          "fnf": "fnf_saves.py", "turborush": "turborush_saves.py", "polygt3d": "polygt3d_saves.py"}
 
 
 def dk_frames(v):
@@ -483,6 +487,12 @@ CHECKS = {
                   and struct.unpack_from("<I", v, 164)[0] >= 1000,
                   lambda v: len(v) == 492 and v[:4] == b"TRU1" and v[114] == 1 and v[127] == 1
                   and struct.unpack_from("<I", v, 164)[0] >= 4000),
+    # "PGT1", version 1, its size (496): the guide read (58), a race kept (64) and going (phase at 75), its clock (96)
+    # running; after the reinstall, from the copy, the same race goes on
+    "polygt3d": (lambda v: len(v) == 496 and v[:4] == b"PGT1" and v[4] == 1 and v[58] == 1 and v[64] == 1 and v[75] == 1
+                 and struct.unpack_from("<I", v, 96)[0] >= 1000,
+                 lambda v: len(v) == 496 and v[:4] == b"PGT1" and v[64] == 1 and v[75] == 1
+                 and struct.unpack_from("<I", v, 96)[0] >= 5000),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
     # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies of the six games kept

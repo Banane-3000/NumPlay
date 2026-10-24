@@ -677,7 +677,7 @@
   },
   {
     "id": "championisland",
-    "rank": 21,
+    "rank": 22,
     "title": "Champion Island",
     "tagline": "Seven sports, one island",
     "credit": "Based on Google's Champion Island Games",
@@ -699,7 +699,7 @@
   },
   {
     "id": "finalearth2",
-    "rank": 22,
+    "rank": 23,
     "title": "The Final Earth 2",
     "tagline": "Build a city in space",
     "credit": "Based on the game by Florian van Strien",
@@ -923,7 +923,7 @@
   },
   {
     "id": "cookieclicker",
-    "rank": 24,
+    "rank": 25,
     "title": "Cookie Clicker",
     "tagline": "Bake billions of cookies",
     "credit": "Based on Cookie Clicker by Orteil",
@@ -944,7 +944,7 @@
   },
   {
     "id": "leveldevil",
-    "rank": 23,
+    "rank": 24,
     "title": "Level Devil",
     "tagline": "Run to the door",
     "credit": "Based on Level Devil by Unept",
@@ -1149,6 +1149,27 @@
       "docs/shot.png"
     ],
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/turborush",
+    "default": false,
+    "xl": true
+  },
+  {
+    "id": "polygt3d",
+    "rank": 21,
+    "title": "PolyGT 3D",
+    "tagline": "3D racing on three circuits",
+    "credit": "A game by Boris-TH",
+    "top": "0x231955",
+    "bottom": "0xEB6E50",
+    "accent": "0x00C3EB",
+    "colors": 16,
+    "records": [
+      "polygt3d.sav",
+      "polygt3d_saves.py"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/polygt3d",
     "default": false,
     "xl": true
   }
