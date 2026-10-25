@@ -35,7 +35,7 @@
 </p>
 
 ⭐ **Enjoying NumPlay?** Give it a star at the top of this page: it takes a second and helps other people find it.<br>
-💡 **Want a game that isn't here?** Check the [roadmap](#roadmap) first, then email me at [masonchen204@gmail.com](mailto:masonchen204@gmail.com).
+💡 **Want a game that isn't here?** Check the [roadmap](#roadmap) first, then [ask for it in an issue](https://github.com/Mason363/NumPlay/issues/new/choose).
 
 ## Games in NumPlay
 
@@ -206,7 +206,7 @@ Install any of them instead of NumPlay.nwa: your progress is the same in each. A
 
 - Your progress is saved on the calculator as files. Turning it off keeps them.
 - **Installing apps erases these files**, all but the Python scripts. So NumPlay keeps a copy of every save in a Python script, `numplay_saves.py` (the big games have their own), and your progress comes back the first time you open the game. Don't delete these scripts.
-- **A restart erases every file**, scripts included: the reset button on the back, or a crash. If your calculator restarts by itself while you play, please [email me](mailto:masonchen204@gmail.com) which game and what you were doing.
+- **A restart erases every file**, scripts included: the reset button on the back, or a crash. If your calculator restarts by itself while you play, please [open an issue](https://github.com/Mason363/NumPlay/issues/new/choose) with the game and what you were doing.
 - The calculator holds 42 KB of files in all. A big NumBlocks world can fill it: delete worlds or scripts you don't need to make room.
 
 </details>
