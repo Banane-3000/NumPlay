@@ -1633,9 +1633,17 @@ int main(void) {
       if (R.best_hand > S.best_hand) S.best_hand = R.best_hand;
       draw_overlay();
     }
-    bg_update(dt / 1000.f, overlay == OV_RUNINFO || overlay == OV_DECK ? 0 : screen == SCR_TITLE ? (overlay ? 2 : 8) : 6);
+    /* the title's paint keeps moving at its own pace behind a panel (Options, the new run...): 8 rows of it a frame,
+       fewer only while a frame takes too long (a page full of text on the N0110). Run Info and the deck cover the
+       screen in a run. */
+    static int title_rows = 8;
+    bg_update(dt / 1000.f, overlay == OV_RUNINFO || overlay == OV_DECK ? 0 : screen == SCR_TITLE ? title_rows : 6);
     g_end();
     uint64_t spent = eadk_timing_millis() - now;
+    if (screen == SCR_TITLE) {
+      if (spent > 30 && title_rows > 2) title_rows--;
+      else if (spent < 26 && title_rows < 8) title_rows++;
+    }
     if (spent < 30) eadk_timing_msleep((uint32_t)(30 - spent));
   }
 }
