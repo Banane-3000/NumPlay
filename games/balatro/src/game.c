@@ -1446,6 +1446,16 @@ void move_joker(int from, int to) {
   R.jokers[to] = t;
 }
 
+void move_cons(int from, int to) {
+  if (from < 0 || to < 0 || from >= R.ncons || to >= R.ncons || from == to) return;
+  cons_t t = R.cons[from];
+  if (from < to)
+    for (int i = from; i < to; i++) R.cons[i] = R.cons[i + 1];
+  else
+    for (int i = from; i > to; i--) R.cons[i] = R.cons[i - 1];
+  R.cons[to] = t;
+}
+
 void move_hand_card(int from, int to) {
   if (from < 0 || to < 0 || from >= R.nhand || to >= R.nhand || from == to) return;
   uint8_t c = R.hand[from], s = R.sel[from];

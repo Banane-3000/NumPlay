@@ -620,6 +620,13 @@ void layout_cards(int dt, int show_hand, int hand_y) {
 int focus_zone = 0, focus_idx = 0, focus_shake;
 enum { FZ_HAND = 1, FZ_JOKERS, FZ_CONS };
 
+extern int moving; /* main.c: the card in focus picked up, to be moved */
+/* the card picked up: higher, outlined in white, its shadow left on the row */
+static void lifted(int x, int y, int lift) {
+  g_shade(x, y, CW, CH, 3, 12);
+  g_rrect(x - 2, y - lift - 2, CW + 4, CH + 4, 4, C_WHITE);
+}
+
 void draw_jokers_row(int focus_j, int focus_c, int sel_j, int sel_c) {
   char t[8];
   g_shade(JOKER_X - 2, ROW_Y - 2, JOKER_W + 4, CH + 4, 5, 9);
@@ -641,6 +648,7 @@ void draw_jokers_row(int focus_j, int focus_c, int sel_j, int sel_c) {
       if (f != pass) continue;
       int lift = f ? 3 : 0;
       if (i == sel_j) lift = 7;
+      if (f && moving) lift = 10, lifted((int)j->x, (int)j->y, lift);
       int fl = (j->flags & JF_DEBUFF) ? FX_DIM : 0;
       if (j->flags & JF_DOWN) fl |= 0x100;
       int sx = f ? focus_shake : 0;
@@ -654,6 +662,7 @@ void draw_jokers_row(int focus_j, int focus_c, int sel_j, int sel_c) {
       if (f != pass) continue;
       int lift = f ? 3 : 0;
       if (i == sel_c) lift = 7;
+      if (f && moving) lift = 10, lifted((int)c->x, (int)c->y, lift);
       draw_cons_sprite(c->id, c->ed, (int)c->x + (f ? focus_shake : 0), (int)c->y - lift, juice_scale(c->juice), 0);
     }
 }
@@ -665,7 +674,8 @@ void draw_hand_cards(int focus_h) {
       if (f != pass) continue;
       vcard_t *c = &V.cards[V.hand[i]];
       int x = (int)c->x + (f ? focus_shake : 0), y = (int)c->y - (f ? 4 : 0), sc = juice_scale(c->juice);
-      if (f && sc == 256 && !V.nplay) g_rrect(x - 2, y - 2, CW + 4, CH + 4, 4, C_FOCUS); /* the D-pad cursor */
+      if (f && moving) lifted(x, (int)c->y, 12), y = (int)c->y - 12;
+      else if (f && sc == 256 && !V.nplay) g_rrect(x - 2, y - 2, CW + 4, CH + 4, 4, C_FOCUS); /* the D-pad cursor */
       draw_card(c, x, y, sc, f);
     }
 }

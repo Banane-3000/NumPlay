@@ -55,7 +55,7 @@
 | EXE | Play Hand |
 | ⌫ | Discard |
 | shift | Sort the hand by rank or by suit |
-| alpha + left / right | Move a Joker or a card |
+| alpha | Pick up a card, Joker or consumable to move it: left / right carry it, OK puts it down |
 | toolbox | Run Info (poker hands, blinds, vouchers) |
 | var | View your deck |
 | Hold OK or EXE | Speed up scoring |
