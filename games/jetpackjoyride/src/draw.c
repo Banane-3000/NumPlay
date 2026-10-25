@@ -59,12 +59,98 @@ static void blit(const jj_sheet *s, int f, int ax, int ay, int flags) {
   }
 }
 
-/* the background: one wide picture of the lab, side by side */
+/* a band of a background picture, opaque, from the top of the screen at x (the strip's rows from from_row on) */
+static void band(const jj_sheet *s, int f, int x) {
+  const jj_frame *fr = &s->f[f];
+  int w = fr->w;
+  if (x >= SCREEN_W || x + w <= 0) return;
+  const uint8_t *base = s->data + fr->data;
+  const uint16_t *pal = s->pal;
+  int r0 = gfx_y0 > from_row ? gfx_y0 : from_row, r1 = gfx_y1 < fr->h ? gfx_y1 : fr->h;
+  for (int r = r0; r < r1; r++) {
+    const uint8_t *p = base + (base[2 * r] | base[2 * r + 1] << 8);
+    color_t *row = gfx_buf + (r - gfx_y0) * SCREEN_W;
+    int i = x;   /* the screen column of the next pixel */
+    while (i < SCREEN_W && i < x + w) {
+      unsigned tag = *p++;
+      int n = (int)(tag & 127) + 1, a = i < 0 ? 0 : i, b = i + n > SCREEN_W ? SCREEN_W : i + n;
+      if (tag & 128) {
+        color_t c = pal[*p++];
+        for (int k = a; k < b; k++) row[k] = c;
+      } else {
+        const uint8_t *q = p + (a - i);
+        for (int k = a; k < b; k++) row[k] = pal[*q++];
+        p += n;
+      }
+      i += n;
+    }
+  }
+}
+
+/* the title's background: the lab's picture, side by side */
 static void lab(int scroll) {
   int w = pic_lab.f[0].w;
   int x = -(scroll % w);
   if (x > 0) x -= w;
-  for (; x < SCREEN_W; x += w) blit(&pic_lab, 0, x, 0, 0);
+  for (; x < SCREEN_W; x += w) band(&pic_lab, 0, x);
+}
+
+/* ---------------------------------------------------------------- the rooms
+ * levelgeneration.xml: one room after another, each in from the lab, a few of its middle chunks, and out to the lab
+ * again. Here the lab comes between the others: a run starts with 2 to 4 of the lab's pictures, then the glass tube
+ * under the sea, the lava cave or the greenhouse (never the same twice running), then 1 to 3 of the lab's, and so
+ * on. Made from the run's own number (jj_run.level), so the same run always has the same rooms. */
+enum { PC_LAB, PC_TUBE_IN, PC_TUBE_OUT, PC_CAVE_IN, PC_CAVE, PC_CAVE_OUT, PC_GREEN_IN, PC_GREEN, PC_GREEN_OUT };
+static const jj_sheet *const piece_pic[] = {&pic_lab, &pic_rm_tube_in, &pic_rm_tube_out, &pic_rm_cave_in, &pic_rm_cave,
+                                            &pic_rm_cave_out, &pic_rm_green_in, &pic_rm_green, &pic_rm_green_out};
+static int piece_w(int pc) {
+  const jj_sheet *s = piece_pic[pc];
+  int w = 0;
+  for (int f = 0; f < s->n; f++) w += s->f[f].w;
+  return w;
+}
+
+static const uint8_t room_in[3] = {PC_TUBE_IN, PC_CAVE_IN, PC_GREEN_IN};
+static struct {
+  uint32_t level, rng;     /* the run's, and the dice where the walk has got to */
+  int32_t x;               /* where the current piece starts (pixels of scroll) */
+  uint8_t piece, room;     /* room 255: the lab */
+  uint8_t left;            /* in a room: its pieces after this one; in the lab: lab pictures after this one */
+  uint8_t last;            /* the last room */
+} walk;
+
+static void next_piece(void) {
+  walk.x += piece_w(walk.piece);
+  if (walk.room != 255) {
+    if (walk.left > 1) walk.piece = (uint8_t)(room_in[walk.room] + 1), walk.left--;          /* a middle chunk */
+    else if (walk.left == 1) walk.piece = (uint8_t)(room_in[walk.room] + (walk.room ? 2 : 1)), walk.left = 0;   /* out */
+    else walk.piece = PC_LAB, walk.room = 255, walk.left = (uint8_t)(jj_rand(&walk.rng) % 3);
+    return;
+  }
+  if (walk.left) {
+    walk.left--;
+    return;
+  }
+  int r = (int)(jj_rand(&walk.rng) % 2);   /* the next room: not the last one */
+  if (r >= walk.last) r++;
+  walk.room = walk.last = (uint8_t)r;
+  walk.piece = room_in[r];
+  /* the tube is its two halves; the cave has 1 or 2 chunks of rock (chunkMaxSize 2048), the greenhouse 2 to 5 */
+  walk.left = (uint8_t)(r == 0 ? 1 : r == 1 ? 2 + jj_rand(&walk.rng) % 2 : 3 + jj_rand(&walk.rng) % 4);
+}
+
+int jj_room_at(uint32_t level, int scroll);
+static void rooms(uint32_t level, int scroll) {
+  jj_room_at(level, scroll);   /* (the walk to where the screen starts) */
+  /* draw from the piece the screen starts in; the walk stays there */
+  typeof(walk) keep = walk;
+  int x = walk.x - scroll;
+  while (x < SCREEN_W) {
+    const jj_sheet *s = piece_pic[walk.piece];
+    for (int f = 0; f < s->n; f++) band(s, f, x), x += s->f[f].w;
+    next_piece();
+  }
+  walk = keep;
 }
 
 static void plot(int x, int y, color_t c) {
@@ -169,17 +255,17 @@ static void lasers(void) {
   }
 }
 
+static float run_dx(void) { return R->state == JJ_ALIVE ? jj_speed(R) / 60.0f : R->dvx; }
+
 static void barry_draw(void) {
   int bx = SX(JJ_BX), by = SX(R->y);
   uint32_t t = R->t;
   if (R->state == JJ_ALIVE && R->safe && (t / 4) & 1) return;   /* blinks while he can't be hit */
   if (R->state != JJ_ALIVE) {
-    int f;
-    if (R->state == JJ_ZAPPED) f = (t / 3) & 1 ? 11 : 12;
-    else if (R->state == JJ_STOPPED) f = 18;
-    else if (R->by != JJ_BY_ZAPPER && R->stop_t == 0 && R->vy < -2) f = 13;
-    else f = 14 + (int)(t / 4 % 4);
-    blit(&pic_barry, f, bx, by, 0);
+    if (R->state == JJ_ZAPPED) blit(&pic_barry, (t / 3) & 1 ? 10 : 11, bx, by, 0);
+    else if (R->y < JJ_FLOOR || R->vy != 0)   /* thrown about, spinning */
+      blit(&pic_tumble, R->pose * 8 + (((R->rot + 4096) >> 13) & 7), bx, SX(R->y - 16), 0);
+    else blit(&pic_barry, 12, bx, by, 0);   /* sliding to a stop on his front */
     return;
   }
   switch (R->ride) {
@@ -188,16 +274,8 @@ static void barry_draw(void) {
     if (R->ground) f = (int)(t / 5 % 4);
     else if (R->held) f = 4 + (int)(t / 3 % 4);
     else f = 8 + (int)(t / 8 % 2);
-    if (R->held && !R->ground) {
-      /* the machine gun fires down: its flash and a stream of bullets */
-      blit(&pic_flash, (t / 2) & 1, bx - 9, by - 4, 0);
-      for (int i = 0; i < 4; i++) {
-        int d = (int)((t * 10 + (uint32_t)i * 23) % 70);
-        int yy = by + 4 + d, xx = bx - 8 - d / 6 + ((i * 5) % 7) - 3;
-        if (yy < SX(JJ_FLOOR) + 2) line(xx, yy, xx - 1, yy + 3, 1, GOLD);
-      }
-    }
     blit(&pic_barry, f, bx, by, 0);
+    if (R->held) blit(&pic_jflash, (int)(t % 4), bx - 5, by - 1, 0);   /* the gun's flash, under its barrels */
     break;
   }
   case JJ_MECH: {
@@ -242,13 +320,24 @@ static void barry_draw(void) {
 
 static void world(void) {
   uint32_t t = R->t;
-  lab((int)(R->dist / 24));   /* 16ths of a point at 2/3: / 24 */
+  rooms(R->level, (int)(R->dist / 24));   /* 16ths of a point at 2/3: / 24 */
   for (int i = 0; i < JJ_SCIENTISTS; i++) {
     const jj_scientist *s = &R->sci[i];
     if (!s->on) continue;
-    int f = s->state == 2 ? 5 : (int)(s->t / (s->state ? 4 : 7) % 4);
-    blit(&pic_sci, f, SX(s->x), SX(JJ_FLOOR) + 1, s->dir < 0 ? FLIP_X : 0);
+    static const uint8_t shock[3] = {15, 15, 16};
+    int f;
+    switch (s->state) {
+    case JJ_SCI_WALK: f = (int)(s->t / 5 % 4); break;
+    case JJ_SCI_RUN: f = 4 + (int)(s->t / 5 % 4); break;
+    case JJ_SCI_FETAL: f = 14; break;
+    case JJ_SCI_ZAPPED: f = shock[s->t / 2 % 3]; break;
+    case JJ_SCI_AIR: f = 8 + s->pose; break;
+    default: f = 12 + (s->pose & 1); break;
+    }
+    blit(s->kind ? &pic_sci2 : &pic_sci1, f, SX(s->x), SX(s->y) + 1, s->dir < 0 ? FLIP_X : 0);
   }
+  for (int i = 0; i < JJ_SPARKS; i++)
+    if (R->spark[i].t) blit(&pic_spark, R->spark[i].t - 1, SX(R->spark[i].x), SX(JJ_FLOOR) + 1, 0);
   for (int i = 0; i < JJ_COINSETS; i++) {
     const jj_coinset *c = &R->coin[i];
     if (!c->on) continue;
@@ -271,6 +360,17 @@ static void world(void) {
   for (int i = 0; i < JJ_ZAPPERS; i++)
     if (R->zap[i].on) zapper(&R->zap[i], t);
   lasers();
+  /* the bullets, turned the way they go on the screen (0 to 40 degrees back from straight down) */
+  float dx = run_dx();
+  for (int i = 0; i < JJ_BULLETS; i++) {
+    const jj_bullet *b = &R->bul[i];
+    if (b->vy == 0) continue;
+    float back = (dx - b->vx) / b->vy;   /* tan of the angle */
+    int f = back < 0.0875f ? 0 : back < 0.268f ? 1 : back < 0.466f ? 2 : back < 0.7f ? 3 : 4;
+    blit(&pic_bullet, f, SX(b->x), SX(b->y), 0);
+  }
+  for (int i = 0; i < JJ_SHELLS; i++)
+    if (R->shell[i].on) blit(&pic_shell, R->shell[i].rot, SX(R->shell[i].x), SX(R->shell[i].y), 0);
   barry_draw();
   for (int i = 0; i < JJ_MISSILES; i++) {
     const jj_missile *m = &R->mis[i];
@@ -306,7 +406,8 @@ static void hud(bool keys) {
     outlined(&np_font_body, 25, 58, s, WHITE, false);
   }
   if (keys) {
-    from_row = 222, lab((int)(R->dist / 24)), from_row = 0; /* (nothing of the run over the key line) */
+    from_row = 222, rooms(R->level, (int)(R->dist / 24)), from_row = 0; /* (nothing of the run over the key line) */
+    gfx_fill_alpha(0, 222, SCREEN_W, SCREEN_H - 222, INK, 150);           /* (and the rooms' sand and ferns dimmed under it) */
     static const char *const k[JJ_RIDES] = {"Hold OK to fly   Back pause", "Hold OK to jump and glide   Back pause",
                                             "OK jump   Back pause", "OK flap   Back pause", "OK flip gravity   Back pause",
                                             "OK teleport to the arrow   Back pause"};
@@ -456,6 +557,16 @@ static void scene(void *ctx) {
     else if (V->screen == JJ_SCREEN_RESULTS) results();
     break;
   }
+}
+
+int jj_room_at(uint32_t level, int scroll) {
+  if (walk.level != level || scroll < walk.x || !walk.rng) {
+    walk.level = level, walk.rng = level ? level : 1;
+    walk.x = 0, walk.piece = PC_LAB, walk.room = 255, walk.last = 3;
+    walk.left = (uint8_t)(1 + jj_rand(&walk.rng) % 3);
+  }
+  while (walk.x + piece_w(walk.piece) <= scroll) next_piece();
+  return walk.room == 255 ? 0 : walk.room + 1;
 }
 
 void jj_draw(const jj_run *r, const jj_view *v) {

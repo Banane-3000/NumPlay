@@ -20,4 +20,5 @@ typedef struct {
 } jj_view;
 
 void jj_draw(const jj_run *r, const jj_view *v);
+int jj_room_at(uint32_t level, int scroll);   /* the room the background shows there: 0 the lab, 1 the tube, 2 the cave, 3 the greenhouse */
 #endif

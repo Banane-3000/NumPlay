@@ -190,6 +190,111 @@ static void units(void) {
   CHECK(!jj_valid(&b), "bad pattern accepted");
 }
 
+/* ---------------------------------------------------------------- what players reported (#222) */
+static void calm(jj_run *r) { r->next = 1e6f, r->vehicle_at = 0xffffffffu, r->token_last = 0xffffffffu; }
+
+static void reported(void) {
+  /* a zapper hits what its electricity touches, not the air beside it: a diagonal one whose beam passes 8 points
+     from Barry's top corner misses him (the old square test hit him there), one 3 points from it hits */
+  for (int d = 8; d >= 3; d -= 5) {
+    jj_run r;
+    jj_start(&r, 5, 0, 0);
+    calm(&r);
+    float k = (float)d / 1.41421356f;   /* Barry's box: 120..136 by 260..290; its corner (136, 260) */
+    jj_zapper *z = &r.zap[0];
+    z->on = 1, z->ang = 8192, z->len = 120;   /* 45 degrees, down to the right */
+    z->x = 136 + k + jj_speed(&r) / 60.0f, z->y = 260 - k;
+    jj_step(&r, false);
+    CHECK((r.state == JJ_ALIVE) == (d == 8), "diagonal zapper %d points from Barry: %s", d, r.state == JJ_ALIVE ? "missed" : "hit");
+  }
+  /* the jetpack's bullets knock out the scientists they meet, however high Barry flies; a scientist that's not under
+     them walks on */
+  for (int firing = 0; firing < 2; firing++) {
+    jj_run r;
+    jj_start(&r, 9, 0, 0);
+    calm(&r);
+    r.y = 80, r.ground = 0;
+    jj_scientist *c = &r.sci[0];
+    c->on = 1, c->x = 300, c->y = JJ_FLOOR, c->vx = 0.5f, c->dir = -1, c->state = JJ_SCI_WALK, c->alert = 1, c->near = 100;
+    int bullets = 0;
+    for (int i = 0; i < 150 && c->on; i++) {
+      jj_step(&r, firing != 0);
+      for (int b = 0; b < JJ_BULLETS; b++) bullets += r.bul[b].vy != 0;
+      if (r.y > 100) r.y = 80;
+    }
+    bool down = c->state == JJ_SCI_AIR || c->state == JJ_SCI_SLIDE;
+    CHECK(down == (firing != 0), "a scientist under Barry at the ceiling, %s: state %d", firing ? "firing" : "not firing", c->state);
+    CHECK((bullets > 0) == (firing != 0), "bullets %d", bullets);
+  }
+  /* bullets come from the jetpack's barrels, 10 points behind and 28 under Barry's middle (weapons.xml), at 15 points a
+     frame within 17.5 degrees of straight down (185) */
+  {
+    jj_run r;
+    jj_start(&r, 21, 0, 0);
+    calm(&r);
+    r.y = 150, r.ground = 0;
+    jj_step(&r, true);
+    const jj_bullet *b = &r.bul[0];
+    float dx = jj_speed(&r) / 60.0f, ox = b->x - (b->vx - dx), oy = b->y - b->vy;
+    CHECK(b->vy != 0 && fabsf(ox - (JJ_BX - 6)) < 0.01f && fabsf(oy - (r.y + 12)) < 0.01f, "bullet from %f %f", ox, oy);
+    CHECK(fabsf(sqrtf(b->vx * b->vx + b->vy * b->vy) - 15) < 0.1f && b->vx / b->vy > -0.33f && b->vx / b->vy < 0.23f, "bullet speed and angle");
+  }
+  /* knocked out, his body spins while it's in the air, then he slides to a stop on his front */
+  {
+    jj_run r;
+    jj_start(&r, 33, 0, 0);
+    calm(&r);
+    r.y = 200, r.ground = 0;
+    jj_missile *m = &r.mis[0];
+    m->on = 1, m->state = JJ_FLY, m->x = JJ_BX + 20, m->y = 185;
+    jj_step(&r, false);
+    CHECK(r.state == JJ_TUMBLE && r.spin >= 8 * 65536 / 360 && r.spin <= 18 * 65536 / 360 + 1, "spin %d", r.spin);
+    uint16_t rot = r.rot;
+    int turned = 0, frames = 0;
+    while (!jj_over(&r) && frames < 3000) {
+      jj_step(&r, false), frames++;
+      if (r.y < JJ_FLOOR && r.rot != rot) turned++;
+      rot = r.rot;
+    }
+    CHECK(jj_over(&r) && turned > 10, "never came to rest or never turned (%d)", turned);
+  }
+  /* the rooms change: every run starts in the lab, then the tube, the cave and the greenhouse come in an order of its
+     own, never the same room twice running; the same run always has the same rooms */
+  {
+    int seen[4] = {0}, differ = 0, twice = 0;
+    char prev[64] = {0};
+    for (uint32_t k = 1; k <= 40; k++) {
+      jj_run r;
+      jj_start(&r, k * 2654435761u, 0, 0);
+      CHECK(jj_room_at(r.level, 0) == 0 && jj_room_at(r.level, 600) == 0, "run %u doesn't start in the lab", k);
+      char order[64];
+      int n = 0, last = 0, lastroom = -1;
+      for (int x = 0; x < 40000 && n < 63; x += 60) {
+        int room = jj_room_at(r.level, x);
+        if (room != last) {
+          if (room) {
+            order[n++] = (char)('0' + room);
+            if (room == lastroom) twice++;
+            lastroom = room;
+          }
+          last = room;
+        }
+        seen[room]++;
+      }
+      order[n] = 0;
+      differ += strcmp(order, prev) != 0;
+      memcpy(prev, order, sizeof prev);
+      CHECK(jj_room_at(r.level, 12345) == jj_room_at(r.level, 12345) && jj_room_at(r.level ^ 1, 0) == 0, "rooms");
+      int again = jj_room_at(r.level, 20000);
+      jj_room_at(r.level, 0);
+      CHECK(jj_room_at(r.level, 20000) == again, "the same run, other rooms");
+    }
+    CHECK(seen[1] && seen[2] && seen[3] && seen[0], "rooms seen: lab %d tube %d cave %d greenhouse %d", seen[0], seen[1], seen[2], seen[3]);
+    CHECK(differ >= 30 && !twice, "room orders: %d of 40 differ, %d repeats", differ, twice);
+    printf("reported: zappers by their glow, bullets for real, the spinning fall, rooms (%d different orders in 40 runs)\n", differ);
+  }
+}
+
 /* ---------------------------------------------------------------- the bot's runs */
 static void bots(void) {
   int seen_ride[JJ_RIDES] = {0}, lasers = 0, missiles = 0, rotating = 0, tokens = 0, swarm = 0;
@@ -269,7 +374,45 @@ static void saves(void) {
   /* too short, too long, empty */
   plat_save(JJ_SAVE_NAME, keep, n - 1), save_load(&q, &back);
   CHECK(q.best == 0, "short save");
-  printf("saves: %u bytes, every damaged byte refused\n", n);
+  /* a version 1 save (1.16, 1.17): its records come back, its run's coins are banked and its distance counts for the
+     best, and it's written again in this version; from the file or from the copy in the script */
+  for (int from_copy = 0; from_copy < 2; from_copy++) {
+    uint8_t v1[JJ_V1_SIZE] = {0};
+    uint32_t magic = JJ_MAGIC, dist = 1500u * 16 * 18, coins = 77, sum;
+    uint16_t ver = 1, size = JJ_V1_SIZE;
+    jj_profile old = {1000, 500, 3, 1, 0, 0, 1};
+    memcpy(v1, &magic, 4), memcpy(v1 + 4, &ver, 2), memcpy(v1 + 6, &size, 2), memcpy(v1 + 8, &old, sizeof old);
+    memcpy(v1 + JJ_V1_RUN + 40, &dist, 4), memcpy(v1 + JJ_V1_RUN + 44, &coins, 4);
+    sum = jj_sum(v1, JJ_V1_SIZE - 4), memcpy(v1 + JJ_V1_SIZE - 4, &sum, 4);
+    forget(JJ_SAVE_NAME), forget(JJ_COPY_NAME);
+    if (from_copy) {
+      static char txt[2048];
+      static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+      int o = snprintf(txt, sizeof txt, "#>%s:", JJ_SAVE_NAME);
+      for (int i = 0; i < JJ_V1_SIZE; i += 3) {
+        int left = JJ_V1_SIZE - i;
+        uint32_t v = (uint32_t)v1[i] << 16 | (left > 1 ? (uint32_t)v1[i + 1] << 8 : 0) | (left > 2 ? v1[i + 2] : 0);
+        txt[o++] = b64[v >> 18 & 63], txt[o++] = b64[v >> 12 & 63];
+        txt[o++] = left > 1 ? b64[v >> 6 & 63] : '=', txt[o++] = left > 2 ? b64[v & 63] : '=';
+      }
+      txt[o++] = '\n';
+      plat_save(JJ_COPY_NAME, txt, (uint32_t)o);
+    } else {
+      plat_save(JJ_SAVE_NAME, v1, JJ_V1_SIZE);
+    }
+    memset(&q, 0xAB, sizeof q);
+    save_load(&q, &back);
+    CHECK(q.best == 1500 && q.coins == 577 && q.runs == 3 && q.guide_seen == 1 && !q.has_run, "version 1 save (%s): best %u coins %u",
+          from_copy ? "copy" : "file", q.best, q.coins);
+    const uint8_t *d2 = plat_load(JJ_SAVE_NAME, &n);
+    jj_file f2;
+    CHECK(d2 && n == sizeof f2, "version 1 save not written again");
+    if (d2 && n == sizeof f2) {
+      memcpy(&f2, d2, sizeof f2);
+      CHECK(jj_file_ok(&f2) && f2.p.coins == 577, "rewritten save");
+    }
+  }
+  printf("saves: %u bytes, every damaged byte refused, version 1 saves read\n", (unsigned)sizeof(jj_file));
 }
 
 /* ---------------------------------------------------------------- the whole app with random keys */
@@ -466,6 +609,7 @@ int main(int argc, char **argv) {
   if (argc >= 2 && !strcmp(argv[1], "test")) {
     clock_t c0 = clock();
     units();
+    reported();
     bots();
     clock_t c1 = clock();
     saves();

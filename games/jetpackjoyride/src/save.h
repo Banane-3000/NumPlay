@@ -13,7 +13,11 @@ typedef struct {
 #define JJ_SAVE_NAME "jetpackjoyride.sav"
 #define JJ_COPY_NAME "jetpackjoyride_saves.py"
 #define JJ_MAGIC 0x31524A4Au   /* "JJR1" */
-#define JJ_VERSION 1
+#define JJ_VERSION 2
+/* version 1 (1.16 to 1.17): the same header and records, a smaller run; its run isn't read back, its coins are
+   banked and its distance counts for the best */
+#define JJ_V1_SIZE 728
+#define JJ_V1_RUN 24        /* where its run starts; its dist and coins sit where they still do */
 
 typedef struct {
   uint32_t magic;
@@ -25,6 +29,7 @@ typedef struct {
 
 uint32_t jj_sum(const void *data, uint32_t n);
 bool jj_file_ok(const jj_file *f);
+bool jj_file_v1(const uint8_t *d, uint32_t n, jj_profile *p);   /* a version 1 save: its records, its run banked */
 void save_load(jj_profile *p, jj_run *r);   /* the save, its copy, or a fresh start */
 bool save_write(const jj_profile *p, const jj_run *r);
 #endif
