@@ -332,11 +332,15 @@ static void choice(int y, const char *s, bool on) {
   center(&np_font_body, y, s, on ? WHITE : MUTED);
 }
 
+/* the logo as the game lays it out (levels/title/objects/title.png): JOYRIDE under JETPACK and a little to the
+   right, Barry flying off the end, his flame behind the letters; the whole of it in the middle of the screen */
+#define LOGO_W (187 + 103)
 static void title(void) {
   lab((int)(V->clock / 2));
-  blit(&pic_wjet, 0, 14, 22, 0);
-  blit(&pic_wjoy, 0, 18, 80, 0);
-  blit(&pic_hero, 0, 228, 24, 0);
+  int x0 = (SCREEN_W - LOGO_W) / 2, y0 = 53;
+  blit(&pic_hero, 0, x0 + 187, y0 - 33, 0);
+  blit(&pic_wjet, 0, x0, y0, 0);
+  blit(&pic_wjoy, 0, x0 + 24, y0 + 61, 0);
   outlined(&np_font_title, SCREEN_W / 2, 194, "Press OK to play!", WHITE, true);
   char s[40], *p = s;
   memcpy(p, "Best ", 5), p = num(p + 5, V->best);
