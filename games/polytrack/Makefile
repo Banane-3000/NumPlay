@@ -5,7 +5,8 @@
 #   make test       every official track driven to the finish, the checkpoints, respawns and restarts, the physics,
 #                   saves (kept, damaged, storage full), random keys and the same runs to the same hashes on every
 #                   computer (with the sanitizers)
-#   make data       src/data.bin, src/data.c and src/data.h from PolyTrack's web build
+#   make armcheck   the same runs on the calculator's processor (in tools/emu.py), to the same hashes
+#   make data       src/data.bin, src/data.c, src/data.h, src/logo.h and src/icon.png from PolyTrack's web build
 #                   (POLYTRACK_WEB=its folder; Python with numpy, DracoPy and Pillow)
 Q ?= @
 # the ARM toolchain on the PATH, or in TOOLCHAIN=<its bin folder>
@@ -38,7 +39,7 @@ LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
 RAM = 133652
 APP_SPACE = 2031616
 
-.PHONY: build check clean host test data
+.PHONY: build check clean host test data armcheck
 build: $(BUILD_DIR)/polytrack.nwa
 
 check: $(BUILD_DIR)/polytrack.nwa
@@ -63,6 +64,14 @@ $(BUILD_DIR)/polytrack.nwa: $(HOT) src/plat_eadk.c $(COLD_OBJ) $(HEADERS) $(BUIL
 	  -lm -o $@
 	$(Q) $(STRIP) $@
 
+# (the physics on its own, flags as the game's)
+$(BUILD_DIR)/armcheck.nwa: tests/armcheck.c tests/routes.h src/car.c src/world.c src/ptmath.c src/data.c $(HEADERS) \
+                           $(BUILD_DIR)/icon.o $(BUILD_DIR)/data.o
+	$(Q) $(CC) $(CFLAGS) -O2 $(LDFLAGS) tests/armcheck.c src/car.c src/world.c src/ptmath.c src/data.c \
+	  $(BUILD_DIR)/data.o $(BUILD_DIR)/icon.o -lm -o $@
+armcheck: $(BUILD_DIR)/armcheck.nwa
+	$(PYTHON) tools/armcheck.py $<
+
 $(BUILD_DIR)/icon.o: src/icon.png | $(BUILD_DIR)
 	@echo "ICON    $<"
 	$(Q) $(NWLINK) png-icon-o $< $@
@@ -72,6 +81,7 @@ $(BUILD_DIR):
 
 data:
 	$(PYTHON) tools/pack.py $(POLYTRACK_WEB)
+	$(PYTHON) tools/logo.py $(POLYTRACK_WEB)
 
 # on a computer: tests/play.c drives the tracks and the whole app, and saves pictures
 HOST_SRC = tests/play.c src/car.c src/world.c src/ptmath.c src/render.c src/draw.c src/save.c src/ghost.c src/data.c \

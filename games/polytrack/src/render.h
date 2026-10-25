@@ -31,7 +31,8 @@ car_look car_look_mix(const car_look *a, const car_look *b, float t);
 
 extern const uint32_t rd_paints[8];   /* the car colours */
 extern int rd_detail;                  /* 0..3: how far it draws; lowered when a frame is slow */
-extern int rd_tris, rd_dropped;
+#define RD_MAX_TRIS 1700              /* triangles in a frame, at most */
+extern int rd_tris, rd_dropped, rd_mtris, rd_chunks;   /* the last frame: triangles kept, some left out, of the mountains; chunks */
 
 void rd_begin(const camera_t *cam, int env, int sun, bool sky_only);
 void rd_track(void);

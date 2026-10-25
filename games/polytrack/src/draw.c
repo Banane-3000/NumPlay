@@ -4,6 +4,7 @@
 #include "../../../launcher/src/gfx.h"
 #include "data.h"
 #include "draw.h"
+#include "logo.h"
 #include "plat.h"
 #include "world.h"
 
@@ -106,10 +107,14 @@ static void keys(const char *s) {
   key_line(236, s);
 }
 
-static void page(const char *title) {
-  gfx_vgrad(0, 0, 320, 240, 0x28346A, 0x151B3C);
+static void header(const char *title) {
   slant(-8, 10, 200, 28, 8, SURFACE3, 256);
   text(&np_font_title, 12, 31, title, WHITE);
+}
+
+static void page(const char *title) {
+  gfx_vgrad(0, 0, 320, 240, 0x28346A, 0x151B3C);
+  header(title);
 }
 
 /* a button: PolyTrack's dark slanted box, the chosen one lighter with a lavender edge */
@@ -127,28 +132,17 @@ static void not_saved(int y) {
   center(&np_font_small, 162, y + 12, "Storage full: progress not saved", WHITE);
 }
 
-/* PolyTrack's name: its logo's letters (pale lavender, a dark blue edge), leaning like the logo */
-static void logo(int x0, int y, int scale) {
-  const np_font_t *f = &np_font_title;
-  const char *s = "PolyTrack";
-  for (int pass = 0; pass < 2; pass++) {
-    int x = x0;
-    for (const char *q = s; *q; q++) {
-      const np_glyph_t *g = &f->glyphs[(uint8_t)*q - f->first];
-      const uint8_t *m = f->data + g->offset;
-      for (int gy = 0; gy < g->h; gy++) {
-        int yy = y + (g->y + gy) * scale;
-        if (yy + scale + 2 <= gfx_y0 || yy - 2 >= gfx_y1) continue;
-        int lean = (g->h - gy) * scale / 5;
-        for (int gx = 0; gx < g->w; gx++) {
-          int k = gy * g->w + gx, cov = (m[k / 2] >> ((k & 1) * 4)) & 15;
-          if (cov < 6) continue;
-          int px = x + (g->x + gx) * scale + lean;
-          if (pass == 0) gfx_fill(px - 2, yy - 2, scale + 4, scale + 4, BUTTON);
-          else gfx_fill(px, yy, scale, scale, LAVENDER);
-        }
-      }
-      x += g->advance * scale;
+/* PolyTrack's logo (logo.h): lavender letters edged in dark blue, blended over the picture */
+static void logo(int x0, int y0) {
+  for (int y = 0; y < PT_LOGO_H; y++) {
+    int yy = y0 + y;
+    if (yy < gfx_y0 || yy >= gfx_y1) continue;
+    for (int x = 0; x < PT_LOGO_W; x++) {
+      int k = y * PT_LOGO_W + x, v = (pt_logo[k >> 1] >> ((k & 1) * 4)) & 15;
+      if (!(v & 7)) continue;
+      color_t c = v & 8 ? BUTTON : LAVENDER;
+      if ((v & 7) == 7) gfx_fill(x0 + x, yy, 1, 1, c);
+      else gfx_fill_alpha(x0 + x, yy, 1, 1, c, (v & 7) * 256 / 7);
     }
   }
 }
@@ -261,7 +255,7 @@ int track_of_tab(int tab, int row) {
 
 static void title(void) {
   for (int y = 0; y < 80; y += 4) gfx_fill_alpha(0, y, 320, 4, HEX(0x0A0F2A), 150 - y * 150 / 80);
-  logo(18, 40, 2);
+  logo(14, 18);
   static const char *const NAMES[MENU_ROWS] = {"Play", "Car", "How to play"};
   for (int i = 0; i < MENU_ROWS; i++) button(18, 96 + i * 34, 136, NAMES[i], U->sel == i);
   text(&np_font_small, 18, 214, "Kodub's PolyTrack, made for NumPlay", WHITE);
@@ -308,14 +302,14 @@ static void tracks(void) {
 }
 
 static void car_screen(void) {
-  page("CAR");
-  slant(30, 182, 260, 26, 8, SURFACE3, 230);
+  header("CAR");
+  slant(30, 174, 260, 46, 8, SURFACE3, 235);
   char s[24];
   char *p = cat(s, "< ");
   p = cat(p, PAINT_NAMES[F->p.paint % PT_PAINTS]);
   cat(p, " >");
-  center(&np_font_body, 162, 200, s, WHITE);
-  center(&np_font_small, 162, 222, F->p.view ? "View: from the cockpit" : "View: behind the car", MUTED);
+  center(&np_font_body, 162, 194, s, WHITE);
+  center(&np_font_small, 162, 212, F->p.view ? "View: from the cockpit" : "View: behind the car", MUTED);
   keys("Left Right=colour|Up Down=view|OK=done");
 }
 
@@ -425,13 +419,14 @@ void pt_render(const pt_file *f, const car_t *car, const camera_t *cam, const ca
   F = f, CAR = car, U = ui;
   int s = ui->screen;
   if (s == V_RACE || s == V_PAUSE || s == V_LEAVE || s == V_RESULT) {
+    /* (the cars first: they always have room) */
     rd_begin(cam, W.t->env, W.t->sun, false);
-    rd_track();
-    if (ghost) rd_car(ghost);
     if (!f->p.view) {
-      rd_shadow(look, car);
       rd_car(look);
+      rd_shadow(look, car);
     }
+    if (ghost) rd_car(ghost);
+    rd_track();
   } else if (s == V_TITLE || s == V_QUIT || s == V_CAR) {
     /* the track's start from a camera going round the car */
     camera_t c;
@@ -443,9 +438,9 @@ void pt_render(const pt_file *f, const car_t *car, const camera_t *cam, const ca
     v3 x = vnorm(vcross(V3(0.0f, 1.0f, 0.0f), z));
     c.pos = eye, c.right = x, c.up = vcross(z, x), c.fwd = vneg(z), c.fov = 60.0f;
     rd_begin(&c, W.t->env, W.t->sun, false);
-    rd_track();
-    rd_shadow(look, car);
     rd_car(look);
+    rd_shadow(look, car);
+    rd_track();
   }
   color_t *old = gfx_buf;
   gfx_buf = strip;

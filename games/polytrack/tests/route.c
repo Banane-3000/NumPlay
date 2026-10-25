@@ -104,7 +104,10 @@ static void build_field(void) {
         v[j] = world_apply(in, V3((float)q[0] / PT_FIX, (float)q[1] / PT_FIX, (float)q[2] / PT_FIX));
       }
       v3 nn = vnorm(vcross(vsub(v[1], v[0]), vsub(v[2], v[0])));
-      bool dp = drive_part(pt_part_id[in->part]);
+      /* (a part's floor is driven on however the part is turned: a road up a wall) */
+      const int8_t *o = world_orient(in);
+      float local_up = (float)o[1] * nn.x + (float)o[4] * nn.y + (float)o[7] * nn.z;
+      bool dp = drive_part(pt_part_id[in->part]) || (in->orient >> 2 && local_up > 0.5f);
       /* flat floors (1), and what can be climbed: slopes, walls, loops (2) */
       if (nn.y > 0.5f || dp) {
         mark_tri(surf, v[0], v[1], v[2], nn, nn.y >= 0.96f && !dp ? 1 : 2);
@@ -209,7 +212,8 @@ static void build_field(void) {
 /* Dijkstra with a bucket queue: near a drivable surface a cube costs 2; in the air 6 across, 3 down and 24 up
    (a jump goes across or down, not up) */
 #define NB 32
-#define VCOST 1    /* up or down a slope: about free, the way across it counts */
+static int vcost = 1;      /* up or down a slope or a wall (VC=) */
+static int air_up = 0;     /* up through the air (AU=; 0: never) */
 static int *bucket[NB], bcount[NB], bcap[NB];
 static void push(int b, int i) {
   if (bcount[b] == bcap[b]) bcap[b] = bcap[b] ? bcap[b] * 2 : 4096, bucket[b] = realloc(bucket[b], sizeof(int) * (size_t)bcap[b]);
@@ -251,9 +255,12 @@ static void bfs(uint16_t *d, v3 lo, v3 hi) {
         int wi = F.walk[i];
         if (D[k][1] == -1) {
           /* i above j: up only along a slope or a wall */
-          if (wi != 3 && w != 3) continue;
-          cost = wi == 3 && w == 3 ? VCOST : 2;
-        } else if (D[k][1] == 1 && wi == 3 && w == 3) cost = VCOST;
+          if (wi != 3 && w != 3) {
+            /* (up through the air: off a ramp, say, dearly) */
+            if (!air_up) continue;
+            cost = air_up;
+          } else cost = wi == 3 && w == 3 ? vcost : 2;
+        } else if (D[k][1] == 1 && wi == 3 && w == 3) cost = vcost;
         else if (w >= 2 && wi >= 2) cost = 2;
         else if (D[k][1] == 1) cost = 3;        /* down */
         else cost = 6;
@@ -382,7 +389,7 @@ static unsigned pilot(const car_t *c, int L, float vmax) {
 /* ------------------------------------------------------------------ the search */
 #define SLOT 10                     /* ms a key is held, at least */
 #define STEP 10                     /* slots a try lasts */
-#define MAXN 4000000
+#define MAXN 8000000
 typedef struct {
   int32_t parent;
   uint8_t keys[STEP];
@@ -414,7 +421,23 @@ static void act(car_t *c, const action_t *a, uint8_t *keys) {
 }
 
 /* the archive */
-#define MAXC 8000
+#define MAXC 30000
+#define TEMP 25.0
+static double wcum[MAXC];
+#define HASH 65536
+static int32_t slot[HASH];          /* cell + 1 by key */
+static int wn;
+static double pt_expd(double x) {
+  /* e^x for x <= 0, near enough */
+  double r = 1.0 + x / 1024.0;
+  for (int i = 0; i < 10; i++) r *= r;
+  return r;
+}
+static double sqrt_d(double x) {
+  double r = x > 1.0 ? x : 1.0;
+  for (int i = 0; i < 30; i++) r = 0.5 * (r + x / r);
+  return r;
+}
 typedef struct {
   car_t car;
   int32_t node;
@@ -525,48 +548,45 @@ static bool route(int t, FILE *out) {
   nodes[0].parent = -1;
   int ncell = 0;
   static cell_t cells[MAXC];
+  memset(slot, 0, sizeof slot);
   cells[ncell++] = (cell_t){start, 0, 0, cell_key(&start), 0};
+  {
+    uint32_t h = (cells[0].key * 2654435761u) & (HASH - 1);
+    slot[h] = 1;
+  }
   int found = -1;
   uint32_t seed = 12345u + (uint32_t)t * 7919u;
   int tries = getenv("TRIES") ? atoi(getenv("TRIES")) : 200000;
   int best = 0;
   for (int it = 0; it < tries && found < 0 && nnodes + 64 < MAXN; it++) {
-    /* the car to go on from: one of the 24 furthest, weighted by how little it was tried; now and then any */
-    int pick;
-    if (lcg(&seed) % 10 == 0) pick = (int)(lcg(&seed) % (uint32_t)ncell);
-    else {
-      static int top[24];
-      int nt = 0;
+    /* the car to go on from: weighted by how far on it is (a factor e for each TEMP metres) over the root of how
+       often it was tried, so that when the front gets nowhere the cars behind it get their turn */
+    if (it % 64 == 0) {
+      double top = -1e30;
+      for (int i = 0; i < ncell; i++)
+        if (progress(&cells[i]) > top) top = progress(&cells[i]);
+      double acc = 0.0;
       for (int i = 0; i < ncell; i++) {
-        int j;
-        if (nt < 24) j = nt++;
-        else if (progress(&cells[i]) > progress(&cells[top[23]])) j = 23;
-        else continue;
-        top[j] = i;
-        while (j > 0 && progress(&cells[top[j]]) > progress(&cells[top[j - 1]])) {
-          int tmp = top[j];
-          top[j] = top[j - 1], top[j - 1] = tmp;
-          j--;
-        }
+        double x = (progress(&cells[i]) - top) / TEMP;
+        acc += x < -30.0 ? 0.0 : pt_expd(x) / sqrt_d(1.0 + cells[i].tries);
+        wcum[i] = acc;
       }
-      double wsum = 0.0;
-      for (int k = 0; k < nt; k++) wsum += 1.0 / (1.0 + cells[top[k]].tries);
-      double r = (double)(lcg(&seed) % 1000000u) / 1000000.0 * wsum;
-      pick = top[nt - 1];
-      for (int k = 0; k < nt; k++) {
-        r -= 1.0 / (1.0 + cells[top[k]].tries);
-        if (r <= 0.0) {
-          pick = top[k];
-          break;
-        }
-      }
+      wn = ncell;
     }
+    double r = (double)(lcg(&seed) % 1000000u) / 1000000.0 * wcum[wn - 1];
+    int lo = 0, hi = wn - 1;
+    while (lo < hi) {
+      int mid = (lo + hi) / 2;
+      if (wcum[mid] < r) lo = mid + 1;
+      else hi = mid;
+    }
+    int pick = lo;
     cells[pick].tries++;
     static car_t c;
     c = cells[pick].car;
     car_cache_rebuild(&c);
     int node = cells[pick].node;
-    int steps = 5 + (int)(lcg(&seed) % 26u), a = (int)(lcg(&seed) % (uint32_t)NACT);
+    int steps = 5 + (int)(lcg(&seed) % 26u), a = (int)(lcg(&seed) % (uint32_t)NACT), lost = 0;
     for (int s = 0; s < steps && !c.finish; s++) {
       if (lcg(&seed) % 10 >= 6) {
         /* (the driver more often than held keys) */
@@ -584,15 +604,21 @@ static bool route(int t, FILE *out) {
         break;
       }
       float d = dist_of(&c);
-      if (d >= 1e5f || c.pos.y < -3.0f) break;     /* lost */
+      if (c.pos.y < -3.0f) break;
+      if (d >= 1e5f) {
+        /* (off the map, high in the air say: on, but not kept) */
+        if (++lost > 30) break;
+        continue;
+      }
+      lost = 0;
       uint32_t key = cell_key(&c);
-      int k = -1;
-      for (int i = 0; i < ncell; i++)
-        if (cells[i].key == key) {
-          k = i;
-          break;
-        }
-      if (k < 0 && ncell < MAXC) k = ncell++, cells[k].tries = 0, cells[k].key = key, cells[k].frames = 0xFFFFFFFFu;
+      uint32_t h = (key * 2654435761u) & (HASH - 1);
+      while (slot[h] && cells[slot[h] - 1].key != key) h = (h + 1) & (HASH - 1);
+      int k = slot[h] ? slot[h] - 1 : -1;
+      if (k < 0 && ncell < MAXC) {
+        k = ncell++, cells[k].tries = 0, cells[k].key = key, cells[k].frames = 0xFFFFFFFFu;
+        slot[h] = k + 1;
+      }
       if (k >= 0 && c.frames < cells[k].frames) {
         cells[k].car = c, cells[k].node = node, cells[k].frames = c.frames;
         if (progress(&cells[k]) > progress(&cells[best])) best = k;
@@ -647,6 +673,8 @@ static bool route(int t, FILE *out) {
 }
 
 int main(int argc, char **argv) {
+  if (getenv("VC")) vcost = atoi(getenv("VC"));
+  if (getenv("AU")) air_up = atoi(getenv("AU"));
   int list[PT_NTRACKS], n = 0;
   for (int i = 1; i < argc; i++) list[n++] = atoi(argv[i]);
   if (!n)

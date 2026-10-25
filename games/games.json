@@ -1175,23 +1175,24 @@
     "xl": true
   },
   {
-    "id": "polygt3d",
+    "id": "polytrack",
     "rank": 22,
-    "title": "PolyGT 3D",
-    "tagline": "3D racing on three circuits",
-    "credit": "A game by Boris-TH",
-    "top": "0x231955",
-    "bottom": "0xEB6E50",
-    "accent": "0x00C3EB",
+    "title": "PolyTrack",
+    "tagline": "Time trials on 17 low-poly tracks",
+    "credit": "Based on PolyTrack by Kodub",
+    "top": "0x28346A",
+    "bottom": "0x112052",
+    "accent": "0xB3C1FF",
     "colors": 16,
     "records": [
-      "polygt3d.sav",
-      "polygt3d_saves.py"
+      "polytrack.sav",
+      "polytrack_saves.py",
+      "polytrack_ghosts.sav"
     ],
     "shots": [
       "docs/shot.png"
     ],
-    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/polygt3d",
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/polytrack",
     "default": false,
     "xl": true
   }

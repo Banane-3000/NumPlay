@@ -644,8 +644,8 @@ int main(int argc, char **argv) {
     sv.p.track = (uint8_t)t;
     rd_detail = argc > 5 ? atoi(argv[5]) : 3;
     render_race(&car, &chase, 0.0f);
-    printf("track %s frame %u pos %.2f %.2f %.2f speed %.1f cp %d tris %d%s\n", pt_tracks[t].name, car.frames,
-           (double)car.pos.x, (double)car.pos.y, (double)car.pos.z, (double)car.speed, car.next_cp, rd_tris,
+    printf("track %s frame %u pos %.2f %.2f %.2f speed %.1f cp %d tris %d (mountains %d, chunks %d)%s\n", pt_tracks[t].name, car.frames,
+           (double)car.pos.x, (double)car.pos.y, (double)car.pos.z, (double)car.speed, car.next_cp, rd_tris, rd_mtris, rd_chunks,
            rd_dropped ? " (dropped)" : "");
     shot(dir, "view");
     return 0;
@@ -670,6 +670,65 @@ int main(int argc, char **argv) {
       }
       car_step(&car, keys);
     }
+    return 0;
+  }
+  if (!strcmp(argv[1], "shots")) {
+    /* every screen: play shots DIR */
+    memset(&sv, 0, sizeof sv);
+    pt_fresh(&sv.p);
+    sv.p.guide = 1;
+    for (int t = 0; t < PT_NTRACKS; t++)
+      if (t % 3 != 2) sv.p.best[t] = 31000u + (uint32_t)t * 2345u;
+    rd_detail = 3;
+    world_load(0);
+    car_reset(&car);
+    look = car_look_of(&car);
+    memset(&ui, 0, sizeof ui);
+    static const struct { uint8_t screen, sel, page, tab; const char *name; } S[] = {
+      {V_TITLE, 0, 0, 0, "title"}, {V_QUIT, 1, 0, 0, "quit"}, {V_TRACKS, 1, 0, 0, "tracks"},
+      {V_TRACKS, 2, 0, 2, "tracks_desert"}, {V_CAR, 0, 0, 0, "car"}, {V_GUIDE, 0, 0, 0, "guide"},
+      {V_HELP, 0, 1, 0, "help2"}, {V_HELP, 0, 2, 0, "help3"},
+    };
+    for (unsigned i = 0; i < sizeof S / sizeof S[0]; i++) {
+      ui.screen = S[i].screen, ui.sel = S[i].sel, ui.page = S[i].page, ui.tab = S[i].tab;
+      ui.clock = 7000;
+      sv.p.paint = S[i].screen == V_CAR ? 1 : 0;
+      look.paint = sv.p.paint;
+      chase_update(&chase, &cam, 0.0f, look.pos, look.rot, 0.0f);
+      pt_render(&sv, &car, &cam, &look, NULL, &ui);
+      shot(dir, S[i].name);
+    }
+    /* the race: Summer 1, its run some way on, then the pause, leaving, the finish */
+    world_load(0);
+    route_load(0);
+    car_reset(&car);
+    chase_reset(&chase, car.pos, car.rot);
+    memset(&ui, 0, sizeof ui);
+    ui.screen = V_RACE;
+    render_race(&car, &chase, 0.0f);
+    ui.started = 0;
+    pt_render(&sv, &car, &cam, &look, NULL, &ui);
+    shot(dir, "start");
+    uint32_t at = argc > 3 ? (uint32_t)atoi(argv[3]) : 12000;
+    for (uint32_t f = 0; f < at; f++) {
+      car_step(&car, route_keys(f));
+      if (f % 33 == 0) chase_update(&chase, &cam, 0.033f, car.pos, car.rot, car.speed);
+    }
+    ui.clock = 100000, ui.split_at = ui.clock - 1000, ui.split_cp = 0, ui.split_diff = -1234;
+    render_race(&car, &chase, 0.0f);
+    shot(dir, "race");
+    ui.screen = V_PAUSE, ui.sel = 0;
+    pt_render(&sv, &car, &cam, &look, NULL, &ui);
+    shot(dir, "pause");
+    ui.screen = V_LEAVE, ui.sel = 0;
+    pt_render(&sv, &car, &cam, &look, NULL, &ui);
+    shot(dir, "leave");
+    while (!car.finish && car.frames < 600000) car_step(&car, route_keys(car.frames));
+    for (int i = 0; i < 60; i++) chase_update(&chase, &cam, 0.033f, car.pos, car.rot, car.speed);
+    ui.screen = V_RESULT, ui.sel = 0, ui.new_record = 1, ui.finish_diff = -2345, ui.finish_at = 1, ui.split_at = 0;
+    pt_render(&sv, &car, &cam, &look, NULL, &ui);
+    shot(dir, "result");
+    printf("shots in %s\n", dir);
     return 0;
   }
   if (!strcmp(argv[1], "cam")) {

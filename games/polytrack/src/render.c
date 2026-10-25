@@ -11,7 +11,7 @@
 #define CX 160.0f
 #define CY 120.0f
 #define NEAR 0.5f
-#define MAX_TRIS 1700
+#define MAX_TRIS RD_MAX_TRIS
 #define MAX_VIS 400
 #define GUARD 1500.0f
 #define STRIP_ROWS 24
@@ -27,7 +27,7 @@ typedef struct {
 
 static tri tris[MAX_TRIS];
 static int ntris;
-int rd_tris, rd_dropped;
+int rd_tris, rd_dropped, rd_mtris, rd_chunks;
 int rd_detail = 2;
 static const float DRAW[4] = {100.0f, 140.0f, 180.0f, 230.0f};
 static const float NEAR_DETAIL[4] = {22.0f, 30.0f, 40.0f, 52.0f};
@@ -320,9 +320,17 @@ static void collect(int i, void *ctx) {
                     (float)o[6] * lc.x + (float)o[7] * lc.y + (float)o[8] * lc.z), o0);
     v3 cc = to_cam(wc);
     if (!sphere_visible(cc, r)) continue;
-    if (nvis >= MAX_VIS) return;
     float d = vlen(vsub(wc, C.pos)) - r;
-    vis_t *v = &vis[nvis++];
+    vis_t *v;
+    if (nvis < MAX_VIS) v = &vis[nvis++];
+    else {
+      /* (full: the nearest are kept) */
+      int far = 0;
+      for (int j = 1; j < MAX_VIS; j++)
+        if (vis[j].dist > vis[far].dist) far = j;
+      if (vis[far].dist <= d) continue;
+      v = &vis[far];
+    }
     v->inst = (uint16_t)i, v->chunk = (uint8_t)k, v->dist = d;
     v->lod = d < NEAR_DETAIL[rd_detail & 3] ? 0 : 1;
   }
@@ -406,6 +414,7 @@ static void mountains(void) {
 
 void rd_track(void) {
   mountains();
+  rd_mtris = ntris;
   nvis = 0;
   v3 r = V3(far_d, far_d, far_d);
   world_query(vsub(C.pos, r), vadd(C.pos, r), collect, NULL);
@@ -416,7 +425,12 @@ void rd_track(void) {
     while (j >= 0 && vis[j].dist > t.dist) vis[j + 1] = vis[j], j--;
     vis[j + 1] = t;
   }
-  for (int i = 0; i < nvis; i++) draw_chunk(&vis[i]);
+  /* (when the room runs short, the further ones simplified) */
+  for (int i = 0; i < nvis; i++) {
+    if (ntris > MAX_TRIS * 3 / 5) vis[i].lod = 1;
+    draw_chunk(&vis[i]);
+  }
+  rd_chunks = nvis;
 }
 
 /* ------------------------------------------------------------------ the car */
