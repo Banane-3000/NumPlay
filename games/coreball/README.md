@@ -20,7 +20,7 @@ Shoot every ball into the spinning core without touching the ones already on it.
 
 ## Credits
 
-Core Ball is **[Random](https://github.com/randomyang/core-ball)**'s (Yang Hao's) game (2015, MIT License). Not affiliated with its maker. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to the calculator. This version is written in C from its source: its levels, turns, speeds, timings and colours are the original's (see [LICENSES/MIT-CoreBall.txt](../../LICENSES/MIT-CoreBall.txt)).
+Core Ball is **[Random](https://github.com/randomyang/core-ball)**'s (Yang Hao's) game (2015, MIT License). Not affiliated with its maker. **Bobydeluxe** brought it to the calculator. This version is written in C from its source: its levels, turns, speeds, timings and colours are the original's (see [LICENSES/MIT-CoreBall.txt](../../LICENSES/MIT-CoreBall.txt)).
 
 Inside NumPlay it draws with the launcher's own shapes and fonts and saves through its file functions, so the game itself is about 5 KB.
 
