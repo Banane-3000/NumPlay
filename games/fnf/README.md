@@ -81,7 +81,7 @@ A missed note, or a key pressed with no note to hit, costs health: when the gree
 Inspired by [Friday Night Funkin'](https://github.com/FunkinCrew/Funkin) by the Funkin' Crew (ninjamuffin99, PhantomArcade, evilsk8r and Kawai Sprite), not affiliated with them. Go play the original: it's free on itch.io and Newgrounds, with the music.
 
 * The charts, characters, stages, notes, ratings and letters come from the game's own files ([funkin.assets](https://github.com/FunkinCrew/funkin.assets)), which keep the Funkin' Crew's terms: they are not in this repository, and are fetched when the game is built. The rules and numbers follow the game's own code, under the Apache License 2.0.
-* The calculator adaptation is by **[Bobydeluxe](https://github.com/Bobydeluxe)**, who brought it to NumPlay.
+* The calculator adaptation is by **Bobydeluxe**, who brought it to NumPlay.
 * The text uses NumPlay's **Nunito** font (SIL Open Font License).
 
 Made by Mason Chen as part of NumPlay.

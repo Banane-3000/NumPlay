@@ -19,7 +19,7 @@ Drop each moving block on the tower; what hangs over the edge falls off. Steve G
 
 ## Credits
 
-Tower Blocks is **[Steve Gardner](https://codepen.io/ste-vg)**'s game ([on CodePen](https://codepen.io/ste-vg/pen/ppLQNW), MIT License), the one Y8 shows as Tower Block. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. This version is written in C from its source: its sizes, speeds, colours, light and camera are the original's (see [LICENSES/MIT-TowerBlocks.txt](../../LICENSES/MIT-TowerBlocks.txt)).
+Tower Blocks is **[Steve Gardner](https://codepen.io/ste-vg)**'s game ([on CodePen](https://codepen.io/ste-vg/pen/ppLQNW), MIT License), the one Y8 shows as Tower Block. **Bobydeluxe** brought it to NumPlay. This version is written in C from its source: its sizes, speeds, colours, light and camera are the original's (see [LICENSES/MIT-TowerBlocks.txt](../../LICENSES/MIT-TowerBlocks.txt)).
 
 Inside NumPlay it draws with the launcher's own shapes and fonts and saves through its file functions, so the game itself is about 5 KB.
 
