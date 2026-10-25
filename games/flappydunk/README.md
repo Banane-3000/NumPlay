@@ -21,7 +21,7 @@ Flap the winged ball and drop it down through every hoop. Voodoo's endless game 
 
 ## Credits
 
-Flappy Dunk is **Voodoo**'s game (2017), developed with Acid Cousins. **[Bobydeluxe](https://github.com/Bobydeluxe)** brought it to NumPlay. This version is written in C for NumPlay with no code or art from the original. Its physics and hoops follow the numbers in the game's Android build, and its French and Chinese texts are the original's own where it has them.
+Flappy Dunk is **Voodoo**'s game (2017), developed with Acid Cousins. **Bobydeluxe** brought it to NumPlay. This version is written in C for NumPlay with no code or art from the original. Its physics and hoops follow the numbers in the game's Android build, and its French and Chinese texts are the original's own where it has them.
 
 Inside NumPlay it draws with the launcher's own shapes and fonts and saves through its file functions, so the game itself is about 8 KB.
 

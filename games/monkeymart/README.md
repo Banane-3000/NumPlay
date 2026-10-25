@@ -74,7 +74,7 @@ Walk with the arrows. Stand by a banana palm until your arms are full, then by t
 Inspired by [Monkey Mart](https://poki.com/en/g/monkey-mart) by TinyDobbins, not affiliated with them. Go play the original: it's free on the web, with music, sound and the newer marts.
 
 * The pictures (the marts' floors, shelves, plants, machines, decorations, the clouds and icons), the monkeys and animals (baked from the game's Spine skeleton) and the Riffic font (InkyType's) come from the game's own web build, read by [tools/data.py](tools/data.py) and [tools/art.py](tools/art.py) into [src/data.c](src/data.c) and [src/art.c](src/art.c). Its rules and numbers follow the game's own code.
-* The calculator adaptation is by **[Bobydeluxe](https://github.com/Bobydeluxe)**, who brought it to NumPlay.
+* The calculator adaptation is by **Bobydeluxe**, who brought it to NumPlay.
 
 Made by Mason Chen as part of NumPlay.
 

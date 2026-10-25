@@ -81,7 +81,7 @@ Inspired by **Dune!** by Team Lava, not affiliated with them. Go play the origin
 
 * The pictures (the balls, the landscapes, the coins and the icons), the Bango Pro lettering, the texts and the numbers come from Dune Rider, Inlogic Software's web version of the game (not affiliated with them), read by [tools/data.py](tools/data.py) into [src/art.c](src/art.c).
 * The ball moves as in [p2.js](https://github.com/schteppe/p2.js) 0.7.1 by Stefan Hedman (MIT license), the physics engine the web game runs on, written again in C. [tests/oracle.cjs](tests/oracle.cjs) checks every step against the engine itself, reading it from the web build.
-* Adapted for the calculator by **[Bobydeluxe](https://github.com/Bobydeluxe)**.
+* Adapted for the calculator by **Bobydeluxe**.
 
 Made by Mason Chen as part of NumPlay.
 
