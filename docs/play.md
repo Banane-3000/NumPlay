@@ -612,6 +612,23 @@ Three laps against seven rivals. A bend pulls you outwards, more the faster you 
 
 <br clear="right">
 
+## Angry Birds
+
+<img src="../games/angrybirds/docs/shot.png" width="320" align="right" alt="Angry Birds">
+
+| Key | What it does |
+| --- | --- |
+| **Up, Down** | Aim the slingshot |
+| **Left, Right** | Pull it back less or more |
+| **OK** | Fire, then OK again for the bird's power |
+| **1** | Call the Mighty Eagle |
+| **shift** (hold) | Look at the pigs |
+| **Back** | Pause (with Restart, Levels, How to play and Quit game) |
+
+Knock down the pigs' castles and pop every pig. Each bird has its own power: the yellow one speeds up, the blue one splits in three, the black one explodes, the white one drops an egg bomb and the green one turns back. Fewer birds used means more points and up to three stars. Your progress is saved.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">
