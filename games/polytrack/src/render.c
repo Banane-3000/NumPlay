@@ -45,7 +45,7 @@ static uint8_t srgb[1025];
 static uint16_t back_lut[256];
 static float fog_rgb[3];
 
-const uint32_t rd_paints[8] = {0x6B0B0B, 0x0B2D6B, 0x0F5223, 0x4A1166, 0x6B3A0B, 0x0B5A5A, 0x1A1A1A, 0x8C8C8C};
+const uint32_t rd_paints[8] = {0x990000, 0x003399, 0x00802B, 0x5C0099, 0x994C00, 0x007A7A, 0x262626, 0x8C8C8C};
 
 /* ------------------------------------------------------------------ colours */
 static float lin_of(int c8) {
@@ -545,49 +545,56 @@ void rd_showroom(int paint, float angle, int env) {
 }
 
 /* ------------------------------------------------------------------ drawing a strip */
-static uint16_t zbuf[SCREEN_W * STRIP_ROWS];
+static uint16_t zbuf[SCREEN_W * STRIP_ROWS] __attribute__((aligned(4)));
 
-static void background(int ys, int ye) {
-  /* the view ray's height, per 16 pixels: dir = right (x - CX)/f + up (CY - y)/f + forward */
-  float rx = C.right.y / focal, uy = C.up.y / focal, fy = C.fwd.y;
-  float r2[2] = {C.right.x, C.right.z};
-  (void)r2;
+__attribute__((noinline)) static void background(int ys, int ye) {
+  /* the view ray's height, every 32 pixels (in between, a straight line): dir = right (x - CX)/f + up (CY - y)/f + fwd;
+     and the depth buffer cleared */
+  float rx = C.right.y / focal, uy = C.up.y / focal, fy = C.fwd.y, ff = 1.0f / (focal * focal);
   for (int y = ys; y < ye; y++) {
     uint16_t *row = gfx_buf + (y - ys) * SCREEN_W;
+    uint32_t *z = (uint32_t *)(zbuf + (y - ys) * SCREEN_W);
+    for (int x = 0; x < SCREEN_W / 2; x++) z[x] = 0;
     float yy = CY - ((float)y + 0.5f);
-    float base = uy * yy + fy;
-    float prev_idx = 0.0f;
-    for (int x = 0; x <= SCREEN_W; x += 16) {
+    float base = uy * yy + fy, yy2 = yy * yy * ff + 1.0f;
+    int32_t prev = 0;
+    for (int x = 0; x <= SCREEN_W; x += 32) {
       float xx = (float)x - CX;
-      float dy = rx * xx + base;
-      float len2 = (xx * xx + yy * yy) / (focal * focal) + 1.0f;
-      float n = dy / pt_sqrtf(len2);
-      float idx = (n * 127.5f + 127.5f);
+      float n = (rx * xx + base) / pt_sqrtf(xx * xx * ff + yy2);
+      int32_t idx = (int32_t)((n * 127.5f + 127.5f) * 65536.0f);
       if (x > 0) {
-        float d = (idx - prev_idx) / 16.0f, f = prev_idx;
-        for (int k = x - 16; k < x; k++, f += d) {
-          int i = (int)f;
-          row[k] = back_lut[i < 0 ? 0 : i > 255 ? 255 : i];
+        int32_t d = (idx - prev) / 32, f = prev;
+        uint16_t *o = row + x - 32;
+        if ((prev >> 16) == (idx >> 16) && prev >= 0 && prev < (256 << 16)) {
+          uint16_t c = back_lut[prev >> 16];
+          for (int k = 0; k < 32; k++) o[k] = c;
+        } else {
+          for (int k = 0; k < 32; k++, f += d) {
+            int i = f >> 16;
+            o[k] = back_lut[i < 0 ? 0 : i > 255 ? 255 : i];
+          }
         }
       }
-      prev_idx = idx;
+      prev = idx;
     }
   }
 }
 
-static void raster(const tri *t, int ys, int ye) {
+__attribute__((noinline)) static void raster(const tri *t, int ys, int ye) {
   float x0 = t->x[0] * (1.0f / 16), y0 = t->y[0] * (1.0f / 16), x1 = t->x[1] * (1.0f / 16), y1 = t->y[1] * (1.0f / 16),
         x2 = t->x[2] * (1.0f / 16), y2 = t->y[2] * (1.0f / 16);
   int ta = iceil(y0 - 0.5f), tb = iceil(y2 - 0.5f);
   int ra = ta > ys ? ta : ys, rb = tb < ye ? tb : ye;
   if (ra >= rb) return;
-  float w0 = t->w[0] * (1.0f / 65535), w1 = t->w[1] * (1.0f / 65535), w2 = t->w[2] * (1.0f / 65535);
+  float w0 = t->w[0] * (1.0f / 65536), w1 = t->w[1] * (1.0f / 65536), w2 = t->w[2] * (1.0f / 65536);
   float dx1 = x1 - x0, dy1 = y1 - y0, dx2 = x2 - x0, dy2 = y2 - y0;
   float det = dx1 * dy2 - dx2 * dy1;
   if (det > -0.01f && det < 0.01f) return;
-  float B = ((w1 - w0) * dy2 - (w2 - w0) * dy1) / det, Cc = (dx1 * (w2 - w0) - dx2 * (w1 - w0)) / det;
+  float idet = 1.0f / det;
+  float B = ((w1 - w0) * dy2 - (w2 - w0) * dy1) * idet, Cc = (dx1 * (w2 - w0) - dx2 * (w1 - w0)) * idet;
   float s02 = (x2 - x0) / (y2 - y0);
   float s01 = y1 > y0 ? (x1 - x0) / (y1 - y0) : 0, s12 = y2 > y1 ? (x2 - x1) / (y2 - y1) : 0;
+  int32_t dq = (int32_t)(B * 1073741824.0f);
   uint16_t col = t->c;
   int kind = t->kind;
   for (int r = ra; r < rb; r++) {
@@ -595,7 +602,8 @@ static void raster(const tri *t, int ys, int ye) {
     float xl = x0 + (yc - y0) * s02;
     float xs = yc < y1 ? x0 + (yc - y0) * s01 : x1 + (yc - y1) * s12;
     float xa = xl < xs ? xl : xs, xb = xl < xs ? xs : xl;
-    xa = pt_clampf(xa, -1.0f, 321.0f), xb = pt_clampf(xb, -1.0f, 321.0f);
+    if (xa < -1.0f) xa = -1.0f;
+    if (xb > 321.0f) xb = 321.0f;
     int pa = iceil(xa - 0.5f), pb = iceil(xb - 0.5f);
     if (pa < 0) pa = 0;
     if (pb > SCREEN_W) pb = SCREEN_W;
@@ -606,25 +614,28 @@ static void raster(const tri *t, int ys, int ye) {
       continue;
     }
     float wa = w0 + B * ((float)pa + 0.5f - x0) + Cc * (yc - y0);
-    float wb = w0 + B * ((float)pb - 0.5f - x0) + Cc * (yc - y0);
-    int32_t qa = (int32_t)(pt_clampf(wa, 0, 1) * 1073741824.0f), qb = (int32_t)(pt_clampf(wb, 0, 1) * 1073741824.0f);
+    if (wa < 0.0f) wa = 0.0f;
+    if (wa > 0.99998f) wa = 0.99998f;
+    int32_t qa = (int32_t)(wa * 1073741824.0f), d = dq;
     int n = pb - pa;
-    int32_t dq = n > 1 ? (qb - qa) / (n - 1) : 0;
-    uint16_t *z = zbuf + (r - ys) * SCREEN_W;
+    int32_t qe = qa + d * (n - 1);
+    if (n > 1 && (qe < 0 || qe > 1073725440)) d = ((qe < 0 ? 0 : 1073725440) - qa) / (n - 1);
+    uint16_t *z = zbuf + (r - ys) * SCREEN_W + pa;
+    p += pa;
     if (kind == RK_SOLID) {
-      for (int x = pa; x < pb; x++, qa += dq) {
-        uint16_t q = (uint16_t)(qa >> 14 > 65535 ? 65535 : qa >> 14);
-        if (q > z[x]) z[x] = q, p[x] = col;
+      for (int x = 0; x < n; x++, qa += d) {
+        uint32_t q = (uint32_t)qa >> 14;
+        if (q > z[x]) z[x] = (uint16_t)q, p[x] = col;
       }
     } else if (kind == RK_GHOST) {
-      for (int x = pa; x < pb; x++, qa += dq) {
-        if ((x + r) & 1) continue;
-        uint16_t q = (uint16_t)(qa >> 14 > 65535 ? 65535 : qa >> 14);
+      int odd = (pa + r) & 1;
+      for (int x = odd; x < n; x += 2) {
+        uint32_t q = (uint32_t)(qa + d * x) >> 14;
         if (q > z[x]) p[x] = col;
       }
     } else {
-      for (int x = pa; x < pb; x++, qa += dq) {
-        int q = qa >> 14;
+      for (int x = 0; x < n; x++, qa += d) {
+        uint32_t q = (uint32_t)qa >> 14;
         if (q + 24 >= z[x]) {
           uint16_t c = p[x];
           /* 60 % of the sun taken away: about five eighths of the colour */
@@ -635,17 +646,45 @@ static void raster(const tri *t, int ys, int ye) {
   }
 }
 
+/* the triangles by the strip they start in, and those still going on */
+static uint16_t order[MAX_TRIS], active[MAX_TRIS];
+static uint16_t strip_start[240 / STRIP_ROWS + 2];
+static int nactive, next_order;
+
+static int strip_of(int16_t y16) {
+  int r = iceil((float)y16 * (1.0f / 16) - 0.5f);
+  if (r < 0) r = 0;
+  if (r > 239) r = 239;
+  return r / STRIP_ROWS;
+}
+
 void rd_draw(void) {
   int ys = gfx_y0, ye = gfx_y1;
   rd_tris = ntris;
   background(ys, ye);
-  memset(zbuf, 0, sizeof(uint16_t) * (size_t)SCREEN_W * (size_t)(ye - ys));
+  int s = ys / STRIP_ROWS;
+  if (ys == 0) {
+    int cnt[240 / STRIP_ROWS + 2] = {0};
+    for (int i = 0; i < ntris; i++) cnt[strip_of(tris[i].y[0])]++;
+    int acc = 0;
+    for (int k = 0; k < 240 / STRIP_ROWS + 1; k++) strip_start[k] = (uint16_t)acc, acc += cnt[k];
+    strip_start[240 / STRIP_ROWS + 1] = (uint16_t)acc;
+    int pos[240 / STRIP_ROWS + 2];
+    for (int k = 0; k < 240 / STRIP_ROWS + 2; k++) pos[k] = strip_start[k];
+    for (int i = 0; i < ntris; i++) order[pos[strip_of(tris[i].y[0])]++] = (uint16_t)i;
+    nactive = 0, next_order = 0;
+  }
+  /* the ones that ended above this strip go; the ones starting in it come */
+  int m = 0;
+  for (int k = 0; k < nactive; k++)
+    if (strip_of(tris[active[k]].y[2]) >= s) active[m++] = active[k];
+  nactive = m;
+  for (; next_order < strip_start[s + 1 > 240 / STRIP_ROWS + 1 ? 240 / STRIP_ROWS + 1 : s + 1]; next_order++)
+    active[nactive++] = order[next_order];
   for (int pass = 0; pass < 3; pass++)
-    for (int i = 0; i < ntris; i++) {
-      const tri *t = &tris[i];
-      int k = t->kind == RK_BACK ? 0 : t->kind == RK_SHADOW ? 2 : 1;
-      if (k != pass) continue;
-      if (t->y[2] < ys * 16 - 8 || t->y[0] > ye * 16 + 8) continue;
-      raster(t, ys, ye);
+    for (int k = 0; k < nactive; k++) {
+      const tri *t = &tris[active[k]];
+      int kd = t->kind == RK_BACK ? 0 : t->kind == RK_SHADOW ? 2 : 1;
+      if (kd == pass) raster(t, ys, ye);
     }
 }

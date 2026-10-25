@@ -1,22 +1,32 @@
-# PolyGT 3D on the NumWorks calculator.
-#   make            output/polygt3d.nwa
-#   make check      link it like the calculator does (output/polygt3d.bin), within the RAM and the app space
+# PolyTrack on the NumWorks calculator.
+#   make            output/polytrack.nwa
+#   make check      link it like the calculator does (output/polytrack.bin), within the RAM and the app space
 #   make host       build/play: the game on a computer, for tests and pictures
-#   make test       the roads, laps, physics, crashes, the rivals finishing every circuit at every level, a race
-#                   driven to the finish, the endless road, saves (kept, damaged, storage full), random keys and the
-#                   same race to the same hash on every computer (with the sanitizers)
+#   make test       every official track driven to the finish, the checkpoints, respawns and restarts, the physics,
+#                   saves (kept, damaged, storage full), random keys and the same runs to the same hashes on every
+#                   computer (with the sanitizers)
+#   make data       src/data.bin, src/data.c and src/data.h from PolyTrack's web build
+#                   (POLYTRACK_WEB=its folder; Python with numpy, DracoPy and Pillow)
 Q ?= @
-CC = arm-none-eabi-gcc
+# the ARM toolchain on the PATH, or in TOOLCHAIN=<its bin folder>
+TOOLCHAIN ?=
+BIN = $(if $(TOOLCHAIN),$(TOOLCHAIN)/)
+CC = $(BIN)arm-none-eabi-gcc
+STRIP ?= $(BIN)arm-none-eabi-strip --strip-unneeded
 NWLINK ?= npx --yes -- nwlink@1.0.0
 BUILD_DIR = output
 L = ../../launcher/src
+POLYTRACK_WEB ?= $(HOME)/Documents/Assets/gamesrc/polytrack/web
+PYTHON ?= python3
 
-SRC = src/main.c src/track.c src/race.c src/save.c src/render.c src/draw.c src/plat_eadk.c \
-      $(L)/gfx.c $(L)/font_data.c $(L)/xfont.c
+# the physics and the picture run every frame at -O2; the screens are small at -Os
+HOT = src/car.c src/world.c src/ptmath.c src/render.c
+COLD = src/main.c src/draw.c src/save.c src/ghost.c src/data.c $(L)/gfx.c $(L)/font_data.c $(L)/xfont.c
+COLD_OBJ = $(patsubst %.c,$(BUILD_DIR)/cold/%.o,$(notdir $(COLD)))
 HEADERS = $(wildcard src/*.h) $(L)/gfx.h $(L)/font.h $(L)/np.h ../common/epsilon_app.h ../common/epsilon_files.h
 
 CFLAGS = -std=gnu11 $(shell $(NWLINK) eadk-cflags-device) -DPLATFORM_DEVICE=1 -DEPSILON_XL=1 -I$(L) -Isrc
-CFLAGS += -Os -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant -ffp-contract=off
+CFLAGS += -Wall -Wextra -Wno-unused-parameter -fno-math-errno -fsingle-precision-constant -ffp-contract=off
 CFLAGS += -fno-tree-loop-distribute-patterns -flto -fno-fat-lto-objects -fwhole-program -fvisibility=internal
 CFLAGS += -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--relocatable -nostartfiles --specs=nano.specs
@@ -28,19 +38,30 @@ LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
 RAM = 133652
 APP_SPACE = 2031616
 
-.PHONY: build check clean host test
-build: $(BUILD_DIR)/polygt3d.nwa
+.PHONY: build check clean host test data
+build: $(BUILD_DIR)/polytrack.nwa
 
-check: $(BUILD_DIR)/polygt3d.nwa
-	$(Q) $(NWLINK) nwa-bin --ram-length $(RAM) $< $(BUILD_DIR)/polygt3d.bin
-	$(Q) n=$$(wc -c < $(BUILD_DIR)/polygt3d.bin); [ $$n -le $(APP_SPACE) ] || \
-	  { echo "polygt3d.nwa is bigger than the calculator's app space ($(APP_SPACE) bytes)"; exit 1; }; \
-	  echo "BIN     $(BUILD_DIR)/polygt3d.bin: $$n bytes, RAM within $(RAM) bytes"
+check: $(BUILD_DIR)/polytrack.nwa
+	$(Q) $(NWLINK) nwa-bin --ram-length $(RAM) $< $(BUILD_DIR)/polytrack.bin
+	$(Q) n=$$(wc -c < $(BUILD_DIR)/polytrack.bin); [ $$n -le $(APP_SPACE) ] || \
+	  { echo "polytrack.nwa is bigger than the calculator's app space ($(APP_SPACE) bytes)"; exit 1; }; \
+	  echo "BIN     $(BUILD_DIR)/polytrack.bin: $$n bytes, $$(( $(APP_SPACE) - n )) to spare, RAM within $(RAM) bytes"
 
-$(BUILD_DIR)/polygt3d.nwa: $(SRC) $(HEADERS) $(BUILD_DIR)/icon.o
+$(BUILD_DIR)/data.o: src/data.S src/data.bin | $(BUILD_DIR)
+	$(Q) $(CC) -c -DDATA_BIN='"src/data.bin"' $< -o $@
+
+$(BUILD_DIR)/cold/%.o: src/%.c $(HEADERS) | $(BUILD_DIR)
+	@mkdir -p $(@D)
+	$(Q) $(CC) $(CFLAGS) -Os -c $< -o $@
+$(BUILD_DIR)/cold/%.o: $(L)/%.c $(HEADERS) | $(BUILD_DIR)
+	@mkdir -p $(@D)
+	$(Q) $(CC) $(CFLAGS) -Os -c $< -o $@
+
+$(BUILD_DIR)/polytrack.nwa: $(HOT) src/plat_eadk.c $(COLD_OBJ) $(HEADERS) $(BUILD_DIR)/icon.o $(BUILD_DIR)/data.o
 	@echo "LD      $@"
-	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $(SRC) $(BUILD_DIR)/icon.o -lm -o $@
-	$(Q) arm-none-eabi-strip --strip-unneeded $@
+	$(Q) $(CC) $(CFLAGS) -O2 $(LDFLAGS) $(HOT) src/plat_eadk.c $(COLD_OBJ) $(BUILD_DIR)/data.o $(BUILD_DIR)/icon.o \
+	  -lm -o $@
+	$(Q) $(STRIP) $@
 
 $(BUILD_DIR)/icon.o: src/icon.png | $(BUILD_DIR)
 	@echo "ICON    $<"
@@ -49,14 +70,21 @@ $(BUILD_DIR)/icon.o: src/icon.png | $(BUILD_DIR)
 $(BUILD_DIR):
 	$(Q) mkdir -p $@
 
-# on a computer: tests/play.c drives races and the whole app, and saves pictures
-HOST_SRC = tests/play.c src/track.c src/race.c src/save.c src/render.c src/draw.c $(L)/gfx.c $(L)/font_data.c \
-           $(L)/xfont.c
+data:
+	$(PYTHON) tools/pack.py $(POLYTRACK_WEB)
+
+# on a computer: tests/play.c drives the tracks and the whole app, and saves pictures
+HOST_SRC = tests/play.c src/car.c src/world.c src/ptmath.c src/render.c src/draw.c src/save.c src/ghost.c src/data.c \
+           $(L)/gfx.c $(L)/font_data.c $(L)/xfont.c
 HOST_FLAGS = -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -ffp-contract=off -Isrc -I$(L) -DHOST
 host: build/play
-build/play: $(HOST_SRC) src/main.c $(wildcard src/*.h)
+build/data.o: src/data.S src/data.bin
 	$(Q) mkdir -p build
-	$(Q) cc $(HOST_FLAGS) -fsanitize=address,undefined -fno-sanitize-recover=undefined $(HOST_SRC) -lm -o $@
+	$(Q) cc -c -DDATA_BIN='"src/data.bin"' $< -o $@
+build/play: $(HOST_SRC) src/main.c $(wildcard src/*.h) build/data.o
+	$(Q) mkdir -p build
+	$(Q) cc $(HOST_FLAGS) -fsanitize=address,undefined -fno-sanitize-recover=undefined $(HOST_SRC) build/data.o -lm \
+	  -o $@
 	@echo "HOST    $@"
 test: build/play
 	build/play test build

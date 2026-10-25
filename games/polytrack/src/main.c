@@ -1,107 +1,61 @@
-/* PolyGT 3D, a low-poly 3D racer for the NumWorks calculator, by Boris-TH, made for NumPlay: three circuits against
- * up to seven rivals, the endless road against the clock, three cars and two horses, nitro orbs, the slipstream and a
- * ghost of your best lap. The rules are in race.c and track.c, the picture in render.c, the screens
- * in draw.c and the save in save.c.
+/* PolyTrack for the NumWorks calculator: Kodub's low-poly time trial racer, its 17 official tracks, its car and its
+ * physics, made for NumPlay. The physics is in car.c (1 ms frames, as the game), the track in world.c, the picture in
+ * render.c, the screens in draw.c, the saves in save.c and the ghost in ghost.c.
  *
- * Keys: Up accelerates, Down brakes, Left and Right steer, OK (or EXE) burns nitro, + and - change gear with the
- * manual gearbox, Back pauses; Home saves and quits, from anywhere. */
+ * Keys: Up accelerates, Down brakes (and reverses), Left and Right steer, OK (or EXE) goes back to the last
+ * checkpoint, Backspace starts over, Back pauses; Home saves and quits, from anywhere. */
 #include <string.h>
+#include "car.h"
 #include "draw.h"
-#include "game.h"
+#include "ghost.h"
 #include "plat.h"
 #include "render.h"
 #include "save.h"
+#include "world.h"
 
-static pg_file sv;                  /* what's kept: your choices and records, the race going on */
-static pg_track track;              /* the road built (the race's, or the circuit on the race screen) */
-static pg_race prev;
-static pg_ui ui;
-static uint32_t now, saved_at, hold_at;
+static pt_file sv;                  /* what's kept */
+static car_t car;
+static car_look look, ghost_look;
+static chase_t chase;
+static camera_t cam;
+static ghost_rec rec;
+static ghost_play gplay;
+static pt_ui ui;
+static uint32_t now, saved_at;
 static int32_t accum;
-static int pending_shift;
-static int built = -1;              /* which road is in `track`: a circuit, or 100: the endless road of seed... */
-static uint32_t built_seed;         /* ...built_seed */
+static uint16_t cp_seen;
 static uint32_t frame_gap;          /* the least ms between frames (the tests draw fewer) */
 /* frames drawn, the slowest (ms) and those over 33 ms: read by tools/emu.py */
 #ifndef HOST
 __attribute__((used, externally_visible))
 #endif
 uint32_t perf_frames, perf_max, perf_slow;
-
-/* ------------------------------------------------------------------ the ghost of your best lap on each circuit
-   (kept until you quit): where you were every 200 ms */
-typedef struct {
-  uint16_t s;                       /* in the lap, 1/8 metre */
-  int8_t x, a;                      /* across, 1/8 metre; heading from the road, 1/256 turn */
-} ghost_pt;
-typedef struct {
-  uint16_t n;
-  uint8_t model, on;
-  uint32_t ms;
-  ghost_pt p[PG_GHOST];
-} ghost;
-static ghost best_ghost[PG_CIRCUITS], rec;
-static bool rec_ok;                 /* the lap being recorded was driven from its start */
-static rd_ghost ghost_now;
+#define MAX_STEPS 120               /* frames of physics at most between two pictures (else the game slows) */
 
 static void save(void) {
   ui.save_failed = !save_write(&sv);
   saved_at = now;
 }
 
-/* the road for a race, built again when it isn't the one in `track` */
-static void show_race(const pg_race *r) {
-  if (r->mode == MODE_ENDLESS) {
-    if (built != 100 || built_seed != r->seed || !track.endless) {
-      pg_endless(&track, r->seed);
-      built = 100, built_seed = r->seed;
-    }
-    pg_extend(&track, pg_seg_of(&track, r->car[0].s) + 48);
-  } else if (built != r->track || track.endless) {
-    pg_build(&track, r->track);
-    built = r->track;
-  }
-}
-static void show_circuit(int id) {
-  if (built != id || track.endless) pg_build(&track, id), built = id;
-}
-
-static pg_setup setup_of(void) {
-  pg_setup s;
-  s.mode = sv.p.mode, s.track = sv.p.track, s.vehicle = sv.p.vehicle, s.laps = sv.p.laps, s.rivals = sv.p.rivals;
-  s.level = sv.p.level, s.manual = sv.p.manual;
-  return s;
-}
-
-static void title_menu(void) {
-  int n = 0;
-  if (sv.has_race) ui.menu[n++] = MENU_CONTINUE;
-  ui.menu[n++] = MENU_PLAY, ui.menu[n++] = MENU_RECORDS, ui.menu[n++] = MENU_HELP;
-  ui.menu_n = (uint8_t)n;
-}
-static void to_title(void) {
-  ui.screen = V_TITLE, ui.sel = 0;
-  title_menu();
-}
-
 /* ------------------------------------------------------------------ races */
-/* the race screen's choices set to the race just driven (to drive it again) */
-static void use_race_settings(void) {
-  pg_race *r = &sv.race;
-  sv.p.mode = r->mode, sv.p.vehicle = r->vehicle, sv.p.manual = r->manual;
-  if (r->mode == MODE_RACE) sv.p.track = r->track, sv.p.laps = r->laps, sv.p.rivals = r->rivals, sv.p.level = r->level;
-}
-
 static void race_begin(void) {
-  pg_setup s = setup_of();
-  pg_new(&sv.race, &track, &s, (plat_random() ^ now) | 1);
-  built = s.mode == MODE_ENDLESS ? 100 : s.track, built_seed = sv.race.seed;
-  prev = sv.race;
-  sv.has_race = 1;
-  ui.screen = V_RACE, ui.sel = 0, ui.hold = 0;
-  accum = 0, pending_shift = 0;
-  rec.n = 0, rec_ok = true;
-  save();
+  world_load(sv.p.track);
+  car_reset(&car);
+  look = car_look_of(&car);
+  look.paint = sv.p.paint;
+  chase_reset(&chase, car.pos, car.rot);
+  chase_update(&chase, &cam, 0.0f, car.pos, car.rot, 0.0f);
+  ghost_rec_start(&rec);
+  ghost_rec_add(&rec, car.pos, car.rot);
+  ghost_entry g;
+  if (ghosts_find(sv.p.track, &g)) ghost_play_start(&gplay, g.data, g.len, g.ms);
+  else ghost_play_start(&gplay, NULL, 0, 0);
+  ui.has_ghost = gplay.on;
+  ui.screen = V_RACE, ui.sel = 0;
+  ui.started = 0, ui.new_record = 0;
+  ui.split_at = 0, ui.finish_at = 0, ui.still_ms = 0;
+  accum = 0;
+  cp_seen = 0;
 }
 
 static void start_or_guide(void) {
@@ -112,123 +66,96 @@ static void start_or_guide(void) {
   race_begin();
 }
 
-static void resume_saved(void) {
-  show_race(&sv.race);
-  prev = sv.race;
-  ui.screen = V_RACE, ui.hold = 3, accum = 0, pending_shift = 0;
-  hold_at = now + 500;
-  rec.n = 0, rec_ok = false;
-}
-
-static void finish_race(void) {
-  pg_race *r = &sv.race;
-  pg_profile *p = &sv.p;
-  ui.new_best = ui.new_lap = ui.new_far = 0;
-  if (r->mode == MODE_ENDLESS) {
-    uint32_t m = (uint32_t)(r->car[0].s / FX);
-    if (m > PG_MAX_M) m = PG_MAX_M;
-    if (p->runs < 999999) p->runs++;
-    if (m > p->best_m) p->best_m = m, p->best_zone = (uint16_t)(r->zone + 1), ui.new_far = 1;
-  } else {
-    int rank = r->car[0].place ? r->car[0].place : pg_rank(r, 0);
-    ui.result_rank = (uint8_t)rank;
-    if (p->races < 999999) p->races++;
-    if (rank == 1 && r->rivals) p->wins++;
-    int id = r->track;
-    uint32_t t = r->car[0].finish_ms;
-    if (t && t <= PG_MAX_TIME && (!p->best_ms[id] || t < p->best_ms[id])) p->best_ms[id] = t, ui.new_best = 1;
-    if (r->best_lap_ms && r->best_lap_ms <= PG_MAX_TIME && (!p->best_lap_ms[id] || r->best_lap_ms < p->best_lap_ms[id]))
-      p->best_lap_ms[id] = r->best_lap_ms, ui.new_lap = 1;
-    /* (a best race holds a lap at least as good) */
-    if (p->best_ms[id] && (!p->best_lap_ms[id] || p->best_lap_ms[id] > p->best_ms[id])) p->best_lap_ms[id] = p->best_ms[id];
+static void finished(void) {
+  uint32_t t = car.finish;
+  int id = sv.p.track;
+  uint32_t best = sv.p.best[id];
+  ui.finish_at = ui.clock ? ui.clock : 1;
+  ui.finish_diff = best ? (int32_t)t - (int32_t)best : 0;
+  if (sv.p.finishes < 999999) sv.p.finishes++;
+  if (!best || t < best) {
+    sv.p.best[id] = t;
+    int n = car_checkpoints();
+    for (int k = 0; k < PT_SPLITS; k++) sv.p.split[id][k] = k < n && k < 64 ? car.cp_frames[k] : 0;
+    ui.new_record = 1;
+    /* its ghost: the run's last sample, then kept with the others */
+    ghost_rec_add(&rec, car.pos, car.rot);
+    if (!rec.full && rec.len) {
+      ghosts_put(id, t, rec.buf, rec.len);
+      ghost_entry g;
+      if (ghosts_find(id, &g)) ghost_play_start(&gplay, g.data, g.len, g.ms);
+    }
   }
-  sv.has_race = 0;
-  ui.screen = V_RESULT, ui.sel = 0;
   save();
 }
 
-/* the ghost: a sample every 200 ms of the lap; at the end of a lap, kept if it's the best on this circuit */
-static void ghost_after_step(int lap_before) {
-  pg_race *r = &sv.race;
-  if (r->mode != MODE_RACE) return;
-  ghost *g = &best_ghost[r->track];
-  bool lap_done = r->lap != lap_before || (r->phase == PH_DONE && r->end == END_FINISH && r->car[0].driven && rec.n &&
-                                           r->last_lap_ms && r->time_ms - r->lap_at == r->last_lap_ms);
-  if (lap_done) {
-    if (rec_ok && rec.n > 10 && r->last_lap_ms && (!g->on || r->last_lap_ms < g->ms)) {
-      memcpy(g->p, rec.p, sizeof(ghost_pt) * rec.n);
-      g->n = rec.n, g->ms = r->last_lap_ms, g->model = r->vehicle, g->on = 1;
+static void step_race(uint32_t keys, uint32_t hit, uint32_t dt) {
+  unsigned in = 0;
+  if (keys & PK_UP) in |= IN_UP;
+  if (keys & PK_DOWN) in |= IN_DOWN;
+  if (keys & PK_LEFT) in |= IN_LEFT;
+  if (keys & PK_RIGHT) in |= IN_RIGHT;
+  if (keys & PK_OK) in |= IN_RESET;
+  if (hit & PK_OK) {
+    if (!car.has_respawn) {
+      /* (no checkpoint yet: back to the start) */
+      race_begin();
+      return;
     }
-    rec.n = 0, rec_ok = r->phase == PH_RACE;
+    chase_reset(&chase, car.respawn.pos, car.respawn.rot);
   }
-  if (r->phase != PH_RACE || r->car[0].driven) return;
-  uint32_t t = r->time_ms - r->lap_at;
-  if (t % 200 || t / 200 != rec.n) {
-    if (t / 200 > rec.n) rec_ok = false;
-    return;
+  if (!ui.started) {
+    /* the car waits at the start until a driving key: the clock starts with it */
+    if (!(in & (IN_UP | IN_DOWN | IN_LEFT | IN_RIGHT))) return;
+    ui.started = 1;
+    accum = 0;
   }
-  if (rec.n >= PG_GHOST) {
-    rec_ok = false;
-    return;
+  accum += (int32_t)dt;
+  int steps = 0;
+  bool was_done = car_finished(&car);
+  while (accum >= 1 && steps < MAX_STEPS) {
+    car_step(&car, in);              /* (a held OK is one reset: the car looks for it pressed after released) */
+    accum--, steps++;
+    if (!car.finish && car.frames % GHOST_STEP == 0) ghost_rec_add(&rec, car.pos, car.rot);
+    if (car.next_cp > cp_seen) {
+      int k = car.next_cp - 1;
+      ui.split_at = ui.clock ? ui.clock : 1;
+      ui.split_cp = (uint16_t)k;
+      uint32_t bs = k < PT_SPLITS ? sv.p.split[sv.p.track][k] : 0;
+      ui.split_diff = bs ? (int32_t)car.cp_frames[k] - (int32_t)bs : 0x7FFFFFFF;
+    }
+    cp_seen = car.next_cp;
+    if (!was_done && car_finished(&car)) {
+      finished();
+      was_done = true;
+    }
   }
-  const pg_car *c = &r->car[0];
-  ghost_pt *q = &rec.p[rec.n++];
-  q->s = (uint16_t)(pg_lap_s(r, &track) / 32);
-  q->x = (int8_t)(c->x / 32);
-  q->a = (int8_t)((c->ang + c->slip) / 256);
-}
-
-static void ghost_pose(int alpha) {
-  ghost_now.on = false;
-  pg_race *r = &sv.race;
-  if (r->mode != MODE_RACE || r->phase != PH_RACE || track.endless) return;
-  const ghost *g = &best_ghost[r->track];
-  if (!g->on) return;
-  uint32_t t = r->time_ms - r->lap_at + (uint32_t)(alpha * PG_TICK / 256);
-  uint32_t i = t / 200, f = t % 200;
-  if (i + 1 >= g->n) return;
-  const ghost_pt *a = &g->p[i], *b = &g->p[i + 1];
-  int32_t L = track.length, sa = a->s * 32, sb = b->s * 32;
-  if (sb - sa < -L / 2) sb += L;
-  if (sb - sa > L / 2) sb -= L;
-  ghost_now.s = sa + (sb - sa) * (int32_t)f / 200;
-  ghost_now.x = (a->x * 32) + (b->x - a->x) * 32 * (int32_t)f / 200;
-  ghost_now.ang = a->a * 256 + (int32_t)(int8_t)(b->a - a->a) * 256 * (int32_t)f / 200;
-  ghost_now.model = g->model;
-  ghost_now.on = true;
+  if (accum > 100) accum = 100;
+  if (pt_absf(car.speed) < 50.0f) ui.still_ms += dt;
+  else ui.still_ms = 0;
 }
 
 /* ------------------------------------------------------------------ keys, screen by screen */
-static bool row_off(int row) {
-  return sv.p.mode == MODE_ENDLESS && (row == SET_TRACK || row == SET_LAPS || row == SET_RIVALS || row == SET_LEVEL);
-}
-
-static void set_change(int row, int d) {
-  pg_profile *p = &sv.p;
-  switch (row) {
-    case SET_MODE: p->mode ^= 1; break;
-    case SET_TRACK: p->track = (uint8_t)((p->track + PG_CIRCUITS + d) % PG_CIRCUITS); break;
-    case SET_CAR: p->vehicle = (uint8_t)((p->vehicle + PG_VEHICLES + d) % PG_VEHICLES); break;
-    case SET_LAPS: p->laps = (uint8_t)((p->laps - 1 + PG_MAX_LAPS + d) % PG_MAX_LAPS + 1); break;
-    case SET_RIVALS: p->rivals = (uint8_t)((p->rivals + PG_CARS + d) % PG_CARS); break;
-    case SET_LEVEL: p->level = (uint8_t)((p->level + 3 + d) % 3); break;
-    case SET_GEARS: p->manual ^= 1; break;
-    case SET_VIEW: p->view = (uint8_t)((p->view + VIEWS + d) % VIEWS); break;
-  }
+static int tab_row_of(int track) {
+  for (int t = 0; t < 3; t++)
+    for (int r = 0; r < tab_rows(t); r++)
+      if (track_of_tab(t, r) == track) return r;
+  return 0;
 }
 
 static bool keys_menu(uint32_t hit) {
-  int n;
   switch (ui.screen) {
     case V_TITLE:
-      n = ui.menu_n;
-      if (hit & PK_UP) ui.sel = (uint8_t)((ui.sel + n - 1) % n);
-      if (hit & PK_DOWN) ui.sel = (uint8_t)((ui.sel + 1) % n);
+      if (hit & PK_UP) ui.sel = (uint8_t)((ui.sel + MENU_ROWS - 1) % MENU_ROWS);
+      if (hit & PK_DOWN) ui.sel = (uint8_t)((ui.sel + 1) % MENU_ROWS);
       if (hit & PK_BACK) ui.screen = V_QUIT, ui.sel = 0;
-      else if (hit & PK_OK) switch (ui.menu[ui.sel % n]) {
-          case MENU_CONTINUE: resume_saved(); break;
-          case MENU_PLAY: ui.screen = V_SETUP, ui.sel = SET_START; break;
-          case MENU_RECORDS: ui.screen = V_RECORDS; break;
+      else if (hit & PK_OK) switch (ui.sel) {
+          case MENU_PLAY:
+            ui.screen = V_TRACKS;
+            ui.tab = (uint8_t)pt_tracks[sv.p.track].env;
+            ui.sel = (uint8_t)tab_row_of(sv.p.track);
+            break;
+          case MENU_CAR: ui.screen = V_CAR; break;
           default: ui.screen = V_HELP, ui.page = 0, ui.under = V_TITLE; break;
         }
       break;
@@ -240,47 +167,45 @@ static bool keys_menu(uint32_t hit) {
         ui.screen = V_TITLE, ui.sel = 0;
       }
       break;
-    case V_SETUP: {
-      int d = (hit & PK_DOWN) ? 1 : (hit & PK_UP) ? -1 : 0;
-      if (d) {
-        do ui.sel = (uint8_t)((ui.sel + SET_ROWS + d) % SET_ROWS);
-        while (row_off(ui.sel));
+    case V_TRACKS: {
+      int n = tab_rows(ui.tab);
+      if (hit & PK_UP) ui.sel = (uint8_t)((ui.sel + n - 1) % n);
+      if (hit & PK_DOWN) ui.sel = (uint8_t)((ui.sel + 1) % n);
+      if (hit & (PK_LEFT | PK_RIGHT)) {
+        ui.tab = (uint8_t)((ui.tab + ((hit & PK_RIGHT) ? 1 : 2)) % 3);
+        int m = tab_rows(ui.tab);
+        if (ui.sel >= m) ui.sel = (uint8_t)(m - 1);
       }
-      int dx = (hit & PK_RIGHT) ? 1 : (hit & PK_LEFT) ? -1 : 0;
-      if (dx && ui.sel < SET_START) set_change(ui.sel, dx);
-      if (hit & PK_BACK) {
+      if (hit & PK_BACK) ui.screen = V_TITLE, ui.sel = MENU_PLAY;
+      else if (hit & PK_OK) {
+        sv.p.track = (uint8_t)track_of_tab(ui.tab, ui.sel);
         save();
-        to_title();
-        ui.sel = (uint8_t)(ui.menu_n - 3);
-      } else if (hit & PK_OK) {
-        if (ui.sel < SET_START) set_change(ui.sel, 1);
-        else if (sv.has_race) ui.screen = V_NEWRUN, ui.sel = 0;
-        else start_or_guide();
+        start_or_guide();
       }
-      if (ui.screen == V_SETUP && sv.p.mode == MODE_RACE) show_circuit(sv.p.track);
       break;
     }
-    case V_NEWRUN:
-      if (hit & (PK_UP | PK_DOWN)) ui.sel ^= 1;
-      if ((hit & PK_BACK) || ((hit & PK_OK) && !ui.sel)) ui.screen = V_SETUP, ui.sel = SET_START;
-      else if (hit & PK_OK) sv.has_race = 0, start_or_guide();
+    case V_CAR:
+      if (hit & PK_LEFT) sv.p.paint = (uint8_t)((sv.p.paint + PT_PAINTS - 1) % PT_PAINTS);
+      if (hit & PK_RIGHT) sv.p.paint = (uint8_t)((sv.p.paint + 1) % PT_PAINTS);
+      if (hit & (PK_UP | PK_DOWN)) sv.p.view ^= 1;
+      if (hit & (PK_BACK | PK_OK)) save(), ui.screen = V_TITLE, ui.sel = MENU_CAR;
       break;
     case V_GUIDE:
-      if ((hit & PK_RIGHT) && ui.page + 1 < PG_HELP_PAGES) ui.page++;
+      if ((hit & PK_RIGHT) && ui.page + 1 < PT_HELP_PAGES) ui.page++;
       if ((hit & PK_LEFT) && ui.page) ui.page--;
-      if (hit & PK_BACK) ui.screen = V_SETUP, ui.sel = SET_START;
-      else if (hit & PK_OK) sv.p.guide = 1, race_begin();
+      if (hit & PK_BACK) ui.screen = V_TRACKS;
+      else if (hit & PK_OK) {
+        if (ui.page + 1 < PT_HELP_PAGES) ui.page++;
+        else sv.p.guide = 1, save(), race_begin();
+      }
       break;
     case V_HELP:
-      if ((hit & PK_RIGHT) && ui.page + 1 < PG_HELP_PAGES) ui.page++;
+      if ((hit & PK_RIGHT) && ui.page + 1 < PT_HELP_PAGES) ui.page++;
       if ((hit & PK_LEFT) && ui.page) ui.page--;
       if (hit & (PK_BACK | PK_OK)) {
         if (ui.under == V_PAUSE) ui.screen = V_PAUSE, ui.sel = PAUSE_HELP;
-        else to_title(), ui.sel = (uint8_t)(ui.menu_n - 1);
+        else ui.screen = V_TITLE, ui.sel = MENU_HELP;
       }
-      break;
-    case V_RECORDS:
-      if (hit & (PK_BACK | PK_OK)) to_title(), ui.sel = (uint8_t)(ui.menu_n - 2);
       break;
     case V_PAUSE:
       if (hit & PK_UP) ui.sel = (uint8_t)((ui.sel + PAUSE_ROWS - 1) % PAUSE_ROWS);
@@ -288,7 +213,7 @@ static bool keys_menu(uint32_t hit) {
       if (hit & PK_BACK) ui.screen = V_RACE;
       else if (hit & PK_OK) switch (ui.sel) {
           case PAUSE_RESUME: ui.screen = V_RACE; break;
-          case PAUSE_RESTART: use_race_settings(), race_begin(); break;
+          case PAUSE_RESTART: race_begin(); break;
           case PAUSE_HELP: ui.screen = V_HELP, ui.page = 0, ui.under = V_PAUSE; break;
           default: ui.screen = V_LEAVE, ui.sel = 0; break;
         }
@@ -299,17 +224,24 @@ static bool keys_menu(uint32_t hit) {
       if (hit & PK_BACK) ui.screen = V_PAUSE, ui.sel = PAUSE_QUIT;
       else if (hit & PK_OK) {
         if (ui.sel == 0) ui.screen = V_RACE;
-        else if (ui.sel == 1) save(), to_title();
-        else return true;
+        else if (ui.sel == 1) {
+          ui.screen = V_TRACKS;
+          ui.tab = (uint8_t)pt_tracks[sv.p.track].env;
+          ui.sel = (uint8_t)tab_row_of(sv.p.track);
+        } else return true;
       }
       break;
     case V_RESULT:
-      if (hit & (PK_UP | PK_DOWN)) ui.sel ^= 1;
-      if (hit & PK_OK) {
-        if (ui.sel == 0) {
-          use_race_settings(), race_begin();
-        } else {
-          to_title();
+      if (hit & PK_UP) ui.sel = (uint8_t)((ui.sel + RES_ROWS - 1) % RES_ROWS);
+      if (hit & PK_DOWN) ui.sel = (uint8_t)((ui.sel + 1) % RES_ROWS);
+      if (hit & PK_RESTART) race_begin();
+      else if (hit & PK_OK) {
+        if (ui.sel == RES_AGAIN) race_begin();
+        else if (ui.sel == RES_NEXT) sv.p.track = (uint8_t)((sv.p.track + 1) % PT_NTRACKS), save(), race_begin();
+        else {
+          ui.screen = V_TRACKS;
+          ui.tab = (uint8_t)pt_tracks[sv.p.track].env;
+          ui.sel = (uint8_t)tab_row_of(sv.p.track);
         }
       }
       break;
@@ -318,31 +250,20 @@ static bool keys_menu(uint32_t hit) {
 }
 
 /* ------------------------------------------------------------------ the loop */
-static unsigned race_input(uint32_t keys) {
-  unsigned in = 0;
-  if (keys & PK_UP) in |= IN_GAS;
-  if (keys & PK_DOWN) in |= IN_BRAKE;
-  if (keys & PK_LEFT) in |= IN_LEFT;
-  if (keys & PK_RIGHT) in |= IN_RIGHT;
-  if (keys & PK_OK) in |= IN_NITRO;
-  return in;
-}
-
-static bool race_over(const pg_race *r) {
-  return r->phase == PH_DONE && r->done >= (r->mode == MODE_ENDLESS ? 2 * PG_HZ + PG_HZ / 2 : 3 * PG_HZ);
-}
-
 int main(void) {
   plat_begin();
   memset(&ui, 0, sizeof ui);
   now = plat_millis();
   save_load(&sv);
-  if (sv.has_race) show_race(&sv.race);
-  to_title();
+  ghosts_load();
+  world_load(sv.p.track);
+  car_reset(&car);
+  ui.screen = V_TITLE;
   uint32_t stale = plat_keys(), prev_keys = stale, rep_at = 0, last = now, frame_at = 0, spin0 = now;
   uint8_t shown = 0xFF;
   bool dirty = true;
-  uint32_t min_frame = frame_gap ? frame_gap : plat_slow() ? 33 : 20;
+  uint32_t min_frame = frame_gap ? frame_gap : plat_slow() ? 33 : 25;
+  uint32_t slow_frames = 0, quick_frames = 0;
   for (;;) {
     now = plat_millis();
     uint32_t dt = now - last;
@@ -358,63 +279,68 @@ int main(void) {
     }
     prev_keys = live;
     if (keys & PK_HOME) break;      /* Home (or On/Off): saved below, then out */
-    if (hit && ui.screen != V_RACE) dirty = true;   /* (a race is drawn at its own pace) */
+    if (hit && ui.screen != V_RACE) dirty = true;
     bool quit = false;
+    ui.clock = now - spin0;
     if (ui.screen == V_RACE) {
       if (hit & PK_BACK) {
         ui.screen = V_PAUSE, ui.sel = PAUSE_RESUME;
-        save();
-      } else if (ui.hold) {
-        if ((int32_t)(now - hold_at) >= 0) ui.hold--, hold_at = now + 500, dirty = true;
-        prev = sv.race;
+      } else if (hit & PK_RESTART) {
+        race_begin();
       } else {
-        if (hit & PK_GEAR_UP) pending_shift = 1;
-        if (hit & PK_GEAR_DOWN) pending_shift = -1;
-        accum += (int32_t)dt;
-        unsigned in = race_input(live);
-        while (accum >= PG_TICK) {
-          prev = sv.race;
-          int lap = sv.race.lap;
-          pg_step(&sv.race, &track, in, pending_shift);
-          pending_shift = 0;
-          accum -= PG_TICK;
-          ghost_after_step(lap);
-          if (race_over(&sv.race)) {
-            finish_race();
-            break;
-          }
-        }
-        if (ui.screen == V_RACE && (int32_t)(now - saved_at) >= 30000) save();
+        if (hit & PK_VIEW) sv.p.view ^= 1;
+        step_race(live, hit, dt);
+        if (car.finish && ui.finish_at && ui.clock - ui.finish_at > 2000 && ui.screen == V_RACE)
+          ui.screen = V_RESULT, ui.sel = RES_AGAIN;
       }
+    } else if (ui.screen == V_RESULT) {
+      /* (the car rolls on behind the results) */
+      step_race(0, 0, dt);
+      quit = keys_menu(hit);
     } else {
       quit = keys_menu(hit);
     }
     if (quit) break;
     if (ui.screen != shown) {
       stale = keys, prev_keys = 0;  /* a new screen starts with all keys up */
-      if (ui.screen != V_RACE) accum = 0;
-      if (ui.screen == V_SETUP && sv.p.mode == MODE_RACE) show_circuit(sv.p.track);
-      if (ui.screen == V_RACE || ui.screen == V_PAUSE || ui.screen == V_RESULT) show_race(&sv.race);
       shown = ui.screen;
       dirty = true;
     }
-    bool moving = ui.screen == V_RACE || ui.screen == V_TITLE || ui.screen == V_QUIT;
+    bool moving = ui.screen == V_RACE || ui.screen == V_RESULT || ui.screen == V_TITLE || ui.screen == V_QUIT ||
+                  ui.screen == V_CAR;
     if (dirty || (moving && now - frame_at >= min_frame)) {
       uint32_t t0 = plat_millis();
-      ui.clock = now - spin0;
-      int alpha = accum >= PG_TICK ? 256 : accum * 256 / PG_TICK;
-      if (ui.screen != V_RACE || ui.hold) alpha = 256;
-      ghost_pose(alpha);
+      float fdt = (float)(now - frame_at) / 1000.0f;
+      if (fdt > 0.1f) fdt = 0.1f;
+      look = car_look_of(&car);
+      look.paint = sv.p.paint;
+      if (sv.p.view) cockpit_camera(&cam, look.pos, look.rot, car.speed);
+      else chase_update(&chase, &cam, fdt, look.pos, look.rot, car.speed);
+      ghost_look.ghost = 0;
+      v3 gp;
+      qt gr;
+      if (ui.started && ghost_at(&gplay, car.frames, &gp, &gr)) {
+        memset(&ghost_look, 0, sizeof ghost_look);
+        ghost_look.pos = gp, ghost_look.rot = gr, ghost_look.ghost = 1, ghost_look.paint = sv.p.paint;
+        for (int i = 0; i < 4; i++) ghost_look.susp[i] = 0.078f;
+      }
       plat_vblank();
-      pg_render(&sv, &track, &prev, &sv.race, alpha, &ui, &ghost_now);
+      pt_render(&sv, &car, &cam, &look, ghost_look.ghost ? &ghost_look : NULL, &ui);
       uint32_t spent = plat_millis() - t0;
       perf_frames++;
       if (spent > perf_max) perf_max = spent;
       if (spent > 33) perf_slow++;
+      /* the picture's detail follows the time it takes: down at once when slow, up slowly */
+      if (ui.screen == V_RACE) {
+        if (spent > 30) slow_frames++, quick_frames = 0;
+        else if (spent < 18) quick_frames++, slow_frames = 0;
+        if (slow_frames >= 2 && rd_detail > 0) rd_detail--, slow_frames = 0;
+        if (quick_frames >= 30 && rd_detail < 3) rd_detail++, quick_frames = 0;
+      }
       frame_at = now;
       dirty = false;
     } else {
-      plat_sleep(moving ? 2 : 10);
+      plat_sleep(moving ? 1 : 10);
     }
   }
   save();
