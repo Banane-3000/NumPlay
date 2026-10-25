@@ -153,6 +153,13 @@ static void cache_refresh(car_t *c) {
   c->cache_ok = 1;
 }
 
+void car_cache_rebuild(car_t *c) {
+  /* the same triangles, in the same order, as when the cache was last filled (for a state put back) */
+  if (!c->cache_ok) return;
+  v3 h = V3(5.0f, 5.0f, 5.0f);
+  c->ncache = world_gather(vsub(c->cache_at, h), vadd(c->cache_at, h), cache, PT_CACHE);
+}
+
 /* Bullet's btTriangleRaycastCallback, closest hit: fraction, normal facing the ray's start */
 static bool ray_tri(const wtri *t, v3 from, v3 to, float *frac, v3 *normal) {
   v3 v10 = vsub(t->b, t->a), v20 = vsub(t->c, t->a);

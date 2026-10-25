@@ -59,5 +59,6 @@ void car_reset(car_t *c);           /* at the start, as before the first frame *
 void car_step(car_t *c, unsigned input);
 bool car_finished(const car_t *c);
 uint32_t car_hash(const car_t *c);  /* the state's bits, for the tests */
+void car_cache_rebuild(car_t *c);   /* after putting back a saved state */
 int car_checkpoints(void);          /* checkpoints on the track (orders) */
 #endif
