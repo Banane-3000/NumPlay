@@ -87,7 +87,7 @@ All of these come in one app, **NumPlay.nwa**.
 
 Want just one game? Each one also comes as its own file on the [downloads page](https://github.com/Mason363/NumPlay/releases/latest).
 
-**NumVisuals**, moving backgrounds with a clock, a stopwatch, a timer or a counter on top, comes on its own: [download NumVisuals.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumVisuals.nwa). Its backgrounds are also in NumPlay: press ⌫ on the home screen.
+**NumVisuals**, moving backgrounds with a clock, a stopwatch, a timer or a counter on top, comes on its own: [download NumVisuals.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumVisuals.nwa), or add it to NumPlay in [NumPlay Studio](https://mason363.github.io/NumPlay/customize/). Its backgrounds are also in NumPlay: press ⌫ on the home screen.
 
 ## Big games, installed on their own
 

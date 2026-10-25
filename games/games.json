@@ -1173,5 +1173,24 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/angrybirds",
     "default": false,
     "xl": true
+  },
+  {
+    "id": "numvisuals",
+    "rank": 31,
+    "title": "NumVisuals",
+    "tagline": "Backgrounds, clocks, timers",
+    "credit": null,
+    "top": "0x7A2BFF",
+    "bottom": "0x1B0B3A",
+    "accent": "0xFF3E8A",
+    "colors": 48,
+    "records": [
+      "numvisuals.sav"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/numvisuals",
+    "default": false
   }
 ]
