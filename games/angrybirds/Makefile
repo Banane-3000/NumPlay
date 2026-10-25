@@ -84,19 +84,26 @@ HOST_FLAGS = -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -ffp-contract
 HOST_CXXFLAGS = -std=gnu++11 -O2 -g -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-but-set-variable \
   -Wno-unused-private-field -ffp-contract=off -Isrc -Isrc/box2d -DHOST -fno-exceptions -fno-rtti
 HOST_SAN = -fsanitize=address,undefined -fno-sanitize-recover=undefined
-HOST_SRC = tests/play.c src/ui.c src/draw.c src/game.c src/res.c src/save.c src/inflate.c src/names.c $(L)/gfx.c \
-  $(L)/font_data.c $(L)/xfont.c
+HOST_SRC = tests/play.c src/ui.c src/draw.c src/game.c src/res.c src/save.c src/inflate.c src/names.c
+HOST_LSRC = gfx.c font_data.c xfont.c
+HOST_COBJ = $(patsubst %.c,build/host/c/%.o,$(HOST_SRC)) $(patsubst %.c,build/host/l/%.o,$(HOST_LSRC))
 HOST_PHYS = $(patsubst src/%.cpp,build/host/%.o,$(PHYS))
 host: build/play
 build/host/%.o: src/%.cpp $(HEADERS) $(BOX2D_H)
 	$(Q) mkdir -p $(@D)
 	$(Q) c++ $(HOST_CXXFLAGS) $(HOST_SAN) -c $< -o $@
+# (the C files with cc: g++ takes them for C++ even after -x c)
+build/host/c/%.o: %.c $(HEADERS)
+	$(Q) mkdir -p $(@D)
+	$(Q) cc $(HOST_FLAGS) $(HOST_SAN) -c $< -o $@
+build/host/l/%.o: $(L)/%.c $(HEADERS)
+	$(Q) mkdir -p $(@D)
+	$(Q) cc $(HOST_FLAGS) $(HOST_SAN) -c $< -o $@
 build/host/data.o: src/data.S src/data.bin
 	$(Q) mkdir -p $(@D)
 	$(Q) cc -c -DDATA_BIN='"src/data.bin"' $< -o $@
-build/play: $(HOST_SRC) $(HEADERS) $(HOST_PHYS) build/host/data.o
-	$(Q) mkdir -p build
-	$(Q) c++ -x c $(HOST_FLAGS) $(HOST_SAN) $(HOST_SRC) -x none $(HOST_PHYS) build/host/data.o -lm -o $@
+build/play: $(HOST_COBJ) $(HOST_PHYS) build/host/data.o
+	$(Q) c++ $(HOST_SAN) $(HOST_COBJ) $(HOST_PHYS) build/host/data.o -lm -o $@
 	@echo "HOST    $@"
 
 test: build/play
