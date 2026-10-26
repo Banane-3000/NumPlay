@@ -118,7 +118,14 @@ static bool load_one(uint16_t id);
 static struct { uint16_t id, frame; } failed[8];   /* loads that found no room, lately */
 static int nfailed;
 
-static uint32_t tex_entry(uint16_t id) { return rd32(section(SEC_TEX) + 4 + 4 * id); }
+/* the texture table, found once (tex_get runs for every texture a strip draws) */
+static const uint8_t *sec_tex;
+static uint16_t ntex;
+static const uint8_t *tex_table(void) {
+  if (!sec_tex) sec_tex = section(SEC_TEX), ntex = rd16(sec_tex);
+  return sec_tex;
+}
+static uint32_t tex_entry(uint16_t id) { return rd32(tex_table() + 4 + 4 * id); }
 int tex_half_extent(uint16_t id) {
   int v = section(SEC_TEXDIM)[id];
   return v == 255 ? 4096 : v * 2;
@@ -159,7 +166,8 @@ void res_init(void) {
 }
 
 bool tex_get(uint16_t id, Tex *t) {
-  if (id >= rd16(section(SEC_TEX))) return false;   /* none (0xFFFF) */
+  tex_table();
+  if (id >= ntex) return false;   /* none (0xFFFF) */
   uint32_t e = tex_entry(id);
   if (e == 0xFFFFFFFF) return false;                 /* not in this data */
   if (e >> 30 == 1) {

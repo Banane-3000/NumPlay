@@ -135,6 +135,18 @@ static inline int sx_(float x) { return (int)floorf(x + 0.5f) - (hud ? 0 : g_cam
 static inline int sy_(float y) { return (int)floorf(y + 0.5f) - (hud ? 0 : g_camy); }
 
 /* ---------------------------------------------------------------- color math */
+/* s premultiplied: s + d * (1 - a), a in 0..256 (inlined in the blits' loops, a call a pixel cost a sixth of a busy
+ * room's frame) */
+static inline __attribute__((always_inline)) uint16_t blend565_in(uint16_t d, uint16_t s, int a) {
+  uint32_t ia = 256 - a;
+  uint32_t r = (s >> 11) + (((d >> 11) * ia) >> 8);
+  uint32_t g = ((s >> 5) & 63) + ((((d >> 5) & 63) * ia) >> 8);
+  uint32_t b = (s & 31) + (((d & 31) * ia) >> 8);
+  if (r > 31) r = 31;
+  if (g > 63) g = 63;
+  if (b > 31) b = 31;
+  return (uint16_t)(r << 11 | g << 5 | b);
+}
 uint16_t blend565(uint16_t d, uint16_t s, int a) {
   /* s premultiplied: s + d * (1 - a), a in 0..256 */
   uint32_t ia = 256 - a;
@@ -154,6 +166,16 @@ static inline uint16_t add565(uint16_t d, uint16_t s) {
   t |= (lo - (lo >> 5)) | (hi - (hi >> 6));
   t &= 0x07E0F81Fu;
   return (uint16_t)(t | t >> 16);
+}
+/* the same for the two pixels of a word: one half of the fields (B and R of the first, G of the second) as above, the
+ * other half shifted down a bit so that each has a free bit over it too; qa, qb: the color added, spread the same ways */
+static inline uint32_t add565x2(uint32_t p, uint32_t qa, uint32_t qb) {
+  uint32_t a = (p & 0x07E0F81Fu) + qa, b = ((p >> 1) & 0x7C0F83F0u) + qb;
+  uint32_t oa = a & 0x08010020u, ob = b & 0x80100400u;
+  uint32_t la = oa & 0x00010020u, ha = oa & 0x08000000u, lb = ob & 0x00000400u, hb = ob & 0x80100000u;
+  a = (a | (la - (la >> 5)) | (ha - (ha >> 6))) & 0x07E0F81Fu;
+  b = (b | (lb - (lb >> 6)) | (hb - (hb >> 5))) & 0x7C0F83F0u;
+  return a | b << 1;
 }
 uint16_t mul565(uint16_t c, uint16_t t) {
   uint32_t r = ((c >> 11) * ((t >> 11) + 1)) >> 5;
@@ -238,7 +260,7 @@ static inline void plot(uint16_t *d, uint8_t idx) {
     return;
   }
   int a = alpha_of(idx);
-  *d = a >= 256 ? EC[idx] : blend565(*d, EC[idx], a);
+  *d = a >= 256 ? EC[idx] : blend565_in(*d, EC[idx], a);
 }
 
 /* n pixels from d on, one step (+1 or -1) apart: one index (run) or n indices (literals) */
@@ -250,13 +272,23 @@ static inline void span_run(uint16_t *d, int n, int step, uint8_t v) {
     else
       while (n--) *d-- = c;
   } else if (ep_flags & GF_ADD) {
-    for (; n--; d += step) *d = add565(*d, c);
+    if (step > 0 && n > 3) {   /* two pixels at a time (the Celestial Resort's sunset over the whole view) */
+      if ((uintptr_t)d & 2) *d = add565(*d, c), d++, n--;
+      uint32_t qa = (c | (uint32_t)c << 16) & 0x07E0F81Fu, qb = ((c | (uint32_t)c << 16) >> 1) & 0x7C0F83F0u;
+      for (; n >= 2; n -= 2, d += 2) {   /* (memcpy: an aligned word, read and written as such) */
+        uint32_t p;
+        memcpy(&p, d, 4);
+        p = add565x2(p, qa, qb);
+        memcpy(d, &p, 4);
+      }
+    }
+    for (; n > 0; n--, d += step) *d = add565(*d, c);
   } else {
     int a = alpha_of(v);
     if (a >= 256)
       for (; n--; d += step) *d = c;
     else
-      for (; n--; d += step) *d = blend565(*d, c, a);
+      for (; n--; d += step) *d = blend565_in(*d, c, a);
   }
 }
 static inline void span_lit(uint16_t *d, int n, int step, const uint8_t *s) {
@@ -270,7 +302,7 @@ static inline void span_lit(uint16_t *d, int n, int step, const uint8_t *s) {
   } else
     for (; n--; d += step, s++) {
       int a = alpha_of(*s);
-      *d = a >= 256 ? EC[*s] : blend565(*d, EC[*s], a);
+      *d = a >= 256 ? EC[*s] : blend565_in(*d, EC[*s], a);
     }
 }
 

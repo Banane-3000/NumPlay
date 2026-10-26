@@ -1,3 +1,6 @@
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize("Os")   /* smaller over faster: the drawing takes the frame, not this (and the app space is full) */
+#endif
 /* Entities: the pool, depth order, collisions, and Monocle's Actor, Solid,
  * JumpThru movement (pixel by pixel, pushing and carrying riders). */
 #include "ent.h"
