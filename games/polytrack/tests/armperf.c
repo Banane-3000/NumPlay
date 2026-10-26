@@ -68,8 +68,8 @@ int main(void) {
     perf_out[0]++, perf_out[1] += spent;
     if (spent > perf_out[2]) perf_out[2] = spent;
     if (spent > 33) perf_out[3]++, perf_out[10] += (uint32_t)rd_tris, perf_out[11] += (uint32_t)rd_chunks;
-    if (rd_detail < 2) perf_out[rd_detail ? 9 : 12]++;
-    else perf_out[4 + rd_detail - 2]++;
+    if (rd_detail < 3) perf_out[rd_detail == 2 ? 9 : rd_detail == 1 ? 12 : 13]++;
+    else perf_out[4 + rd_detail - 3]++;
     rd_adapt(spent);
     dt = spent > 33 ? spent : 33;     /* (the game's frames: 33 ms at least on these calculators) */
   }

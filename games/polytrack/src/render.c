@@ -29,13 +29,13 @@ static tri tris[MAX_TRIS];
 static int ntris;
 int rd_tris, rd_dropped, rd_mtris, rd_chunks;
 int rd_detail = RD_LEVELS - 1;
-bool rd_half;
+bool rd_half, rd_halfx;
 /* the picture's quality, lowest first: how far it draws, how near the parts keep their whole shape, half the rows,
    triangles at most */
-static const float DRAW[RD_LEVELS] = {70.0f, 100.0f, 100.0f, 140.0f, 180.0f, 230.0f};
-static const float NEAR_DETAIL[RD_LEVELS] = {12.0f, 22.0f, 22.0f, 30.0f, 40.0f, 52.0f};
-static const uint8_t HALF[RD_LEVELS] = {1, 1, 0, 0, 0, 0};
-static const uint16_t CAP[RD_LEVELS] = {1100, MAX_TRIS, MAX_TRIS, MAX_TRIS, MAX_TRIS, MAX_TRIS};
+static const float DRAW[RD_LEVELS] = {60.0f, 70.0f, 100.0f, 100.0f, 140.0f, 180.0f, 230.0f};
+static const float NEAR_DETAIL[RD_LEVELS] = {10.0f, 12.0f, 22.0f, 22.0f, 30.0f, 40.0f, 52.0f};
+static const uint8_t HALF[RD_LEVELS] = {3, 1, 1, 0, 0, 0, 0};   /* 1: half the rows, 2: and of the columns */
+static const uint16_t CAP[RD_LEVELS] = {900, 1100, MAX_TRIS, MAX_TRIS, MAX_TRIS, MAX_TRIS, MAX_TRIS};
 static int cap = MAX_TRIS;
 
 /* the camera */
@@ -264,7 +264,7 @@ void rd_begin(const camera_t *cam, int env, int sun_byte, bool sky_only) {
   focal = CY * pt_cosf(half) / pt_sinf(half);
   int q = rd_detail < 0 ? 0 : rd_detail >= RD_LEVELS ? RD_LEVELS - 1 : rd_detail;
   far_d = DRAW[q];
-  rd_half = HALF[q];
+  rd_half = HALF[q] & 1, rd_halfx = HALF[q] >> 1;
   cap = CAP[q];
   fog0 = far_d * 0.55f;
   float l = pt_sqrtf(focal * focal + CX * CX);
@@ -424,7 +424,7 @@ static void mountains(void) {
   float rad[8];
   for (int k = 0; k < 8; k++) rad[k] = W.mr + 100.0f * (float)k;
   /* (at the lowest qualities: every other segment, the nearer rings) */
-  int de = rd_detail <= 1 ? 2 : 1, k0 = rd_detail <= 1 ? 3 : 6;
+  int de = rd_detail <= 2 ? 2 : 1, k0 = rd_detail <= 2 ? 3 : 6;
   for (int k = k0; k >= 0; k--)
     for (int e = 0; e < s; e += de) {
       int e1 = (e + de) % s;
@@ -549,7 +549,7 @@ void rd_car(const car_look *c) {
   v3 t = to_cam(vadd(c->pos, mrow(&R, V3(0.0f, CAR_MASS_OFFSET, 0.0f))));
   if (t.z < -6.0f || t.z > far_d) return;
   car_mesh(pt_body_v, PT_BODY_NV, pt_body_t, PT_BODY_NT, M, t, &R, mat, c);
-  if (!c->ghost && rd_detail > 1) car_mesh(pt_extra_v, PT_EXTRA_NV, pt_extra_t, PT_EXTRA_NT, M, t, &R, mat, c);
+  if (!c->ghost && rd_detail > 2) car_mesh(pt_extra_v, PT_EXTRA_NV, pt_extra_t, PT_EXTRA_NT, M, t, &R, mat, c);
   /* the wheels: at their suspension's end, turned by the steering (front) and rolling */
   for (int i = 0; i < 4; i++) {
     v3 wp = vadd(c->pos, mrow(&R, vadd(car_wheel_pos[i], V3(0.0f, -c->susp[i], 0.0f))));
@@ -598,12 +598,15 @@ void rd_shadow(const car_look *c, const car_t *phys) {
    triangles), up slowly */
 void rd_adapt(uint32_t spent_ms) {
   static uint32_t slow, quick;
-  if (spent_ms > 30 || rd_dropped) slow++, quick = 0;
-  else if (spent_ms < 18 && rd_tris < cap * 3 / 4) quick++, slow = 0;
+  if (spent_ms > 26 || rd_dropped) slow++, quick = 0;
+  else if (spent_ms < 16 && rd_tris < cap * 3 / 4) quick++, slow = 0;
   else slow = quick = 0;
   int q = rd_detail;
+  /* (a frame near 33 ms: down at once, two steps when past it) */
+  if (spent_ms > 30) q -= spent_ms > 36 ? 2 : 1, slow = 0;
   /* (out of triangles but in time, at the nearest distance: not a reason for half the rows) */
-  if (slow >= 2 && q > 0 && (spent_ms > 30 || q > 2)) q--, slow = 0;
+  if (slow >= 2 && q > 0 && (spent_ms > 26 || q > 3)) q--, slow = 0;
+  if (q < 0) q = 0;
   if (quick >= 30 && q < RD_LEVELS - 1) q++, quick = 0;
   rd_detail = q;
 }
@@ -677,12 +680,32 @@ __attribute__((noinline)) static void raster(const tri *t, int ys, int ye) {
     float xa = xl < xs ? xl : xs, xb = xl < xs ? xs : xl;
     if (xa < -1.0f) xa = -1.0f;
     if (xb > 321.0f) xb = 321.0f;
+    uint16_t *p = gfx_buf + (r - ys) * SCREEN_W;
+    bool two = step == 2 && r + 1 < ye;
+    if (rd_halfx && kind == RK_SOLID) {
+      /* half the columns too: blocks of two pixels, each covered when its middle is, depth at its middle */
+      int ba = iceil((xa - 1.0f) * 0.5f), bb = iceil((xb - 1.0f) * 0.5f);
+      if (ba < 0) ba = 0;
+      if (bb > SCREEN_W / 2) bb = SCREEN_W / 2;
+      if (bb <= ba) continue;
+      float wb = w0 + B * ((float)(2 * ba + 1) - x0) + Cc * (yc - y0);
+      wb = pt_clampf(wb, 0.0f, 0.99998f);
+      int32_t qb = (int32_t)(wb * 1073741824.0f), d2 = (int32_t)(pt_clampf(2.0f * B, -1.9f, 1.9f) * 1073741824.0f);
+      int nb = bb - ba;
+      int32_t qe = qb + d2 * (nb - 1);
+      if (nb > 1 && (qe < 0 || qe > 1073725440)) d2 = ((qe < 0 ? 0 : 1073725440) - qb) / (nb - 1);
+      uint16_t *z = zbuf + (r - ys) * SCREEN_W + 2 * ba, *pp = p + 2 * ba;
+      int dn = two ? SCREEN_W : 0;
+      for (int k = 0; k < nb; k++, qb += d2, z += 2, pp += 2) {
+        uint16_t q = (uint16_t)((uint32_t)qb >> 14);
+        if (q > z[0]) z[0] = z[1] = z[dn] = z[dn + 1] = q, pp[0] = pp[1] = pp[dn] = pp[dn + 1] = col;
+      }
+      continue;
+    }
     int pa = iceil(xa - 0.5f), pb = iceil(xb - 0.5f);
     if (pa < 0) pa = 0;
     if (pb > SCREEN_W) pb = SCREEN_W;
     if (pb <= pa) continue;
-    uint16_t *p = gfx_buf + (r - ys) * SCREEN_W;
-    bool two = step == 2 && r + 1 < ye;
     if (kind == RK_BACK) {
       for (int x = pa; x < pb; x++) p[x] = col;
       if (two)

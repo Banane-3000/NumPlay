@@ -330,8 +330,21 @@ static const char *const pt_routes[17] = {
   "b2jbjbjbjbjbjdb10d2bdbdbdbdbdbdbdbdbdbdbdbdbdbdbdbdbdbdbdbdbdbd2jdb2d2bdbdbdbd3jd2j2djd2j2djdj2dj2bdbdb2d2jbdbdbd"
   "bdbdbdbdbdbdb3djb16d40j14dj2djdjdjdjdjdjd2jdjdbj2dbjdbjbjbjbjg10j9bj2b2j2b2j2dbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjb"
   "jbjbjbjbjbjbjbjbjdb36e20jbjbjbjbjbjbjbjbjbj2bjbjbjbjbja19",
-  /* Desert 3: 0 ms */
-  "b",
+  /* Desert 3: 34636 ms */
+  "j56djd2jd2jd2jdjd2jd2jdjd2jd2bjbjbjbjbjbjbjbjbjbjbjbjbjbjbjdbjbjbjbiaiaiaiaiadbdbd2bdbdbdjbd2bdbdbdbdbdbdbdj4b2jb"
+  "jbjbjbjdb16dbdbdbdbd2bdbdbdbdbdbd3jbdbd2jdjdjd2j2djd2jdjdjd40e10b10j8d2jdjd2jdjd2g10j6b2j2bjbj4dj5djdjdjd2jdjd3jd"
+  "jd2jdjd2b2j2d2bjbjbjbjb6dbdbd2bdbdbdbd2bdbd3j2d2jdjdjdjda10m10d19jb20d9ja10e10g10d10j2djdj2djdb30j50d10jd9e10j40"
+  "g10d10ci2c7m10d66j3dj2dj3d2jd3jdjdjdjdjdjdjdjdjdjdjdjdjdjdjdjdjdjdjdjdjdjdjdjd11j5d2jd2jd2jdjdj2djdjdj2djdjdjdj2d"
+  "jdjdj2djdjdjdj2djdjbdbdbdjbdbdbdbdbdbdbdbdb2dbdbdbdbdbdbdbdbdbdbdbdb27d30j56dj2d2j2d2jd2jdj7djd3jd3jd2jd5b2dbd7jd"
+  "jdjdjdjdjdjdjdjdjdjdjdjdjdjdjdjdmgm2g2m2gmgmgmgm2gmgd2jdj2dj2djdjdj2djbdbdjbdbdbdjbdbdbdjb9jbjbj2bjbjbjbjbjbjbjbj"
+  "bjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbjbj2bj4d2j3dj2djd2jd7bdbdj2bj7dj2dj2d2jdjd2jd2jd2jdjd2"
+  "bjbjdbm3gm76j50d10g10b20d90j8db4d2j2dbdjdb3db3jg20m10d19jg40j70d77jdj3dj3dj2dj2bdb2dbdbdbdbdbdbdbd5j2djdj4bd2bdb"
+  "j6djd4bjbjbjbjbjdb5dbd6jdj2dj2djdjdjb2dbdbdbdbdbdbdbdbdbdj10d10b60d8j2djdjdj2djdjdj2djdjdja10d10j8bdbdbdbdbdbdbd"
+  "b2dbdbdbdbdbdbdbdbdbdbdbdjb26jbjbjbd5j2bdjbdjbdb4jbjbjbj2bjbj2bj2dj2djdjdjdjdjdjdjdjdjdjdja10j4dj2d2j2d2jdbjdbjbj"
+  "b2j2dbjb4dbdbdbdbdbdbdbdbdbdbdbdbdbd2jdbdbdbdbdbdbdbdbdbdbdbdbdbdbdbdbdb2d2jdb2dbdbdbdbdbdbdbdbdbdbdb3djb41mememe"
+  "memej30d50mgmgm2gmgmd18jdg40d10m10d50b20j10d10j30dj19djdj7m10j119d2jdjdj2d3jdjd2jdjd3j2djdjd2jdjd2j3d3bjbjbjbj2dj"
+  "dbjbjbj2dj30b20d20j7djdjd2jdjdjd2m7gmejdj4d4bdjb2dbdbdbdbdbdbdbdbdbdbdbdbdg30d40g30j9bdb2dbdjb3djb8jbjbjbjbjbd5jd"
+  "j2bdj2bdjb4a20d10m30i10d10j10b10d20m9i15",
   /* Desert 4: 37852 ms */
   "d53jdjdj5djdj2djdj2djbdbjbdbdbdbdbdbdbcijaiaiaid6j3bd5jdjdj5bdbdbdj30d10j9d2jdjdjd2jdjdjdjd2jdjdjdjd2jdjdjdjdjd2j"
   "djdbjbjbjbjbjb2jbjbjbj4djd2jdja10j2bjbjb2jbjbjbjbjbjbjbjbjbjbjbj2bjbjdbjbjbjbjbjbjbjbjbjbjdb25dbdbdbdbdbdbdbdbdbd"
@@ -380,8 +393,8 @@ static const char *const pt_routes[17] = {
   "d2jd2jd4bjbjbjbjbjbjbjbj2bjbjbjb2jbjbjbjbjbjb60j3bjbjbjbj4djdjdjd4bjbjbjbjbjdbjbjb83dbdbdbdbdbdbdbdbdbdbdbdbdbdbd"
   "bdbdbdbdbdbdbdbdbdb31dbdbdbdbdbdbdbdbdbdb61gegegegegegegegegegeb20e10b160d10a60b45jbjbjemg4",
 };
-static const uint32_t pt_route_ms[17] = {32293, 27987, 39521, 66019, 106224, 87739, 59000, 28763, 67052, 72137, 36518, 44386, 50234, 51686, 0, 37852, 76658};
+static const uint32_t pt_route_ms[17] = {32293, 27987, 39521, 66019, 106224, 87739, 59000, 28763, 67052, 72137, 36518, 44386, 50234, 51686, 34636, 37852, 76658};
 static const uint32_t pt_route_hash[17] = {
   0x46b14d50, 0x41d4075b, 0x97b7dc15, 0x3be09d36, 0x36f6af61, 0x86e1e537, 0xf85a38d1, 0xc7882ade, 0x798ce928,
-  0xcf725a2a, 0x5bdaaa3a, 0x2bf4cac6, 0x5855d5a5, 0x5957f905, 0x00000000, 0x919a971f, 0xc8835445};
+  0xcf725a2a, 0x5bdaaa3a, 0x2bf4cac6, 0x5855d5a5, 0x5957f905, 0xe4db5b83, 0x919a971f, 0xc8835445};
 #endif
