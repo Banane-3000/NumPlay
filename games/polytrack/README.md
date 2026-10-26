@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="../../docs/media/gallery/polytrack.gif" width="640" alt="PolyTrack: Summer 2, flat out towards the wall ride">
+  <img src="../../docs/media/gallery/polytrack.gif" width="640" alt="PolyTrack: Desert 4, through a checkpoint and round its tube">
 </p>
 
 ## Highlights
@@ -32,12 +32,12 @@
 
 <table>
   <tr>
-    <td align="center"><img src="docs/shot.png" width="390" alt="Racing on Summer 1"><br><sub>Summer 1: down from the start</sub></td>
+    <td align="center"><img src="docs/shot.png" width="390" alt="Racing on Summer 1"><br><sub>Summer 1, after the first checkpoint</sub></td>
     <td align="center"><img src="docs/wallride.png" width="390" alt="The wall ride on Summer 2"><br><sub>Summer 2's wall ride</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/winter.png" width="390" alt="Racing on a Winter track"><br><sub>Winter 2</sub></td>
-    <td align="center"><img src="docs/desert.png" width="390" alt="Racing on a Desert track"><br><sub>Desert 4</sub></td>
+    <td align="center"><img src="docs/winter.png" width="390" alt="Racing on Winter 2"><br><sub>Winter 2, flat out</sub></td>
+    <td align="center"><img src="docs/desert.png" width="390" alt="Inside Desert 4's tube"><br><sub>Desert 4's tube</sub></td>
   </tr>
   <tr>
     <td align="center"><img src="docs/tracks.png" width="390" alt="Choosing a track"><br><sub>The tracks, each with its map and record</sub></td>

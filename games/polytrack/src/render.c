@@ -28,10 +28,15 @@ typedef struct {
 static tri tris[MAX_TRIS];
 static int ntris;
 int rd_tris, rd_dropped, rd_mtris, rd_chunks;
-int rd_detail = 2;
+int rd_detail = RD_LEVELS - 1;
 bool rd_half;
-static const float DRAW[4] = {100.0f, 140.0f, 180.0f, 230.0f};
-static const float NEAR_DETAIL[4] = {22.0f, 30.0f, 40.0f, 52.0f};
+/* the picture's quality, lowest first: how far it draws, how near the parts keep their whole shape, half the rows,
+   triangles at most */
+static const float DRAW[RD_LEVELS] = {70.0f, 100.0f, 100.0f, 140.0f, 180.0f, 230.0f};
+static const float NEAR_DETAIL[RD_LEVELS] = {12.0f, 22.0f, 22.0f, 30.0f, 40.0f, 52.0f};
+static const uint8_t HALF[RD_LEVELS] = {1, 1, 0, 0, 0, 0};
+static const uint16_t CAP[RD_LEVELS] = {1100, MAX_TRIS, MAX_TRIS, MAX_TRIS, MAX_TRIS, MAX_TRIS};
+static int cap = MAX_TRIS;
 
 /* the camera */
 static camera_t C;
@@ -155,7 +160,7 @@ static int iceil(float f) {
 }
 
 static void store(const sv *a, const sv *b, const sv *c, uint16_t col, int kind) {
-  if (ntris >= MAX_TRIS) {
+  if (ntris >= cap) {
     rd_dropped = 1;
     return;
   }
@@ -257,7 +262,10 @@ void rd_begin(const camera_t *cam, int env, int sun_byte, bool sky_only) {
   ntris = 0, rd_dropped = 0;
   float half = C.fov * 0.5f * (PT_PI / 180.0f);
   focal = CY * pt_cosf(half) / pt_sinf(half);
-  far_d = DRAW[rd_detail & 3];
+  int q = rd_detail < 0 ? 0 : rd_detail >= RD_LEVELS ? RD_LEVELS - 1 : rd_detail;
+  far_d = DRAW[q];
+  rd_half = HALF[q];
+  cap = CAP[q];
   fog0 = far_d * 0.55f;
   float l = pt_sqrtf(focal * focal + CX * CX);
   px_n[0] = focal / l, px_n[1] = CX / l;
@@ -333,7 +341,7 @@ static void collect(int i, void *ctx) {
       v = &vis[far];
     }
     v->inst = (uint16_t)i, v->chunk = (uint8_t)k, v->dist = d;
-    v->lod = d < NEAR_DETAIL[rd_detail & 3] ? 0 : 1;
+    v->lod = d < NEAR_DETAIL[rd_detail < 0 ? 0 : rd_detail >= RD_LEVELS ? RD_LEVELS - 1 : rd_detail] ? 0 : 1;
   }
 }
 
@@ -415,11 +423,13 @@ static void mountains(void) {
   if (!s) return;
   float rad[8];
   for (int k = 0; k < 8; k++) rad[k] = W.mr + 100.0f * (float)k;
-  for (int k = 6; k >= 0; k--)
-    for (int e = 0; e < s; e++) {
-      float a0 = (float)e / (float)s * 2.0f * PT_PI, a1 = (float)(e + 1) / (float)s * 2.0f * PT_PI;
+  /* (at the lowest qualities: every other segment, the nearer rings) */
+  int de = rd_detail <= 1 ? 2 : 1, k0 = rd_detail <= 1 ? 3 : 6;
+  for (int k = k0; k >= 0; k--)
+    for (int e = 0; e < s; e += de) {
+      int e1 = (e + de) % s;
+      float a0 = (float)e / (float)s * 2.0f * PT_PI, a1 = (float)(e + de) / (float)s * 2.0f * PT_PI;
       float c0 = pt_cosf(a0), s0 = pt_sinf(a0), c1 = pt_cosf(a1), s1 = pt_sinf(a1);
-      int e1 = (e + 1) % s;
       float h00 = (float)W.mh[e][k] * (100.0f / 255.0f), h10 = (float)W.mh[e1][k] * (100.0f / 255.0f);
       float h01 = (float)W.mh[e][k + 1] * (100.0f / 255.0f), h11 = (float)W.mh[e1][k + 1] * (100.0f / 255.0f);
       if (h00 + h10 + h01 + h11 == 0.0f) continue;
@@ -450,7 +460,7 @@ void rd_track(void) {
   }
   /* (when the room runs short, the further ones simplified) */
   for (int i = 0; i < nvis; i++) {
-    if (ntris > MAX_TRIS * 3 / 5) vis[i].lod = 1;
+    if (ntris > cap * 3 / 5) vis[i].lod = 1;
     draw_chunk(&vis[i]);
   }
   rd_chunks = nvis;
@@ -539,7 +549,7 @@ void rd_car(const car_look *c) {
   v3 t = to_cam(vadd(c->pos, mrow(&R, V3(0.0f, CAR_MASS_OFFSET, 0.0f))));
   if (t.z < -6.0f || t.z > far_d) return;
   car_mesh(pt_body_v, PT_BODY_NV, pt_body_t, PT_BODY_NT, M, t, &R, mat, c);
-  if (!c->ghost) car_mesh(pt_extra_v, PT_EXTRA_NV, pt_extra_t, PT_EXTRA_NT, M, t, &R, mat, c);
+  if (!c->ghost && rd_detail > 1) car_mesh(pt_extra_v, PT_EXTRA_NV, pt_extra_t, PT_EXTRA_NT, M, t, &R, mat, c);
   /* the wheels: at their suspension's end, turned by the steering (front) and rolling */
   for (int i = 0; i < 4; i++) {
     v3 wp = vadd(c->pos, mrow(&R, vadd(car_wheel_pos[i], V3(0.0f, -c->susp[i], 0.0f))));
@@ -585,19 +595,17 @@ void rd_shadow(const car_look *c, const car_t *phys) {
 }
 
 /* the picture's quality follows the time a race frame takes: down at once when slow (or out of room for
-   triangles), up slowly; below the nearest drawing distance, half the rows */
+   triangles), up slowly */
 void rd_adapt(uint32_t spent_ms) {
   static uint32_t slow, quick;
   if (spent_ms > 30 || rd_dropped) slow++, quick = 0;
-  else if (spent_ms < 18 && rd_tris < RD_MAX_TRIS * 3 / 4) quick++, slow = 0;
+  else if (spent_ms < 18 && rd_tris < cap * 3 / 4) quick++, slow = 0;
   else slow = quick = 0;
-  int q = rd_half ? 0 : 1 + (rd_detail & 3);
-  if (slow >= 2 && q > 0) q--, slow = 0;
-  if (quick >= 30 && q < 4) q++, quick = 0;
-  /* (a frame out of triangles at the nearest distance: not a reason for half the rows) */
-  if (q == 0 && spent_ms <= 30 && !rd_half) q = 1;
-  rd_half = q == 0;
-  rd_detail = q ? q - 1 : 0;
+  int q = rd_detail;
+  /* (out of triangles but in time, at the nearest distance: not a reason for half the rows) */
+  if (slow >= 2 && q > 0 && (spent_ms > 30 || q > 2)) q--, slow = 0;
+  if (quick >= 30 && q < RD_LEVELS - 1) q++, quick = 0;
+  rd_detail = q;
 }
 
 /* ------------------------------------------------------------------ drawing a strip */

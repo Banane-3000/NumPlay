@@ -23,7 +23,7 @@ def one(args):
     c.uc.mem_write(c.symbols["perf_track"], struct.pack("<I", t))
     c.uc.mem_write(c.symbols["perf_go"], struct.pack("<I", 1))
     c.run(30 * 60 * 1000)
-    out = struct.unpack("<12I", bytes(c.uc.mem_read(c.symbols["perf_out"], 48)))
+    out = struct.unpack("<16I", bytes(c.uc.mem_read(c.symbols["perf_out"], 64)))
     done, = struct.unpack("<I", bytes(c.uc.mem_read(c.symbols["perf_done"], 4)))
     return t, out, done
 
@@ -35,9 +35,10 @@ def main():
     with ProcessPoolExecutor(max_workers=min(8, len(tracks))) as ex:
         for t, o, done in ex.map(one, [(nwa, t) for t in tracks]):
             frames, work, worst, over = o[0], o[1], o[2], o[3]
-            det = "/".join(str(x) for x in [o[9]] + list(o[4:8]))
+            det = "/".join(str(x) for x in [o[12], o[9]] + list(o[4:8]))
             print(f"{NAMES[t]:9}: {frames:5} frames, {work / max(frames, 1):5.1f} ms a frame, slowest {worst:3} ms, "
-                  f"{over:3} over 33 ms (half rows/detail 0/1/2/3: {det}), finish {o[8]} ms" + ("" if done else ", NOT done"))
+                  f"{over:3} over 33 ms (quality 0/1/2/3/4/5: {det}), finish {o[8]} ms" +
+                  (f", slow ones: {o[10] // over} triangles, {o[11] // over} chunks" if over else "") + ("" if done else ", NOT done"))
             bad += over > 0 or not done
     sys.exit(1 if bad else 0)
 

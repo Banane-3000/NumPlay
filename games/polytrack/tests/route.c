@@ -216,6 +216,7 @@ static int vcost = 1;      /* up or down a slope or a wall (VC=) */
 static int air_up = 0;     /* up through the air (AU=; 0: never) */
 static int height_buckets; /* HB= */
 static double speed_w = 0.5; /* SPEEDW=: what a faster class is worth, in metres of the way */
+static double energy_w;     /* ENERGY=: archive by energy instead, each 150 J/kg worth this many metres */
 static int *bucket[NB], bcount[NB], bcap[NB];
 static void push(int b, int i) {
   if (bcount[b] == bcap[b]) bcap[b] = bcap[b] ? bcap[b] * 2 : 4096, bucket[b] = realloc(bucket[b], sizeof(int) * (size_t)bcap[b]);
@@ -470,6 +471,14 @@ typedef struct {
    (back, across, on) and how fast (under 20, 80, 140, 200, 260, 320 km/h, or over) */
 static uint32_t cell_key(const car_t *c) {
   int k = target_of(c);
+  if (energy_w > 0.0) {
+    /* (ENERGY=w: the stretch in 8 m steps and the car's energy, speed and height, in steps of 150 J/kg: for a
+       jump that wants all the speed there is) */
+    int d8 = (int)(dist_of(c) / 8.0f);
+    float e = 0.5f * vlen2(c->vel) + 9.82f * c->pos.y;
+    int eb = (int)pt_clampf(e / 150.0f, 0.0f, 1023.0f);
+    return (uint32_t)stage_of(c) << 24 | (uint32_t)(d8 < 16383 ? d8 : 16383) << 10 | (uint32_t)eb;
+  }
   int d = (int)(dist_of(c) / 4.0f);
   float v = pt_absf(c->speed);
   int sb = v < 20.0f ? 0 : v < 80.0f ? 1 : v < 140.0f ? 2 : v < 200.0f ? 3 : v < 260.0f ? 4 : v < 320.0f ? 5 : 6, ab = 1;
@@ -484,6 +493,8 @@ static uint32_t cell_key(const car_t *c) {
   return (uint32_t)stage_of(c) << 24 | (uint32_t)(d < 65535 ? d : 65535) << 8 | hb << 6 | (uint32_t)ab << 4 | (uint32_t)sb;
 }
 static double progress(const cell_t *e) {
+  if (energy_w > 0.0)
+    return (double)(e->key >> 24) * 1e6 - (double)((e->key >> 10) & 0x3FFF) * 8.0 + (double)(e->key & 1023) * energy_w;
   return (double)(e->key >> 24) * 1e6 - (double)((e->key >> 8) & 0xFFFF) * 4.0 + (double)((e->key >> 4) & 3) +
          (double)(e->key & 7) * speed_w;
 }
@@ -759,6 +770,7 @@ int main(int argc, char **argv) {
   if (getenv("AU")) air_up = atoi(getenv("AU"));
   if (getenv("HB")) height_buckets = atoi(getenv("HB"));
   if (getenv("SPEEDW")) speed_w = atof(getenv("SPEEDW"));
+  if (getenv("ENERGY")) energy_w = atof(getenv("ENERGY"));
   int list[PT_NTRACKS], n = 0;
   for (int i = 1; i < argc; i++) list[n++] = atoi(argv[i]);
   if (!n)

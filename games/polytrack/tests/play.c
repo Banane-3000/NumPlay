@@ -297,7 +297,7 @@ static void reset_app(void) {
   memset(&ui, 0, sizeof ui);
   memset(&sv, 0, sizeof sv);
   memset(&car, 0, sizeof car);
-  rd_detail = 3;
+  rd_detail = RD_LEVELS - 1;
   calls = 0, quit_at = 0;
   app_phase = 0, loaded = -1;
 }
@@ -635,7 +635,7 @@ int main(int argc, char **argv) {
       if (f % 33 == 0) chase_update(&chase, &cam, 0.033f, car.pos, car.rot, car.speed);
     }
     sv.p.track = (uint8_t)t;
-    rd_detail = argc > 5 ? atoi(argv[5]) : 3;
+    rd_detail = argc > 5 ? atoi(argv[5]) : RD_LEVELS - 1;
     render_race(&car, &chase, 0.0f);
     printf("track %s frame %u pos %.2f %.2f %.2f speed %.1f cp %d tris %d (mountains %d, chunks %d)%s\n", pt_tracks[t].name, car.frames,
            (double)car.pos.x, (double)car.pos.y, (double)car.pos.z, (double)car.speed, car.next_cp, rd_tris, rd_mtris, rd_chunks,
@@ -672,7 +672,7 @@ int main(int argc, char **argv) {
     sv.p.guide = 1;
     for (int t = 0; t < PT_NTRACKS; t++)
       if (t % 3 != 2) sv.p.best[t] = 31000u + (uint32_t)t * 2345u;
-    rd_detail = 3;
+    rd_detail = RD_LEVELS - 1;
     world_load(0);
     car_reset(&car);
     look = car_look_of(&car);
@@ -735,7 +735,7 @@ int main(int argc, char **argv) {
     c.right = vnorm(vcross(c.fwd, V3(0.0f, 1.0f, 0.0f)));
     c.up = vcross(c.right, c.fwd);
     c.fov = 70.0f;
-    rd_detail = 3;
+    rd_detail = RD_LEVELS - 1;
     rd_begin(&c, W.t->env, W.t->sun, false);
     rd_track();
     color_t *old = gfx_buf;
@@ -758,7 +758,7 @@ int main(int argc, char **argv) {
     car_reset(&car);
     chase_reset(&chase, car.pos, car.rot);
     sv.p.track = (uint8_t)t;
-    rd_detail = 3;
+    rd_detail = RD_LEVELS - 1;
     int n = 0;
     for (uint32_t f = 0; f < ms; f++) {
       car_step(&car, route_keys(f));
