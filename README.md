@@ -314,6 +314,8 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Brawl Stars, against bots
 - [ ] Papers, Please, with the story and Endless
 - [ ] Mario Kart
+- [ ] Mahjong
+- [ ] Universal Paperclips
 
 ## Credits
 
