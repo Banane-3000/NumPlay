@@ -4,11 +4,12 @@
  *                            hash on every computer; the checkpoints in order, respawns, restarts; the whole app
  *                            through its keys, all 17 tracks one after the other; saves written and read back,
  *                            damaged saves, a full storage, the ghosts; 300 sessions of random keys
- *   play shots DIR           pictures of the screens (DIR/<name>.ppm)
- *   play view DIR T MS       a picture of track T after MS ms of its recorded run (DIR/view.ppm)
+ *   play shots DIR [MS]      pictures of the screens, the race MS ms into Summer 1's run (DIR/<name>.ppm)
+ *   play view DIR T MS [Q]   a picture of track T after MS ms of its recorded run, at quality Q (DIR/view.ppm)
  *   play film DIR T MS STEP  MS ms of track T's recorded run, a frame every STEP ms (DIR/<frame>_<ms>.raw, for
  *                            tools/record.py --frames)
  *   play probe DIR T MS [K]  the car's state after MS ms of the run, then a second of keys K (IN_ bits)
+ *   play cam DIR T X Y Z TX TY TZ   track T seen from (X, Y, Z) looking at (TX, TY, TZ) (DIR/cam.ppm)
  * A run found by tests/route.c can be looked at before it goes into routes.h: ROUTE_FILE=its output. */
 #define main pt_app_main
 #include "../src/main.c"

@@ -1,10 +1,19 @@
 /* Finds a run to the finish of each official track with the game's own physics, for tests/routes.h:
  *
- *   route [TRACK...]     prints the routes (C) of the tracks given, or of all
+ *   route [TRACK...]     prints the runs (letters, as in routes.h) of the tracks given, or of all
  *
- * How: a map of how far each place is from the next checkpoint along the track (2 m cubes near the track's
- * surfaces, walked from the checkpoint's box), and a beam search: every 100 ms each of the best few cars tries the
- * keys, looks half a second ahead, and the ones nearest the next checkpoint go on. */
+ * How: a map of how far each place is from the next checkpoint along the track (2 m cubes over the track's
+ * surfaces, walked back from the checkpoint's box, not through walls), a driver that steers along it, and
+ * Go-Explore: an archive of cars, one for each stretch of the way (and how fast, and which way), the quickest kept;
+ * again and again a car is taken from it, those further on and less tried first, and driven on a while by the
+ * driver or with keys held; cars that get somewhere new go in.
+ *
+ * Options (in the environment): TRIES, SEED; VC and AU, what climbing and going up through the air cost on the map;
+ * VIA="k x y z r", a place to go through after k checkpoints; HB, SPEEDW, ENERGY, more kinds of stretches;
+ * PREFIX=file, going on from a run found before (LANE="k x0 x1 z y" to hold its run-up on a lane); PARTIAL, print
+ * the furthest run when none finishes; TRACE, FIELD_DUMP and PILOT, to look at the map and the driver.
+ * The runs in routes.h came from this finder over its versions, a few with options (Desert 3: a run-up held on its
+ * lane with LANE, then VC=2 AU=10); a run found again is another, as good, with its own times and hashes. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -625,6 +634,46 @@ static bool route(int t, FILE *out) {
       for (r = r ? r : 1; r-- && ns < (int)sizeof pk;) pk[ns++] = (uint8_t)(c0 - 'a');
     }
     static car_t c;
+    if (getenv("LANE")) {
+      /* (LANE="k x0 x1 z y": a run-up held on a lane northwards, flat out, from the best of the prefix's moments
+         after k checkpoints: the one that reaches z the highest above y; for Desert 3's jump) */
+      int lk;
+      float x0, x1, zs, ys;
+      sscanf(getenv("LANE"), "%d %f %f %f %f", &lk, &x0, &x1, &zs, &ys);
+      static car_t s;
+      static uint8_t lkeys[2000], bkeys[2000];
+      int bi = -1, bn = 0;
+      float bh = -1e9f;
+      c = start;
+      for (int i = 0; i < ns && !c.finish; i++) {
+        for (int f2 = 0; f2 < SLOT; f2++) car_step(&c, pk[i]);
+        if (c.next_cp < lk || i % 5) continue;
+        for (float X = x0; X <= x1; X += 2.0f) {
+          s = c;
+          car_cache_rebuild(&s);
+          int m = 0;
+          float h = -1e9f;
+          while (m < 2000 && !s.finish && s.pos.y > -3.0f) {
+            /* heading north (-z), drifting onto x = X */
+            v3 fw = mcolumn(&s.basis, 2);
+            float want = pt_clampf(0.04f * (X - s.pos.x), -0.3f, 0.3f), err = fw.x - want;
+            unsigned k = IN_UP | (err > 0.02f ? IN_LEFT : err < -0.02f ? IN_RIGHT : 0u);
+            lkeys[m++] = (uint8_t)k;
+            for (int f2 = 0; f2 < SLOT; f2++) car_step(&s, k);
+            if (s.pos.z < zs) {
+              h = s.pos.y;
+              break;
+            }
+          }
+          if (h > bh) bh = h, bi = i, bn = m, memcpy(bkeys, lkeys, (size_t)m);
+        }
+      }
+      fprintf(stderr, "  lane: from %d ms, %.1f m up at the end\n", (bi + 1) * SLOT, (double)bh);
+      if (bi >= 0 && bh > ys) {
+        memcpy(&pk[bi + 1], bkeys, (size_t)bn);
+        ns = bi + 1 + bn;
+      }
+    }
     c = start;
     int node = 0;
     g_via = 0;

@@ -1,7 +1,8 @@
-/* A run to the finish of each official track, found by tests/route.c: a driver that follows a map of the track and
- * tries keys ahead with the game's own physics. A letter for each 10 ms: 'a' + the keys held (1 gas, 2 right,
- * 4 brake, 8 left), a number after it repeats it. With each, where it finishes (ms) and the car's state there (a
- * hash), the same on every computer. */
+/* A run to the finish of each official track, found with the game's own physics by tests/route.c (a driver that
+ * follows a map of the track, and a search from the cars it got furthest). A letter for each 10 ms: 'a' + the keys
+ * held (1 gas, 2 right, 4 brake, 8 left), a number after it repeats it; each run starts with a driving key, as the
+ * game's clock does. With each, where it finishes (ms) and the car's state there (a hash): the same on every
+ * computer and on the calculator. */
 #ifndef PT_ROUTES_H
 #define PT_ROUTES_H
 #include <stdint.h>
