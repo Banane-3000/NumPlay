@@ -214,6 +214,8 @@ static void build_field(void) {
 #define NB 32
 static int vcost = 1;      /* up or down a slope or a wall (VC=) */
 static int air_up = 0;     /* up through the air (AU=; 0: never) */
+static int height_buckets; /* HB= */
+static double speed_w = 0.5; /* SPEEDW=: what a faster class is worth, in metres of the way */
 static int *bucket[NB], bcount[NB], bcap[NB];
 static void push(int b, int i) {
   if (bcount[b] == bcap[b]) bcap[b] = bcap[b] ? bcap[b] * 2 : 4096, bucket[b] = realloc(bucket[b], sizeof(int) * (size_t)bcap[b]);
@@ -362,14 +364,6 @@ static float dist_of(const car_t *c) {
   return v < 0 ? 1e5f : (float)F.dist[k][v];
 }
 
-static double score(const car_t *c) {
-  if (c->finish) return 1e12 - (double)c->finish;
-  double s = (double)c->next_cp * 1e7 - (double)dist_of(c) * 1000.0;
-  s += (double)pt_absf(c->speed) * 2.0;
-  if (c->pos.y < -3.0f) s -= 1e6;
-  return s;
-}
-
 /* ------------------------------------------------------------------ a driver that follows the map */
 /* the place L cubes further down the map from the car (towards target k) */
 static v3 ahead(int k, const car_t *c, int L) {
@@ -412,7 +406,7 @@ static unsigned pilot(const car_t *c, int L, float vmax) {
 /* ------------------------------------------------------------------ the search */
 #define SLOT 10                     /* ms a key is held, at least */
 #define STEP 10                     /* slots a try lasts */
-#define MAXN 8000000
+#define MAXN 16000000
 typedef struct {
   int32_t parent;
   uint8_t keys[STEP];
@@ -438,6 +432,8 @@ static const action_t ACTIONS[] = {
 static void act(car_t *c, const action_t *a, uint8_t *keys) {
   for (int s = 0; s < STEP; s++) {
     unsigned k = a->L ? pilot(c, a->L, a->vmax) : a->keys;
+    /* (the game's clock starts with the first driving key: a run starts with one) */
+    if (!c->frames && !(k & (IN_UP | IN_DOWN | IN_LEFT | IN_RIGHT))) k |= IN_UP;
     if (keys) keys[s] = (uint8_t)k;
     for (int i = 0; i < SLOT && !c->finish; i++) car_step(c, k);
     via_check(c);
@@ -483,11 +479,13 @@ static uint32_t cell_key(const car_t *c) {
     float cs = l > 0.0f ? vdot(to, c->vel) / l : 0.0f;
     ab = cs < -0.3f ? 0 : cs < 0.5f ? 1 : 2;
   }
-  return (uint32_t)stage_of(c) << 24 | (uint32_t)(d < 65535 ? d : 65535) << 8 | (uint32_t)ab << 4 | (uint32_t)sb;
+  /* (HB=1: and how high, in 20 m steps: a car up a wall has more to give than one at its foot) */
+  uint32_t hb = height_buckets ? (uint32_t)pt_clampf(c->pos.y / 20.0f, 0.0f, 3.0f) : 0u;
+  return (uint32_t)stage_of(c) << 24 | (uint32_t)(d < 65535 ? d : 65535) << 8 | hb << 6 | (uint32_t)ab << 4 | (uint32_t)sb;
 }
 static double progress(const cell_t *e) {
   return (double)(e->key >> 24) * 1e6 - (double)((e->key >> 8) & 0xFFFF) * 4.0 + (double)((e->key >> 4) & 3) +
-         (double)(e->key & 7) * 0.5;
+         (double)(e->key & 7) * speed_w;
 }
 static uint32_t lcg(uint32_t *s) { return *s = *s * 1103515245u + 12345u, *s >> 8; }
 
@@ -640,7 +638,7 @@ static bool route(int t, FILE *out) {
     }
     fprintf(stderr, "  prefix: %d ms, %d stretches, cp %d dist %.0f\n", ns * SLOT, ncell, c.next_cp, (double)dist_of(&c));
   }
-  uint32_t seed = 12345u + (uint32_t)t * 7919u;
+  uint32_t seed = 12345u + (uint32_t)t * 7919u + (getenv("SEED") ? (uint32_t)atoi(getenv("SEED")) * 104729u : 0u);
   int tries = getenv("TRIES") ? atoi(getenv("TRIES")) : 200000;
   for (int it = 0; it < tries && found < 0 && nnodes + 64 < MAXN; it++) {
     /* the car to go on from: weighted by how far on it is (a factor e for each TEMP metres) over the root of how
@@ -681,7 +679,6 @@ static bool route(int t, FILE *out) {
       nodes[nnodes].parent = node;
       act(&c, &ACTIONS[a], nodes[nnodes].keys);
       node = nnodes++;
-      if (node == 1 && !(nodes[1].keys[0] & (IN_UP | IN_DOWN | IN_LEFT | IN_RIGHT))) break;   /* (the first keys start the clock) */
       if (c.finish) {
         found = node;
         cells[0].car = c, cells[0].node = node;
@@ -760,6 +757,8 @@ static bool route(int t, FILE *out) {
 int main(int argc, char **argv) {
   if (getenv("VC")) vcost = atoi(getenv("VC"));
   if (getenv("AU")) air_up = atoi(getenv("AU"));
+  if (getenv("HB")) height_buckets = atoi(getenv("HB"));
+  if (getenv("SPEEDW")) speed_w = atof(getenv("SPEEDW"));
   int list[PT_NTRACKS], n = 0;
   for (int i = 1; i < argc; i++) list[n++] = atoi(argv[i]);
   if (!n)

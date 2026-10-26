@@ -338,6 +338,7 @@ static void collect(int i, void *ctx) {
 }
 
 static v3 cv[256];
+static sv cs[256];                  /* the vertices on the screen (w < 0: before the near plane) */
 static void draw_chunk(const vis_t *v) {
   const pt_inst *in = world_inst(v->inst);
   const pt_part *p = &pt_parts[in->part];
@@ -361,6 +362,13 @@ static void draw_chunk(const vis_t *v) {
     float x = (float)q[0] * s, y = (float)q[1] * s, z = (float)q[2] * s;
     cv[k] = V3(M[0][0] * x + M[0][1] * y + M[0][2] * z + t.x, M[1][0] * x + M[1][1] * y + M[1][2] * z + t.y,
                M[2][0] * x + M[2][1] * y + M[2][2] * z + t.z);
+    /* (projected once here, for all the triangles that share it) */
+    if (cv[k].z >= NEAR) {
+      float inv = 1.0f / cv[k].z;
+      cs[k].x = CX + cv[k].x * focal * inv, cs[k].y = CY - cv[k].y * focal * inv, cs[k].w = NEAR * inv;
+    } else {
+      cs[k].w = -1.0f;
+    }
   }
   /* the colours: the track's world, or the one the part asks for */
   int env = env_now;
@@ -383,6 +391,20 @@ static void draw_chunk(const vis_t *v) {
                     (float)o[6] * nx + (float)o[7] * ny + (float)o[8] * nz), 1.0f / 127.0f);
     int m = tr[3];
     const float *base = (custom && m == PT_M_BLOCK_SURFACE) ? custom : matlin[env][m];
+    const sv *sa = &cs[tr[0]], *sb = &cs[tr[1]], *sc = &cs[tr[2]];
+    if (sa->w > 0.0f && sb->w > 0.0f && sc->w > 0.0f) {
+      /* (all past the near plane: off the screen, or as it is, or cut to the guard band) */
+      float x0 = pt_minf(sa->x, pt_minf(sb->x, sc->x)), x1 = pt_maxf(sa->x, pt_maxf(sb->x, sc->x));
+      float y0 = pt_minf(sa->y, pt_minf(sb->y, sc->y)), y1 = pt_maxf(sa->y, pt_maxf(sb->y, sc->y));
+      if (x1 < 0.0f || x0 > 320.0f || y1 < 0.0f || y0 > 240.0f) continue;
+      uint16_t col = lit(base, wn, fade, 1.0f);
+      if (x0 >= -GUARD && x1 <= 320.0f + GUARD && y0 >= -GUARD && y1 <= 240.0f + GUARD) store(sa, sb, sc, col, RK_SOLID);
+      else {
+        sv q[3] = {*sa, *sb, *sc};
+        screen_poly(q, 3, col, RK_SOLID);
+      }
+      continue;
+    }
     cam_tri(a, b, c, lit(base, wn, fade, 1.0f), RK_SOLID);
   }
 }
@@ -463,6 +485,13 @@ static void car_mesh(const int16_t *vtx, int nv, const uint8_t *tr, int nt, cons
     float x = (float)vtx[k * 3] * s, y = (float)vtx[k * 3 + 1] * s, z = (float)vtx[k * 3 + 2] * s;
     cv[k] = V3(M[0][0] * x + M[0][1] * y + M[0][2] * z + t.x, M[1][0] * x + M[1][1] * y + M[1][2] * z + t.y,
                M[2][0] * x + M[2][1] * y + M[2][2] * z + t.z);
+    /* (projected once here, for all the triangles that share it) */
+    if (cv[k].z >= NEAR) {
+      float inv = 1.0f / cv[k].z;
+      cs[k].x = CX + cv[k].x * focal * inv, cs[k].y = CY - cv[k].y * focal * inv, cs[k].w = NEAR * inv;
+    } else {
+      cs[k].w = -1.0f;
+    }
   }
   for (int k = 0; k < nt; k++, tr += 4) {
     v3 a = cv[tr[0]], b = cv[tr[1]], cc = cv[tr[2]];

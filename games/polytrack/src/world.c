@@ -192,11 +192,6 @@ int world_gather(v3 lo, v3 hi, wtri *out, int max) {
   return g.n;
 }
 
-float mountain_height(float x, float z) {
-  (void)x, (void)z;
-  return 0.0f;
-}
-
 /* ------------------------------------------------------------------ start and detectors */
 qt world_quat(int rot, int axis) {
   const int8_t *o = &pt_orient[axis * 36 + rot * 9];

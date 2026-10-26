@@ -52,5 +52,4 @@ typedef struct {
 } detector_t;
 void world_detector(int k, detector_t *d);
 qt world_quat(int rot, int axis);
-float mountain_height(float x, float z);           /* (for the picture) */
 #endif

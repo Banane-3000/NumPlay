@@ -42,5 +42,4 @@ void rd_car(const car_look *c);
 void rd_shadow(const car_look *c, const car_t *phys);
 void rd_draw(void);                    /* the strip gfx_y0..gfx_y1 of gfx_buf */
 /* a car alone on a turntable (the menus) */
-void rd_showroom(int paint, float angle, int env);
 #endif

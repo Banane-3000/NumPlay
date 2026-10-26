@@ -130,17 +130,7 @@ static void route_load(int t) {
 }
 static unsigned route_keys(uint32_t frame) { return frame / 10 < (uint32_t)nslots ? slots[frame / 10] : 0; }
 
-/* drives track t with its run; the finish frame (0: not finished by max) */
-static car_t c1;
-static uint32_t drive(int t, uint32_t max, uint32_t *hash) {
-  world_load(t);
-  route_load(t);
-  car_reset(&c1);
-  for (uint32_t f = 0; f < max && !c1.finish; f++) car_step(&c1, route_keys(f));
-  if (hash) *hash = car_hash(&c1);
-  return c1.finish;
-}
-
+static car_t c1;                    /* (the tests' car) */
 static void render_race(const car_t *c, chase_t *ch, float dt) {
   look = car_look_of(c);
   look.paint = sv.p.paint;
@@ -171,6 +161,8 @@ static void test_runs(void) {
     CHECK(c1.finish, "%s: not finished", pt_tracks[t].name);
     CHECK(c1.next_cp == n, "%s: finished with %d of %d checkpoints", pt_tracks[t].name, c1.next_cp, n);
     CHECK(order_ok, "%s: checkpoints out of order", pt_tracks[t].name);
+    CHECK(nslots && (slots[0] & (IN_UP | IN_DOWN | IN_LEFT | IN_RIGHT)), "%s: the run doesn't start with a driving key",
+          pt_tracks[t].name);
     CHECK(c1.finish == pt_route_ms[t], "%s: finished in %u ms, recorded %u", pt_tracks[t].name, c1.finish, pt_route_ms[t]);
     CHECK(h == pt_route_hash[t], "%s: hash %08x, recorded %08x (the physics isn't the same here)", pt_tracks[t].name, h,
           pt_route_hash[t]);
@@ -260,15 +252,14 @@ static void test_respawn(void) {
     v3 at = c1.pos;
     for (int i = 0; i < 300; i++) car_step(&c1, IN_RESET);
     CHECK(vlen(vsub(c1.pos, at)) < 1.0f, "%s: a held key respawned again", pt_tracks[t].name);
-    /* (and it drives off) */
-    for (int i = 0; i < 2000; i++) car_step(&c1, IN_UP);
-    CHECK(c1.speed > 30.0f || c1.next_cp > cp || c1.finish, "%s: stuck after a respawn (%.0f km/h)", pt_tracks[t].name,
-          (double)c1.speed);
+    /* (and it drives off: 30 km/h within two seconds of gas) */
+    float top = 0.0f;
+    for (int i = 0; i < 2000; i++) car_step(&c1, IN_UP), top = pt_maxf(top, c1.speed);
+    CHECK(top > 30.0f, "%s: stuck after a respawn (%.0f km/h at most)", pt_tracks[t].name, (double)top);
   }
 }
 
 /* ---------------------------------------------------------------- the whole app, through its keys */
-static uint32_t app_track_runs;      /* races finished */
 static int app_phase;
 static uint32_t to_pk(unsigned in) {
   uint32_t k = 0;
@@ -283,15 +274,16 @@ static int loaded = -1;
 /* Title: Play; Tracks: OK; the guide: OK three times; each track with its run, then Next track; after the last,
    Tracks, Back, Back, the quit question: Down, OK */
 static uint32_t script_all(uint32_t n) {
+  if (ui.screen == V_RACE) {
+    if (loaded != sv.p.track) route_load(sv.p.track), loaded = sv.p.track;
+    return to_pk(route_keys(car.frames));
+  }
   if (n & 1) return 0;              /* (keys go up between presses) */
   switch (ui.screen) {
     case V_TITLE: return app_phase ? PK_BACK : PK_OK;
     case V_TRACKS: return app_phase ? PK_BACK : PK_OK;
     case V_GUIDE: return PK_OK;
     case V_QUIT: return ui.sel ? PK_OK : PK_DOWN;
-    case V_RACE:
-      if (loaded != sv.p.track) route_load(sv.p.track), loaded = sv.p.track;
-      return to_pk(route_keys(car.frames));
     case V_RESULT:
       if (sv.p.track == PT_NTRACKS - 1) {
         app_phase = 1;
@@ -318,7 +310,8 @@ static void test_app(void) {
   script = script_all;
   quit_at = 30000000;
   pt_app_main();
-  CHECK(calls < quit_at, "the app didn't quit through its menus (screen %d)", ui.screen);
+  CHECK(calls < quit_at, "the app didn't quit through its menus (screen %d, track %d, %u ms, checkpoint %d, at %.0f %.0f %.0f)",
+        ui.screen, sv.p.track, car.frames, car.next_cp, (double)car.pos.x, (double)car.pos.y, (double)car.pos.z);
   pt_file f;
   bool ok = save_load(&f);
   CHECK(ok, "no save after the races");
