@@ -263,7 +263,6 @@ int main(void) {
   uint8_t shown = 0xFF;
   bool dirty = true;
   uint32_t min_frame = frame_gap ? frame_gap : plat_slow() ? 33 : 25;
-  uint32_t slow_frames = 0, quick_frames = 0;
   for (;;) {
     now = plat_millis();
     uint32_t dt = now - last;
@@ -330,14 +329,7 @@ int main(void) {
       perf_frames++;
       if (spent > perf_max) perf_max = spent;
       if (spent > 33) perf_slow++;
-      /* the picture's detail follows the time it takes: down at once when slow, up slowly */
-      if (ui.screen == V_RACE) {
-        /* (and down when the triangles ran out, up only with room to spare) */
-        if (spent > 30 || rd_dropped) slow_frames++, quick_frames = 0;
-        else if (spent < 18 && rd_tris < RD_MAX_TRIS * 3 / 4) quick_frames++, slow_frames = 0;
-        if (slow_frames >= 2 && rd_detail > 0) rd_detail--, slow_frames = 0;
-        if (quick_frames >= 30 && rd_detail < 3) rd_detail++, quick_frames = 0;
-      }
+      if (ui.screen == V_RACE) rd_adapt(spent);
       frame_at = now;
       dirty = false;
     } else {

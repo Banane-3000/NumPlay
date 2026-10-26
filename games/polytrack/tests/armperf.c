@@ -13,8 +13,9 @@
 const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name"))) = "PTPerf";
 const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level"))) = 0;
 
-/* in: the track; out: frames, work (ms) in all, the slowest, frames over 33 ms, detail levels used, the finish */
-__attribute__((used, externally_visible)) volatile uint32_t perf_track;
+/* in: the track, then go (set by the emulator once the app waits); out: frames, work (ms) in all, the slowest,
+   frames over 33 ms, frames at each detail level, the finish, frames at half the rows */
+__attribute__((used, externally_visible)) volatile uint32_t perf_track, perf_go;
 __attribute__((used, externally_visible)) uint32_t perf_out[8 + 4], perf_done;
 
 void plat_push(int x, int y, int w, int h, const uint16_t *px) {
@@ -26,18 +27,27 @@ static pt_file sv;
 static pt_ui ui;
 static chase_t chase;
 static camera_t cam;
-static uint8_t slots[60000];
+/* the run's keys, read as the frames go (10 ms a letter) */
+static const char *rs;
+static unsigned rkey;
+static uint32_t rleft;
+static unsigned next_keys(void) {
+  while (!rleft && *rs) {
+    char ch = *rs++;
+    if (ch < 'a' || ch > 'p') continue;
+    uint32_t r = 0;
+    while (*rs >= '0' && *rs <= '9') r = r * 10 + (uint32_t)(*rs++ - '0');
+    rkey = (unsigned)(ch - 'a'), rleft = (r ? r : 1) * 10;
+  }
+  if (!rleft) return 0;
+  rleft--;
+  return rkey;
+}
 
 int main(void) {
+  while (!perf_go) {}
   int t = (int)perf_track;
-  int n = 0;
-  for (const char *s = pt_routes[t]; *s && n < (int)sizeof slots;) {
-    char ch = *s++;
-    if (ch < 'a' || ch > 'p') continue;
-    int r = 0;
-    while (*s >= '0' && *s <= '9') r = r * 10 + (*s++ - '0');
-    for (r = r ? r : 1; r-- && n < (int)sizeof slots;) slots[n++] = (uint8_t)(ch - 'a');
-  }
+  rs = pt_routes[t];
   memset(&sv, 0, sizeof sv);
   sv.p.track = (uint8_t)t;
   world_load(t);
@@ -46,10 +56,10 @@ int main(void) {
   memset(&ui, 0, sizeof ui);
   ui.screen = V_RACE, ui.started = 1;
   rd_detail = 3;
-  uint32_t dt = 33, slow = 0, quick = 0, f = 0;
+  uint32_t dt = 33, f = 0;
   while (!car.finish && f < 600000) {
     uint32_t t0 = (uint32_t)eadk_timing_millis();
-    for (uint32_t i = 0; i < dt && !car.finish; i++, f++) car_step(&car, f / 10 < (uint32_t)n ? slots[f / 10] : 0);
+    for (uint32_t i = 0; i < dt && !car.finish; i++, f++) car_step(&car, next_keys());
     car_look look = car_look_of(&car);
     chase_update(&chase, &cam, (float)dt / 1000.0f, look.pos, look.rot, car.speed);
     ui.clock += dt;
@@ -58,11 +68,9 @@ int main(void) {
     perf_out[0]++, perf_out[1] += spent;
     if (spent > perf_out[2]) perf_out[2] = spent;
     if (spent > 33) perf_out[3]++;
-    perf_out[4 + (rd_detail & 3)]++;
-    if (spent > 30 || rd_dropped) slow++, quick = 0;
-    else if (spent < 18 && rd_tris < RD_MAX_TRIS * 3 / 4) quick++, slow = 0;
-    if (slow >= 2 && rd_detail > 0) rd_detail--, slow = 0;
-    if (quick >= 30 && rd_detail < 3) rd_detail++, quick = 0;
+    if (rd_half) perf_out[9]++;
+    else perf_out[4 + (rd_detail & 3)]++;
+    rd_adapt(spent);
     dt = spent > 33 ? spent : 33;     /* (the game's frames: 33 ms at least on these calculators) */
   }
   perf_out[8] = car.finish;

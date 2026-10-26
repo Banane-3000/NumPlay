@@ -21,7 +21,7 @@ typedef struct {
   uint8_t *walk;                    /* 1: a car can be there */
   uint8_t *wall;                    /* 1: a barrier; 2: next to one or to a drop, 3: one further in */
   uint8_t *cut;                     /* bits 1, 2, 4: a surface between the cube and the next one in x, y, z */
-  uint16_t *dist[16];               /* to each target: the checkpoint orders, then the finish */
+  uint16_t *dist[17];               /* to each target: the checkpoint orders, then the finish (and a VIA) */
   int ntarget;
 } field_t;
 
@@ -273,6 +273,21 @@ static void bfs(uint16_t *d, v3 lo, v3 hi) {
   }
 }
 
+/* a place the run must go through between two checkpoints, where the map's way can't be driven (a jump it takes
+   too straight, say): VIA="k x y z r", after k checkpoints; then g_via says whether the car has been there */
+static int via_k = -1, via_t;
+static v3 via_p;
+static float via_r;
+static int g_via;
+static int target_of(const car_t *c) {
+  if (c->next_cp == via_k && !g_via) return via_t;
+  return c->next_cp < F.ntarget ? c->next_cp : F.ntarget - 1;
+}
+static int stage_of(const car_t *c) { return c->next_cp * 2 + (via_k < 0 || c->next_cp != via_k || g_via); }
+static void via_check(const car_t *c) {
+  if (c->next_cp == via_k && !g_via && vlen2(vsub(c->pos, via_p)) < via_r * via_r) g_via = 1;
+}
+
 static void build_targets(void) {
   const pt_track *t = W.t;
   size_t n = (size_t)F.nx * F.ny * F.nz;
@@ -297,6 +312,13 @@ static void build_targets(void) {
     }
     k++;
   }
+  if (getenv("VIA")) {
+    sscanf(getenv("VIA"), "%d %f %f %f %f", &via_k, &via_p.x, &via_p.y, &via_p.z, &via_r);
+    via_t = no + 1;
+    F.dist[via_t] = malloc(n * 2);
+    v3 h = V3(via_r * 0.7f, via_r * 0.7f, via_r * 0.7f);
+    bfs(F.dist[via_t], vsub(via_p, h), vadd(via_p, h));
+  }
   F.dist[no] = malloc(n * 2);
   for (int i = 0; i < t->nfin; i++) {
     world_detector(t->ncp + i, &d);
@@ -316,6 +338,7 @@ static void free_field(void) {
   free(F.cut);
   free(F.wall);
   for (int i = 0; i < F.ntarget; i++) free(F.dist[i]);
+  if (via_k >= 0) free(F.dist[via_t]), via_k = -1;
 }
 
 /* the car's cube on the map: a metre up from it (its own up), else two, else just above it; -1 when off the map */
@@ -333,8 +356,8 @@ static int car_vox(const car_t *c, int k) {
 
 /* how far the car is from its next target (in map units, about metres; 1e5 when lost) */
 static float dist_of(const car_t *c) {
-  int k = c->next_cp;
-  if (k >= F.ntarget) return 0.0f;
+  if (c->next_cp >= F.ntarget) return 0.0f;
+  int k = target_of(c);
   int v = car_vox(c, k);
   return v < 0 ? 1e5f : (float)F.dist[k][v];
 }
@@ -372,7 +395,7 @@ static v3 ahead(int k, const car_t *c, int L) {
 
 /* the keys for the next 10 ms: steer towards the place L cubes ahead, gas up to vmax km/h */
 static unsigned pilot(const car_t *c, int L, float vmax) {
-  int k = c->next_cp < F.ntarget ? c->next_cp : F.ntarget - 1;
+  int k = target_of(c);
   v3 d = mcol(&c->basis, vsub(ahead(k, c, L), c->pos));
   float ang = pt_atan2f(d.x, d.z);
   float want = pt_clampf(ang * 2.5f, -1.0f, 1.0f);
@@ -417,14 +440,15 @@ static void act(car_t *c, const action_t *a, uint8_t *keys) {
     unsigned k = a->L ? pilot(c, a->L, a->vmax) : a->keys;
     if (keys) keys[s] = (uint8_t)k;
     for (int i = 0; i < SLOT && !c->finish; i++) car_step(c, k);
+    via_check(c);
   }
 }
 
 /* the archive */
-#define MAXC 30000
+#define MAXC 60000
 #define TEMP 25.0
 static double wcum[MAXC];
-#define HASH 65536
+#define HASH 131072
 static int32_t slot[HASH];          /* cell + 1 by key */
 static int wn;
 static double pt_expd(double x) {
@@ -444,12 +468,27 @@ typedef struct {
   int32_t tries;
   uint32_t key;
   uint32_t frames;
+  uint8_t via;
 } cell_t;
+/* a stretch: the next checkpoint, the distance left in 4 m steps, whether the car goes the way the map says
+   (back, across, on) and how fast (under 20, 80, 140, 200, 260, 320 km/h, or over) */
 static uint32_t cell_key(const car_t *c) {
+  int k = target_of(c);
   int d = (int)(dist_of(c) / 4.0f);
-  return (uint32_t)c->next_cp << 16 | (uint32_t)(d < 65535 ? d : 65535);
+  float v = pt_absf(c->speed);
+  int sb = v < 20.0f ? 0 : v < 80.0f ? 1 : v < 140.0f ? 2 : v < 200.0f ? 3 : v < 260.0f ? 4 : v < 320.0f ? 5 : 6, ab = 1;
+  if (v >= 20.0f) {
+    v3 to = vsub(ahead(k, c, 6), c->pos);
+    float l = vlen(to) * vlen(c->vel);
+    float cs = l > 0.0f ? vdot(to, c->vel) / l : 0.0f;
+    ab = cs < -0.3f ? 0 : cs < 0.5f ? 1 : 2;
+  }
+  return (uint32_t)stage_of(c) << 24 | (uint32_t)(d < 65535 ? d : 65535) << 8 | (uint32_t)ab << 4 | (uint32_t)sb;
 }
-static double progress(const cell_t *e) { return (double)(e->key >> 16) * 1e6 - (double)(e->key & 0xFFFF); }
+static double progress(const cell_t *e) {
+  return (double)(e->key >> 24) * 1e6 - (double)((e->key >> 8) & 0xFFFF) * 4.0 + (double)((e->key >> 4) & 3) +
+         (double)(e->key & 7) * 0.5;
+}
 static uint32_t lcg(uint32_t *s) { return *s = *s * 1103515245u + 12345u, *s >> 8; }
 
 static bool route(int t, FILE *out) {
@@ -549,15 +588,60 @@ static bool route(int t, FILE *out) {
   int ncell = 0;
   static cell_t cells[MAXC];
   memset(slot, 0, sizeof slot);
-  cells[ncell++] = (cell_t){start, 0, 0, cell_key(&start), 0};
+  g_via = 0;
+  cells[ncell++] = (cell_t){start, 0, 0, cell_key(&start), 0, 0};
   {
     uint32_t h = (cells[0].key * 2654435761u) & (HASH - 1);
     slot[h] = 1;
   }
-  int found = -1;
+  int found = -1, best = 0;
+  if (getenv("PREFIX")) {
+    /* (going on from a run found before: its cars, every 100 ms, in the archive) */
+    static char buf[400000];
+    static uint8_t pk[60000];
+    FILE *f = fopen(getenv("PREFIX"), "r");
+    int n = 0, ch, in = 0;
+    while (f && (ch = fgetc(f)) != EOF && n < (int)sizeof buf - 1) {
+      if (ch == '"') in = !in;
+      else if (in) buf[n++] = (char)ch;
+    }
+    buf[n] = 0;
+    if (f) fclose(f);
+    int ns = 0;
+    for (const char *q = buf; *q && ns < (int)sizeof pk;) {
+      char c0 = *q++;
+      if (c0 < 'a' || c0 > 'p') continue;
+      int r = 0;
+      while (*q >= '0' && *q <= '9') r = r * 10 + (*q++ - '0');
+      for (r = r ? r : 1; r-- && ns < (int)sizeof pk;) pk[ns++] = (uint8_t)(c0 - 'a');
+    }
+    static car_t c;
+    c = start;
+    int node = 0;
+    g_via = 0;
+    for (int i = 0; i + STEP <= ns && !c.finish; i += STEP) {
+      nodes[nnodes].parent = node;
+      memcpy(nodes[nnodes].keys, &pk[i], STEP);
+      for (int s2 = 0; s2 < STEP; s2++) {
+        for (int f2 = 0; f2 < SLOT && !c.finish; f2++) car_step(&c, pk[i + s2]);
+        via_check(&c);
+      }
+      node = nnodes++;
+      if (dist_of(&c) >= 1e5f) continue;
+      uint32_t key = cell_key(&c);
+      uint32_t h = (key * 2654435761u) & (HASH - 1);
+      while (slot[h] && cells[slot[h] - 1].key != key) h = (h + 1) & (HASH - 1);
+      int k = slot[h] ? slot[h] - 1 : -1;
+      if (k < 0 && ncell < MAXC) k = ncell++, cells[k].tries = 0, cells[k].key = key, cells[k].frames = 0xFFFFFFFFu, slot[h] = k + 1;
+      if (k >= 0 && c.frames < cells[k].frames) {
+        cells[k].car = c, cells[k].node = node, cells[k].frames = c.frames, cells[k].via = (uint8_t)g_via;
+        if (progress(&cells[k]) > progress(&cells[best])) best = k;
+      }
+    }
+    fprintf(stderr, "  prefix: %d ms, %d stretches, cp %d dist %.0f\n", ns * SLOT, ncell, c.next_cp, (double)dist_of(&c));
+  }
   uint32_t seed = 12345u + (uint32_t)t * 7919u;
   int tries = getenv("TRIES") ? atoi(getenv("TRIES")) : 200000;
-  int best = 0;
   for (int it = 0; it < tries && found < 0 && nnodes + 64 < MAXN; it++) {
     /* the car to go on from: weighted by how far on it is (a factor e for each TEMP metres) over the root of how
        often it was tried, so that when the front gets nowhere the cars behind it get their turn */
@@ -584,6 +668,7 @@ static bool route(int t, FILE *out) {
     cells[pick].tries++;
     static car_t c;
     c = cells[pick].car;
+    g_via = cells[pick].via;
     car_cache_rebuild(&c);
     int node = cells[pick].node;
     int steps = 5 + (int)(lcg(&seed) % 26u), a = (int)(lcg(&seed) % (uint32_t)NACT), lost = 0;
@@ -620,7 +705,7 @@ static bool route(int t, FILE *out) {
         slot[h] = k + 1;
       }
       if (k >= 0 && c.frames < cells[k].frames) {
-        cells[k].car = c, cells[k].node = node, cells[k].frames = c.frames;
+        cells[k].car = c, cells[k].node = node, cells[k].frames = c.frames, cells[k].via = (uint8_t)g_via;
         if (progress(&cells[k]) > progress(&cells[best])) best = k;
       }
     }

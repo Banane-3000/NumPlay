@@ -19,7 +19,9 @@ def main():
     ms = [int(x) for x in re.search(r"pt_route_ms\[17\] = \{([^}]*)\}", src).group(1).split(",")]
     hs = [int(x, 16) for x in re.search(r"pt_route_hash\[17\] = \{([^}]*)\}", src).group(1).replace("\n", "").split(",")]
     c = emu.Calculator(nwa)
+    c.run(100)  # (the app starts, then waits)
     c.uc.mem_write(c.symbols["check_tracks"], struct.pack("<I", tracks))
+    c.uc.mem_write(c.symbols["check_go"], struct.pack("<I", 1))
     c.run(60 * 60 * 1000)
     out = struct.unpack(f"<{2 * 17}I", bytes(c.uc.mem_read(c.symbols["check_out"], 4 * 2 * 17)))
     done, = struct.unpack("<I", bytes(c.uc.mem_read(c.symbols["check_done"], 4)))

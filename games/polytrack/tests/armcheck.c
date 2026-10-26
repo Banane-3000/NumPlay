@@ -9,10 +9,12 @@ const char eadk_app_name[] __attribute__((section(".rodata.eadk_app_name"))) = "
 const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level"))) = 0;
 
 __attribute__((used, externally_visible)) uint32_t check_out[2 * PT_NTRACKS], check_done;
-__attribute__((used, externally_visible)) volatile uint32_t check_tracks = PT_NTRACKS;   /* (the emulator may lower it) */
+/* (the emulator sets how many tracks, then go, once the app waits) */
+__attribute__((used, externally_visible)) volatile uint32_t check_tracks, check_go;
 
 static car_t c;
 int main(void) {
+  while (!check_go) {}
   for (int t = 0; t < (int)check_tracks && t < PT_NTRACKS; t++) {
     world_load(t);
     car_reset(&c);

@@ -212,9 +212,9 @@ static void hud(void) {
     if (d || !U->new_record) diff_of(s3, d), dc = d < 0 ? GREEN : RED;
   }
   if (!s3[0]) cat(s3, "- - -");
-  time_box(6, 186, 94, 6, "Record", s, WHITE, false);
-  time_box(104, 182, 112, 0, "Current", s2, split ? WHITE : WHITE, true);
-  time_box(220, 186, 94, -6, "Difference", s3, dc, false);
+  time_box(6, 192, 94, 6, "Record", s, WHITE, false);
+  time_box(104, 188, 112, 0, "Current", s2, WHITE, true);
+  time_box(220, 192, 94, -6, "Difference", s3, dc, false);
   /* PolyTrack's hints */
   const char *h1 = NULL, *h2 = NULL;
   if (!U->started) {

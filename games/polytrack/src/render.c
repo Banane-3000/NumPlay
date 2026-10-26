@@ -29,6 +29,7 @@ static tri tris[MAX_TRIS];
 static int ntris;
 int rd_tris, rd_dropped, rd_mtris, rd_chunks;
 int rd_detail = 2;
+bool rd_half;
 static const float DRAW[4] = {100.0f, 140.0f, 180.0f, 230.0f};
 static const float NEAR_DETAIL[4] = {22.0f, 30.0f, 40.0f, 52.0f};
 
@@ -554,8 +555,20 @@ void rd_shadow(const car_look *c, const car_t *phys) {
   for (int i = 1; i + 1 < 6; i++) cam_tri(q[0], q[i], q[i + 1], 0, RK_SHADOW);
 }
 
-void rd_showroom(int paint, float angle, int env) {
-  (void)paint, (void)angle, (void)env;
+/* the picture's quality follows the time a race frame takes: down at once when slow (or out of room for
+   triangles), up slowly; below the nearest drawing distance, half the rows */
+void rd_adapt(uint32_t spent_ms) {
+  static uint32_t slow, quick;
+  if (spent_ms > 30 || rd_dropped) slow++, quick = 0;
+  else if (spent_ms < 18 && rd_tris < RD_MAX_TRIS * 3 / 4) quick++, slow = 0;
+  else slow = quick = 0;
+  int q = rd_half ? 0 : 1 + (rd_detail & 3);
+  if (slow >= 2 && q > 0) q--, slow = 0;
+  if (quick >= 30 && q < 4) q++, quick = 0;
+  /* (a frame out of triangles at the nearest distance: not a reason for half the rows) */
+  if (q == 0 && spent_ms <= 30 && !rd_half) q = 1;
+  rd_half = q == 0;
+  rd_detail = q ? q - 1 : 0;
 }
 
 /* ------------------------------------------------------------------ drawing a strip */
@@ -565,11 +578,12 @@ __attribute__((noinline)) static void background(int ys, int ye) {
   /* the view ray's height, every 32 pixels (in between, a straight line): dir = right (x - CX)/f + up (CY - y)/f + fwd;
      and the depth buffer cleared */
   float rx = C.right.y / focal, uy = C.up.y / focal, fy = C.fwd.y, ff = 1.0f / (focal * focal);
-  for (int y = ys; y < ye; y++) {
+  uint32_t *zall = (uint32_t *)zbuf;
+  for (int x = 0; x < (ye - ys) * SCREEN_W / 2; x++) zall[x] = 0;
+  int step = rd_half ? 2 : 1;
+  for (int y = ys; y < ye; y += step) {
     uint16_t *row = gfx_buf + (y - ys) * SCREEN_W;
-    uint32_t *z = (uint32_t *)(zbuf + (y - ys) * SCREEN_W);
-    for (int x = 0; x < SCREEN_W / 2; x++) z[x] = 0;
-    float yy = CY - ((float)y + 0.5f);
+    float yy = CY - ((float)y + (float)step * 0.5f);   /* (half the rows: each one drawn twice) */
     float base = uy * yy + fy, yy2 = yy * yy * ff + 1.0f;
     int32_t prev = 0;
     for (int x = 0; x <= SCREEN_W; x += 32) {
@@ -591,6 +605,7 @@ __attribute__((noinline)) static void background(int ys, int ye) {
       }
       prev = idx;
     }
+    if (step == 2 && y + 1 < ye) memcpy(row + SCREEN_W, row, SCREEN_W * 2);
   }
 }
 
@@ -608,11 +623,18 @@ __attribute__((noinline)) static void raster(const tri *t, int ys, int ye) {
   float B = ((w1 - w0) * dy2 - (w2 - w0) * dy1) * idet, Cc = (dx1 * (w2 - w0) - dx2 * (w1 - w0)) * idet;
   float s02 = (x2 - x0) / (y2 - y0);
   float s01 = y1 > y0 ? (x1 - x0) / (y1 - y0) : 0, s12 = y2 > y1 ? (x2 - x1) / (y2 - y1) : 0;
-  int32_t dq = (int32_t)(B * 1073741824.0f);
+  int32_t dq = (int32_t)(pt_clampf(B, -1.9f, 1.9f) * 1073741824.0f);   /* (a sliver's slope is huge: kept in range) */
   uint16_t col = t->c;
   int kind = t->kind;
-  for (int r = ra; r < rb; r++) {
-    float yc = (float)r + 0.5f;
+  /* half the rows: every other one, sampled between the two, written twice */
+  int step = 1;
+  if (rd_half) {
+    step = 2, ra &= ~1;
+    if (ra < ys) ra = ys;
+  }
+  for (int r = ra; r < rb; r += step) {
+    float yc = (float)r + (float)step * 0.5f;
+    if (step == 2) yc = pt_clampf(yc, y0, y2);
     float xl = x0 + (yc - y0) * s02;
     float xs = yc < y1 ? x0 + (yc - y0) * s01 : x1 + (yc - y1) * s12;
     float xa = xl < xs ? xl : xs, xb = xl < xs ? xs : xl;
@@ -623,8 +645,11 @@ __attribute__((noinline)) static void raster(const tri *t, int ys, int ye) {
     if (pb > SCREEN_W) pb = SCREEN_W;
     if (pb <= pa) continue;
     uint16_t *p = gfx_buf + (r - ys) * SCREEN_W;
+    bool two = step == 2 && r + 1 < ye;
     if (kind == RK_BACK) {
       for (int x = pa; x < pb; x++) p[x] = col;
+      if (two)
+        for (int x = pa; x < pb; x++) p[SCREEN_W + x] = col;
       continue;
     }
     float wa = w0 + B * ((float)pa + 0.5f - x0) + Cc * (yc - y0);
@@ -637,23 +662,35 @@ __attribute__((noinline)) static void raster(const tri *t, int ys, int ye) {
     uint16_t *z = zbuf + (r - ys) * SCREEN_W + pa;
     p += pa;
     if (kind == RK_SOLID) {
-      for (int x = 0; x < n; x++, qa += d) {
-        uint32_t q = (uint32_t)qa >> 14;
-        if (q > z[x]) z[x] = (uint16_t)q, p[x] = col;
+      if (two) {
+        for (int x = 0; x < n; x++, qa += d) {
+          uint32_t q = (uint32_t)qa >> 14;
+          if (q > z[x]) z[x] = z[SCREEN_W + x] = (uint16_t)q, p[x] = p[SCREEN_W + x] = col;
+        }
+      } else {
+        for (int x = 0; x < n; x++, qa += d) {
+          uint32_t q = (uint32_t)qa >> 14;
+          if (q > z[x]) z[x] = (uint16_t)q, p[x] = col;
+        }
       }
     } else if (kind == RK_GHOST) {
       int odd = (pa + r) & 1;
       for (int x = odd; x < n; x += 2) {
         uint32_t q = (uint32_t)(qa + d * x) >> 14;
-        if (q > z[x]) p[x] = col;
+        if (q > z[x]) {
+          p[x] = col;
+          if (two) p[SCREEN_W + x + (x + 1 < n ? 1 : -1)] = col;
+        }
       }
     } else {
       for (int x = 0; x < n; x++, qa += d) {
         uint32_t q = (uint32_t)qa >> 14;
-        if (q + 24 >= z[x]) {
-          uint16_t c = p[x];
-          /* 60 % of the sun taken away: about five eighths of the colour */
-          p[x] = (uint16_t)(((c >> 1) & 0x7BEF) + ((c >> 3) & 0x18E3));
+        for (int k = 0; k <= (int)two; k++) {
+          if (q + 24 >= z[k * SCREEN_W + x]) {
+            uint16_t c = p[k * SCREEN_W + x];
+            /* 60 % of the sun taken away: about five eighths of the colour */
+            p[k * SCREEN_W + x] = (uint16_t)(((c >> 1) & 0x7BEF) + ((c >> 3) & 0x18E3));
+          }
         }
       }
     }
