@@ -6,6 +6,7 @@
 #                   saves (kept, damaged, storage full), random keys and the same runs to the same hashes on every
 #                   computer (with the sanitizers)
 #   make armcheck   the same runs on the calculator's processor (in tools/emu.py), to the same hashes
+#   make armperf    each track's run drawn at an N0110's speed (in tools/emu.py): the frame rate
 #   make data       src/data.bin, src/data.c, src/data.h, src/logo.h and src/icon.png from PolyTrack's web build
 #                   (POLYTRACK_WEB=its folder; Python with numpy, DracoPy and Pillow)
 Q ?= @
@@ -39,7 +40,7 @@ LDFLAGS += -Wl,--gc-sections -flinker-output=nolto-rel
 RAM = 133652
 APP_SPACE = 2031616
 
-.PHONY: build check clean host test data armcheck
+.PHONY: build check clean host test data armcheck armperf
 build: $(BUILD_DIR)/polytrack.nwa
 
 check: $(BUILD_DIR)/polytrack.nwa
@@ -71,6 +72,11 @@ $(BUILD_DIR)/armcheck.nwa: tests/armcheck.c tests/routes.h src/car.c src/world.c
 	  $(BUILD_DIR)/data.o $(BUILD_DIR)/icon.o -lm -o $@
 armcheck: $(BUILD_DIR)/armcheck.nwa
 	$(PYTHON) tools/armcheck.py $<
+$(BUILD_DIR)/armperf.nwa: tests/armperf.c tests/routes.h $(HOT) $(COLD_OBJ) $(HEADERS) $(BUILD_DIR)/icon.o $(BUILD_DIR)/data.o
+	$(Q) $(CC) $(CFLAGS) -O2 $(LDFLAGS) tests/armperf.c $(HOT) $(filter-out %/main.o,$(COLD_OBJ)) $(BUILD_DIR)/data.o \
+	  $(BUILD_DIR)/icon.o -lm -o $@
+armperf: $(BUILD_DIR)/armperf.nwa
+	$(PYTHON) tools/armperf.py $<
 
 $(BUILD_DIR)/icon.o: src/icon.png | $(BUILD_DIR)
 	@echo "ICON    $<"
@@ -91,7 +97,7 @@ host: build/play
 build/data.o: src/data.S src/data.bin
 	$(Q) mkdir -p build
 	$(Q) cc -c -DDATA_BIN='"src/data.bin"' $< -o $@
-build/play: $(HOST_SRC) src/main.c $(wildcard src/*.h) build/data.o
+build/play: $(HOST_SRC) src/main.c $(wildcard src/*.h) tests/routes.h build/data.o
 	$(Q) mkdir -p build
 	$(Q) cc $(HOST_FLAGS) -fsanitize=address,undefined -fno-sanitize-recover=undefined $(HOST_SRC) build/data.o -lm \
 	  -o $@
