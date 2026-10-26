@@ -1093,20 +1093,31 @@ static int dash_block_hit(Ent *e, Player *p, V2 dir) {
 }
 
 /* FakeWall, CoverupWall, ExitBlock: tiles that fade */
+enum { BF_NO_LISTENER = 0x40 };   /* a FakeWall the player was in when it came: no TransitionListener */
+static bool player_in(const Ent *e) {
+  Ent *p = level_player_ent();
+  return p && collide_ent_at(e, e->x, e->y, p);
+}
+static void fakewall_awake(Ent *e) {
+  Block *b = ST(e, Block);
+  if (!player_in(e)) return;
+  b->alpha = 0, b->mode = 1, b->flags |= BF_NO_LISTENER;
+  level_set_do_not_load(b->hash);
+}
 static void fakewall_update(Ent *e) {
   Block *b = ST(e, Block);
-  Ent *p = level_player_ent();
   if (b->mode == 1) {   /* fading */
     b->alpha = approach(b->alpha, 0, 2 * DT);
     if (b->alpha <= 0) ent_remove(e);
     return;
   }
-  if (p && collide_ent_at(e, e->x, e->y, p) && g_player.state != ST_DREAMDASH) {
+  if (player_in(e) && g_player.state != ST_DREAMDASH) {
     level_set_do_not_load(b->hash);
     b->mode = 1;
   }
 }
-static const EntClass FAKEWALL = {.size = sizeof(Block), .name = "fakeWall", .update = fakewall_update, .render = block_render};
+static const EntClass FAKEWALL = {.size = sizeof(Block), .name = "fakeWall", .update = fakewall_update, .render = block_render,
+                                  .awake = fakewall_awake};
 static void coverup_update(Ent *e) {
   Block *b = ST(e, Block);
   Ent *p = level_player_ent();
@@ -1114,19 +1125,49 @@ static void coverup_update(Ent *e) {
   b->alpha = approach(b->alpha, in ? 0 : 1, 4 * DT);
 }
 static const EntClass COVERUP = {.size = sizeof(Block), .name = "coverupWall", .update = coverup_update, .render = block_render};
+/* ExitBlock: there, unless the player is in it when it comes; then it closes once they are out */
+static void exit_awake(Ent *e) {
+  if (player_in(e)) ST(e, Block)->alpha = 0, e->collidable = 0;
+}
 static void exit_update(Ent *e) {
   Block *b = ST(e, Block);
-  Ent *p = level_player_ent();
-  if (!e->collidable) {
-    e->collidable = 1;
-    bool in = p && collide_ent_at(e, e->x, e->y, p);
-    e->collidable = !in;
-    if (!in) b->mode = 1;
-  }
-  if (b->mode == 1) b->alpha = approach(b->alpha, 1, 2 * DT);
   plat_update(e);
+  if (e->collidable) b->alpha = approach(b->alpha, 1, DT);
+  else if (!player_in(e)) e->collidable = 1;
 }
-static const EntClass EXITBLOCK = {.size = sizeof(Block), .name = "exitBlock", .update = exit_update, .render = block_render, .kind = KIND_SOLID};
+static const EntClass EXITBLOCK = {.size = sizeof(Block), .name = "exitBlock", .update = exit_update, .render = block_render,
+                                   .awake = exit_awake, .kind = KIND_SOLID};
+
+/* their TransitionListeners: those across the edge between the two rooms fade with the camera
+ * (Block.step: TL_IN or TL_OUT; Block.timer: the alpha it fades out from) */
+enum { TL_IN = 1, TL_OUT };
+static bool on_room(const Ent *e, const Room *r) {   /* Collide.CheckRect(e, bounds) */
+  return e_right(e) > r->x && e_bottom(e) > r->y && e_left(e) < r->x + r->w && e_top(e) < r->y + r->h;
+}
+static bool listens(const Ent *e) {
+  return e->dead != 1 && (e->cls == &EXITBLOCK || (e->cls == &FAKEWALL && !(ST(e, Block)->flags & BF_NO_LISTENER)));
+}
+void blocks_transition_begin(void) {   /* OnOutBegin, OnInBegin: the next room is loaded (and awake) */
+  const Room *prev = &g_level.rooms[g_level.room_slot ^ 1];
+  for (Ent *e = g_ents; e < g_ents + g_nents; e++) {
+    if (!e->cls || !listens(e)) continue;
+    Block *b = ST(e, Block);
+    b->step = 0;
+    if (e->room != g_level.room_slot) {
+      if (on_room(e, g_level.room)) b->step = TL_OUT, b->timer = b->alpha;
+    } else if (on_room(e, prev) && (e->cls == &FAKEWALL || !player_in(e))) {
+      b->step = TL_IN, b->alpha = 0;
+    }
+  }
+}
+void blocks_transition(void) {   /* OnOut, OnIn */
+  for (Ent *e = g_ents; e < g_ents + g_nents; e++) {
+    if (!e->cls || !listens(e)) continue;
+    Block *b = ST(e, Block);
+    if (b->step == TL_IN) b->alpha = g_level.tr_at;
+    else if (b->step == TL_OUT) b->alpha = b->timer * (1 - g_level.tr_at);
+  }
+}
 
 /* Debris: bits of broken blocks */
 typedef struct { uint16_t tex; V2 speed; float life, rot, spin; } Debris;
@@ -1478,10 +1519,7 @@ bool ent_create(const EData *d) {
     }
     case ET_exitBlock: {
       Ent *e = new_block(&EXITBLOCK, d, EA(d, exitBlock, width), EA(d, exitBlock, height), TILE_ATTR(d, exitBlock, tileType), true);
-      if (!e) return true;
-      e->depth = -13000;
-      e->collidable = 0;
-      ST(e, Block)->alpha = 0;
+      if (e) e->depth = -13000;
       return true;
     }
     case ET_killbox: {

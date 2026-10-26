@@ -596,6 +596,7 @@ static void transition_to(int index, V2 dir) {
   tiles_invalidate();   /* (the tiles at its edges with the other room) */
   ents_awake_new();
   cassette_level_start(true);
+  blocks_transition_begin();
   Room *rm = g_level.room;
   g_level.transitioning = true;
   g_level.tr_dir = dir;
@@ -627,6 +628,7 @@ static void transition_update(void) {
   g_level.tr_at = approach(g_level.tr_at, 1, DT / g_level.tr_duration);
   if (g_level.tr_at > 0.9f) g_level.cam = g_level.tr_cam_to;
   else g_level.cam = v2add(g_level.tr_cam_from, v2mul(v2sub(g_level.tr_cam_to, g_level.tr_cam_from), ease_cube_out(g_level.tr_at)));
+  blocks_transition();
   if (arrived && g_level.tr_at >= 1) {
     int old = g_level.room_slot ^ 1;
     ents_remove_room(old);

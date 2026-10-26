@@ -133,6 +133,25 @@ for how, frames, keys in (("played", 2250, ",".join(f"{f}-{f + 2}:o" for f in ra
               what=f"3A's lobby ({how})")
     check("room 00-a " in out, f"3A's lobby: Oshiro's door stayed shut, the cutscene {how}: {out[-160:]}")
 
+# 3A's 11-b, come into from 12-b: the exit block over the way down from 11-c (top left) is there as the room comes in,
+# not fading in after it (ExitBlock: hidden only from a player inside it)
+def ppm(path):
+    with open(path, "rb") as f:
+        _, size, _, px = f.read().split(b"\n", 3)
+    return int(size.split()[0]), px
+
+
+d = tempfile.mkdtemp(prefix="celeste_check_")
+run(["--chapter", "7", "--room", "12-b", "--nowipe", "--shot", f"70:{d}/a.ppm", "--shot", f"150:{d}/b.ppm"], 151, "20-150:l",
+    what="3A's 11-b exit block")
+if os.path.exists(f"{d}/a.ppm") and os.path.exists(f"{d}/b.ppm"):
+    (w, a), (_, b) = ppm(f"{d}/a.ppm"), ppm(f"{d}/b.ppm")
+    changed = sum(1 for y in range(30, 60) for x in range(40) if max(abs(a[(y * w + x) * 3 + c] - b[(y * w + x) * 3 + c]) for c in range(3)) > 24)
+    check(changed < 20, f"3A's 11-b: the way down from 11-c showed as the room came in ({changed} pixels)")
+else:
+    check(False, "3A's 11-b: no pictures")
+shutil.rmtree(d, ignore_errors=True)
+
 # 5A's c-10: its two touch switches (below the middle cracked block, on top of it) open the temple gate (TouchSwitches)
 # up on the right, the way to c-12
 out = run(["--chapter", "13", "--room", "c-10", "--nowipe"], 520,

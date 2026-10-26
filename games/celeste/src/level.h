@@ -303,6 +303,8 @@ void tiles_overlay(char type, int x, int y, int w, int h, TileQ *out);   /* blen
 void tiles_draw(const TileQ *q, char type, int w, int h, float x, float y, uint16_t tint, uint8_t alpha);
 TileQ *blocks_new_tiles(int n);     /* n tiles for an entity of the room being made (NULL: none left), until it goes */
 void blocks_free_tiles(int slot);   /* the room in that slot is gone: its blocks' tiles (entities.c) */
+void blocks_transition_begin(void);   /* FakeWall, ExitBlock: TransitionListener.OnOutBegin, OnInBegin */
+void blocks_transition(void);         /* and OnOut, OnIn */
 
 /* stylegrounds (style.c) */
 extern float g_snow_alpha;   /* the Snow stylegrounds' Alpha */
