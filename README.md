@@ -317,6 +317,7 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Mario Kart
 - [ ] Mahjong
 - [ ] Universal Paperclips
+- [ ] OMORI
 
 ## Credits
 
