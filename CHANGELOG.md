@@ -2,6 +2,13 @@
 
 What's new in each version of NumPlay. Every file of every version is on the [downloads page](https://github.com/Mason363/NumPlay/releases).
 
+## 1.17.0: Angry Birds, Friday Night Funkin', UNO and Turbo Rush
+
+- **New on their own:** Angry Birds, Friday Night Funkin', UNO and Turbo Rush, by Bobydeluxe.
+- **2 Players:** Quick Draw and Tug of War, player 1 on OK, and a fairer computer.
+- **NumPlay Studio:** NumVisuals can go in your own NumPlay.
+- **Fixed:** Hill Climb Racing's Volcano runs as smooth as the other stages, and Cookie Clicker's save script says what it holds.
+
 ## 1.16.0: Monkey Mart, Tomb of the Mask and more Hill Climb Racing
 
 - **New on their own:** Monkey Mart and Tomb of the Mask, by Bobydeluxe.

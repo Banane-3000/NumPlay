@@ -35,7 +35,7 @@
 </p>
 
 ⭐ **Enjoying NumPlay?** Give it a star at the top of this page: it takes a second and helps other people find it.<br>
-💡 **Want a game that isn't here?** Check the [roadmap](#roadmap) first, then email me at [masonchen204@gmail.com](mailto:masonchen204@gmail.com).
+💡 **Want a game that isn't here?** Check the [roadmap](#roadmap) first, then [ask for it in an issue](https://github.com/Mason363/NumPlay/issues/new/choose).
 
 ## Games in NumPlay
 
@@ -87,7 +87,7 @@ All of these come in one app, **NumPlay.nwa**.
 
 Want just one game? Each one also comes as its own file on the [downloads page](https://github.com/Mason363/NumPlay/releases/latest).
 
-**NumVisuals**, moving backgrounds with a clock, a stopwatch, a timer or a counter on top, comes on its own: [download NumVisuals.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumVisuals.nwa). Its backgrounds are also in NumPlay: press ⌫ on the home screen.
+**NumVisuals**, moving backgrounds with a clock, a stopwatch, a timer or a counter on top, comes on its own: [download NumVisuals.nwa](https://github.com/Mason363/NumPlay/releases/latest/download/NumVisuals.nwa), or add it to NumPlay in [NumPlay Studio](https://mason363.github.io/NumPlay/customize/). Its backgrounds are also in NumPlay: press ⌫ on the home screen.
 
 ## Big games, installed on their own
 
@@ -207,7 +207,7 @@ Install any of them instead of NumPlay.nwa: your progress is the same in each. A
 
 - Your progress is saved on the calculator as files. Turning it off keeps them.
 - **Installing apps erases these files**, all but the Python scripts. So NumPlay keeps a copy of every save in a Python script, `numplay_saves.py` (the big games have their own), and your progress comes back the first time you open the game. Don't delete these scripts.
-- **A restart erases every file**, scripts included: the reset button on the back, or a crash. If your calculator restarts by itself while you play, please [email me](mailto:masonchen204@gmail.com) which game and what you were doing.
+- **A restart erases every file**, scripts included: the reset button on the back, or a crash. If your calculator restarts by itself while you play, please [open an issue](https://github.com/Mason363/NumPlay/issues/new/choose) with the game and what you were doing.
 - The calculator holds 42 KB of files in all. A big NumBlocks world can fill it: delete worlds or scripts you don't need to make room.
 
 </details>
@@ -315,6 +315,8 @@ Read **[Make your own NumWorks game](docs/make-a-game.md)** to go from there, an
 - [ ] Brawl Stars, against bots
 - [ ] Papers, Please, with the story and Endless
 - [ ] Mario Kart
+- [ ] Mahjong
+- [ ] Universal Paperclips
 
 ## Credits
 
