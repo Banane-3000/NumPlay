@@ -17,6 +17,9 @@ const uint32_t eadk_api_level __attribute__((section(".rodata.eadk_api_level")))
    frames over 33 ms, frames at qualities 2..5, the finish, at 1, the triangles and the chunks of the slow frames in all, at 0 */
 __attribute__((used, externally_visible)) volatile uint32_t perf_track, perf_go;
 __attribute__((used, externally_visible)) uint32_t perf_out[16], perf_done;
+/* (for a profile of the slow frames: the frame going on, and each frame's work in ms) */
+__attribute__((used, externally_visible)) volatile uint32_t perf_frame;
+__attribute__((used, externally_visible)) uint8_t perf_ms[4096];
 
 void plat_push(int x, int y, int w, int h, const uint16_t *px) {
   eadk_display_push_rect((eadk_rect_t){(uint16_t)x, (uint16_t)y, (uint16_t)w, (uint16_t)h}, (const eadk_color_t *)px);
@@ -57,20 +60,33 @@ int main(void) {
   ui.screen = V_RACE, ui.started = 1;
   rd_detail = RD_LEVELS - 1;
   uint32_t dt = 33, f = 0;
+  /* (the race waits at the start for a driving key: the picture settles meanwhile) */
+  for (int i = 0; i < 30; i++) {
+    uint32_t t0 = (uint32_t)eadk_timing_millis();
+    car_look look = car_look_of(&car);
+    chase_update(&chase, &cam, 0.033f, look.pos, look.rot, car.speed);
+    pt_render(&sv, &car, &cam, &look, NULL, &ui);
+    rd_adapt((uint32_t)eadk_timing_millis() - t0);
+  }
   while (!car.finish && f < 600000) {
     uint32_t t0 = (uint32_t)eadk_timing_millis();
     for (uint32_t i = 0; i < dt && !car.finish; i++, f++) car_step(&car, next_keys());
+    uint32_t t1 = (uint32_t)eadk_timing_millis();
+    rd_ease_for(t1 - t0);
     car_look look = car_look_of(&car);
     chase_update(&chase, &cam, (float)dt / 1000.0f, look.pos, look.rot, car.speed);
     ui.clock += dt;
     pt_render(&sv, &car, &cam, &look, NULL, &ui);
     uint32_t spent = (uint32_t)eadk_timing_millis() - t0;
+    if (perf_frame < sizeof perf_ms) perf_ms[perf_frame] = (uint8_t)(spent < 255 ? spent : 255);
+    perf_frame++;
     perf_out[0]++, perf_out[1] += spent;
     if (spent > perf_out[2]) perf_out[2] = spent;
-    if (spent > 33) perf_out[3]++, perf_out[10] += (uint32_t)rd_tris, perf_out[11] += (uint32_t)rd_chunks;
+    if (spent > 33) perf_out[3]++, perf_out[10] += (uint32_t)rd_tris, perf_out[11] += (uint32_t)rd_chunks, perf_out[14] += t1 - t0, perf_out[15] += (uint32_t)car.ncache;
     if (rd_detail < 3) perf_out[rd_detail == 2 ? 9 : rd_detail == 1 ? 12 : 13]++;
     else perf_out[4 + rd_detail - 3]++;
     rd_adapt(spent);
+    rd_ease = 0;
     dt = spent > 33 ? spent : 33;     /* (the game's frames: 33 ms at least on these calculators) */
   }
   perf_out[8] = car.finish;

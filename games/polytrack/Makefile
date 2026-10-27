@@ -73,7 +73,7 @@ $(BUILD_DIR)/armcheck.nwa: tests/armcheck.c tests/routes.h src/car.c src/world.c
 armcheck: $(BUILD_DIR)/armcheck.nwa
 	$(PYTHON) tools/armcheck.py $<
 $(BUILD_DIR)/armperf.nwa: tests/armperf.c tests/routes.h $(HOT) $(COLD_OBJ) $(HEADERS) $(BUILD_DIR)/icon.o $(BUILD_DIR)/data.o
-	$(Q) $(CC) $(CFLAGS) -O2 $(LDFLAGS) tests/armperf.c $(HOT) $(filter-out %/main.o,$(COLD_OBJ)) $(BUILD_DIR)/data.o \
+	$(Q) $(CC) $(CFLAGS) -O2 $(PERF_CFLAGS) $(LDFLAGS) tests/armperf.c $(HOT) $(filter-out %/main.o,$(COLD_OBJ)) $(BUILD_DIR)/data.o \
 	  $(BUILD_DIR)/icon.o -lm -o $@
 armperf: $(BUILD_DIR)/armperf.nwa
 	$(PYTHON) tools/armperf.py $<

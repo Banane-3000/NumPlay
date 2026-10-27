@@ -28,7 +28,8 @@ typedef struct {
 static tri tris[MAX_TRIS];
 static int ntris;
 int rd_tris, rd_dropped, rd_mtris, rd_chunks;
-int rd_detail = RD_LEVELS - 1;
+int rd_detail = RD_LEVELS - 1, rd_ease;
+static int qcur = RD_LEVELS - 1;    /* the quality of the frame being made */
 bool rd_half, rd_halfx;
 /* the picture's quality, lowest first: how far it draws, how near the parts keep their whole shape, half the rows,
    triangles at most */
@@ -262,7 +263,9 @@ void rd_begin(const camera_t *cam, int env, int sun_byte, bool sky_only) {
   ntris = 0, rd_dropped = 0;
   float half = C.fov * 0.5f * (PT_PI / 180.0f);
   focal = CY * pt_cosf(half) / pt_sinf(half);
-  int q = rd_detail < 0 ? 0 : rd_detail >= RD_LEVELS ? RD_LEVELS - 1 : rd_detail;
+  int q = rd_detail - rd_ease;
+  q = q < 0 ? 0 : q >= RD_LEVELS ? RD_LEVELS - 1 : q;
+  qcur = q;
   far_d = DRAW[q];
   rd_half = HALF[q] & 1, rd_halfx = HALF[q] >> 1;
   cap = CAP[q];
@@ -341,7 +344,7 @@ static void collect(int i, void *ctx) {
       v = &vis[far];
     }
     v->inst = (uint16_t)i, v->chunk = (uint8_t)k, v->dist = d;
-    v->lod = d < NEAR_DETAIL[rd_detail < 0 ? 0 : rd_detail >= RD_LEVELS ? RD_LEVELS - 1 : rd_detail] ? 0 : 1;
+    v->lod = d < NEAR_DETAIL[qcur] ? 0 : 1;
   }
 }
 
@@ -424,7 +427,7 @@ static void mountains(void) {
   float rad[8];
   for (int k = 0; k < 8; k++) rad[k] = W.mr + 100.0f * (float)k;
   /* (at the lowest qualities: every other segment, the nearer rings) */
-  int de = rd_detail <= 2 ? 2 : 1, k0 = rd_detail <= 2 ? 3 : 6;
+  int de = qcur <= 2 ? 2 : 1, k0 = qcur <= 2 ? 3 : 6;
   for (int k = k0; k >= 0; k--)
     for (int e = 0; e < s; e += de) {
       int e1 = (e + de) % s;
@@ -549,7 +552,7 @@ void rd_car(const car_look *c) {
   v3 t = to_cam(vadd(c->pos, mrow(&R, V3(0.0f, CAR_MASS_OFFSET, 0.0f))));
   if (t.z < -6.0f || t.z > far_d) return;
   car_mesh(pt_body_v, PT_BODY_NV, pt_body_t, PT_BODY_NT, M, t, &R, mat, c);
-  if (!c->ghost && rd_detail > 2) car_mesh(pt_extra_v, PT_EXTRA_NV, pt_extra_t, PT_EXTRA_NT, M, t, &R, mat, c);
+  if (!c->ghost && qcur > 2) car_mesh(pt_extra_v, PT_EXTRA_NV, pt_extra_t, PT_EXTRA_NT, M, t, &R, mat, c);
   /* the wheels: at their suspension's end, turned by the steering (front) and rolling */
   for (int i = 0; i < 4; i++) {
     v3 wp = vadd(c->pos, mrow(&R, vadd(car_wheel_pos[i], V3(0.0f, -c->susp[i], 0.0f))));
@@ -594,14 +597,16 @@ void rd_shadow(const car_look *c, const car_t *phys) {
   for (int i = 1; i + 1 < 6; i++) cam_tri(q[0], q[i], q[i + 1], 0, RK_SHADOW);
 }
 
-/* the picture's quality follows the time a race frame takes: down at once when slow (or out of room for
-   triangles), up slowly */
+/* the picture's quality follows the time a frame's work takes (the physics and the picture): down at once when
+   slow (or out of room for triangles), up slowly. rd_ease_for: a frame whose physics took long is drawn simpler */
+void rd_ease_for(uint32_t physics_ms) { rd_ease = physics_ms > 10 ? 2 : physics_ms > 6 ? 1 : 0; }
 void rd_adapt(uint32_t spent_ms) {
   static uint32_t slow, quick;
-  if (spent_ms > 26 || rd_dropped) slow++, quick = 0;
-  else if (spent_ms < 16 && rd_tris < cap * 3 / 4) quick++, slow = 0;
-  else slow = quick = 0;
   int q = rd_detail;
+  /* (up from the lower resolutions on time alone; above them, only with triangles to spare) */
+  if (spent_ms > 26 || rd_dropped) slow++, quick = 0;
+  else if (q < 3 ? spent_ms < 20 : spent_ms < 16 && rd_tris < cap * 3 / 4) quick++, slow = 0;
+  else slow = quick = 0;
   /* (a frame near 33 ms: down at once, two steps when past it) */
   if (spent_ms > 30) q -= spent_ms > 36 ? 2 : 1, slow = 0;
   /* (out of triangles but in time, at the nearest distance: not a reason for half the rows) */

@@ -33,7 +33,9 @@ extern const uint32_t rd_paints[8];   /* the car colours */
 #define RD_LEVELS 7
 extern int rd_detail;                  /* 0..RD_LEVELS-1: the picture's quality; lowered when a frame is slow */
 extern bool rd_half, rd_halfx;         /* half the rows, each drawn twice (the lowest qualities); and of the columns */
-void rd_adapt(uint32_t spent_ms);      /* after each race frame: the quality for the next */
+void rd_adapt(uint32_t spent_ms);      /* after each frame in 3D, its work in ms: the quality for the next */
+extern int rd_ease;                    /* this frame drawn this many levels lower (rd_ease_for) */
+void rd_ease_for(uint32_t physics_ms); /* before drawing: the physics took this long */
 #define RD_MAX_TRIS 1700              /* triangles in a frame, at most */
 extern int rd_tris, rd_dropped, rd_mtris, rd_chunks;   /* the last frame: triangles kept, some left out, of the mountains; chunks */
 

@@ -34,6 +34,51 @@ static v3 hull_lo, hull_hi;
 static float hull_plane[16][4];     /* the hull's face planes, outwards */
 static int nhull_plane;
 static wtri cache[PT_CACHE];
+/* the cached triangles near enough to touch the car this frame (a sphere round it), in the cache's order: the
+   contacts and the wheels' rays look at these only, and find what they would among all */
+static uint8_t near_tri[PT_CACHE];
+static int nnear;
+/* the cached triangles' boxes in bytes (12 m round where the cache was filled, rounded outwards): a quick test
+   before the exact one, never turning away a triangle the exact one would keep */
+#define BOX_K (255.0f / 12.0f)
+static uint8_t box8[PT_CACHE][6];
+static v3 box_o;
+static int qlo(float v) {
+  float f = v * BOX_K;
+  int i = (int)f;
+  if ((float)i > f) i--;
+  return i < 0 ? 0 : i > 255 ? 255 : i;
+}
+static int qhi(float v) {
+  float f = v * BOX_K;
+  int i = (int)f;
+  if ((float)i < f) i++;
+  return i < 0 ? 0 : i > 255 ? 255 : i;
+}
+static void box8_fill(const car_t *c) {
+  box_o = vsub(c->cache_at, V3(6.0f, 6.0f, 6.0f));
+  for (int i = 0; i < c->ncache; i++) {
+    const wtri *t = &cache[i];
+    v3 a = vsub(t->a, box_o), b = vsub(t->b, box_o), d = vsub(t->c, box_o);
+    box8[i][0] = (uint8_t)qlo(pt_minf(a.x, pt_minf(b.x, d.x))), box8[i][1] = (uint8_t)qhi(pt_maxf(a.x, pt_maxf(b.x, d.x)));
+    box8[i][2] = (uint8_t)qlo(pt_minf(a.y, pt_minf(b.y, d.y))), box8[i][3] = (uint8_t)qhi(pt_maxf(a.y, pt_maxf(b.y, d.y)));
+    box8[i][4] = (uint8_t)qlo(pt_minf(a.z, pt_minf(b.z, d.z))), box8[i][5] = (uint8_t)qhi(pt_maxf(a.z, pt_maxf(b.z, d.z)));
+  }
+}
+/* a query box in bytes, and whether triangle i may meet it */
+typedef struct { uint8_t v[6]; } qbox;
+static qbox qbox_of(v3 lo, v3 hi) {
+  lo = vsub(lo, box_o), hi = vsub(hi, box_o);
+  qbox q = {{(uint8_t)qlo(lo.x), (uint8_t)qhi(hi.x), (uint8_t)qlo(lo.y), (uint8_t)qhi(hi.y), (uint8_t)qlo(lo.z), (uint8_t)qhi(hi.z)}};
+  return q;
+}
+static bool may_meet(int i, const qbox *q) {
+  const uint8_t *b = box8[i];
+  return !(b[1] < q->v[0] || b[0] > q->v[1] || b[3] < q->v[2] || b[2] > q->v[3] || b[5] < q->v[4] || b[4] > q->v[5]);
+}
+static float reach;                 /* the farthest the hull or a wheel's ray gets from the car's origin */
+static v3 hull_c;                   /* the hull's middle (body space), and the farthest corner from it */
+static float hull_r;
 
 /* the checkpoints of the track */
 #define MAX_DET 64
@@ -51,6 +96,11 @@ static void hull_setup(void) {
     hull_lo = V3(pt_minf(hull_lo.x, hull[i].x), pt_minf(hull_lo.y, hull[i].y), pt_minf(hull_lo.z, hull[i].z));
     hull_hi = V3(pt_maxf(hull_hi.x, hull[i].x), pt_maxf(hull_hi.y, hull[i].y), pt_maxf(hull_hi.z, hull[i].z));
   }
+  reach = 0.0f;
+  for (int i = 0; i < PT_HULL_N; i++) reach = pt_maxf(reach, vlen(hull[i]));
+  hull_c = vmul(vadd(hull_lo, hull_hi), 0.5f), hull_r = 0.0f;
+  for (int i = 0; i < PT_HULL_N; i++) hull_r = pt_maxf(hull_r, vlen(vsub(hull[i], hull_c)));
+  for (int i = 0; i < 4; i++) reach = pt_maxf(reach, vlen(car_wheel_pos[i]) + REST + RADIUS);
   /* inertia: Bullet's box from the cached AABB (support points +- 0.04), its margin 0.02 added twice */
   float lx = 2.0f * ((hull_hi.x - hull_lo.x) * 0.5f + 0.04f + 0.02f + 0.02f);
   float ly = 2.0f * ((hull_hi.y - hull_lo.y) * 0.5f + 0.04f + 0.02f + 0.02f);
@@ -151,6 +201,7 @@ static void cache_refresh(car_t *c) {
   v3 h = V3(5.0f, 5.0f, 5.0f);
   c->ncache = world_gather(vsub(c->pos, h), vadd(c->pos, h), cache, PT_CACHE);
   c->cache_ok = 1;
+  box8_fill(c);
 }
 
 void car_cache_rebuild(car_t *c) {
@@ -158,6 +209,15 @@ void car_cache_rebuild(car_t *c) {
   if (!c->cache_ok) return;
   v3 h = V3(5.0f, 5.0f, 5.0f);
   c->ncache = world_gather(vsub(c->cache_at, h), vadd(c->cache_at, h), cache, PT_CACHE);
+  box8_fill(c);
+}
+
+static void near_refresh(const car_t *c) {
+  float r = reach + 0.35f;          /* (and what the car moves in a frame, and the contact margins) */
+  qbox q = qbox_of(vsub(c->pos, V3(r, r, r)), vadd(c->pos, V3(r, r, r)));
+  nnear = 0;
+  for (int i = 0; i < c->ncache; i++)
+    if (may_meet(i, &q)) near_tri[nnear++] = (uint8_t)i;
 }
 
 /* Bullet's btTriangleRaycastCallback, closest hit: fraction, normal facing the ray's start */
@@ -187,8 +247,10 @@ static bool cast_ray(car_t *c, v3 from, v3 to, float *frac, v3 *normal) {
   float ly = pt_minf(from.y, to.y), hy = pt_maxf(from.y, to.y);
   float lz = pt_minf(from.z, to.z), hz = pt_maxf(from.z, to.z);
   *frac = 1.0f;
-  for (int i = 0; i < c->ncache; i++) {
-    const wtri *t = &cache[i];
+  qbox q = qbox_of(V3(lx, ly, lz), V3(hx, hy, hz));
+  for (int j = 0; j < nnear; j++) {
+    if (!may_meet(near_tri[j], &q)) continue;
+    const wtri *t = &cache[near_tri[j]];
     if (pt_maxf(t->a.x, pt_maxf(t->b.x, t->c.x)) < lx || pt_minf(t->a.x, pt_minf(t->b.x, t->c.x)) > hx) continue;
     if (pt_maxf(t->a.y, pt_maxf(t->b.y, t->c.y)) < ly || pt_minf(t->a.y, pt_minf(t->b.y, t->c.y)) > hy) continue;
     if (pt_maxf(t->a.z, pt_maxf(t->b.z, t->c.z)) < lz || pt_minf(t->a.z, pt_minf(t->b.z, t->c.z)) > hz) continue;
@@ -230,8 +292,16 @@ static int find_contacts(car_t *c, contact_t *out) {
   lo = vsub(lo, V3(g, g, g)), hi = vadd(hi, V3(g, g, g));
   contact_t cand[48];
   int nc = 0;
-  for (int i = 0; i < c->ncache && nc < 48; i++) {
-    const wtri *t = &cache[i];
+  /* (a triangle whose plane passes further than this from the hull's middle can't give a contact: every corner
+     is more than 0.5 m from it, and none of its corners is in the hull) */
+  v3 hc = vadd(c->pos, mrow(&c->basis, hull_c));
+  float far = hull_r + 0.6f;
+  qbox q = qbox_of(lo, hi);
+  for (int j = 0; j < nnear && nc < 48; j++) {
+    if (!may_meet(near_tri[j], &q)) continue;
+    const wtri *t = &cache[near_tri[j]];
+    float dc = vdot(t->n, hc) - t->d;
+    if (dc > far || dc < -far) continue;
     if (pt_maxf(t->a.x, pt_maxf(t->b.x, t->c.x)) < lo.x || pt_minf(t->a.x, pt_minf(t->b.x, t->c.x)) > hi.x) continue;
     if (pt_maxf(t->a.y, pt_maxf(t->b.y, t->c.y)) < lo.y || pt_minf(t->a.y, pt_minf(t->b.y, t->c.y)) > hi.y) continue;
     if (pt_maxf(t->a.z, pt_maxf(t->b.z, t->c.z)) < lo.z || pt_minf(t->a.z, pt_minf(t->b.z, t->c.z)) > hi.z) continue;
@@ -632,6 +702,7 @@ static void checkpoints(car_t *c) {
 void car_step(car_t *c, unsigned in) {
   if (c->frames > PT_MAX_FRAMES) return;
   cache_refresh(c);
+  near_refresh(c);
   c->impulse = 0.0f;
   /* the downforce: -up |v . forward| 0.05 */
   {
@@ -719,6 +790,7 @@ void car_step(car_t *c, unsigned in) {
     c->next_cp = c->respawn.next;
     c->cache_ok = 0;
     cache_refresh(c);
+    near_refresh(c);
   }
   c->reset_held = reset;
   /* Bullet's step */

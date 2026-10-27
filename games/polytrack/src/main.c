@@ -263,6 +263,7 @@ int main(void) {
   uint8_t shown = 0xFF;
   bool dirty = true;
   uint32_t min_frame = frame_gap ? frame_gap : plat_slow() ? 33 : 25;
+  uint32_t work_phys = 0;           /* ms of physics since the last picture */
   for (;;) {
     now = plat_millis();
     uint32_t dt = now - last;
@@ -288,13 +289,17 @@ int main(void) {
         race_begin();
       } else {
         if (hit & PK_VIEW) sv.p.view ^= 1;
+        uint32_t p0 = plat_millis();
         step_race(live, hit, dt);
+        work_phys += plat_millis() - p0;
         if (car.finish && ui.finish_at && ui.clock - ui.finish_at > 2000 && ui.screen == V_RACE)
           ui.screen = V_RESULT, ui.sel = RES_AGAIN;
       }
     } else if (ui.screen == V_RESULT) {
       /* (the car rolls on behind the results) */
+      uint32_t p0 = plat_millis();
       step_race(0, 0, dt);
+      work_phys += plat_millis() - p0;
       quit = keys_menu(hit);
     } else {
       quit = keys_menu(hit);
@@ -309,6 +314,7 @@ int main(void) {
                   ui.screen == V_CAR;
     if (dirty || (moving && now - frame_at >= min_frame)) {
       uint32_t t0 = plat_millis();
+      rd_ease_for(work_phys);
       float fdt = (float)(now - frame_at) / 1000.0f;
       if (fdt > 0.1f) fdt = 0.1f;
       look = car_look_of(&car);
@@ -329,7 +335,8 @@ int main(void) {
       perf_frames++;
       if (spent > perf_max) perf_max = spent;
       if (spent > 33) perf_slow++;
-      if (ui.screen == V_RACE) rd_adapt(spent);
+      if (moving) rd_adapt(spent + work_phys);   /* (the screens in 3D: the frame's physics and picture) */
+      work_phys = 0, rd_ease = 0;
       frame_at = now;
       dirty = false;
     } else {

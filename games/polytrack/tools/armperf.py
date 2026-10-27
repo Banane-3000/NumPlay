@@ -38,7 +38,7 @@ def main():
             det = "/".join(str(x) for x in [o[13], o[12], o[9]] + list(o[4:8]))
             print(f"{NAMES[t]:9}: {frames:5} frames, {work / max(frames, 1):5.1f} ms a frame, slowest {worst:3} ms, "
                   f"{over:3} over 33 ms (quality 0-6: {det}), finish {o[8]} ms" +
-                  (f", slow ones: {o[10] // over} triangles, {o[11] // over} chunks" if over else "") + ("" if done else ", NOT done"))
+                  (f", slow ones: {o[10] // over} triangles, {o[11] // over} chunks, {o[14] / over:.1f} ms of physics, {o[15] // over} cached triangles" if over else "") + ("" if done else ", NOT done"))
             bad += over > 0 or not done
     sys.exit(1 if bad else 0)
 
