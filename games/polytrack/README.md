@@ -70,7 +70,7 @@ In the menus, the arrows choose, **OK** picks and **Back** goes back. 8, 4, 6, 2
 
 * **On its own:** PolyTrack is too big to fit next to NumPlay. Installing it from the NumWorks website swaps out NumPlay and the other apps, and installing NumPlay again swaps it back out. Your progress in each one is kept.
 * **Quit game** in the pause menu asks first: keep racing, go back to the tracks, or quit.
-* On the busiest tracks the far scenery is drawn simpler, so that the race keeps going at 30 frames a second, even on the N0110.
+* On the busiest stretches the picture gets simpler as needed, the far scenery first, then fewer pixels, so that the race keeps going at 30 frames a second, even on the N0110.
 * The ghosts take up to 12 KB in `polytrack_ghosts.sav`. There is no music or sound: the calculator has no speaker.
 
 ## Credits
