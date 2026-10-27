@@ -140,12 +140,16 @@ static void sp_rect(uint16_t *strip, int sy0, int sy1, int x, int y, int w, int 
   int y0 = y < sy0 ? sy0 : y, y1 = y + h > sy1 ? sy1 : y + h;
   if (x0 >= x1 || y0 >= y1 || a <= 0) return;
   uint16_t pc = a >= 256 ? c : scale565(c, a);
+  uint32_t ia = 256 - (uint32_t)a, pr = pc >> 11, pg = (pc >> 5) & 63, pb = pc & 31;
   for (int r = y0; r < y1; r++) {
     uint16_t *d = strip + (r - sy0) * VIEW_W + x0;
     if (a >= 256)
       for (int i = x0; i < x1; i++) *d++ = c;
-    else
-      for (int i = x0; i < x1; i++, d++) *d = blend565(*d, pc, a);
+    else   /* blend565, its color's channels worked out once (the clutter's backing covers most of 3A's busiest room) */
+      for (int i = x0; i < x1; i++, d++) {
+        uint32_t v = *d, cr = pr + (((v >> 11) * ia) >> 8), cg = pg + ((((v >> 5) & 63) * ia) >> 8), cb = pb + (((v & 31) * ia) >> 8);
+        *d = (uint16_t)((cr > 31 ? 31 : cr) << 11 | (cg > 63 ? 63 : cg) << 5 | (cb > 31 ? 31 : cb));
+      }
   }
 }
 static void sp_line(uint16_t *strip, int sy0, int sy1, int x0, int y0, int x1, int y1, uint16_t c, int a) {
@@ -466,25 +470,43 @@ static void clutter_awake(Ent *e) {
 }
 static void clutter_removed(Ent *e) { clut_drop_slot(ST(e, Clutter)->slot); }
 /* ClutterBlockBase.Render: a dark rectangle (deeper), then the blocks in front of the player */
+/* (the room's place and the camera are whole pixels: what is in the strip is found with integers first, a block's
+ * float, at most 2 pixels up, only for those) */
 static void clut_base_layer(uint16_t *strip, int sy0, int sy1, void *ctx) {
   Ent *e = ctx;
   Clutter *c = ST(e, Clutter);
+  int ox = c->rx - g_camx, oy = c->ry - g_camy;
   for (int i = 0; i < nclut_base; i++) {
     ClutBase *k = &clut_base[i];
     if (((k->f >> 3) & 1) != c->slot) continue;
     bool on = k->f & 4;
-    sp_rect(strip, sy0, sy1, vx(c->rx + k->x * 8.f), vy(c->ry + k->y * 8.f), k->w * 8, k->h * 8 + (on ? 2 : 0), 0, on ? 179 : 77);
+    int y = oy + k->y * 8, h = k->h * 8 + (on ? 2 : 0);
+    if (y >= sy1 || y + h <= sy0) continue;
+    sp_rect(strip, sy0, sy1, ox + k->x * 8, y, k->w * 8, h, 0, on ? 179 : 77);
   }
 }
+/* the blocks, drawn as their pictures are (spans of the palette's colors: what sp_tex did a pixel at a time) */
 static void clut_blk_layer(uint16_t *strip, int sy0, int sy1, void *ctx) {
   Ent *e = ctx;
   Clutter *c = ST(e, Clutter);
+  int ox = c->rx - g_camx, oy = c->ry - g_camy;
+  Tex tx[3 * 15];
+  uint64_t got = 0;   /* tx[i] filled */
   for (int i = 0; i < nclut_blk; i++) {
     ClutBlock *b = &clut_blk[i];
     if (!clut_mine(c, b) || (b->f & CB_FLY)) continue;
-    int x = vx(c->rx + b->x * 8.f), y = vy(c->ry + b->y * 8.f + clut_float(c, b));
-    if (y >= sy1 || y + CLUT_H[b->tex] * 8 <= sy0 || x >= VIEW_W || x + CLUT_W[b->tex] * 8 <= 0) continue;
-    sp_tex(strip, sy0, sy1, clut_tex[b->f & CB_COLOR][b->tex], x, y, 0xFFFF, 256, false);
+    int y0 = oy + b->y * 8, x = ox + b->x * 8, h = CLUT_H[b->tex] * 8;
+    if (y0 - 2 >= sy1 || y0 + h <= sy0 || x >= VIEW_W || x + CLUT_W[b->tex] * 8 <= 0) continue;
+    int y = vy(c->ry + b->y * 8.f + clut_float(c, b));
+    if (y >= sy1 || y + h <= sy0) continue;
+    int ti = (b->f & CB_COLOR) * 15 + b->tex;
+    if (!(got >> ti & 1)) {
+      if (!tex_get(clut_tex[b->f & CB_COLOR][b->tex], &tx[ti])) continue;
+      got |= (uint64_t)1 << ti;
+    }
+    const Tex *t = &tx[ti];
+    if (t->fmt == TF_RAW4) sp_tex(strip, sy0, sy1, clut_tex[b->f & CB_COLOR][b->tex], x, y, 0xFFFF, 256, false);
+    else blit_tex(strip, sy0, sy1, t, x + t->ox, y + t->oy, 0, 0xFFFF, 255);
   }
 }
 static void clutter_render(Ent *e) { gfx_custom(clut_base_layer, e, 0, VIEW_H); }
@@ -1121,6 +1143,7 @@ static bool ts_riding(Ent *e, Ent *pl) {
   float dx = s->dir == TS_LEFT ? 1 : s->dir == TS_RIGHT ? -1 : 0, dy = s->dir == TS_UP ? 1 : s->dir == TS_DOWN ? -1 : 0;
   return collide_ent_at(e, e->x + dx, e->y + dy, pl) && !collide_ent_at(e, e->x, e->y, pl);   /* CollideCheckOutside */
 }
+#define TS_REACH 24
 static void ts_layer(uint16_t *strip, int sy0, int sy1, void *ctx) {
   (void)ctx;
   /* DustStyles: the edges' colors */
@@ -1132,10 +1155,16 @@ static void ts_layer(uint16_t *strip, int sy0, int sy1, void *ctx) {
     TSpikes *s = ST(e, TSpikes);
     V2 along = (s->dir == TS_UP || s->dir == TS_DOWN) ? v2(1, 0) : v2(0, 1), out = ts_outwards(s->dir);
     bool vert = s->dir == TS_UP || s->dir == TS_DOWN;
+    /* only the strip's: a tendril or its dust reaches at most TS_REACH pixels from its place */
+    int ey0 = vy(e->y) - TS_REACH, ey1 = vy(e->y + (vert ? 0 : 2 + s->n * 4.f)) + TS_REACH;
+    int ex0 = vx(e->x) - TS_REACH, ex1 = vx(e->x + (vert ? 2 + s->n * 4.f : 0)) + TS_REACH;
+    if (ey1 < sy0 || ey0 >= sy1 || ex1 < 0 || ex0 >= VIEW_W) continue;
     for (int i = 0; i < s->n; i++) {
       int k = s->first + i;
-      uint32_t h = hash32((uint32_t)e->eid * 104729u + (uint32_t)i);   /* its own (Added's randoms): not from where it is, it rides blocks */
       V2 at = v2add(v2(e->x, e->y), v2mul(along, 2 + i * 4.f));
+      int ay = vy(at.y), ax = vx(at.x);
+      if (ay + TS_REACH < sy0 || ay - TS_REACH >= sy1 || ax + TS_REACH < 0 || ax - TS_REACH >= VIEW_W) continue;
+      uint32_t h = hash32((uint32_t)e->eid * 104729u + (uint32_t)i);   /* its own (Added's randoms): not from where it is, it rides blocks */
       if (!(ts_state[k] & 128)) {   /* the tendril, waving */
         int frame = (int)(fmodf((h % 900) / 100.f + g_level.time_active * 12, 9));
         uint16_t t = vert ? ts_tent_v[frame] : ts_tent_h[frame];

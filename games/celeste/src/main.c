@@ -26,10 +26,11 @@ int main(void) {
   game_init();
   uint32_t next = plat_millis() * 3;   /* in thirds of a millisecond: 50 per update */
   while (g_running) {
-    /* 60 updates a second; draw when caught up (at most 2 updates per frame) */
+    /* 60 updates a second; draw when caught up (at most 3 updates per frame: the busiest rooms keep the game's speed
+       on the N0110) */
     int n = 0;
     uint32_t now = plat_millis() * 3;
-    while ((int32_t)(now - next) >= 0 && n < 2 && g_running) {
+    while ((int32_t)(now - next) >= 0 && n < 3 && g_running) {
       game_frame();
       perf_updates++;
       next += 50;
