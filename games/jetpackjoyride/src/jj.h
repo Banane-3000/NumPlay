@@ -28,7 +28,10 @@ enum { JJ_WARN, JJ_LOCK, JJ_FLY };                              /* a missile */
 #define JJ_MISSILES 8
 #define JJ_TOKENS 2
 #define JJ_FX 6
-#define JJ_SCIENTISTS 3
+#define JJ_SCIENTISTS 4
+#define JJ_BULLETS 10
+#define JJ_SHELLS 8
+#define JJ_SPARKS 6
 
 typedef struct {
   float x, y;           /* the middle */
@@ -62,11 +65,20 @@ typedef struct {
   uint8_t kind, t;      /* kind 0 a missile or Barry hit, 1 a vehicle breaking */
 } jj_fx;
 
+/* a scientist (workerinfo.xml): x, y his feet; vx, vy his own speed in points a frame (vx along dir) */
+enum { JJ_SCI_WALK, JJ_SCI_RUN, JJ_SCI_FETAL, JJ_SCI_ZAPPED, JJ_SCI_AIR, JJ_SCI_SLIDE };
 typedef struct {
-  float x;
+  float x, y, vx, vy;
   int8_t dir;           /* -1 left, 1 right */
-  uint8_t on, state, t; /* state 0 walking, 1 running, 2 knocked down */
+  uint8_t on, state, kind, pose, alert; /* kind: which suit; pose: his death bounce frame; alert: reacted to Barry */
+  uint16_t t, timer;    /* frames in this state; frames to the next thing (a trip, curling up), 0 none */
+  uint16_t near;        /* points from Barry at which he notices him */
 } jj_scientist;
+
+/* the jetpack's fire: bullets (x, y and points a frame), the shells it throws out, where bullets hit the floor */
+typedef struct { float x, y, vx, vy; } jj_bullet;            /* vy 0: none */
+typedef struct { float x, y, vx, vy; uint8_t on, rot; } jj_shell;
+typedef struct { float x; uint8_t t; } jj_spark;
 
 typedef struct {
   /* Barry */
@@ -95,9 +107,18 @@ typedef struct {
   jj_token token[JJ_TOKENS];
   jj_token box;                      /* the vehicle box */
   jj_fx fx[JJ_FX];
-  jj_scientist sci[JJ_SCIENTISTS];
   /* counted for the results */
   uint32_t zappers_dodged, missiles_dodged, tokens_taken;
+  /* (from here on, new in save version 2) */
+  uint32_t crowd;                    /* the scientists' and the bullets' own dice, so the hazards don't hang on them */
+  uint32_t level;                    /* the rooms of this run (draw.c makes them from it) */
+  uint16_t rot;                      /* knocked out: how he's turned (65536 a turn) */
+  int16_t spin;                      /* and how fast (per frame) */
+  uint8_t pose, pad[3];              /* his death bounce pose */
+  jj_scientist sci[JJ_SCIENTISTS];
+  jj_bullet bul[JJ_BULLETS];
+  jj_shell shell[JJ_SHELLS];
+  jj_spark spark[JJ_SPARKS];
 } jj_run;
 
 void jj_start(jj_run *r, uint32_t seed, bool double_coins, bool head_start);

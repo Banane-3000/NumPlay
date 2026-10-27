@@ -29,13 +29,15 @@
 * **Coins:** the game's 26 coin patterns, and coin streaks.
 * **Five vehicles** from the vehicle boxes: the Lil' Stomper, the Profit Bird, the Crazy Freaking Teleporter, the Bad As Hog and the Gravity Suit, each with its own controls, speed and obstacles. A vehicle takes a hit for you.
 * **The Final Spin:** spin tokens play the slot machine after a run, for coins, blasts, a Second Chance, double coins or a head start.
-* **The game's look:** Halfbrick's own pictures of Barry, the lab, the hazards and the vehicles, and the game's font for the distance.
+* **The rooms:** the lab, the glass tube under the sea, the lava cave and the greenhouse, in a new order every run.
+* **The machine gun jetpack fires for real:** its bullets rain down and ricochet off the floor, and they knock out the scientists they hit.
+* **The game's look:** Halfbrick's own pictures of Barry, the rooms, the scientists, the hazards and the vehicles, and the game's font for the distance.
 * **Saved as you go:** Home saves the run and quits, and the next start picks it up paused. Your best and coins are also copied into `jetpackjoyride_saves.py`, so installing the app again doesn't erase them.
 
 <table>
   <tr>
-    <td align="center"><img src="docs/shot.png" width="390" alt="Lasers firing across the lab"><br><sub>A laser pattern</sub></td>
-    <td align="center"><img src="docs/missile.png" width="390" alt="A missile flying at Barry"><br><sub>A missile, fired after its warning</sub></td>
+    <td align="center"><img src="docs/shot.png" width="390" alt="Lasers firing across the lava cave"><br><sub>A laser pattern in the cave</sub></td>
+    <td align="center"><img src="docs/missile.png" width="390" alt="A missile flying at Barry in the greenhouse"><br><sub>A missile, fired after its warning</sub></td>
   </tr>
   <tr>
     <td align="center"><img src="docs/stomper.png" width="390" alt="Barry in the Lil' Stomper"><br><sub>The Lil' Stomper</sub></td>
@@ -70,14 +72,14 @@ Grab the spin tokens: when the run ends, each one is a spin of the Final Spin. P
 * **On its own:** Jetpack Joyride is too big to fit next to NumPlay. Installing it from the NumWorks website swaps out NumPlay and the other apps, and installing NumPlay again swaps it back out.
 * **The first year's game:** the numbers are those of versions 1.1 and 1.3.5, with the five vehicles of the first release. Mr. Cuddles and the later vehicles aren't here.
 * **Left out:** The Stash (outfits, jetpacks, gadgets and upgrades), missions, coin purchases and ads, and music and sound (the calculator has no speaker). Coins add up on the title.
-* **One lab:** one picture of the lab is drawn, not all of the game's rooms.
+* **Four rooms:** the lab, the glass tube, the cave and the greenhouse, without the game's later ones. What shows behind them scrolls with them.
 
 ## Credits
 
 Inspired by [Jetpack Joyride](https://www.halfbrick.com/games/jetpack-joyride) by [Halfbrick](https://www.halfbrick.com), not affiliated with them. Go play the original: it's free on iOS and Android, with the Stash, missions and much more.
 
 * The numbers come from the game's own files (its settings, level pacing, zapper, laser, missile, coin, vehicle and slot machine data), read by [tools/data.py](tools/data.py) into [src/data.h](src/data.h).
-* The pictures are Halfbrick's: from archive.org's [Jetpack Joyride Facebook assets](https://archive.org/details/jetpack-joyride-assets), and from the game's Android package for the Lil' Stomper, the Bad As Hog, the spin token, the distance font (New Athletic M54) and the Final Spin's prizes, packed by [tools/art.py](tools/art.py) into [src/art.h](src/art.h).
+* The pictures are Halfbrick's: from archive.org's [Jetpack Joyride Facebook assets](https://archive.org/details/jetpack-joyride-assets), and from the game's Android package for the machine gun jetpack and its bullets, flash and shells, the Lil' Stomper, the Bad As Hog, the spin token, the distance font (New Athletic M54) and the Final Spin's prizes, packed by [tools/art.py](tools/art.py) into [src/art.h](src/art.h).
 * Brought to NumPlay by **Bobydeluxe**, who chose the Facebook assets.
 
 Made by Mason Chen as part of NumPlay.

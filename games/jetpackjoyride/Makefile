@@ -44,7 +44,7 @@ $(BUILD_DIR):
 	$(Q) mkdir -p $@
 
 # on a computer: tests/play.c runs the game with scripted keys, checks it and saves pictures
-HOST_FLAGS = -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Isrc -DHOST \
+HOST_FLAGS = -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -ffp-contract=off -Isrc -DHOST \
   -fsanitize=address,undefined -fno-sanitize-recover=undefined
 host: build/play
 build/play: $(filter-out src/plat_eadk.c,$(SRC)) tests/play.c $(HEADERS) $(L)/gfx.c $(L)/font_data.c $(L)/xfont.c

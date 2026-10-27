@@ -455,7 +455,7 @@ CHECKS = {
                       and struct.unpack_from("<d", v, 8)[0] >= 3,
                       lambda v: v[:4] == b"CCK1" and struct.unpack_from("<d", v, 48)[0] == 5),
     # a run kept ("JJR1", has_run at 23, its frames at 60); after the reinstall, from the copy, it goes on
-    "jetpackjoyride": (lambda v: len(v) == 728 and v[:4] == b"JJR1" and v[23] == 1 and struct.unpack_from("<I", v, 60)[0] >= 30,
+    "jetpackjoyride": (lambda v: len(v) == 1200 and v[:4] == b"JJR1" and v[23] == 1 and struct.unpack_from("<I", v, 60)[0] >= 30,
                        lambda v: v[:4] == b"JJR1" and v[23] == 1 and struct.unpack_from("<I", v, 60)[0] >= 90),
     # how to play seen, level 1 being played ("SHK3", guide_seen at 17, has_course at 18, the course at 20); after the
     # reinstall, from the copy, the same level and course

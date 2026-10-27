@@ -21,6 +21,9 @@ uint32_t jj_rand(uint32_t *s) {
   return *s = x ? x : 0x2545F491u;
 }
 static int range(jj_run *r, int a, int b) { return b <= a ? a : a + (int)(jj_rand(&r->rng) % (uint32_t)(b - a + 1)); }
+/* the scientists' and the bullets' dice: their own, so what comes next never hangs on who got shot */
+static int crowd(jj_run *r, int a, int b) { return b <= a ? a : a + (int)(jj_rand(&r->crowd) % (uint32_t)(b - a + 1)); }
+static float crowdf(jj_run *r, float a, float b) { return a + (b - a) * (float)(jj_rand(&r->crowd) & 0xffff) / 65535.0f; }
 
 static const int16_t quarter[65] = {
   0, 25, 50, 75, 100, 125, 150, 175, 200, 224, 249, 273, 297, 321, 345, 369, 392, 415, 438, 460, 483, 505,
@@ -192,6 +195,8 @@ static float spawn_missile(jj_run *r, int file) {
     s->chase = jj_mis_files[file].chase;
     s->y = r->y - jj_box_h(r->ride) / 2.0f;
     s->x = JJ_W - 18;
+    for (int i = 0; i < JJ_SCIENTISTS; i++)   /* CowerWithMissilesProbability 50 */
+      if (r->sci[i].on && r->sci[i].state <= JJ_SCI_RUN && crowd(r, 0, 99) < 50) r->sci[i].state = JJ_SCI_FETAL, r->sci[i].t = 0;
     return 0;
   }
   return 0;
@@ -213,13 +218,20 @@ static float spawn_token(jj_run *r, uint32_t m) {
   return 0;
 }
 
+/* workerinfo.xml: a scientist walks at 0.5 to 2 points a frame, one in five runs (2 to 6), and he notices Barry
+   200 to 500 points away */
 static void spawn_scientist(jj_run *r) {
   for (int k = 0; k < JJ_SCIENTISTS; k++) {
     jj_scientist *s = &r->sci[k];
     if (s->on) continue;
-    s->on = 1, s->state = 0, s->t = 0;
-    s->x = JJ_SPAWN_X;
-    s->dir = (int8_t)(jj_rand(&r->rng) & 1 ? 1 : -1);
+    memset(s, 0, sizeof *s);
+    s->on = 1, s->state = JJ_SCI_WALK;
+    s->x = JJ_SPAWN_X, s->y = JJ_FLOOR;
+    s->dir = (int8_t)(jj_rand(&r->crowd) & 1 ? 1 : -1);
+    s->kind = (uint8_t)(jj_rand(&r->crowd) & 1);
+    s->vx = crowdf(r, 0.5f, 2.0f);
+    s->near = (uint16_t)crowd(r, 200, 500);
+    if (crowd(r, 0, 99) < 20) s->state = JJ_SCI_RUN, s->vx = crowdf(r, 2.0f, 6.0f);
     return;
   }
 }
@@ -293,6 +305,9 @@ static void spawn(jj_run *r) {
 void jj_start(jj_run *r, uint32_t seed, bool double_coins, bool head_start) {
   memset(r, 0, sizeof *r);
   r->rng = seed ? seed : 0x4A4A4A4Au;
+  r->crowd = (r->rng * 0x9E3779B9u) ^ 0x5BD1E995u;
+  r->level = (r->rng * 0x85EBCA6Bu) ^ 0xC2B2AE35u;
+  if (!r->crowd) r->crowd = 1;
   r->y = JJ_FLOOR;
   r->ground = 1;
   r->double_coins = double_coins;
@@ -340,6 +355,17 @@ void jj_revive(jj_run *r) {
   r->revived++;
 }
 
+/* his body spins as it flies and bounces: 8 to 18 degrees a frame (settings.xml MIN/MAX_ROTATION_SPEED), one of
+   the four death bounce poses each time it leaves the floor */
+static void new_spin(jj_run *r) {
+  r->spin = (int16_t)(crowd(r, 8, 18) * 65536 / 360);
+  r->pose = (uint8_t)crowd(r, 0, 3);
+}
+static void tumble(jj_run *r, float vy) {
+  r->state = JJ_TUMBLE, r->vy = vy, r->stop_t = 0, r->rot = 0;
+  new_spin(r);
+}
+
 static void knock_out(jj_run *r, int by) {
   r->by = (uint8_t)by;
   r->dvx = jj_speed(r) / 60.0f;
@@ -349,7 +375,7 @@ static void knock_out(jj_run *r, int by) {
     r->state = JJ_ZAPPED, r->stop_t = 0;
   } else {
     boom(r, JJ_BX, r->y - 20, 0);
-    r->state = JJ_TUMBLE, r->vy = -5;
+    tumble(r, -5);
   }
 }
 
@@ -444,17 +470,133 @@ static bool boxes(float ax, float ay, float aw, float ah, float bx, float by, fl
   return ax < bx + bw && bx < ax + aw && ay < by + bh && by < ay + ah;
 }
 
+/* a zapper hits what its electricity touches: the beam, 5 points either side of the line between the orbs (its
+   glow), and the orbs, 9 points round (their picture). Points along it, 2 apart, are tried against the box. */
+static float box_d2(float px, float py, float bx, float by, float bw, float bh) {
+  float ex = px < bx ? bx - px : px > bx + bw ? px - (bx + bw) : 0;
+  float ey = py < by ? by - py : py > by + bh ? py - (by + bh) : 0;
+  return ex * ex + ey * ey;
+}
 static bool zapper_hits(const jj_zapper *z, float bx, float by, float bw, float bh) {
-  /* the beam, from orb to orb, 10 points either side */
   float dx = jj_cos(z->ang) * (z->len / 2.0f) / 1024.0f, dy = jj_sin(z->ang) * (z->len / 2.0f) / 1024.0f;
-  int n = z->len / 8 + 2;
+  if (box_d2(z->x - dx, z->y - dy, bx, by, bw, bh) < 9 * 9 || box_d2(z->x + dx, z->y + dy, bx, by, bw, bh) < 9 * 9) return true;
+  int n = z->len / 2;
   for (int i = 0; i <= n; i++) {
-    float t = -1.0f + 2.0f * i / n;
-    float px = z->x + dx * t, py = z->y + dy * t;
-    float rad = (i == 0 || i == n) ? 14.0f : 9.0f;
-    if (px + rad > bx && px - rad < bx + bw && py + rad > by && py - rad < by + bh) return true;
+    float t = -1.0f + 2.0f * (float)i / (float)n;
+    if (box_d2(z->x + dx * t, z->y + dy * t, bx, by, bw, bh) < 5 * 5) return true;
   }
   return false;
+}
+
+/* ---------------------------------------------------------------- the jetpack's fire and the scientists
+ * weapons.xml JETPACK_DEFAULT: a bullet every 2 frames, 15 points a frame, at 185 degrees (0 up, clockwise) give or
+ * take 17.5, from 10 points behind and 28 under Barry's middle; a bullet that meets a scientist knocks him out
+ * (killOnCollide), one that meets the floor makes a ricochet. The shells fall out behind. */
+static void fire(jj_run *r) {
+  if (r->fire) {
+    r->fire--;
+    return;
+  }
+  r->fire = 1;
+  for (int i = 0; i < JJ_BULLETS; i++) {
+    jj_bullet *b = &r->bul[i];
+    if (b->vy != 0) continue;
+    int deg = 185 * 2 + crowd(r, -35, 35);   /* half degrees */
+    uint16_t ang = (uint16_t)(deg * 65536 / 720);
+    b->x = JJ_BX - 6, b->y = r->y + 12;
+    b->vx = 15.0f * (float)jj_sin(ang) / 1024.0f, b->vy = -15.0f * (float)jj_cos(ang) / 1024.0f;
+    break;
+  }
+  if (r->t & 2) {
+    for (int i = 0; i < JJ_SHELLS; i++) {
+      jj_shell *c = &r->shell[i];
+      if (c->on) continue;
+      c->on = 1, c->rot = (uint8_t)crowd(r, 0, 3);
+      c->x = JJ_BX - 10, c->y = r->y - 10;
+      c->vx = crowdf(r, -3.0f, -1.5f), c->vy = crowdf(r, -3.0f, -1.0f);
+      break;
+    }
+  }
+}
+
+static void spark(jj_run *r, float x) {
+  int k = 0;
+  for (int i = 0; i < JJ_SPARKS; i++) {
+    if (!r->spark[i].t) {
+      k = i;
+      break;
+    }
+    if (r->spark[i].t > r->spark[k].t) k = i;
+  }
+  r->spark[k].x = x, r->spark[k].t = 1;
+}
+
+static bool sci_standing(const jj_scientist *s) { return s->state <= JJ_SCI_FETAL; }
+
+/* knocked out: up into the air and bouncing (DeathBounce: 1.5 to 4 points a frame along, 1.5 to 7 up), or thrown
+   by a vehicle (KnockDeath: 4 to 8 points a frame, up give or take 45 degrees, falling faster) */
+static void sci_down(jj_run *r, jj_scientist *s, int dir, bool knock) {
+  s->state = JJ_SCI_AIR, s->t = 0, s->timer = knock;
+  s->pose = (uint8_t)crowd(r, 0, 3);
+  if (knock) {
+    float v = crowdf(r, 4.0f, 8.0f);
+    uint16_t a = (uint16_t)(crowd(r, -45, 45) * 65536 / 360);
+    s->vx = v * (float)jj_sin(a) / 1024.0f, s->vy = -v * (float)jj_cos(a) / 1024.0f;
+  } else {
+    s->vx = (float)dir * crowdf(r, 1.5f, 4.0f), s->vy = -crowdf(r, 1.5f, 7.0f);
+  }
+}
+
+static void scientist(jj_run *r, jj_scientist *s, float dx, uint32_t m) {
+  s->t++;
+  switch (s->state) {
+  case JJ_SCI_WALK:
+  case JJ_SCI_RUN:
+    s->x += (float)s->dir * s->vx - dx;
+    /* Barry comes near: one in ten curls up, most run off (60 in 100, 75 from 1000 m) */
+    if (!s->alert && r->state == JJ_ALIVE && s->x > JJ_BX && s->x - JJ_BX < s->near) {
+      s->alert = 1;
+      int p = crowd(r, 0, 99), run = m >= 1000 ? 75 : 60;
+      if (p < 10) {
+        s->state = JJ_SCI_FETAL, s->t = 0;
+      } else if (p < 10 + run) {
+        s->state = JJ_SCI_RUN, s->t = 0, s->dir = 1, s->vx = crowdf(r, 2.0f, 6.0f);
+        /* a runner may trip (30 in 100) or curl up (10 in 100) after a while */
+        int q = crowd(r, 0, 99);
+        if (q < 30) s->alert = 3, s->timer = (uint16_t)(m >= 1000 ? crowd(r, 15, 60) : crowd(r, 30, 180));
+        else if (q < 40) s->alert = 5, s->timer = (uint16_t)crowd(r, 120, 240);
+      }
+    }
+    if (s->timer && !--s->timer) {
+      if (s->alert & 2) s->state = JJ_SCI_SLIDE, s->pose = 0, s->t = 0, s->vx *= (float)s->dir;   /* tripped, flat on his face */
+      else s->state = JJ_SCI_FETAL, s->t = 0;
+    }
+    break;
+  case JJ_SCI_FETAL:
+    s->vx *= 0.95f;   /* FetalFriction */
+    s->x += (float)s->dir * s->vx - dx;
+    break;
+  case JJ_SCI_ZAPPED:
+    s->x -= dx;
+    if (s->t >= 24) sci_down(r, s, -1, false);
+    break;
+  case JJ_SCI_AIR:
+    s->vy += s->timer ? 0.5f : 0.24f;
+    s->vy *= 0.98f;
+    s->y += s->vy;
+    s->x += s->vx - dx;
+    if (s->y >= JJ_FLOOR) {
+      s->y = JJ_FLOOR;
+      if (s->vy > 2.0f) s->vy = -s->vy * 0.7f, s->pose = (uint8_t)crowd(r, 0, 3);   /* DeathBounce_Y_Dampening */
+      else s->vy = 0, s->state = JJ_SCI_SLIDE, s->t = 0;
+    }
+    break;
+  case JJ_SCI_SLIDE:
+    s->vx *= 0.94f;   /* Death_X_Ground_Friction */
+    s->x += s->vx - dx;
+    break;
+  }
+  if (s->x < -40 || s->x > JJ_SPAWN_X + 60) s->on = 0;
 }
 
 void jj_step(jj_run *r, bool held) {
@@ -474,14 +616,17 @@ void jj_step(jj_run *r, bool held) {
   } else {
     /* knocked out: zapped a moment, then he tumbles and slides to a stop */
     if (r->state == JJ_ZAPPED) {
-      if (++r->stop_t >= 24) r->state = JJ_TUMBLE, r->stop_t = 0, r->vy = -3;
+      if (++r->stop_t >= 24) tumble(r, -3);
     } else {
+      bool air = r->y < JJ_FLOOR || r->vy != 0;
       r->vy += JJ_DEATH_GRAVITY;
       r->y += r->vy;
+      if (air) r->rot = (uint16_t)(r->rot + r->spin);
       if (r->y >= JJ_FLOOR) {
         r->y = JJ_FLOOR;
         r->vy = r->vy > JJ_MIN_BOUNCE ? -r->vy * 0.5f : 0;
         if (r->vy == 0) r->dvx *= JJ_DEATH_GROUND_FRICTION;
+        else new_spin(r);
       }
       if (r->state == JJ_TUMBLE && r->vy == 0 && r->y >= JJ_FLOOR && r->dvx < 0.3f) r->state = JJ_STOPPED, r->dvx = 0;
       if (r->state == JJ_STOPPED && r->stop_t < 60000) r->stop_t++;
@@ -518,20 +663,45 @@ void jj_step(jj_run *r, bool held) {
   }
   for (int i = 0; i < JJ_FX; i++)
     if (r->fx[i].t) r->fx[i].x -= dx;
-  for (int i = 0; i < JJ_SCIENTISTS; i++) {
-    jj_scientist *s = &r->sci[i];
-    if (!s->on) continue;
-    s->t++;
-    float walk = s->state == 2 ? 0 : s->state == 1 ? 3.0f : 1.0f;
-    s->x += s->dir * walk - dx;
-    /* alerted when Barry comes near (workerinfo.xml: 200 to 500 points), some run */
-    if (s->state == 0 && s->x - JJ_BX < 300 && s->x > JJ_BX && (s->t & 31) == 0 && range(r, 0, 99) < 20) s->state = 1, s->dir = 1;
-    /* the jetpack's bullets knock them down */
-    if (s->state != 2 && r->state == JJ_ALIVE && r->ride == JJ_FOOT && r->held && s->x > JJ_BX - 30 && s->x < JJ_BX + 4 &&
-        JJ_FLOOR - r->y < 150)
-      s->state = 2, s->t = 0;
-    if (s->x < -30 || s->x > JJ_SPAWN_X + 40) s->on = 0;
+  if (r->state == JJ_ALIVE && r->ride == JJ_FOOT && held) fire(r);
+  else r->fire = 0;
+  for (int i = 0; i < JJ_BULLETS; i++) {
+    jj_bullet *b = &r->bul[i];
+    if (b->vy == 0) continue;
+    b->x += b->vx - dx, b->y += b->vy;
+    for (int k = 0; k < JJ_SCIENTISTS; k++) {
+      jj_scientist *c = &r->sci[k];
+      if (!c->on || !sci_standing(c)) continue;
+      /* the bullet's last frame of flight, in 3 steps, against his 16 x 28 points */
+      for (int q = 0; q < 3; q++) {
+        float px = b->x - (b->vx - dx) * (float)q / 3.0f, py = b->y - b->vy * (float)q / 3.0f;
+        if (px > c->x - 8 && px < c->x + 8 && py > c->y - 28 && py < c->y) {
+          sci_down(r, c, b->vx < 0 ? -1 : 1, false);
+          b->vy = 0;
+          break;
+        }
+      }
+      if (b->vy == 0) break;
+    }
+    if (b->vy == 0) continue;
+    if (b->y >= JJ_FLOOR) spark(r, b->x - (b->y - JJ_FLOOR) * b->vx / b->vy), b->vy = 0;
+    else if (b->x < -20) b->vy = 0;
   }
+  for (int i = 0; i < JJ_SHELLS; i++) {
+    jj_shell *c = &r->shell[i];
+    if (!c->on) continue;
+    c->vy += 0.25f;
+    c->x += c->vx - dx, c->y += c->vy;
+    if ((r->t & 3) == 0) c->rot = (uint8_t)((c->rot + 1) & 3);
+    if (c->y > JJ_FLOOR + 6 || c->x < -10) c->on = 0;
+  }
+  for (int i = 0; i < JJ_SPARKS; i++)
+    if (r->spark[i].t) {
+      r->spark[i].x -= dx;
+      if (++r->spark[i].t > 4) r->spark[i].t = 0;
+    }
+  for (int i = 0; i < JJ_SCIENTISTS; i++)
+    if (r->sci[i].on) scientist(r, &r->sci[i], dx, m);
   for (int i = 0; i < JJ_MISSILES; i++) {
     jj_missile *s = &r->mis[i];
     if (!s->on) continue;
@@ -553,6 +723,40 @@ void jj_step(jj_run *r, bool held) {
   if (r->laser) {
     r->laser_t++;
     if (r->laser_t > jj_lpats[r->laser - 1].time + SLIDE) r->laser = 0, r->next = 120;
+  }
+
+  /* the lab's own defences get the scientists too: zappers and lasers zap them, missiles blow them up, and a
+     vehicle throws them */
+  for (int i = 0; i < JJ_SCIENTISTS; i++) {
+    jj_scientist *c = &r->sci[i];
+    if (!c->on || !sci_standing(c)) continue;
+    float cx = c->x - 8, cy = c->y - 28;
+    bool zap = false;
+    for (int k = 0; k < JJ_ZAPPERS && !zap; k++) {
+      const jj_zapper *z = &r->zap[k];
+      zap = z->on && !z->dud && z->x - z->len / 2 - 20 < cx + 16 && z->x + z->len / 2 + 20 > cx && zapper_hits(z, cx, cy, 16, 28);
+    }
+    if (r->laser)
+      for (int b = 0; b < jj_lpats[r->laser - 1].count && !zap; b++) {
+        int y, phase, k;
+        jj_beam_state(r->laser - 1, b, r->laser_t, &y, &phase, &k);
+        zap = phase == 2 && k >= 4 && y + 7 > cy && y - 7 < cy + 28;
+      }
+    if (zap) {
+      c->state = JJ_SCI_ZAPPED, c->t = 0;
+      continue;
+    }
+    for (int k = 0; k < JJ_MISSILES; k++) {
+      jj_missile *s2 = &r->mis[k];
+      if (s2->on && s2->state == JJ_FLY && boxes(s2->x - 14, s2->y - 6, 28, 12, cx, cy, 16, 28)) {
+        sci_down(r, c, -1, true);   /* (the missile flies on: it's after Barry) */
+        break;
+      }
+    }
+    if (sci_standing(c) && r->state == JJ_ALIVE && r->ride != JJ_FOOT) {
+      int w = jj_box_w(r->ride), h = jj_box_h(r->ride);
+      if (boxes(JJ_BX - w / 2.0f, r->y - h, (float)w, (float)h, cx, cy, 16, 28)) sci_down(r, c, 1, true);
+    }
   }
 
   if (r->state != JJ_ALIVE) {
@@ -678,8 +882,28 @@ bool jj_valid(const jj_run *r) {
   for (int i = 0; i < JJ_FX; i++)
     if (r->fx[i].t > 33 || r->fx[i].kind > 1 || (r->fx[i].t && (!finite_in(r->fx[i].x, -2000, 2000) || !finite_in(r->fx[i].y, -500, 900))))
       return false;
-  for (int i = 0; i < JJ_SCIENTISTS; i++)
-    if (r->sci[i].on > 1 || r->sci[i].state > 2 || (r->sci[i].on && !finite_in(r->sci[i].x, -100, 1000))) return false;
+  for (int i = 0; i < JJ_SCIENTISTS; i++) {
+    const jj_scientist *c = &r->sci[i];
+    if (c->on > 1 || (c->on && (c->state > JJ_SCI_SLIDE || c->kind > 1 || c->pose > 3 || (c->dir != 1 && c->dir != -1) ||
+                                !finite_in(c->x, -100, 1000) || !finite_in(c->y, -400, JJ_FLOOR) || !finite_in(c->vx, -20, 20) ||
+                                !finite_in(c->vy, -20, 20))))
+      return false;
+  }
+  for (int i = 0; i < JJ_BULLETS; i++) {
+    const jj_bullet *b = &r->bul[i];
+    if (b->vy != 0 && (!finite_in(b->x, -100, 900) || !finite_in(b->y, -100, JJ_FLOOR + 20) || !finite_in(b->vx, -16, 16) ||
+                       !finite_in(b->vy, 1, 16)))
+      return false;
+  }
+  for (int i = 0; i < JJ_SHELLS; i++) {
+    const jj_shell *c = &r->shell[i];
+    if (c->on > 1 || c->rot > 3 || (c->on && (!finite_in(c->x, -100, 900) || !finite_in(c->y, -100, JJ_FLOOR + 20) ||
+                                              !finite_in(c->vx, -20, 20) || !finite_in(c->vy, -20, 40))))
+      return false;
+  }
+  for (int i = 0; i < JJ_SPARKS; i++)
+    if (r->spark[i].t > 4 || (r->spark[i].t && !finite_in(r->spark[i].x, -2000, 2000))) return false;
+  if (r->pose > 3 || !r->crowd) return false;
   return true;
 }
 

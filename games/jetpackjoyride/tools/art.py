@@ -25,7 +25,6 @@ S = 2 / 3
 FB_FILES = {
     'body': '21420928-1f48-42b3-af14-a9d19b8d8020.png',
     'head': 'c26be092-2285-4590-b144-df89a4dbf0c0.png',
-    'gun': '00c9a12f-2d9f-4bf9-ba50-e6a8e2858b52.png',
     'flash': '0ae2fd6b-7484-4bd8-9184-f3bf9fac5d08.png',
     'lab': '1a3e77c5-b730-4ae6-9506-35e2644094c2.png',
     'coins': '5f7ee621-7ab3-41ef-bbd7-db48931e8f42.png',
@@ -35,7 +34,10 @@ FB_FILES = {
     'bird': '2a7a539e-4167-4abb-bf55-ba8119abc77b.png',
     'cft': 'bade5fc4-2ec2-42f7-957d-675ee1ac9aed.png',
     'grav': '915d9cc3-781c-430e-9ac8-0cb8435aabea.png',
-    'scientists': '6029b5c9-ee09-4747-90ea-2e14087ab8c7 (1).png',
+    'worker1': '02dfee8e-274f-412f-a1af-ae35a526b3c2.png',
+    'worker1_head': 'c1751fe8-911a-464b-b16a-de5692b8db11.png',
+    'worker2': '391e301b-50de-4770-8db5-6bcd97d8e117.png',
+    'worker2_head': '14344b46-2a22-43e2-b7bd-7cf092ab0fc3.png',
     'jetpack': 'ad9d62ec-8e4e-416e-826e-f577fe609103.png',
     'joyride': '4f8632f9-cd71-4b2f-898a-2f47c0344b7f.png',
     'hero': 'ee031bfe-32a8-487d-9f68-f0c66a3acf55.png',
@@ -44,6 +46,21 @@ FB_FILES = {
     'box': 'e763b7a7-db2f-462c-b910-e2da9b8d71ce.png',
     'laser': '4a2e43c1-5af8-4c01-8e71-e9e2e7815986.png',
     'warning': '89bfda72-a412-49ec-b87f-a4b09ff275f7.png',
+    # the other rooms: the glass tube under the sea, the lava cave, the greenhouse (their ends have the lab's doors)
+    'tube_in': '2c032eb0-5d37-44ae-89d3-6115c948539f.png',
+    'tube_out': '13d94ae4-369d-47a2-8e6e-34b1ffe1b4be.png',
+    'sea': '21cb3c74-6319-4e99-9227-8f4135b4d391.png',
+    'coral1': '8b2f5933-fbcf-4ab3-a13b-d76c1ec6724e.png',
+    'coral2': 'f20e09b1-5fe1-4ab3-868f-8b70df989dac.png',
+    'cave_in': '828c2c84-2158-481a-a332-325861be1e5a.png',
+    'cave': '75abe928-ba54-4755-b6e2-5541f69ecaab.png',
+    'cave_out': '3c9d663e-8746-4e0e-9a3a-1de3af640951.png',
+    'lava': '7ad87cd7-f077-4f2a-916b-fa7663d124e7.png',
+    'green_in': 'cdf5238d-9e92-4c7a-a432-f51c1bf62b7b.png',
+    'green': '283169e7-ed6c-4601-9ac8-98da3ef7f588.png',
+    'green_out': '55cde58e-fed9-4fdc-b2a0-9ac6f3914cbc.png',
+    'trees': '76bfac6c-f63e-4114-a804-03608b017ef5.png',
+    'trees_far': '4293db94-f1da-4362-b672-490e500a46d9.png',
 }
 
 
@@ -185,23 +202,114 @@ def main():
     sheets = []
 
     # ---- the lab: rows 230..951 of the 2x picture are the screen's 0..240 (ceiling 30, floor 290 in points)
-    lab = F('lab').crop((0, 230, 1024, 951))
+    labpic = F('lab')
+    lab = labpic.crop((0, 230, 1024, 951))
     sheets.append(Sheet('lab', 64).add(scale(lab, 1 / 3), trim=False))
 
-    # ---- Barry: the machine gun jetpack behind, the body, the head (their cells line up); anchor at his feet
-    body, head, gun = F('body'), F('head'), F('gun')
-    gun = gun.crop(gun.getbbox())
+    # ---- the other rooms, made whole: what shows through them behind (the sea and its corals, the lava, the
+    # forest under a misty sky; the game scrolls these slower, here they're drawn in), and the lab where a piece's
+    # end is open (a whole lab picture comes before each room and after it). Cut in bands of at most 120 columns.
+    def tile(bg, w, h, k, y0=0):
+        bg = scale(bg, k)
+        im = Image.new('RGBA', (w, h))
+        for x in range(0, w, bg.width):
+            for y in range(y0, h, bg.height):
+                im.alpha_composite(bg, (x, y))
+        return im
+
+    def sea(w, h):
+        b = tile(F('sea'), w, h, 2)
+        for k, x0 in (('coral1', 0), ('coral2', 520)):
+            for x in range(x0, w, 1040):
+                b.alpha_composite(F(k), (x, h - 572))
+        return b
+
+    def forest(w, h):
+        b = Image.new('RGBA', (w, h))
+        for y in range(h):   # the mist between the trees ([F] the forest pictures' own colours)
+            k = min(1, max(0, (y - 230) / 600))
+            b.paste((round(90 - 55 * k), round(170 - 75 * k), round(195 - 83 * k), 255), (0, y, w, y + 1))
+        b.alpha_composite(tile(F('trees_far'), w, h, 1, 380))
+        b.alpha_composite(tile(F('trees'), w, h, 1))
+        return b
+
+    def lava(w, h):
+        return tile(F('lava'), w, h, 2)
+
+    def room(name, key, behind, lab_left=0, lab_right=None):
+        p = F(key)
+        w = p.width
+        b = behind(w, 1024)
+        if lab_left:
+            b.paste(labpic.crop((0, 0, lab_left, 1024)), (0, 0))
+        if lab_right is not None:
+            b.paste(labpic.crop((1024 - (w - lab_right), 0, 1024, 1024)), (lab_right, 0))
+        b.alpha_composite(p)
+        im = scale(b.crop((0, 230, w, 951)), 1 / 3)
+        sh = Sheet('rm_' + name, 96)
+        for x in range(0, im.width, 120):
+            sh.add(im.crop((x, 0, min(im.width, x + 120), im.height)), trim=False)
+        sheets.append(sh)
+
+    room('tube_in', 'tube_in', sea, lab_left=192)
+    room('tube_out', 'tube_out', sea, lab_right=842)
+    room('cave_in', 'cave_in', lava, lab_left=116)
+    room('cave', 'cave', lava)
+    room('cave_out', 'cave_out', lava, lab_right=968)
+    room('green_in', 'green_in', forest, lab_left=192)
+    room('green', 'green', forest)
+    room('green_out', 'green_out', forest, lab_right=894)
+
+    # ---- Barry, put together as clothing.xml does: the body 3 points under his position, the head 9 over it, the
+    # machine gun jetpack (the APK's, barrels down) 12 behind it. A 56 x 64 canvas, his feet at (28, 58): the body's
+    # cell at (16, 28), the head's at (16, 16), the jetpack's 32 x 64 cell at (4, 9)
+    body, head = F('body'), F('head')
+    jet = T('characters/jetpacks/jetpackdefault.tex')
     barry = Sheet('barry', 32)
-    for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 20, 21, 22, 23, 25, 29, 30]:
-        im = Image.new('RGBA', (48, 56))
-        if i < 16:
-            im.alpha_composite(gun, (4, 22))
-        im.alpha_composite(cell(body, i, 32, 32), (10, 24))
-        im.alpha_composite(cell(head, i, 32, 32), (10, 6))
-        barry.add(scale(im, S), 22 * S, 54 * S)
+    #   run 0-3, fly 4-7, fall 8-9 (with the jetpack); zapped 10-11; sliding on the floor 12
+    for i, j in [(0, 0), (1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6), (7, 7), (8, 8), (10, 10), (16, -1), (20, -1),
+                 (30, -1)]:
+        im = Image.new('RGBA', (56, 64))
+        if j >= 0:
+            im.alpha_composite(cell(jet, j, 32, 64, 4), (4, 9))
+        im.alpha_composite(cell(body, i, 32, 32), (16, 28))
+        im.alpha_composite(cell(head, i, 32, 32), (16, 16))
+        barry.add(scale(im, S), 28 * S, 58 * S)
     sheets.append(barry)
-    fl = F('flash')
-    sheets.append(Sheet('flash', 8).add(scale(cell(fl, 0, 64, 64), 1 / 3), 11, 0).add(scale(cell(fl, 1, 64, 64), 1 / 3), 11, 0))
+    # knocked out, in the air: the four death bounce poses, turned in 8 steps (the game spins him: settings.xml
+    # MIN/MAX_ROTATION_SPEED), anchored at his position, 16 points over his feet
+    tumble = Sheet('tumble', 32)
+    for i in [22, 23, 25, 29]:
+        im = Image.new('RGBA', (64, 64))
+        im.alpha_composite(cell(body, i, 32, 32), (16, 19))
+        im.alpha_composite(cell(head, i, 32, 32), (16, 7))
+        for a in range(8):
+            tumble.add(scale(im.rotate(-45 * a, resample=Image.Resampling.BICUBIC, center=(32, 32)), S), 32 * S, 32 * S)
+    sheets.append(tumble)
+    # the jetpack's fire (APK textures made for 2x, so at half size): its flash under the barrels, its bullets
+    # (effect_smgbullet) turned 0 to 40 degrees from straight down towards the back, the shells it throws out, and
+    # where a bullet hits the floor (the Facebook assets' ricochet)
+    fl = Sheet('jflash', 16)
+    for i in range(4):
+        fl.add(scale(cell(T('effect_jetpackflash.tex'), i, 32, 32), S / 2), 16 * S / 2, 4 * S / 2)
+    sheets.append(fl)
+    bul = T('effect_smgbullet.tex')
+    sh = Sheet('bullet', 16)
+    for a in range(5):
+        r = bul.rotate(-90 - 10 * a, resample=Image.Resampling.BICUBIC, expand=True)
+        sh.add(scale(r, S / 2), r.width * S / 4, r.height * S / 4)
+    sheets.append(sh)
+    shell = T('effect_rocketmgshell.tex')
+    sh = Sheet('shell', 8)
+    for a in range(4):
+        r = shell.rotate(-45 * a, resample=Image.Resampling.BICUBIC, expand=True)
+        sh.add(scale(r, S / 2), r.width * S / 4, r.height * S / 4)
+    sheets.append(sh)
+    rico = F('flash')
+    sh = Sheet('spark', 16)
+    for i in range(4):
+        sh.add(scale(cell(rico, i, 64, 64), 1 / 3), 32 / 3, 58 / 3)
+    sheets.append(sh)
 
     # ---- coins (2x), spin token (APK, 1x), vehicle box (2x)
     coinpic = F('coins')
@@ -297,12 +405,18 @@ def main():
         sh.add(scale(cell(gs, i, 42, 42, 6), S), 21 * S, 40 * S)
     sheets.append(sh)
 
-    # ---- scientists: walking, cowering, knocked flat
-    sc = F('scientists')
-    sh = Sheet('sci', 16)
-    for i in [0, 1, 2, 3, 12, 30]:
-        sh.add(scale(cell(sc, i, 32, 32), S), 16 * S, 30 * S)
-    sheets.append(sh)
+    # ---- the scientists, in their hazmat suits: a body and a helmet each (the cells line up, the helmet 13 points
+    # up). Walking 0-3, running 4-7, the death bounces 8-11, sliding dead on the floor 12-13, curled up 14, zapped
+    # 15-16 (the frames of the game's worker sprite files)
+    for name, bk, hk in (('sci1', 'worker1', 'worker1_head'), ('sci2', 'worker2', 'worker2_head')):
+        wb, wh = F(bk), F(hk)
+        sh = Sheet(name, 16)
+        for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 19]:
+            im = Image.new('RGBA', (40, 56))
+            im.alpha_composite(cell(wb, i, 32, 32), (4, 22))
+            im.alpha_composite(cell(wh, i, 32, 32), (4, 9))
+            sh.add(scale(im, S), 20 * S, 51 * S)
+        sheets.append(sh)
 
     # ---- the title
     sheets.append(Sheet('wjet', 24).add(scale(F('jetpack'), 0.82), trim=False))
