@@ -406,16 +406,16 @@ static void world_list(const mm_game *g, const mm_ui *v) {
         }
       }
     }
-    /* the cash box: notes (up to ten), and stacks of ten (updateSkladCash) */
+    /* the cash box: notes (up to ten), and stacks of ten (updateSkladCash); their z over the box's, as a y in tenths */
     if (i == m->cash) {
       int32_t c = g->cash > 100 ? 100 : g->cash;
       int stacks = c >= 100 ? 10 : c / 10, notes = c >= 100 ? 0 : c % 10;
       int32_t px = p->pos.x - 59, py = p->pos.y - 50;
       for (int s = 0; s < stacks; s++)
-        put(depth((p->pos.y * 10) - 21 - s), px + 48, py + 47 + 16 * s, P_GAME_CASH_LIST, false);
+        put(depth(p->pos.y * 10 - 210 - 10 * s), px + 48, py + 47 + 16 * s, P_GAME_CASH_LIST, false);
       for (int k = 0; k < notes; k++) {
         int col = k & 1, row = k / 2;
-        put(depth(p->pos.y * 10 - 16 * stacks * 10 - 25 + row - 1), px + col * 47 + 12 * row, py + row * 25 - 7 * col + 16 * stacks, P_GAME_CASH, false);
+        put(depth(p->pos.y * 10 - 16 * stacks * 10 - 250 + 10 * row), px + col * 47 + 12 * row, py + row * 25 - 7 * col + 16 * stacks, P_GAME_CASH, false);
       }
     }
   }
