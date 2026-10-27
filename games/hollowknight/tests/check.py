@@ -12,6 +12,7 @@
 - a long walk of made up keys from every room: the Knight never out of the room, without control, wedged, undrawn or
   out of the view, and the view never jumping
 - a bench: sat on, the inventory opened, a charm equipped, then up again (atBench off)
+- the soul orb: dark with no soul, white with its liquid when full
 - the charms: OK changes none away from a bench; at one, equipped (its effect on), none past the notches, unequipped,
   overcharmed on the fifth try and off again, kept by Home in the inventory and a load
 - the stag stations: each seen (their blanker faded out), come in by its gate, by the stag (called by its bell) and
@@ -82,6 +83,19 @@ def main():
     results.append(report("stag stations: seen, the rides", rc, out, ("FAIL",)))
     rc, out = play("--gates", "way")
     results.append(report("the way to the False Knight", rc, out, ("FAIL",)))
+    # the soul orb: dark inside with no soul, its liquid white in it when full (in the screen's pixels at its middle)
+    shades = []
+    with tempfile.TemporaryDirectory() as d:
+        for mp in (0, 99):
+            path = os.path.join(d, "orb%d.ppm" % mp)
+            rc, out = play("--room", "Town", "--at", "60,12", "--play", "_*130", "--shot", path, env={"HKMP": str(mp)})
+            with open(path, "rb") as f:
+                _, size, _, px = f.read().split(b"\n", 3)
+            w = int(size.split()[0])
+            shades.append(sum(px[(y * w + x) * 3 + c] for y in range(42, 52) for x in range(12, 22) for c in range(3)) / 300)
+    orb = shades[0] < 80 and shades[1] > 200
+    results.append(report("the soul orb filled", rc, out if orb else out + "\nFAIL its middle: %.0f empty, %.0f full" % tuple(shades),
+                          ("FAIL",)))
     with ThreadPoolExecutor(JOBS) as pool:
         walks = list(pool.map(lambda w: play("--gates", "wander:all:%d:%d" % w, env={"HKFAST": "1"} if w[0] % 2 else None), WALKS))
     for (seed, ticks), (rc, out) in zip(WALKS, walks):

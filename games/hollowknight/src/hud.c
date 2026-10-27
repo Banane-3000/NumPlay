@@ -142,14 +142,14 @@ void hud_draw(void) {
   if (!hd.started || hd.off) return;
   float k = hd.scale;
   uint8_t white = gfx_dyn_tint(16, 255, 255, 255, 255);
-  /* the soul orb: its liquid (in the orb's circle), the frame over it */
+  /* the soul orb: the frame (its dark glass filling the orb), its liquid over that, in the orb's circle */
+  hud_sprite(hd.frame.sprite, ORB_X + 0.12f, ORB_Y + 0.92f, 1, white, 0);
   if (g_pd.mp > 1 && !hd.out) {   /* (the liquid's renderer off while the HUD is out) */
     float y = FILL_Y + LIQUID_BOTTOM_Y + g_pd.mp * LIQUID_Y_PER_MP;
     uint8_t g = (uint8_t)(255 - (255 - 110) * hd.liquid_grey);
     gfx_hud_clip(1, CANVAS_X + (FILL_X - 2.28f - CANVAS_X) * k, CANVAS_Y + (FILL_Y + 1.32f - CANVAS_Y) * k, 0.97f * k);
     hud_sprite(hd.liquid.sprite, FILL_X - 2.23f, y, 1, gfx_dyn_tint(17, g, g, g, 255), 1);
   }
-  hud_sprite(hd.frame.sprite, ORB_X + 0.12f, ORB_Y + 0.92f, 1, white, 0);
   if (hd.burst_on) hud_sprite(hd.burst.sprite, ORB_X - 0.715f, ORB_Y + 0.4318f, 1, white, 0);
   /* the masks */
   int max = g_pd.max_health > MAX_MASKS ? MAX_MASKS : g_pd.max_health;
