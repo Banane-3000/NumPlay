@@ -222,6 +222,7 @@ int use_cons(int idx);             /* 0 if it cannot be used now */
 int cons_can_use(int idx, int from_pack, int id);
 void move_joker(int from, int to);
 void move_hand_card(int from, int to);
+void move_cons(int from, int to);
 void continue_endless(void);
 
 /* joker engine (jokers.c) */

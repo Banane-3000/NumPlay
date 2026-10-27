@@ -190,7 +190,7 @@ Don't floor it the whole way: too much gas flips the car.
 | **EXE** | Play hand |
 | **⌫** | Discard |
 | **Shift** | Sort by rank or suit |
-| **Alpha + Left / Right** | Move a Joker or a card |
+| **Alpha** | Pick up a card or Joker to move it with Left / Right, then OK |
 | **Toolbox** / **Var** | Run info / your deck |
 | **Back** | Options |
 

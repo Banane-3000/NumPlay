@@ -634,7 +634,7 @@ Wins \004	胜场 \004
 Seed \004	种子 \004
 CONTINUE	继续
 Back	返回
-\004Arrows\020  move between cards, Jokers, buttons\n\004OK\020  select a card, or pick a Joker/item and\n     choose \006Sell\020, \003Use\020, \005Buy\020...\n\004EXE\020  \002Play Hand\020      \004DEL\020  \003Discard\020\n\004shift\020  sort the hand by rank or suit\n\004alpha\020 + \004left/right\020  move a Joker or card\n\004toolbox\020  Run Info      \004var\020  view deck\n\004back\020  back / Options     \004home\020  save, quit\nHold \004OK\020 or \004EXE\020 to speed up scoring.\n\nPlay poker hands: score = \002Chips\020 x \003Mult\020.\nBeat each Blind's score before your\nhands run out. Buy Jokers in the shop\nand beat the Ante 8 Boss Blind to win!	\004方向键\020  在牌、小丑牌和选项间移动\n\004OK\020  选择牌，或选中小丑牌/物品后\n     选择\006出售\020、\003使用\020、\005购买\020等\n\004EXE\020  \002出牌\020      \004DEL\020  \003弃牌\020\n\004shift\020  按点数或花色整理手牌\n\004alpha\020 + \004左/右\020  移动小丑牌或牌\n\004工具箱\020  牌局信息      \004var\020  查看牌组\n\004返回\020  返回/选项      \004主页\020  保存并退出\n按住\004OK\020或\004EXE\020可加快计分\n\n打出扑克牌型：得分 = \002筹码\020 x \003倍率\020\n在出牌次数用完前达到每个盲注的分数\n在商店里购买小丑牌\n击败第8底注的Boss盲注即可获胜！
+\004Arrows\020  move between cards, Jokers, buttons\n\004OK\020  select a card, or pick a Joker/item and\n     choose \006Sell\020, \003Use\020, \005Buy\020...\n\004EXE\020  \002Play Hand\020      \004DEL\020  \003Discard\020\n\004shift\020  sort the hand by rank or suit\n\004alpha\020  pick up a card or Joker to move it,\n     \004left/right\020 to carry it, \004OK\020 to put it down\n\004toolbox\020  Run Info      \004var\020  view deck\n\004back\020  back / Options     \004home\020  save, quit\nHold \004OK\020 or \004EXE\020 to speed up scoring.\n\nPlay poker hands: score = \002Chips\020 x \003Mult\020.\nBeat each Blind's score before your\nhands run out. Buy Jokers in the shop\nand beat the Ante 8 Boss Blind to win!	\004方向键\020  在牌、小丑牌和选项间移动\n\004OK\020  选择牌，或选中小丑牌/物品后\n     选择\006出售\020、\003使用\020、\005购买\020等\n\004EXE\020  \002出牌\020      \004DEL\020  \003弃牌\020\n\004shift\020  按点数或花色整理手牌\n\004alpha\020  拿起一张牌或小丑牌，\n     \004左/右\020 移动它，\004OK\020 放下\n\004工具箱\020  牌局信息      \004var\020  查看牌组\n\004返回\020  返回/选项      \004主页\020  保存并退出\n按住\004OK\020或\004EXE\020可加快计分\n\n打出扑克牌型：得分 = \002筹码\020 x \003倍率\020\n在出牌次数用完前达到每个盲注的分数\n在商店里购买小丑牌\n击败第8底注的Boss盲注即可获胜！
 How to play	玩法说明
 Credits	制作者
 Inspired by \004Balatro\020 by LocalThunk.\nNot affiliated with LocalThunk or Playstack.\n\nCard, Joker and interface art adapted\nfrom Balatro by LocalThunk.\nRules and card texts follow the game.\nFont: \004m6x11\020 by Daniel Linssen.\n\nMade by \004Mason Chen\020 as part of NumPlay.\n\nPlease support the original game!	灵感来自LocalThunk的\004Balatro\020。\n与LocalThunk及Playstack无关。\n\n卡牌、小丑牌和界面美术\n改编自LocalThunk的Balatro。\n规则和卡牌说明同原版。\n字体：Daniel Linssen的\004m6x11\020。\n\n由\004Mason Chen\020为NumPlay制作。\n\n请购买原版游戏！
@@ -762,3 +762,5 @@ Three of a Kind	三条
 Two Pair	两对
 Pair	对子
 High Card	高牌
+move	移动
+put down	放下

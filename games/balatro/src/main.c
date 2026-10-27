@@ -65,6 +65,7 @@ static int deny_t;                    /* "can't" feedback */
 enum { Z_HAND = 1, Z_JOKERS, Z_CONS, Z_BTN, Z_DECK, Z_SHOP, Z_BOTTOM, Z_SHOPBTN, Z_PACK, Z_SKIP };
 static int zone = Z_HAND, zi;
 static int focus_time, last_zone, last_zi; /* how long the focus stayed put */
+int moving;                                /* the card in focus picked up to be moved (ui.c draws it) */
 
 extern void layout_cards(int dt, int show_hand, int hand_y);
 extern void draw_jokers_row(int focus_j, int focus_c, int sel_j, int sel_c);
@@ -217,7 +218,7 @@ static void draw_setup(void) {
 }
 
 static const char help_lines[] =
-    T("\004Arrows\020  move between cards, Jokers, buttons\n\004OK\020  select a card, or pick a Joker/item and\n     choose \006Sell\020, \003Use\020, \005Buy\020...\n\004EXE\020  \002Play Hand\020      \004DEL\020  \003Discard\020\n\004shift\020  sort the hand by rank or suit\n\004alpha\020 + \004left/right\020  move a Joker or card\n\004toolbox\020  Run Info      \004var\020  view deck\n\004back\020  back / Options     \004home\020  save, quit\nHold \004OK\020 or \004EXE\020 to speed up scoring.\n\nPlay poker hands: score = \002Chips\020 x \003Mult\020.\nBeat each Blind's score before your\nhands run out. Buy Jokers in the shop\nand beat the Ante 8 Boss Blind to win!");
+    T("\004Arrows\020  move between cards, Jokers, buttons\n\004OK\020  select a card, or pick a Joker/item and\n     choose \006Sell\020, \003Use\020, \005Buy\020...\n\004EXE\020  \002Play Hand\020      \004DEL\020  \003Discard\020\n\004shift\020  sort the hand by rank or suit\n\004alpha\020  pick up a card or Joker to move it,\n     \004left/right\020 to carry it, \004OK\020 to put it down\n\004toolbox\020  Run Info      \004var\020  view deck\n\004back\020  back / Options     \004home\020  save, quit\nHold \004OK\020 or \004EXE\020 to speed up scoring.\n\nPlay poker hands: score = \002Chips\020 x \003Mult\020.\nBeat each Blind's score before your\nhands run out. Buy Jokers in the shop\nand beat the Ante 8 Boss Blind to win!");
 
 static void draw_help(void) {
   big_panel(10, 6, 300, 228);
@@ -414,7 +415,7 @@ static void round_buttons(int show) {
 }
 
 static void draw_focus_tooltip(void) {
-  if (ui_busy()) return;
+  if (ui_busy() || moving) return;
   if (zone == Z_JOKERS && zi < V.njokers && menu_open < 0) {
     vitem_t *v = &V.jokers[zi];
     if (v->flags & JF_DOWN) return;
@@ -552,6 +553,15 @@ static void move_focused(int dir) {
       zi = to;
       autosave();
     }
+  } else if (zone == Z_CONS) {
+    int to = zi + dir;
+    if (to >= 0 && to < R.ncons) {
+      move_cons(zi, to);
+      vitem_t t = V.cons[zi];
+      V.cons[zi] = V.cons[to], V.cons[to] = t;
+      zi = to;
+      autosave();
+    }
   } else if (zone == Z_HAND) {
     int to = zi + dir;
     if (to >= 0 && to < R.nhand) {
@@ -561,6 +571,61 @@ static void move_focused(int dir) {
       zi = to;
       autosave();
     }
+  }
+}
+
+/* Rearranging, as dragging does in the game: alpha picks up the card, Joker or consumable in focus, left and right
+   carry it along its row, and OK (or alpha, or Back) puts it down. Holding alpha while pressing left or right works
+   too: letting go of alpha then puts it down. */
+static int moved_held;
+static int can_move(void) {
+  if (menu_open >= 0) return 0;
+  if (zone == Z_HAND) return zi < R.nhand && zi < V.nhand && R.nhand > 1;
+  if (zone == Z_JOKERS) return zi < R.njokers && R.njokers > 1;
+  if (zone == Z_CONS) return zi < R.ncons && R.ncons > 1;
+  return 0;
+}
+/* 1 when it used the keys */
+static int move_input(void) {
+  if (moving && !can_move()) moving = 0;
+  if (!moving) {
+    if (!pressed[K_ALPHA] || !can_move()) return 0;
+    moving = 1, moved_held = 0;
+    return 1;
+  }
+  if (pressed[K_LEFT] || pressed[K_RIGHT]) {
+    move_focused(pressed[K_LEFT] ? -1 : 1);
+    if (held(K_ALPHA)) moved_held = 1;
+    return 1;
+  }
+  if (pressed[K_OK] || pressed[K_ALPHA] || pressed[K_BACK] || pressed[K_EXE] || (moved_held && !held(K_ALPHA))) {
+    moving = 0;
+    return 1;
+  }
+  if (pressed[K_UP] || pressed[K_DOWN] || pressed[K_BACKSPACE] || pressed[K_SHIFT]) moving = 0;   /* and the key does its job */
+  return 0;
+}
+
+/* the key line's part for it, under the row in focus: "alpha move", or how to put the card down */
+static void move_hint(int x, int y, int right) {
+  const char *k = moving ? "OK" : "alpha", *what = moving ? T("put down") : T("move");
+  int kw = g_textw(k, T_SMALL) + 6, w = kw + 3 + g_textw(what, F_LABEL);
+  if (right) x -= w;
+  keycap(x + kw / 2, y, k);
+  g_text(what, x + kw + 3, y + 1, F_LABEL, C_WHITE);
+}
+static void move_hints(int hand_y) {
+  if (overlay || ui_busy() || !(moving || can_move())) return;
+  char t[8];
+  if (zone == Z_HAND) move_hint(HAND_X + HAND_W, hand_y + CH + 2, 1);
+  else if (zone == Z_JOKERS) {
+    char *o = fmt_int(t, R.njokers);
+    *o++ = '/', fmt_int(o, joker_slots());
+    move_hint(JOKER_X + g_textw(t, F_LABEL) + 6, ROW_Y + CH + 3, 0);
+  } else if (zone == Z_CONS) {
+    char *o = fmt_int(t, R.ncons);
+    *o++ = '/', fmt_int(o, cons_slots());
+    move_hint(CONS_X + CONS_W - g_textw(t, F_LABEL) - 6, ROW_Y + CH + 3, 1);
   }
 }
 
@@ -578,10 +643,7 @@ static void round_input(void) {
     menu_input();
     return;
   }
-  if (held(K_ALPHA) && (pressed[K_LEFT] || pressed[K_RIGHT])) {
-    move_focused(pressed[K_LEFT] ? -1 : 1);
-    return;
-  }
+  if (move_input()) return;
   if (pressed[K_EXE]) {
     if (!play_hand()) deny();
     else zone = Z_HAND, autosave();
@@ -672,6 +734,7 @@ static void draw_round(int dt, int show_buttons) {
   fmt_int(o, hand_size());
   g_text(t, HAND_X + HAND_W / 2, HAND_Y + CH + 3, F_LABEL | T_CENTER, C_WHITE);
   if (show_buttons) round_buttons(!ui_busy() || V.nplay == 0);
+  move_hints(HAND_Y);
   /* the selected hand, shown in the hand box before playing it */
   if (!ui_busy() && R.phase == PH_ROUND) {
     int h = preview_hand();
@@ -713,6 +776,7 @@ static void draw_blind_select(int dt) {
   draw_sidebar();
   draw_jokers_row(zone == Z_JOKERS ? zi : -1, zone == Z_CONS ? zi : -1, zone == Z_JOKERS ? menu_open : -1,
                   zone == Z_CONS ? menu_open : -1);
+  move_hints(HAND_Y);
   int kinds[3];
   bs_buttons(kinds);
   int tip_tag = -1, tip_x = 0, tip_y = 0;
@@ -782,10 +846,7 @@ static void blind_select_input(void) {
       menu_input();
       return;
     }
-    if (held(K_ALPHA) && (pressed[K_LEFT] || pressed[K_RIGHT])) {
-      move_focused(pressed[K_LEFT] ? -1 : 1);
-      return;
-    }
+    if (move_input()) return;
     if (row_nav()) return;
     if (pressed[K_DOWN] || pressed[K_BACK]) zone = Z_BTN, zi = 0;
     if (pressed[K_OK]) menu_open = zi, menu_sel = 0;
@@ -931,6 +992,7 @@ static void draw_shop(int dt) {
   draw_sidebar();
   int fj = zone == Z_JOKERS ? zi : -1, fc = zone == Z_CONS ? zi : -1;
   draw_jokers_row(fj, fc, zone == Z_JOKERS ? menu_open : -1, zone == Z_CONS ? menu_open : -1);
+  move_hints(HAND_Y);
   int x = SHOP_X, y = SHOP_Y, w = SHOP_W;
   g_rrect(x - 1, y - 1, w + 2, 180, 7, HEXC(0x1A2224));
   g_rrect(x, y, w, 178, 6, C_RED);
@@ -1032,10 +1094,7 @@ static void shop_input(void) {
     }
     return;
   }
-  if (held(K_ALPHA) && (pressed[K_LEFT] || pressed[K_RIGHT]) && zone == Z_JOKERS) {
-    move_focused(pressed[K_LEFT] ? -1 : 1);
-    return;
-  }
+  if (move_input()) return;
   if (pressed[K_BACK]) {
     if (zone != Z_SHOPBTN) zone = Z_SHOPBTN, zi = 0;
     else overlay = OV_OPTIONS, ov_sel = 0;
@@ -1142,6 +1201,7 @@ static void draw_pack(int dt) {
   g_text(t, bx + 6, by + 17, F_LABEL, C_WHITE);
   button(bx + bw - 42, by + 6, 36, 16, C_RED, T("Skip"), F_LABEL, zone == Z_SKIP, 1);
   if (with_hand) draw_hand_cards(hand_focus());
+  move_hints(HAND_Y + 18);
   draw_menu();
   draw_popups();
   if (!ui_busy() && menu_open < 0) {
@@ -1175,6 +1235,7 @@ static void pack_input(void) {
     menu_input();
     return;
   }
+  if (move_input()) return;
   if (pressed[K_BACK]) {
     zone = Z_SKIP;
     return;
@@ -1195,10 +1256,6 @@ static void pack_input(void) {
       }
       break;
     case Z_HAND:
-      if (held(K_ALPHA) && (pressed[K_LEFT] || pressed[K_RIGHT])) {
-        move_focused(pressed[K_LEFT] ? -1 : 1);
-        break;
-      }
       if (pressed[K_LEFT] && zi > 0) zi--;
       if (pressed[K_RIGHT] && zi < V.nhand - 1) zi++;
       if (pressed[K_UP]) zone = Z_SKIP;
@@ -1543,6 +1600,7 @@ int main(void) {
       cash_t = 0;
       last_screen = screen;
     }
+    if (overlay) moving = 0;
     g_begin();
     g_bg(1, 0);
     if (screen == SCR_TITLE) {
@@ -1633,9 +1691,17 @@ int main(void) {
       if (R.best_hand > S.best_hand) S.best_hand = R.best_hand;
       draw_overlay();
     }
-    bg_update(dt / 1000.f, overlay == OV_RUNINFO || overlay == OV_DECK ? 0 : screen == SCR_TITLE ? (overlay ? 2 : 8) : 6);
+    /* the title's paint keeps moving at its own pace behind a panel (Options, the new run...): 8 rows of it a frame,
+       fewer only while a frame takes too long (a page full of text on the N0110). Run Info and the deck cover the
+       screen in a run. */
+    static int title_rows = 8;
+    bg_update(dt / 1000.f, overlay == OV_RUNINFO || overlay == OV_DECK ? 0 : screen == SCR_TITLE ? title_rows : 6);
     g_end();
     uint64_t spent = eadk_timing_millis() - now;
+    if (screen == SCR_TITLE) {
+      if (spent > 30 && title_rows > 2) title_rows--;
+      else if (spent < 26 && title_rows < 8) title_rows++;
+    }
     if (spent < 30) eadk_timing_msleep((uint32_t)(30 - spent));
   }
 }
