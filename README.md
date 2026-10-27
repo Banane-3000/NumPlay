@@ -462,7 +462,7 @@ NumPlay is licensed under the [GNU General Public License v3.0](LICENSE). Copyri
   <tr>
     <td align="center"><img src="docs/media/gallery/coreball.gif" alt="Core Ball: every ball shot onto the spinning core, level 3 and level 4 cleared"><br><a href="games/coreball/README.md"><b>Core Ball</b></a></td>
     <td align="center"><img src="docs/media/gallery/doodlejump.gif" alt="Doodle Jump: the doodler climbs past blue platforms and a monster"><br><a href="games/doodlejump/README.md"><b>Doodle Jump</b></a></td>
-    <td align="center"><img src="docs/media/jetpackjoyride.gif" alt="Jetpack Joyride: lasers, a missile, then the Lil' Stomper"><br><a href="games/jetpackjoyride/README.md"><b>Jetpack Joyride</b></a></td>
+    <td align="center"><img src="docs/media/jetpackjoyride.gif" alt="Jetpack Joyride: Barry grabs coins and rides the Profit Bird until it hits a zapper, then flies on past a missile"><br><a href="games/jetpackjoyride/README.md"><b>Jetpack Joyride</b></a></td>
   </tr>
   <tr>
     <td align="center"><img src="docs/media/stickmanhook.gif" alt="Stickman Hook: two levels swung from hook to hook, each over the finish line"><br><a href="games/stickmanhook/README.md"><b>Stickman Hook</b></a></td>
