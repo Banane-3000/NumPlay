@@ -52,6 +52,7 @@ ALONE = {
     "fnf": ("Friday Night Funkin'", "the Tutorial, Weeks 1 to 7, Weekend 1 and LE SSERAFIM, in story mode and freeplay"),
     "turborush": ("Turbo Rush", "an arcade racer by Bobydeluxe: six circuits, a Grand Prix, single races and Free Ride"),
     "angrybirds": ("Angry Birds", "the 429 levels of the Chrome edition, its seven birds and the Mighty Eagle"),
+    "polytrack": ("PolyTrack", "Kodub's low-poly time trial racer: its 17 tracks, loops, wall rides and jumps, against your ghost"),
 }
 VARIANTS = [
     ("NumPlay-Invisible.nwa", "The same app, hidden: a blank icon with no name"),

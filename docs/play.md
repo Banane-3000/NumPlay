@@ -629,6 +629,24 @@ Knock down the pigs' castles and pop every pig. Each bird has its own power: the
 
 <br clear="right">
 
+## PolyTrack
+
+<img src="../games/polytrack/docs/shot.png" width="320" align="right" alt="PolyTrack">
+
+| Key | What it does |
+| --- | --- |
+| **Up** | Accelerate |
+| **Down** | Brake, then reverse |
+| **Left, Right** | Steer |
+| **OK** | Back to the last checkpoint |
+| **Backspace** | Start the run over |
+| **Toolbox** | Behind the car or the cockpit |
+| **Back** | Pause (with Restart, How to play and Quit game) |
+
+Drive each track as fast as you can, through its checkpoints in order to the finish. Loops, wall rides and tubes hold the car if you keep your speed. Your best time and a ghost of that run are kept for each track, and the clock at the bottom shows how far ahead or behind you are.
+
+<br clear="right">
+
 ## Portal Returns
 
 <img src="media/portal.gif" width="320" align="right" alt="Portal Returns: falling through a portal and flying across a test chamber">

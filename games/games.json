@@ -677,7 +677,7 @@
   },
   {
     "id": "championisland",
-    "rank": 22,
+    "rank": 23,
     "title": "Champion Island",
     "tagline": "Seven sports, one island",
     "credit": "Based on Google's Champion Island Games",
@@ -699,7 +699,7 @@
   },
   {
     "id": "finalearth2",
-    "rank": 23,
+    "rank": 24,
     "title": "The Final Earth 2",
     "tagline": "Build a city in space",
     "credit": "Based on the game by Florian van Strien",
@@ -923,7 +923,7 @@
   },
   {
     "id": "cookieclicker",
-    "rank": 25,
+    "rank": 26,
     "title": "Cookie Clicker",
     "tagline": "Bake billions of cookies",
     "credit": "Based on Cookie Clicker by Orteil",
@@ -944,7 +944,7 @@
   },
   {
     "id": "leveldevil",
-    "rank": 24,
+    "rank": 25,
     "title": "Level Devil",
     "tagline": "Run to the door",
     "credit": "Based on Level Devil by Unept",
@@ -1192,5 +1192,27 @@
     ],
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/numvisuals",
     "default": false
+  },
+  {
+    "id": "polytrack",
+    "rank": 22,
+    "title": "PolyTrack",
+    "tagline": "Time trials on 17 low-poly tracks",
+    "credit": "Based on PolyTrack by Kodub",
+    "top": "0x28346A",
+    "bottom": "0x112052",
+    "accent": "0xB3C1FF",
+    "colors": 16,
+    "records": [
+      "polytrack.sav",
+      "polytrack_saves.py",
+      "polytrack_ghosts.sav"
+    ],
+    "shots": [
+      "docs/shot.png"
+    ],
+    "repo": "https://github.com/Mason363/NumPlay/tree/main/games/polytrack",
+    "default": false,
+    "xl": true
   }
 ]

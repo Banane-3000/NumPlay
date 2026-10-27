@@ -263,6 +263,11 @@ GAMES = {
     "angrybirds": ("AngryBirds.nwa", "angrybirds.sav",
                    presses((1500, "ok"), (2200, "ok"), (2900, "ok"), (3600, "ok"), (4300, "ok"), (5500, "ok")), 9000,
                    presses((1500, "ok"), (2200, "ok"), (2900, "ok"), (3600, "ok")), 6000),
+    # the title's Play, the first track, the first-run guide's three pages, then the race: flat out, Back to pause,
+    # Home. Next time, from the copy, Play and the track straight into the race (the guide was read), quit with On/Off
+    "polytrack": ("PolyTrack.nwa", "polytrack.sav",
+                  presses((1500, "ok"), (2200, "ok"), (2900, "ok"), (3600, "ok"), (4300, "ok"), (9500, "back"))
+                  + [(5000, 9000, K["up"])], 11000, presses((1500, "ok"), (2200, "ok")) + [(3000, 6500, K["up"])], 7500),
     # a level, its message, then play; then back to the level select
     "portal": ("PortalReturns.nwa", "portal.sav",
                presses((1500, "ok"), (2500, "ok"), (3500, "ok")) + every(4000, 7000, 400, "right", 300), 8000,
@@ -330,7 +335,17 @@ COPIES = {"championisland": "champion_saves.py", "numblocks": "numblocks_saves.p
           "donkeykong": "donkeykong_saves.py", "dune": "dune_saves.py", "monkeymart": "monkeymart_saves.py",
           "tombofthemask": "tombofthemask_saves.py", "uno": "uno_saves.py",
           "fnf": "fnf_saves.py", "turborush": "turborush_saves.py",
-          "angrybirds": "angrybirds_saves.py"}
+          "angrybirds": "angrybirds_saves.py", "polytrack": "polytrack_saves.py"}
+
+
+def polytrack_ok(v):
+    """PolyTrack's save: "PTK1", version 1, 768 bytes, an FNV-1a sum of the rest at the end"""
+    if len(v) != 768 or v[:4] != b"PTK1" or struct.unpack_from("<HH", v, 4) != (1, 768):
+        return False
+    h = 2166136261
+    for b in v[:764]:
+        h = ((h ^ b) * 16777619) & 0xFFFFFFFF
+    return struct.unpack_from("<I", v, 764)[0] == h
 
 
 def dk_frames(v):
@@ -495,6 +510,10 @@ CHECKS = {
                    and struct.unpack_from("<H", v, 3012)[0] == 0 and struct.unpack_from("<I", v, 3024)[0] >= 2,
                    lambda v: len(v) == 3032 and v[:4] == b"ABS1" and v[3014] == 1
                    and struct.unpack_from("<I", v, 3024)[0] >= 4),
+    # "PTK1", version 1, its size (768): the guide read (763), Summer 1 chosen (760), its checksum good (FNV-1a at 764);
+    # after the reinstall, from the copy, the same
+    "polytrack": (lambda v: polytrack_ok(v) and v[763] == 1 and v[760] == 0,
+                  lambda v: polytrack_ok(v) and v[763] == 1),
     "breakout": (lambda v: len(v) == 12 and v[:2] == b"B\2" and v[4] == 1 and struct.unpack_from("<I", v, 8)[0] >= 10,
                  lambda v: v[4] == 0 and struct.unpack_from("<I", v, 8)[0] >= 1),  # best kept, shake off
     # Air Hockey and the easy computer chosen; then the normal computer and Tanks, the tallies of the six games kept
