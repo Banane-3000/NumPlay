@@ -645,6 +645,15 @@ static int texts_test(void) {
     text_keys("charm tutorial", "_*30,_*60,_*100", false);
     charm_tute_close();
   }
+  /* King's Pass's first tablet: its text's first page, then its last with the focus tutorial up under it; the first
+   * map's lesson */
+  text_room("Tutorial_01", 111.46f, 31, "");
+  text_keys("focus tablet", "_*60,U*3,_*300", false);
+  text_keys("focus tablet", "O*2,_*300", false);
+  text_room("Crossroads_01", 40, 12, "");
+  first_map_prompt(true);
+  text_keys("first map", "_*200", false);
+  first_map_prompt(false);
   /* a conversation (Elderbug's first) */
   text_room("Town", 76, 12, "");
   text_keys("Elderbug", "_*40,U*2,_*120,O*2,_*60,O*2,_*60,O*2,_*60,O*2,_*60,O*2,_*60", false);
