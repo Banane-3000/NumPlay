@@ -3,7 +3,7 @@
 #include "tilecode.h"
 
 #ifndef NSLOTS
-#define NSLOTS 400
+#define NSLOTS 512   /* (above what the RAM holds, some 420 to 460 slots: all of it; the busiest views use 450) */
 #endif
 #define NHASH 256
 #define NO 0xFFFF

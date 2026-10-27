@@ -509,6 +509,7 @@ void dialogue_start_yn(int text);
 void dialogue_yn_toll(int cost);
 void dialogue_yn_requester(int obj);
 bool dialogue_finished(void);
+bool dialogue_last_page(void);   /* (the text shown on its last page, or none shown) */
 bool dialogue_box_shown(void);
 void dialogue_cancel(void);
 void dialogue_tick(void);

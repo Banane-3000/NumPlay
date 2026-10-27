@@ -67,6 +67,9 @@ static void fade_start(Fade *f, float to, float time, float delay) {
 }
 static void fade_tick(Fade *f) {
   if (f->alpha == f->to) return;
+  /* (the focus tutorial: not up before the tablet's text is on its last page; the game's holds it on one page, the
+   * bigger text here on two) */
+  if (f == &fp && f->to > f->alpha && f->t >= f->delay && !dialogue_last_page()) return;
   f->t += DT;
   float k = f->time > 0 ? (f->t - f->delay) / f->time : 1;
   if (k > 0) f->alpha = f->from + (f->to - f->from) * (k > 1 ? 1 : k);
@@ -308,7 +311,12 @@ static void first_map_draw(void) {
     gfx_hud(&in, 0);
   }
   static const int styles[4] = {STYLE_MSG_NAME, STYLE_MSG, STYLE_MSG, STYLE_MSG};
-  for (int i = 0; i < 4; i++) line(rows[i].text, styles[i], rows[i].x, rows[i].top, 0, true, a);
+  for (int i = 0; i < 4; i++) {
+    int style = styles[i];   /* (a size smaller where the bigger text would run off the screen) */
+    while (style != STYLE_MSG_NAME && style != STYLE_MSG_XS && line(rows[i].text, style, 0, 0, 0, true, 0) > VIEW_W - 8)
+      style = style == STYLE_MSG ? STYLE_MSG_S : STYLE_MSG_XS;
+    line(rows[i].text, style, rows[i].x, rows[i].top, 0, true, a);
+  }
   /* (the key: its box about its place) */
   float w = line(key.text, STYLE_PROMPT, 0, key.y, 0, false, 0) / HUD_PX + 0.5f;
   key_box(key.text, key.x - w / 2, key.y, a, 25);
@@ -323,8 +331,16 @@ static void focus_prompt_draw(void) {
   Inst in;
   sprite_inst(bg.sprite, bg.x, bg.y, 0, bg.kx, bg.ky, gfx_dyn_tint(29, 255, 255, 255, (uint8_t)(a * 255 + 0.5f)), &in);
   gfx_hud(&in, 0);
-  for (int i = 0; i < 4; i++) line(rows[i].text, STYLE_MSG, rows[i].x, rows[i].top, rows[i].align, true, a);
-  key_box(key.text, key.x, key.y, a, 30);
+  /* (its lines in the message's smallest size, still bigger than the game's: each a line under the one above at
+   * least, all over the tablet's stop below them; the key centred on its line, as the game's on its) */
+  const uint8_t *st = font_style(STYLE_MSG_XS);
+  float top = rows[0].top, key_top = top;
+  for (int i = 0; i < 4; i++) {
+    if (i) top = fminf(rows[i].top, top - font_line(st) / HUD_PX);
+    if (rows[i].align == 1) key_top = top;   /* (HOLD, the key after it) */
+    line(rows[i].text, STYLE_MSG_XS, rows[i].x, top, rows[i].align, true, a);
+  }
+  key_box(key.text, key.x, key_top - (font_asc(st) + font_desc(st)) / 2 / HUD_PX, a, 30);
 }
 
 void msg_draw(void) {

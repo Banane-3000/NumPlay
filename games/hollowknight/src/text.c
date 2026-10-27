@@ -271,6 +271,7 @@ void dialogue_yn_toll(int cost) { dl.toll = (int16_t)cost; }
 void dialogue_yn_requester(int obj) { dl.requester = (int16_t)obj; }
 
 bool dialogue_finished(void) { return dl.finished; }
+bool dialogue_last_page(void) { return !dl.text || dl.page + 1 >= dl.npages; }
 bool dialogue_box_shown(void) { return dl.up || dl.alpha > 0; }
 
 static void end_conversation(void) {
