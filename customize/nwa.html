@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multijeux : fusionner des .nwa</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; color: #222; background: #f2f1ef; }
+  h1 { font-size: 1.5rem; }
+  #drop { display: block; border: 2px dashed #888; border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; background: #fff; }
+  #drop.over { border-color: #1f6feb; }
+  .row { display: flex; gap: .5rem; align-items: center; margin: .5rem 0; }
+  .row input[type=text] { flex: 1; padding: .4rem; font: inherit; }
+  .row small { color: #666; white-space: nowrap; }
+  button { font: inherit; padding: .5rem 1rem; border-radius: 8px; border: 0; background: #1f6feb; color: #fff; cursor: pointer; }
+  button.x { background: #c43a2f; padding: .3rem .7rem; }
+  button:disabled { opacity: .5; cursor: default; }
+  #msg { margin-top: 1rem; white-space: pre-wrap; font-size: .9rem; }
+  .err { color: #c43a2f; } .ok { color: #1a7f37; }
+  footer { margin-top: 2rem; font-size: .8rem; color: #666; }
+</style>
+</head>
+<body>
+<h1>Multijeux : fusionner des .nwa</h1>
+<p>Dépose jusqu'à 8 fichiers .nwa. La page les assemble en un seul <b>Multijeux.nwa</b> avec un menu, directement dans ton navigateur.</p>
+
+<label id="drop" for="file">Clique ou glisse tes .nwa ici</label>
+<input id="file" type="file" accept=".nwa" multiple hidden>
+
+<div id="list"></div>
+<div class="row" id="iconrow">
+  <label for="icon">Icône (facultatif)</label>
+  <input id="icon" type="file" accept="image/*">
+</div>
+<button id="go" disabled>Fusionner et télécharger</button>
+<div id="msg"></div>
+
+<footer>
+  Utilise GNU ld et objcopy (binutils 2.43, GPL-3.0+) compilés en WebAssembly, ceux de
+  <a href="https://github.com/Mason363/NumPlay">NumPlay Studio</a> (Mason Chen). Installe ensuite le fichier sur
+  <a href="https://my.numworks.com/apps">my.numworks.com/apps</a>.
+</footer>
+
+<script>
+'use strict';
+const MAXG = 8, NL = 24;
+const $ = (s) => document.querySelector(s);
+const align4 = (n) => (n + 3) & ~3;
+let games = [];          // { name, bytes, size }
+let iconFile = null;
+
+const fetchBytes = async (u) => {
+  const r = await fetch(u);
+  if (!r.ok) throw new Error(u + ' : ' + r.status);
+  return new Uint8Array(await r.arrayBuffer());
+};
+const script = (src) => new Promise((ok, no) => {
+  const s = document.createElement('script');
+  s.src = src; s.onload = ok; s.onerror = () => no(new Error(src));
+  document.head.appendChild(s);
+});
+
+// Même chargement que NumPlay Studio : ld.js puis objcopy.js, chacun définit window.Module
+let tools = null;
+function loadTools() {
+  if (!tools) tools = (async () => {
+    const wasm = Promise.all([fetchBytes('ld/ld.wasm'), fetchBytes('ld/objcopy.wasm')]);
+    await script('ld/ld.js');
+    const ld = window.Module;
+    await script('ld/objcopy.js');
+    const oc = window.Module;
+    const [lw, ow] = await wasm;
+    return { ld: [ld, lw], oc: [oc, ow] };
+  })().catch((e) => { tools = null; throw e; });
+  return tools;
+}
+async function run([factory, wasm], args, files) {
+  let log = '';
+  const m = await factory({ wasmBinary: wasm, print: (s) => { log += s + '\n'; }, printErr: (s) => { log += s + '\n'; } });
+  for (const [n, d] of Object.entries(files)) m.FS.writeFile(n, d);
+  let code = 0;
+  try { code = m.callMain(args); } catch (e) { if (e && typeof e.status === 'number') code = e.status; else throw e; }
+  return { m, code, log };
+}
+
+// Objet ELF ARM relocatable : une section et un symbole global par entrée de `secs` (copié de NumPlay Studio)
+function elfObject(secs) {
+  const enc = new TextEncoder();
+  const shstr = '\0' + secs.map((s) => s.name).join('\0') + '\0.symtab\0.strtab\0.shstrtab\0';
+  const str = '\0' + secs.map((s) => s.sym).join('\0') + '\0';
+  const shs = enc.encode(shstr), sts = enc.encode(str);
+  let at = 52;
+  const offs = secs.map((s) => { const o = at; at = align4(at + s.data.length); return o; });
+  const symOff = at, nsym = secs.length + 1, strOff = symOff + 16 * nsym;
+  const shsOff = strOff + sts.length, shOff = align4(shsOff + shs.length), nsh = secs.length + 4;
+  const b = new Uint8Array(shOff + 40 * nsh), v = new DataView(b.buffer);
+  b.set([0x7f, 0x45, 0x4c, 0x46, 1, 1, 1], 0);
+  v.setUint16(16, 1, true); v.setUint16(18, 40, true); v.setUint32(20, 1, true);
+  v.setUint32(32, shOff, true);
+  v.setUint16(40, 52, true); v.setUint16(46, 40, true); v.setUint16(48, nsh, true); v.setUint16(50, nsh - 1, true);
+  secs.forEach((s, i) => b.set(s.data, offs[i]));
+  let sn = 1;
+  secs.forEach((s, i) => {
+    const o = symOff + 16 * (i + 1);
+    v.setUint32(o, sn, true); sn += enc.encode(s.sym).length + 1;
+    v.setUint32(o + 8, s.data.length, true); v.setUint8(o + 12, 0x10 | (s.type === undefined ? 1 : s.type)); v.setUint16(o + 14, i + 1, true);
+  });
+  b.set(sts, strOff); b.set(shs, shsOff);
+  const sh = (i, name, type, flags, off, sz, link, info, al, es) => {
+    const o = shOff + 40 * i;
+    [name, type, flags, 0, off, sz, link, info, al, es].forEach((x, k) => v.setUint32(o + 4 * k, x, true));
+  };
+  let nameAt = 1;
+  secs.forEach((s, i) => { sh(i + 1, nameAt, 1, s.flags || 2, offs[i], s.data.length, 0, 0, s.align || 1, 0); nameAt += enc.encode(s.name).length + 1; });
+  const n = secs.length;
+  sh(n + 1, shstr.indexOf('.symtab'), 2, 0, symOff, 16 * nsym, n + 2, 1, 4, 16);
+  sh(n + 2, shstr.indexOf('.strtab'), 3, 0, strOff, sts.length, 0, 0, 1, 0);
+  sh(n + 3, shstr.indexOf('.shstrtab'), 3, 0, shsOff, shs.length, 0, 0, 1, 0);
+  return b;
+}
+
+const ascii = (s, max) => Array.from(s).map((c) => (c.charCodeAt(0) >= 32 && c.charCodeAt(0) < 127 ? c : '?')).join('').slice(0, max);
+const nameObj = () => {
+  const d = new TextEncoder().encode('Multijeux\0');
+  return elfObject([{ name: '.rodata.eadk_app_name', sym: 'eadk_app_name', data: d }]);
+};
+const tableObj = () => {
+  const d = new Uint8Array(4 + MAXG * NL), enc = new TextEncoder();
+  d[0] = games.length;
+  games.forEach((g, i) => d.set(enc.encode(ascii(g.name, NL - 1)), 4 + i * NL));
+  return elfObject([{ name: '.rodata.mj_table', sym: 'mj_table', data: d, align: 4 }]);
+};
+
+// Icône 55x56 en RVB565, dans un bloc LZ4 fait uniquement de littéraux (valide, juste non compressé)
+async function iconObj() {
+  const c = document.createElement('canvas');
+  c.width = 55; c.height = 56;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, 55, 56);
+  if (iconFile) {
+    const img = await createImageBitmap(iconFile);
+    const s = Math.max(55 / img.width, 56 / img.height);
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(img, (55 - img.width * s) / 2, (56 - img.height * s) / 2, img.width * s, img.height * s);
+  } else {
+    g.fillStyle = '#1f6feb'; g.fillRect(3, 3, 49, 50);
+    g.fillStyle = '#ffffff'; g.font = 'bold 26px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('MJ', 27.5, 29);
+  }
+  const px = g.getImageData(0, 0, 55, 56).data, raw = new Uint8Array(55 * 56 * 2);
+  for (let p = 0, q = 0; p < px.length; p += 4, q += 2) {
+    const v = ((px[p] >> 3) << 11) | ((px[p + 1] >> 2) << 5) | (px[p + 2] >> 3);
+    raw[q] = v & 255; raw[q + 1] = v >> 8;
+  }
+  const hdr = [15 << 4];
+  let l = raw.length - 15;
+  while (l >= 255) { hdr.push(255); l -= 255; }
+  hdr.push(l);
+  const lz = new Uint8Array(hdr.length + raw.length);
+  lz.set(hdr); lz.set(raw, hdr.length);
+  return elfObject([{ name: '.rodata.eadk_app_icon', sym: 'eadk_app_icon', data: lz, flags: 3, type: 0 }]);
+}
+
+const say = (t, cls) => { const m = $('#msg'); m.textContent = t; m.className = cls || ''; };
+
+async function merge() {
+  const t = await loadTools();
+  say('Chargement du menu...');
+  const files = { 'menu.o': await fetchBytes('menu/menu.o'), 'app.o': nameObj(), 'icon.o': await iconObj(), 'tab.o': tableObj() };
+  const args = ['-r', '-e', 'main', '-u', 'eadk_app_name', '-u', 'eadk_app_icon', '-u', 'eadk_api_level', '--gc-sections',
+                'menu.o', 'icon.o', 'app.o', 'tab.o'];
+  for (let i = 0; i < games.length; i++) {
+    const n = i + 1;
+    say('Préparation de ' + games[i].name + '...');
+    // même traitement que le workflow GitHub : renommer main, cacher les symboles, neutraliser nom/icône
+    const a = await run(t.oc, ['--redefine-sym', 'main=game_' + n + '_main', 'in.o', 'mid.o'], { 'in.o': games[i].bytes });
+    if (a.code) throw new Error(a.log || 'objcopy ' + a.code);
+    const b = await run(t.oc, ['--keep-global-symbol=game_' + n + '_main',
+      '--rename-section', '.rodata.eadk_app_name=.rodata.junk_name_' + n,
+      '--rename-section', '.rodata.eadk_api_level=.rodata.junk_level_' + n,
+      '--rename-section', '.rodata.eadk_app_icon=.rodata.junk_icon_' + n,
+      'mid.o', 'out.o'], { 'mid.o': a.m.FS.readFile('mid.o') });
+    if (b.code) throw new Error(b.log || 'objcopy ' + b.code);
+    files['g' + n + '.o'] = b.m.FS.readFile('out.o');
+    args.push('g' + n + '.o');
+  }
+  say('Assemblage...');
+  const l = await run(t.ld, args.concat(['-o', 'out.nwa']), files);
+  if (l.code) throw new Error(l.log || 'ld ' + l.code);
+  return l.m.FS.readFile('out.nwa');
+}
+
+function render() {
+  const list = $('#list');
+  list.textContent = '';
+  games.forEach((g, i) => {
+    const row = document.createElement('div'); row.className = 'row';
+    const inp = document.createElement('input'); inp.type = 'text'; inp.value = g.name; inp.maxLength = NL - 1;
+    inp.oninput = () => { g.name = inp.value; };
+    const sz = document.createElement('small'); sz.textContent = Math.round(g.size / 1024) + ' Ko';
+    const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.title = 'Retirer';
+    x.onclick = () => { games.splice(i, 1); render(); };
+    row.append(inp, sz, x);
+    list.append(row);
+  });
+  $('#go').disabled = games.length === 0;
+}
+
+async function addFiles(fl) {
+  for (const f of fl) {
+    if (games.length >= MAXG) { say('8 jeux maximum.', 'err'); break; }
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    const elf = bytes.length > 52 && bytes[0] === 0x7f && bytes[1] === 0x45 && bytes[2] === 0x4c && bytes[3] === 0x46;
+    if (!elf) { say(f.name + ' : ce n\'est pas un fichier ELF, ignoré.', 'err'); continue; }
+    if (bytes[16] !== 1) { say(f.name + ' : ce n\'est pas un objet relocatable (type ' + bytes[16] + '), ignoré.', 'err'); continue; }
+    games.push({ name: f.name.replace(/\.nwa$/i, '').replace(/[_-]/g, ' ').replace(/"/g, ''), bytes, size: bytes.length });
+  }
+  render();
+}
+
+$('#file').onchange = (e) => { addFiles(e.target.files); e.target.value = ''; };
+$('#icon').onchange = (e) => { iconFile = e.target.files[0] || null; };
+const drop = $('#drop');
+['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', (e) => addFiles(e.dataTransfer.files));
+
+$('#go').onclick = async () => {
+  const btn = $('#go');
+  btn.disabled = true;
+  try {
+    const out = await merge();
+    const a = document.createElement('a');
+    a.download = 'Multijeux.nwa';
+    a.href = URL.createObjectURL(new Blob([out], { type: 'application/octet-stream' }));
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    say('Multijeux.nwa téléchargé (' + Math.round(out.length / 1024) + ' Ko). Installe-le sur my.numworks.com/apps.', 'ok');
+  } catch (e) {
+    console.error(e);
+    say('Échec : ' + e.message, 'err');
+  } finally { btn.disabled = games.length === 0; }
+};
+</script>
+</body>
+</html>
