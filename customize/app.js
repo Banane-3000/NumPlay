@@ -47,11 +47,11 @@
   const kits = {};         // the kit of each language, loaded when picked
   const byId = {};
   const st = {
-    picked: new Set(), order: [], roms: [], cap: 'std', lang: 'en',
+    picked: new Set(), order: [], roms: [], nwas: [], cap: 'std', lang: 'en',
     app: { icon: 'NumPlay', name: 'NumPlay', open: 'numplay', secret: 0, hint: true },
   };
   let custom = null;       // an icon of your own: { url, obj }
-  let romKey = 0;
+  let romKey = 0, nwaKey = 0;
 
   // ------------------------------------------------------------------ sizes
   const spaces = () => kit.spaces && kit.spaces.length ? kit.spaces :
@@ -64,6 +64,27 @@
   const game = (id) => (langKit().byId || {})[id] || byId[id];  // (as the app's language has it)
   const flash = (id) => game(id).flash;
   const romBytes = (r) => ROM_ENTRY + align4(r.bytes.length);
+  // your own .nwa games: merged with a small menu into a second app, Multijeux.nwa, installed beside NumPlay
+  const MENU = 4096, MAXN = 100, NL = 24;
+  const nwaBytes = () => st.nwas.length ? MENU + st.nwas.reduce((a, g) => a + g.flash, 0) : 0;
+  const needNP = (ids, roms) => ids.length || roms.length || !st.nwas.length;
+  const nwaHue = (g) => { let h = 0; for (const c of g.name + g.key) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+  const nwaColor = (g) => {  // hsl(h 62% 46%) as #rrggbb
+    const h = nwaHue(g), a = 0.62 * Math.min(0.46, 1 - 0.46);
+    const f = (n) => { const k = (n + h / 30) % 12; return Math.round(255 * (0.46 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); };
+    return '#' + [f(0), f(8), f(4)].map((v) => v.toString(16).padStart(2, '0')).join('');
+  };
+  // what an object takes in flash once linked: its loaded sections, not .bss
+  function flashSize(b) {
+    const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    const shoff = v.getUint32(32, true), shsz = v.getUint16(46, true), shn = v.getUint16(48, true);
+    let t = 0;
+    for (let i = 0; i < shn; i++) {
+      const o = shoff + i * shsz;
+      if ((v.getUint32(o + 8, true) & 2) && v.getUint32(o + 4, true) !== 8) t += align4(v.getUint32(o + 20, true));
+    }
+    return t;
+  }
   const iconUrl = () => st.app.icon === 'custom' && custom ? custom.url : KIT + 'variants/' + st.app.icon + '.png';
   const ordered = () => st.order.filter((id) => st.picked.has(id));
   // NumPlay's own bytes: with the library functions NumPlay's games call, or only the launcher when it has big
@@ -74,10 +95,10 @@
   };
   // what a NumPlay of these games (and Game Boy, NES and Sega games) takes
   function total(ids, roms = st.roms) {
-    let n = own(ids, roms);
+    let n = needNP(ids, roms) ? own(ids, roms) : 0;
     for (const id of ids) n += flash(id);
     if (rg && roms.length) n += flash(rg.id) + ROM_HEAD + roms.reduce((a, r) => a + romBytes(r), 0);
-    return n;
+    return n + nwaBytes();
   }
   // a big game too big to go beside the launcher in this space (kit.json "alone") goes on its own there,
   // as its own app: as if you installed just that game
@@ -90,7 +111,7 @@
       const g = byId[s];
       return [{ key: s, id: s, name: g.title, bytes: game(s).alone.size, color: hex(g.top), icon: g.icon ? KIT + 'icons/' + s + '.png' : null }];
     }
-    const out = [{ key: '_core', name: st.app.name.trim() || 'NumPlay', bytes: own(ordered(), st.roms), color: '#3a3a3c', icon: iconUrl() }];
+    const out = !needNP(ordered(), st.roms) ? [] : [{ key: '_core', name: st.app.name.trim() || 'NumPlay', bytes: own(ordered(), st.roms), color: '#3a3a3c', icon: iconUrl() }];
     for (const id of ordered()) {
       const g = byId[id];
       out.push({ key: id, id, name: g.title, bytes: flash(id), color: hex(g.top), icon: g.icon ? KIT + 'icons/' + id + '.png' : null });
@@ -99,6 +120,11 @@
       out.push({ key: rg.id, id: rg.id, name: rg.title, bytes: flash(rg.id) + ROM_HEAD, color: hex(rg.top), icon: rg.icon ? KIT + 'icons/' + rg.id + '.png' : null });
       for (const r of st.roms)
         out.push({ key: 'rom' + r.key, rom: r, name: r.name, bytes: romBytes(r), color: SYS[r.sys].color, tag: SYS[r.sys].tag });
+    }
+    if (st.nwas.length) {
+      out.push({ key: '_menu', name: 'Multijeux', bytes: MENU, color: '#3a3a3c' });
+      for (const g of st.nwas)
+        out.push({ key: 'nwa' + g.key, name: g.name, bytes: g.flash, color: nwaColor(g), tag: g.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() });
     }
     return out;
   }
@@ -252,6 +278,7 @@
   }
 
   function renderCarts() {
+    renderNwaCarts();
     const box = $('#carts');
     const have = new Set();
     for (const r of st.roms) {
@@ -335,7 +362,46 @@
     render();
   }
 
+  function renderNwaCarts() {
+    const box = $('#nwa-carts');
+    box.textContent = '';
+    for (const g of st.nwas) {
+      const c = el('button', 'cart', { type: 'button', 'aria-label': 'Remove ' + g.name });
+      c.style.background = '#3a3a40';
+      c.dataset.tip = g.name + '|' + size(g.flash) + ' · double-click to rename';
+      const lab = c.appendChild(el('span', 'label'));
+      lab.style.background = nwaColor(g);
+      lab.textContent = g.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase();
+      c.appendChild(el('span', 'x')).innerHTML =
+        '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+      c.addEventListener('click', () => { st.nwas = st.nwas.filter((x) => x !== g); render(); });
+      c.addEventListener('dblclick', () => {
+        const n = prompt('Name in the menu', g.name);
+        if (n && n.trim()) { g.name = n.trim().slice(0, NL - 1); render(); }
+      });
+      box.appendChild(c);
+    }
+  }
+  async function addNwas(files) {
+    if (solo()) { bump($('#nwa-drop'), 'shake'); toast(byId[solo()].title + ' takes the whole calculator, so there is no room for .nwa games'); return; }
+    for (const f of files) {
+      if (st.nwas.length >= MAXN) { toast(MAXN + ' games at most'); break; }
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      if (bytes.length < 52 || bytes[0] !== 0x7f || bytes[1] !== 0x45 || bytes[2] !== 0x4c || bytes[3] !== 0x46 || bytes[16] !== 1) {
+        toast(f.name + " isn't an object .nwa (ELF relocatable), skipped"); continue;
+      }
+      const name = f.name.replace(/\.nwa$/i, '').replace(/[_-]/g, ' ').replace(/"/g, '').slice(0, NL - 1);
+      if (st.nwas.some((g) => g.name === name && g.bytes.length === bytes.length)) continue;
+      const g = { key: ++nwaKey, name, bytes, flash: flashSize(bytes) };
+      st.nwas.push(g);
+      const over = total(ordered()) - capacity();
+      if (over > 0) { st.nwas.pop(); bump($('#nwa-drop'), 'shake'); overflow(over); continue; }
+    }
+    render();
+  }
   async function addRoms(files) {
+    const nw = files.filter((f) => /\.nwa$/i.test(f.name));
+    if (nw.length) { files = files.filter((f) => !/\.nwa$/i.test(f.name)); await addNwas(nw); if (!files.length) return; }
     if (solo()) { bump($('#drop'), 'shake'); toast(byId[solo()].title + " takes the whole calculator, so there's no room for Retro-Go"); return; }
     const ok = new Set(rg && rg.systems ? rg.systems : [1, 2, 3]);
     for (const f of files) {
@@ -681,9 +747,44 @@
     return at;
   }
 
+  // Multijeux.nwa: your .nwa objects, main renamed and symbols hidden, linked with a menu (ld -r, as nwa.html does)
+  async function buildMulti() {
+    const t = await loadTools(), enc = new TextEncoder();
+    const asc = (x) => Array.from(x).map((c) => c.charCodeAt(0) >= 32 && c.charCodeAt(0) < 127 ? c : '?').join('').slice(0, NL - 1);
+    const tab = new Uint8Array(4 + MAXN * NL);
+    tab[0] = st.nwas.length;
+    st.nwas.forEach((g, i) => tab.set(enc.encode(asc(g.name)), 4 + i * NL));
+    const iconObj = st.app.icon === 'custom' && custom ? Promise.resolve(custom.obj) : fetchObj('variants/' + st.app.icon + '-icon.o');
+    const [menu, icon] = await Promise.all([fetchBytes('menu/menu.o'), iconObj]);
+    const files = {
+      'menu.o': menu, 'icon.o': icon,
+      'app.o': elfObject([{ name: '.rodata.eadk_app_name', sym: 'eadk_app_name', data: enc.encode('Multijeux\0') }]),
+      'tab.o': elfObject([{ name: '.rodata.mj_table', sym: 'mj_table', data: tab, align: 4 }]),
+    };
+    const args = ['-r', '-e', 'main', '-u', 'eadk_app_name', '-u', 'eadk_app_icon', '-u', 'eadk_api_level', '--gc-sections', 'menu.o', 'icon.o', 'app.o', 'tab.o'];
+    for (let i = 0; i < st.nwas.length; i++) {
+      const n = i + 1;
+      const a = await run(t.oc, ['--redefine-sym', 'main=game_' + n + '_main', 'in.o', 'mid.o'], { 'in.o': st.nwas[i].bytes });
+      if (a.code) throw new Error(a.log || 'objcopy ' + a.code);
+      const b = await run(t.oc, ['--keep-global-symbol=game_' + n + '_main',
+        '--rename-section', '.rodata.eadk_app_name=.rodata.junk_name_' + n,
+        '--rename-section', '.rodata.eadk_api_level=.rodata.junk_level_' + n,
+        '--rename-section', '.rodata.eadk_app_icon=.rodata.junk_icon_' + n,
+        'mid.o', 'out.o'], { 'mid.o': a.m.FS.readFile('mid.o') });
+      if (b.code) throw new Error(b.log || 'objcopy ' + b.code);
+      files['g' + n + '.o'] = b.m.FS.readFile('out.o');
+      args.push('g' + n + '.o');
+    }
+    const l = await run(t.ld, args.concat(['-o', 'out.nwa']), files);
+    if (l.code) throw new Error(l.log || 'ld ' + l.code);
+    return l.m.FS.readFile('out.nwa');
+  }
+
   async function build() {
     const one = solo();
     if (one) return { bytes: await fetchBytes(KIT + 'apps/' + one + '.nwa.gz'), file: game(one).alone.file };
+    const mj = st.nwas.length ? await buildMulti() : null;
+    if (mj && !needNP(ordered(), st.roms)) return { bytes: mj, file: 'Multijeux.nwa' };
     await loadKit(st.lang);
     const k = langKit();
     const sel = ordered();
@@ -713,9 +814,9 @@
     const s = await run(t.oc, ['--strip-unneeded', 'in.nwa', 'out.nwa'], { 'in.nwa': l.m.FS.readFile('out.nwa') });
     if (s.code) throw new Error(s.log || 'objcopy ' + s.code);
     const nwa = s.m.FS.readFile('out.nwa');
-    const n = installedSize(nwa) + k.runtime;
+    const n = installedSize(nwa) + k.runtime + nwaBytes();
     if (n > capacity()) throw new Error("That's " + size(n - capacity()) + ' more than the calculator holds');
-    return { bytes: nwa, file: 'NumPlay.nwa' };
+    return { bytes: nwa, file: 'NumPlay.nwa', extra: mj ? [{ bytes: mj, file: 'Multijeux.nwa' }] : [] };
   }
 
   function download(bytes, file) {
@@ -732,7 +833,8 @@
     try {
       const out = await build();
       download(out.bytes, out.file);
-      if (sheet) openSheet(out.file);
+      for (const x of out.extra || []) { await wait(500); download(x.bytes, x.file); }
+      if (sheet) openSheet(out.extra && out.extra.length ? out.file + ' and ' + out.extra[0].file : out.file);
     } catch (e) {
       console.error(e);
       toast(/more than/.test(e.message) ? e.message : solo() ? "Couldn't get " + game(solo()).alone.file + ', try again' : "Couldn't make NumPlay.nwa, try again");
@@ -1708,6 +1810,7 @@
         addRoms([...e.dataTransfer.files]);
       });
     }
+    $('#nwa-file').addEventListener('change', (e) => { addNwas([...e.target.files]); e.target.value = ''; });
     tips();
     if (lightFromStart()) buildFlat();
     else { build3d(); depth(); watchFrames(); }
