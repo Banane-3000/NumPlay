@@ -1214,5 +1214,23 @@
     "repo": "https://github.com/Mason363/NumPlay/tree/main/games/polytrack",
     "default": false,
     "xl": true
+  },
+  {
+    "id": "mesjeux",
+    "rank": 99,
+    "title": "Mes jeux",
+    "tagline": "Your own .nwa games",
+    "credit": null,
+    "top": "0x3F67B5",
+    "bottom": "0x18243A",
+    "accent": "0x8EC5FF",
+    "colors": 3,
+    "records": [],
+    "shots": [
+      "docs/card.png"
+    ],
+    "app": "MesJeux.nwa",
+    "repo": "https://github.com/Banane-3000/NumPlay/tree/main/games/mesjeux",
+    "default": false
   }
 ]
