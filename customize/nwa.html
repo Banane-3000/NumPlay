@@ -24,6 +24,13 @@
   .dl-link { border: 0; background: none; padding: 0; font-weight: 650; font-size: 14px; color: var(--mute); cursor: pointer; text-decoration: underline; align-self: flex-start; }
   .count { font-size: 13px; font-weight: 700; color: var(--mute); font-variant-numeric: tabular-nums; }
   .note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--text); }
+  .flowmap { display: flex; flex-wrap: wrap; align-content: flex-start; background: #ffffff; position: relative; overflow: hidden; }
+  .flowmap > i { display: block; position: relative; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.55); border-radius: 3px; overflow: hidden; font-style: normal; color: #fff; font-size: 3.6cqh; font-weight: 700; padding: 1px 3px; white-space: nowrap; }
+  .screen.over .status { color: #d70015; }
+  .cart { position: relative; }
+  .cart.off { opacity: 0.35; filter: grayscale(0.7); }
+  .cart.nofit { outline: 2px solid #d70015; }
+  .carts small { display: block; font-size: 10px; text-align: center; margin-top: 2px; color: var(--mute); }
 </style>
 </head>
 <body>
@@ -40,9 +47,9 @@
   </div>
 
   <div class="games">
-    <div class="row-head"><h2>Tes jeux</h2><span id="count" class="count">0 / 8</span></div>
+    <div class="row-head"><h2>Tes jeux</h2><span id="count" class="count">0</span></div>
     <div id="carts" class="carts" aria-label="Tes jeux"></div>
-    <div id="names" aria-label="Noms affichés dans le menu"></div>
+    <p class="note">Clique un jeu pour le cocher ou le décocher. Double-clic : le renommer. La croix : le retirer de la liste. Ta liste reste dans ce navigateur, tu ajoutes des jeux quand tu veux.</p>
   </div>
 
   <aside class="side" aria-label="Ajouter des jeux">
@@ -55,7 +62,8 @@
       </label>
       <input id="file" type="file" multiple accept=".nwa">
     </section>
-    <p class="note">Il faut des .nwa « objets » comme ceux de ton dépôt multijeux (8 au maximum). Le nom de chaque jeu est modifiable à gauche.</p>
+    <div class="row-head"><h2>Espace</h2><select id="cap" class="field"><option value="6">6 Mo (Nwagra)</option><option value="1.94">1,94 Mo (toute NumWorks)</option><option value="3.5">3,5 Mo</option></select></div>
+    <p class="note">Il faut des .nwa « objets » comme ceux de ton dépôt multijeux (100 au maximum, comme ton menu). Ils restent enregistrés ici.</p>
     <button id="install" type="button" class="install" disabled>Créer Multijeux.nwa</button>
     <button id="download" type="button" class="dl-link" disabled>Seulement télécharger, sans les étapes</button>
     <p id="msg" class="msg" role="status"></p>
@@ -68,12 +76,13 @@
   </aside>
 
   <section class="device" aria-label="Ta calculatrice">
+    <div class="meter" aria-hidden="true"><span id="used" class="used">0.00</span><div id="bar" class="bar"></div><span id="cap-of" class="cap-of"></span></div>
     <div id="calc" class="calc">
       <div class="plate"><img class="calc-img" src="calculator.webp" alt="Une calculatrice NumWorks" draggable="false" width="1018" height="2000"></div>
       <div class="well">
         <div id="screen" class="screen" role="img" aria-label="Le menu de Multijeux sur la calculatrice">
           <div class="status"><span id="st">Multijeux</span><span class="battery"><i></i></span></div>
-          <div id="menu" class="map"></div>
+          <div id="menu" class="map flowmap"></div>
           <div class="drop-hint" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
             Dépose pour ajouter
@@ -106,10 +115,12 @@
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script>
 'use strict';
-const MAXG = 8, NL = 24;
+const MAXG = 100, NL = 24, MiB = 1048576;
+let CAP = 6 * MiB;
 const $ = (s) => document.querySelector(s);
 const align4 = (n) => (n + 3) & ~3;
-let games = [];          // { name, bytes, size }
+let lib = [];            // bibliothèque gardée dans le navigateur : { id, name, bytes, size, flash, on }
+let games = [];          // les jeux cochés
 let iconFile = null;
 
 const fetchBytes = async (u) => {
@@ -267,48 +278,102 @@ async function merge() {
 }
 
 
+// ---- bibliothèque (IndexedDB) ----
+const idb = () => new Promise((ok, no) => {
+  const r = indexedDB.open('multijeux', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('games', { keyPath: 'id' });
+  r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error);
+});
+const idbDo = async (mode, fn) => { try { const db = await idb(); return await new Promise((ok, no) => { const t = db.transaction('games', mode), q = fn(t.objectStore('games')); t.oncomplete = () => ok(q && q.result); t.onerror = () => no(t.error); }); } catch (e) { console.warn('stockage', e); return null; } };
+const save = (g) => idbDo('readwrite', (s) => s.put(g));
+const unsave = (id) => idbDo('readwrite', (s) => s.delete(id));
+
+// espace occupé dans la flash : sections ELF chargées (hors .bss), comme après la liaison
+function flashSize(b) {
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const shoff = v.getUint32(32, true), shsz = v.getUint16(46, true), shn = v.getUint16(48, true);
+  let t = 0;
+  for (let i = 0; i < shn; i++) {
+    const o = shoff + i * shsz, type = v.getUint32(o + 4, true), fl = v.getUint32(o + 8, true), sz = v.getUint32(o + 20, true);
+    if ((fl & 2) && type !== 8) t += align4(sz);
+  }
+  return t;
+}
+const fmt = (b) => b >= MiB ? (b / MiB).toFixed(2) + ' Mo' : Math.max(1, Math.round(b / 1024)) + ' Ko';
+const used = () => games.reduce((s, g) => s + g.flash, 0) + 4096;  // + le menu
+
 function render() {
-  const carts = $('#carts'), names = $('#names'), menu = $('#menu');
-  carts.textContent = ''; names.textContent = ''; menu.textContent = '';
-  games.forEach((g, i) => {
-    const h = hue(g.name + i);
+  games = lib.filter((g) => g.on);
+  const carts = $('#carts'), menu = $('#menu'), bar = $('#bar');
+  carts.textContent = ''; menu.textContent = ''; bar.textContent = '';
+  const u = used(), over = u > CAP;
+  let run = 4096;
+  lib.forEach((g) => {
+    const h = hue(g.name + g.id);
+    const fits = g.on || run + g.flash <= CAP;
     const c = document.createElement('button');
-    c.type = 'button'; c.className = 'cart'; c.title = 'Retirer ' + g.name;
+    c.type = 'button'; c.className = 'cart' + (g.on ? '' : ' off') + (!g.on && !fits ? ' nofit' : '');
+    c.title = g.name + ' · ' + fmt(g.flash) + (g.on ? ' · inclus' : fits ? ' · non inclus' : ' · ne rentre plus');
+    c.setAttribute('aria-pressed', g.on);
     c.style.background = 'linear-gradient(#3a3a40, #26262a)';
-    c.innerHTML = '<span class="label"></span><span class="x"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>';
+    c.innerHTML = '<span class="label"></span><span class="x"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>';
     const lb = c.querySelector('.label');
     lb.textContent = ascii(g.name, 3).toUpperCase().replace(/\s/g, '');
     lb.style.background = 'hsl(' + h + ' 62% 46%)';
-    c.onclick = () => { games.splice(i, 1); render(); };
-    carts.append(c);
-
-    const row = document.createElement('div'); row.className = 'name-row';
-    const inp = document.createElement('input'); inp.className = 'field'; inp.value = g.name; inp.maxLength = NL - 1;
-    inp.spellcheck = false; inp.setAttribute('aria-label', 'Nom du jeu ' + (i + 1));
-    inp.oninput = () => { g.name = inp.value; const r = menu.children[i]; if (r) r.textContent = ascii(g.name, NL - 1); };
-    const sz = document.createElement('small'); sz.textContent = Math.round(g.size / 1024) + ' Ko';
-    row.append(inp, sz); names.append(row);
-
-    const m = document.createElement('div'); m.className = 'mrow' + (i === 0 ? ' sel' : '');
-    m.textContent = ascii(g.name, NL - 1);
-    m.onmouseenter = () => { for (const r of menu.children) r.classList.remove('sel'); m.classList.add('sel'); };
-    menu.append(m);
+    c.onclick = (e) => {
+      if (e.target.closest('.x')) { lib = lib.filter((x) => x !== g); unsave(g.id); render(); return; }
+      g.on = !g.on; save(g); render();
+    };
+    c.ondblclick = (e) => {
+      if (e.target.closest('.x')) return;
+      const n = prompt('Nom affiché dans le menu', g.name);
+      if (n && n.trim()) { g.name = n.trim().slice(0, NL - 1); save(g); render(); }
+    };
+    const w = document.createElement('div'); w.append(c);
+    const sm = document.createElement('small'); sm.textContent = fmt(g.flash); w.append(sm);
+    carts.append(w);
+    if (g.on) run += g.flash;
   });
-  if (!games.length) { const e = document.createElement('div'); e.className = 'mempty'; e.textContent = 'Ajoute des .nwa'; menu.append(e); }
-  $('#st').textContent = games.length ? 'Choisis un jeu' : 'Multijeux';
-  $('#count').textContent = games.length + ' / ' + MAXG;
-  $('#install').disabled = games.length === 0;
-  $('#download').disabled = games.length === 0;
+  // l'écran : chaque jeu coché est un bloc, sa surface est proportionnelle à sa taille
+  games.forEach((g) => {
+    const f = Math.min(1, Math.sqrt(g.flash / CAP));
+    const t = document.createElement('i');
+    t.style.width = (100 * f) + '%'; t.style.height = (100 * f) + '%';
+    t.style.background = 'hsl(' + hue(g.name + g.id) + ' 62% 46%)';
+    t.title = g.name + ' · ' + fmt(g.flash);
+    if (f > 0.16) t.textContent = ascii(g.name, 12);
+    menu.append(t);
+    const s = document.createElement('span'); s.className = 'seg';
+    s.style.height = Math.min(100, 100 * g.flash / CAP) + '%';
+    s.style.background = 'hsl(' + hue(g.name + g.id) + ' 62% 46%)';
+    s.title = g.name + ' · ' + fmt(g.flash);
+    bar.append(s);
+  });
+  if (!lib.length) { const e = document.createElement('div'); e.className = 'mempty'; e.textContent = 'Ajoute des .nwa'; menu.append(e); }
+  bar.classList.toggle('over', over);
+  $('#screen').classList.toggle('over', over);
+  $('#used').textContent = (u / MiB).toFixed(2);
+  $('#cap-of').textContent = 'sur ' + +(CAP / MiB).toFixed(2) + ' Mo';
+  $('#st').textContent = (u / MiB).toFixed(2) + ' SUR ' + +(CAP / MiB).toFixed(2) + ' MO';
+  $('#count').textContent = games.length + ' cochés sur ' + lib.length + ' (max ' + MAXG + ')';
+  const dis = games.length === 0 || over || games.length > MAXG;
+  $('#install').disabled = dis; $('#download').disabled = dis;
+  if (over) say('Trop gros : ' + fmt(u) + ' pour ' + fmt(CAP) + '. Décoche des jeux.', 'err');
+  else if ($('#msg').classList.contains('err') && /^Trop gros/.test($('#msg').textContent)) say('');
 }
 
 async function addFiles(fl) {
   for (const f of fl) {
-    if (games.length >= MAXG) { say('8 jeux maximum.', 'err'); toast('8 jeux maximum'); break; }
+    if (lib.length >= 1000) break;
     const bytes = new Uint8Array(await f.arrayBuffer());
     const elf = bytes.length > 52 && bytes[0] === 0x7f && bytes[1] === 0x45 && bytes[2] === 0x4c && bytes[3] === 0x46;
     if (!elf) { say(f.name + ' : ce n\'est pas un fichier ELF, ignoré.', 'err'); toast('Ignoré : ' + f.name); continue; }
     if (bytes[16] !== 1) { say(f.name + ' : ce n\'est pas un objet relocatable (type ' + bytes[16] + '), ignoré.', 'err'); toast('Ignoré : ' + f.name); continue; }
-    games.push({ name: f.name.replace(/\.nwa$/i, '').replace(/[_-]/g, ' ').replace(/"/g, ''), bytes, size: bytes.length });
+    const name = f.name.replace(/\.nwa$/i, '').replace(/[_-]/g, ' ').replace(/"/g, '').slice(0, NL - 1);
+    const old = lib.find((g) => g.name === name && g.size === bytes.length);
+    if (old) continue;  // déjà là
+    const g = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 7), name, bytes, size: bytes.length, flash: flashSize(bytes), on: lib.filter((x) => x.on).length < MAXG };
+    lib.push(g); await save(g);
   }
   render();
 }
@@ -317,7 +382,8 @@ async function refreshIcon() { $('#app-chip-icon').src = (await iconCanvas()).to
 
 let building = false;
 async function go(openSheet) {
-  if (building || !games.length) return;
+  games = lib.filter((g) => g.on);
+  if (building || !games.length || used() > CAP) return;
   building = true;
   for (const b of ['#install', '#download']) $(b).disabled = true;
   try {
@@ -351,7 +417,12 @@ addEventListener('dragover', (e) => e.preventDefault());
 addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; document.body.classList.remove('dragging'); } });
 addEventListener('drop', (e) => { e.preventDefault(); depth = 0; document.body.classList.remove('dragging'); if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
 
-render();
+$('#cap').onchange = (e) => { CAP = parseFloat(e.target.value) * MiB; render(); };
+(async () => {
+  const all = await idbDo('readonly', (s) => s.getAll());
+  lib = (all || []).sort((a, b) => a.id < b.id ? -1 : 1);
+  render();
+})();
 refreshIcon();
 </script>
 </body>
