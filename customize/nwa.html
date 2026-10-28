@@ -3,44 +3,107 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Multijeux : fusionner des .nwa</title>
+<meta name="color-scheme" content="light">
+<title>Multijeux : réunis tes .nwa en une seule app</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="stylesheet" href="app.css">
 <style>
-  body { font: 16px/1.5 system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; color: #222; background: #f2f1ef; }
-  h1 { font-size: 1.5rem; }
-  #drop { display: block; border: 2px dashed #888; border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; background: #fff; }
-  #drop.over { border-color: #1f6feb; }
-  .row { display: flex; gap: .5rem; align-items: center; margin: .5rem 0; }
-  .row input[type=text] { flex: 1; padding: .4rem; font: inherit; }
-  .row small { color: #666; white-space: nowrap; }
-  button { font: inherit; padding: .5rem 1rem; border-radius: 8px; border: 0; background: #1f6feb; color: #fff; cursor: pointer; }
-  button.x { background: #c43a2f; padding: .3rem .7rem; }
-  button:disabled { opacity: .5; cursor: default; }
-  #msg { margin-top: 1rem; white-space: pre-wrap; font-size: .9rem; }
-  .err { color: #c43a2f; } .ok { color: #1a7f37; }
-  footer { margin-top: 2rem; font-size: .8rem; color: #666; }
+  /* seulement ce que app.css ne connaît pas : la liste des noms, le menu sur l'écran, les messages */
+  .name-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .name-row small { color: var(--mute); font-weight: 600; font-size: 12px; white-space: nowrap; }
+  #names:empty { display: none; }
+  .mrow { height: 11.5cqh; padding: 0 3cqw; display: flex; align-items: center; font-size: 5.2cqh; font-weight: 600; background: #ffffff; color: #1d1d1f; white-space: nowrap; overflow: hidden; }
+  .mrow.sel { background: #0000ff; color: #ffffff; }
+  .mempty { height: 100%; display: flex; align-items: center; justify-content: center; background: #ffffff; color: #6b6862; font-size: 5.2cqh; font-weight: 600; }
+  #menu { background: #ffffff; }
+  .msg { margin: 0; font-size: 12px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; max-height: 240px; overflow: auto; }
+  .msg:empty { display: none; }
+  .msg.err { color: #d70015; } .msg.ok { color: #1a7f37; }
+  .side .install { align-self: flex-start; }
+  .side .install:disabled, .side .dl-link:disabled { opacity: 0.35; cursor: default; }
+  .dl-link { border: 0; background: none; padding: 0; font-weight: 650; font-size: 14px; color: var(--mute); cursor: pointer; text-decoration: underline; align-self: flex-start; }
+  .count { font-size: 13px; font-weight: 700; color: var(--mute); font-variant-numeric: tabular-nums; }
+  .note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--text); }
 </style>
 </head>
 <body>
-<h1>Multijeux : fusionner des .nwa</h1>
-<p>Dépose jusqu'à 8 fichiers .nwa. La page les assemble en un seul <b>Multijeux.nwa</b> avec un menu, directement dans ton navigateur.</p>
+<main id="studio">
+  <div class="head">
+    <h1 class="title"><span>Multijeux</span></h1>
+    <div class="chips">
+      <button id="app-chip" type="button" class="chip" title="Choisir l'icône de l'app sur ta calculatrice">
+        <img id="app-chip-icon" src="favicon.png" alt="" width="28" height="28">
+        <svg class="caret" viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <p class="lede">Tes propres jeux .nwa, réunis dans une seule app avec un menu. Ajoute-les, ils vont sur ta calculatrice ensemble.</p>
+  </div>
 
-<label id="drop" for="file">Clique ou glisse tes .nwa ici</label>
-<input id="file" type="file" accept=".nwa" multiple hidden>
+  <div class="games">
+    <div class="row-head"><h2>Tes jeux</h2><span id="count" class="count">0 / 8</span></div>
+    <div id="carts" class="carts" aria-label="Tes jeux"></div>
+    <div id="names" aria-label="Noms affichés dans le menu"></div>
+  </div>
 
-<div id="list"></div>
-<div class="row" id="iconrow">
-  <label for="icon">Icône (facultatif)</label>
-  <input id="icon" type="file" accept="image/*">
+  <aside class="side" aria-label="Ajouter des jeux">
+    <div class="row-head"><h2>Ajouter des .nwa</h2></div>
+    <section class="retro">
+      <label id="drop" class="drop" for="file">
+        <span class="drop-art" aria-hidden="true"><i class="c1"></i><i class="c2"></i><i class="c3"></i></span>
+        <span class="drop-text">Ajouter des jeux</span>
+        <span class="drop-sub">.nwa</span>
+      </label>
+      <input id="file" type="file" multiple accept=".nwa">
+    </section>
+    <p class="note">Il faut des .nwa « objets » comme ceux de ton dépôt multijeux (8 au maximum). Le nom de chaque jeu est modifiable à gauche.</p>
+    <button id="install" type="button" class="install" disabled>Créer Multijeux.nwa</button>
+    <button id="download" type="button" class="dl-link" disabled>Seulement télécharger, sans les étapes</button>
+    <p id="msg" class="msg" role="status"></p>
+    <footer class="foot">
+      <span>Utilise GNU ld et objcopy (binutils 2.43, GPL-3.0+) en WebAssembly, ceux de</span>
+      <a href="https://github.com/Mason363/NumPlay">NumPlay Studio de Mason Chen</a>
+      <span aria-hidden="true">·</span>
+      <a href="./">Le Studio</a>
+    </footer>
+  </aside>
+
+  <section class="device" aria-label="Ta calculatrice">
+    <div id="calc" class="calc">
+      <div class="plate"><img class="calc-img" src="calculator.webp" alt="Une calculatrice NumWorks" draggable="false" width="1018" height="2000"></div>
+      <div class="well">
+        <div id="screen" class="screen" role="img" aria-label="Le menu de Multijeux sur la calculatrice">
+          <div class="status"><span id="st">Multijeux</span><span class="battery"><i></i></span></div>
+          <div id="menu" class="map"></div>
+          <div class="drop-hint" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
+            Dépose pour ajouter
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <button type="button" class="sheet-close" aria-label="Fermer">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <h2 id="sheet-title">Multijeux.nwa se télécharge</h2>
+    <ol class="steps">
+      <li><span class="step-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><rect x="8.5" y="4.5" width="7" height="5" rx="0.5"/><path d="M9 13h.01M12 13h.01M15 13h.01M9 16h.01M12 16h.01M15 16h.01M9 19h.01M12 19h.01M15 19h.01"/></svg>
+      </span><span>Branche ta calculatrice à cet ordinateur</span></li>
+      <li><span class="step-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+      </span><span>Ouvre l'installateur de NumWorks, clique sur Connect, puis ajoute <b>Multijeux.nwa</b> et clique sur Install</span></li>
+    </ol>
+    <a class="install wide" href="https://my.numworks.com/apps" target="_blank" rel="noopener">Ouvrir l'installateur</a>
+  </div>
 </div>
-<button id="go" disabled>Fusionner et télécharger</button>
-<div id="msg"></div>
 
-<footer>
-  Utilise GNU ld et objcopy (binutils 2.43, GPL-3.0+) compilés en WebAssembly, ceux de
-  <a href="https://github.com/Mason363/NumPlay">NumPlay Studio</a> (Mason Chen). Installe ensuite le fichier sur
-  <a href="https://my.numworks.com/apps">my.numworks.com/apps</a>.
-</footer>
-
+<input id="icon-file" type="file" accept="image/*" hidden>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script>
 'use strict';
 const MAXG = 8, NL = 24;
@@ -132,7 +195,7 @@ const tableObj = () => {
 };
 
 // Icône 55x56 en RVB565, dans un bloc LZ4 fait uniquement de littéraux (valide, juste non compressé)
-async function iconObj() {
+async function iconCanvas() {
   const c = document.createElement('canvas');
   c.width = 55; c.height = 56;
   const g = c.getContext('2d');
@@ -147,6 +210,10 @@ async function iconObj() {
     g.fillStyle = '#ffffff'; g.font = 'bold 26px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText('MJ', 27.5, 29);
   }
+  return c;
+}
+async function iconObj() {
+  const g = (await iconCanvas()).getContext('2d');
   const px = g.getImageData(0, 0, 55, 56).data, raw = new Uint8Array(55 * 56 * 2);
   for (let p = 0, q = 0; p < px.length; p += 4, q += 2) {
     const v = ((px[p] >> 3) << 11) | ((px[p + 1] >> 2) << 5) | (px[p + 2] >> 3);
@@ -161,7 +228,16 @@ async function iconObj() {
   return elfObject([{ name: '.rodata.eadk_app_icon', sym: 'eadk_app_icon', data: lz, flags: 3, type: 0 }]);
 }
 
-const say = (t, cls) => { const m = $('#msg'); m.textContent = t; m.className = cls || ''; };
+
+let toastTimer = 0;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 4200);
+}
+const say = (t, cls) => { const m = $('#msg'); m.textContent = t || ''; m.className = 'msg ' + (cls || ''); if (t && cls !== 'err') toast(t.split('\n')[0]); };
+const hue = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
 
 async function merge() {
   const t = await loadTools();
@@ -190,44 +266,60 @@ async function merge() {
   return l.m.FS.readFile('out.nwa');
 }
 
+
 function render() {
-  const list = $('#list');
-  list.textContent = '';
+  const carts = $('#carts'), names = $('#names'), menu = $('#menu');
+  carts.textContent = ''; names.textContent = ''; menu.textContent = '';
   games.forEach((g, i) => {
-    const row = document.createElement('div'); row.className = 'row';
-    const inp = document.createElement('input'); inp.type = 'text'; inp.value = g.name; inp.maxLength = NL - 1;
-    inp.oninput = () => { g.name = inp.value; };
+    const h = hue(g.name + i);
+    const c = document.createElement('button');
+    c.type = 'button'; c.className = 'cart'; c.title = 'Retirer ' + g.name;
+    c.style.background = 'linear-gradient(#3a3a40, #26262a)';
+    c.innerHTML = '<span class="label"></span><span class="x"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>';
+    const lb = c.querySelector('.label');
+    lb.textContent = ascii(g.name, 3).toUpperCase().replace(/\s/g, '');
+    lb.style.background = 'hsl(' + h + ' 62% 46%)';
+    c.onclick = () => { games.splice(i, 1); render(); };
+    carts.append(c);
+
+    const row = document.createElement('div'); row.className = 'name-row';
+    const inp = document.createElement('input'); inp.className = 'field'; inp.value = g.name; inp.maxLength = NL - 1;
+    inp.spellcheck = false; inp.setAttribute('aria-label', 'Nom du jeu ' + (i + 1));
+    inp.oninput = () => { g.name = inp.value; const r = menu.children[i]; if (r) r.textContent = ascii(g.name, NL - 1); };
     const sz = document.createElement('small'); sz.textContent = Math.round(g.size / 1024) + ' Ko';
-    const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.title = 'Retirer';
-    x.onclick = () => { games.splice(i, 1); render(); };
-    row.append(inp, sz, x);
-    list.append(row);
+    row.append(inp, sz); names.append(row);
+
+    const m = document.createElement('div'); m.className = 'mrow' + (i === 0 ? ' sel' : '');
+    m.textContent = ascii(g.name, NL - 1);
+    m.onmouseenter = () => { for (const r of menu.children) r.classList.remove('sel'); m.classList.add('sel'); };
+    menu.append(m);
   });
-  $('#go').disabled = games.length === 0;
+  if (!games.length) { const e = document.createElement('div'); e.className = 'mempty'; e.textContent = 'Ajoute des .nwa'; menu.append(e); }
+  $('#st').textContent = games.length ? 'Choisis un jeu' : 'Multijeux';
+  $('#count').textContent = games.length + ' / ' + MAXG;
+  $('#install').disabled = games.length === 0;
+  $('#download').disabled = games.length === 0;
 }
 
 async function addFiles(fl) {
   for (const f of fl) {
-    if (games.length >= MAXG) { say('8 jeux maximum.', 'err'); break; }
+    if (games.length >= MAXG) { say('8 jeux maximum.', 'err'); toast('8 jeux maximum'); break; }
     const bytes = new Uint8Array(await f.arrayBuffer());
     const elf = bytes.length > 52 && bytes[0] === 0x7f && bytes[1] === 0x45 && bytes[2] === 0x4c && bytes[3] === 0x46;
-    if (!elf) { say(f.name + ' : ce n\'est pas un fichier ELF, ignoré.', 'err'); continue; }
-    if (bytes[16] !== 1) { say(f.name + ' : ce n\'est pas un objet relocatable (type ' + bytes[16] + '), ignoré.', 'err'); continue; }
+    if (!elf) { say(f.name + ' : ce n\'est pas un fichier ELF, ignoré.', 'err'); toast('Ignoré : ' + f.name); continue; }
+    if (bytes[16] !== 1) { say(f.name + ' : ce n\'est pas un objet relocatable (type ' + bytes[16] + '), ignoré.', 'err'); toast('Ignoré : ' + f.name); continue; }
     games.push({ name: f.name.replace(/\.nwa$/i, '').replace(/[_-]/g, ' ').replace(/"/g, ''), bytes, size: bytes.length });
   }
   render();
 }
 
-$('#file').onchange = (e) => { addFiles(e.target.files); e.target.value = ''; };
-$('#icon').onchange = (e) => { iconFile = e.target.files[0] || null; };
-const drop = $('#drop');
-['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
-['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
-drop.addEventListener('drop', (e) => addFiles(e.dataTransfer.files));
+async function refreshIcon() { $('#app-chip-icon').src = (await iconCanvas()).toDataURL(); }
 
-$('#go').onclick = async () => {
-  const btn = $('#go');
-  btn.disabled = true;
+let building = false;
+async function go(openSheet) {
+  if (building || !games.length) return;
+  building = true;
+  for (const b of ['#install', '#download']) $(b).disabled = true;
   try {
     const out = await merge();
     const a = document.createElement('a');
@@ -235,12 +327,32 @@ $('#go').onclick = async () => {
     a.href = URL.createObjectURL(new Blob([out], { type: 'application/octet-stream' }));
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-    say('Multijeux.nwa téléchargé (' + Math.round(out.length / 1024) + ' Ko). Installe-le sur my.numworks.com/apps.', 'ok');
+    say('Multijeux.nwa créé (' + Math.round(out.length / 1024) + ' Ko).', 'ok');
+    if (openSheet) { $('#sheet').hidden = false; $('#sheet .install').focus(); }
   } catch (e) {
     console.error(e);
     say('Échec : ' + e.message, 'err');
-  } finally { btn.disabled = games.length === 0; }
-};
+    toast('Échec de la fusion, détails en bas de la colonne de droite');
+  } finally { building = false; render(); }
+}
+
+$('#file').onchange = (e) => { addFiles(e.target.files); e.target.value = ''; };
+$('#icon-file').onchange = (e) => { iconFile = e.target.files[0] || null; e.target.value = ''; refreshIcon(); };
+$('#app-chip').onclick = () => $('#icon-file').click();
+$('#install').onclick = () => go(true);
+$('#download').onclick = () => go(false);
+$('#sheet').addEventListener('click', (e) => { if (e.target.id === 'sheet' || e.target.closest('.sheet-close')) $('#sheet').hidden = true; });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#sheet').hidden = true; });
+
+// glisser des fichiers n'importe où sur la page
+let depth = 0;
+addEventListener('dragenter', (e) => { e.preventDefault(); depth++; document.body.classList.add('dragging'); });
+addEventListener('dragover', (e) => e.preventDefault());
+addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; document.body.classList.remove('dragging'); } });
+addEventListener('drop', (e) => { e.preventDefault(); depth = 0; document.body.classList.remove('dragging'); if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+
+render();
+refreshIcon();
 </script>
 </body>
 </html>
