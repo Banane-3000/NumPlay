@@ -1,0 +1,42 @@
+name: Compiler le menu Multijeux
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'customize/menu/menu.c'
+      - '.github/workflows/menu.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  menu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Installer le compilateur ARM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi
+
+      - name: Compiler menu.o (objet normal, sans LTO)
+        run: |
+          FLAGS=$(npx --yes nwlink@0.0.19 eadk-cflags-device)
+          eval arm-none-eabi-gcc -std=c99 -mthumb -mfloat-abi=hard -mcpu=cortex-m7 -mfpu=fpv5-sp-d16 \
+            -DPLATFORM_DEVICE=1 $FLAGS -Os -Wall -fdata-sections -ffunction-sections \
+            -c customize/menu/menu.c -o customize/menu/menu.o
+          arm-none-eabi-nm customize/menu/menu.o
+
+      - name: Enregistrer menu.o dans le dépôt
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -f customize/menu/menu.o
+          git commit -m "menu.o compilé" || echo "menu.o inchangé"
+          git push
