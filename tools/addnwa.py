@@ -73,7 +73,7 @@ def patch_build():
     # C library's system calls its libc may leave undefined
     mk = p("Makefile")
     patch(mk, '''elif [ -n "$(filter $*,$(XL_GAMES))" ]; then $(MAKE) --no-print-directory -C games/$* build NWLINK="$(NWLINK)" $(if $(filter $*,$(GAMES_REDIRECT)),$(call GAME_REDIRECT_ARG,$*),); \\
-''', '''elif [ -n "$(filter $*,$(XL_GAMES))" ]; then if [ -f games/$*/prebuilt.nwa ]; then mkdir -p games/$*/output && $(ARM_CC) $(EADK_CFLAGS) -Os -ffreestanding -c games/$*/stub.c -o games/$*/output/stub.o && $(ARM_LD) -r -z noexecstack games/$*/prebuilt.nwa games/$*/output/stub.o -o games/$*/output/$*.nwa; else $(MAKE) --no-print-directory -C games/$* build NWLINK="$(NWLINK)" $(if $(filter $*,$(GAMES_REDIRECT)),$(call GAME_REDIRECT_ARG,$*),); fi; \\
+''', '''elif [ -n "$(filter $*,$(XL_GAMES))" ]; then if [ -f games/$*/prebuilt.nwa ]; then mkdir -p games/$*/output && $(ARM_OBJCOPY) --redefine-sym main=nwa_main games/$*/prebuilt.nwa games/$*/output/pre.nwa && $(ARM_CC) $(EADK_CFLAGS) -Os -ffreestanding -c games/$*/stub.c -o games/$*/output/stub.o && $(ARM_LD) -r -z noexecstack games/$*/output/pre.nwa games/$*/output/stub.o -o games/$*/output/$*.nwa; else $(MAKE) --no-print-directory -C games/$* build NWLINK="$(NWLINK)" $(if $(filter $*,$(GAMES_REDIRECT)),$(call GAME_REDIRECT_ARG,$*),); fi; \\
 ''', "a module from a ready-made .nwa")
     patch(mk, "# the big games' modules are made from these (the kit)",
           "# games that come as a ready-made .nwa (games/<id>/prebuilt.nwa, see tools/addnwa.py)\n"
@@ -157,6 +157,39 @@ def icon_image(nwa, title):
         return img
 
 
+def make_card(icon, title, colors, size):
+    """The game's card, at the size of the kit's own: its colours, its icon, its name."""
+    from PIL import Image, ImageDraw, ImageFont
+    w, h = size
+    top, bottom, accent = (tuple(int(c[i:i + 2], 16) for i in (2, 4, 6)) for c in colors)
+    img = Image.new("RGB", (w, h))
+    dr = ImageDraw.Draw(img)
+    for y in range(h):
+        t = y / max(1, h - 1)
+        dr.line([(0, y), (w, y)], fill=tuple(int(top[i] * (1 - t) + bottom[i] * t) for i in range(3)))
+    s = int(h * 0.56)
+    ic = icon.resize((round(s * 55 / 56), s), Image.NEAREST)
+    img.paste(ic, ((w - ic.width) // 2, int(h * 0.08)))
+    fs = max(8, int(h * 0.13))
+    while True:
+        try:
+            font = ImageFont.load_default(size=fs)
+        except TypeError:  # (an old Pillow: its one small font)
+            font = ImageFont.load_default()
+            break
+        box = dr.textbbox((0, 0), title, font=font)
+        if box[2] - box[0] <= w - 8 or fs <= 6:
+            break
+        fs -= 1
+    box = dr.textbbox((0, 0), title, font=font)
+    dr.text(((w - (box[2] - box[0])) // 2 - box[0], int(h * 0.88) - (box[1] + box[3]) // 2), title, font=font, fill=accent)
+    return img.quantize(colors=colors_n(), method=Image.MEDIANCUT).convert("RGB")
+
+
+def colors_n():
+    return 16
+
+
 def theme(img):
     px = [c for c in img.convert('RGB').tobytes() and list(zip(*[iter(img.convert('RGB').tobytes())] * 3)) if not (c[0] > 235 and c[1] > 235 and c[2] > 235)] or [(60, 90, 180)]
     r, g, b = (sum(c[i] for c in px) / len(px) / 255 for i in range(3))
@@ -165,7 +198,8 @@ def theme(img):
     return hx(h, 0.42, max(0.45, s)), hx(h, 0.12, max(0.4, s * 0.8)), hx(h, 0.72, max(0.5, s))
 
 
-STUB = '''/* Stand-ins for the C library's system calls a game's own libc may leave undefined (weak: the game's own win). */
+STUB = '''/* Stand-ins for the C library's system calls a game's own libc may leave undefined (weak: the game's own win),
+   and a main for the game's own. */
 #define W __attribute__((weak))
 W int _close(int fd) { (void)fd; return -1; }
 W int _fstat(int fd, void *st) { (void)fd; (void)st; return -1; }
@@ -175,6 +209,10 @@ W int _read(int fd, void *buf, int n) { (void)fd; (void)buf; (void)n; return -1;
 W int _write(int fd, const void *buf, int n) { (void)fd; (void)buf; return n; }
 W int _getpid(void) { return 1; }
 W int _kill(int pid, int sig) { (void)pid; (void)sig; return -1; }
+
+/* the game's own main (renamed nwa_main) is called with no arguments, as NumPlay's launcher does for its games */
+extern int nwa_main(int, char **);
+int main(void) { return nwa_main(0, (char **)0); }
 '''
 
 
@@ -224,9 +262,11 @@ def main():
         shutil.copy(f, os.path.join(d, "prebuilt.nwa"))
         open(os.path.join(d, "stub.c"), "w").write(STUB)
         img.save(os.path.join(d, "src", "icon.png"))
-        shutil.copy(p("games", ref["id"], "docs", "card.png"), os.path.join(d, "docs", "card.png"))
+        from PIL import Image
+        size = Image.open(p("games", ref["id"], "docs", "card.png")).size
+        make_card(img, title, (top, bottom, accent), size).save(os.path.join(d, "docs", "card.png"))
         entry = {"id": gid, "rank": 100 + len(added), "title": title, "tagline": "Added from a .nwa", "credit": None,
-                 "top": top, "bottom": bottom, "accent": accent, "colors": ref["colors"], "records": [],
+                 "top": top, "bottom": bottom, "accent": accent, "colors": colors_n(), "records": [],
                  "shots": ["docs/card.png"], "repo": "https://github.com/" + os.environ.get("GITHUB_REPOSITORY", "") + "/tree/main/nwa",
                  "default": False, "xl": True, "prebuilt": True}
         games.append(entry)
