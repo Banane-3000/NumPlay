@@ -64,19 +64,10 @@
   const game = (id) => (langKit().byId || {})[id] || byId[id];  // (as the app's language has it)
   const flash = (id) => game(id).flash;
   const romBytes = (r) => ROM_ENTRY + align4(r.bytes.length);
-  // your own .nwa games: linked into NumPlay itself, behind one tile, "Mes jeux" (the kit's mesjeux game, games/mesjeux)
-  const MENU = 4096, MAXN = 100, NL = 24;
-  const mjFlash = () => (game('mesjeux') || { flash: MENU }).flash;
-  const nwaBytes = () => st.nwas.length ? mjFlash() + st.nwas.reduce((a, g) => a + g.flash, 0) : 0;
+  // your own .nwa games: each becomes a game of NumPlay, with its card (see importNwas)
+  const MAXN = 100, NL = 29;
+  const nwaBytes = () => st.nwas.reduce((a, g) => a + g.flash, 0);
   const needNP = () => true;
-  // RAM: your games' .data and .bss go before NumPlay's arena, so the launcher's RAM grows by them, and the hungriest
-  // game (or the arena) is what's left after it
-  const ramNeed = () => {
-    const k = langKit();
-    const ids = ordered().concat(st.nwas.length ? ['mesjeux'] : []);
-    const most = Math.max(k.arena || 0, ...ids.map((id) => (game(id) || { ram: 0 }).ram));
-    return k.launcherRam + st.nwas.reduce((a, g) => a + g.ram, 0) + most;
-  };
   const nwaHue = (g) => { let h = 0; for (const c of g.name + g.key) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
   const nwaColor = (g) => {  // hsl(h 62% 46%) as #rrggbb
     const h = nwaHue(g), a = 0.62 * Math.min(0.46, 1 - 0.46);
@@ -84,17 +75,6 @@
     return '#' + [f(0), f(8), f(4)].map((v) => v.toString(16).padStart(2, '0')).join('');
   };
   // what an object takes in flash once linked: its loaded sections, not .bss
-  // the RAM an object takes once linked: its writable sections, .data and .bss
-  function ramSize(b) {
-    const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
-    const shoff = v.getUint32(32, true), shsz = v.getUint16(46, true), shn = v.getUint16(48, true);
-    let t = 8;
-    for (let i = 0; i < shn; i++) {
-      const o = shoff + i * shsz, fl = v.getUint32(o + 8, true);
-      if ((fl & 2) && (fl & 1)) t += (v.getUint32(o + 20, true) + 7) & ~7;
-    }
-    return t;
-  }
   function flashSize(b) {
     const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
     const shoff = v.getUint32(32, true), shsz = v.getUint16(46, true), shn = v.getUint16(48, true);
@@ -141,11 +121,8 @@
       for (const r of st.roms)
         out.push({ key: 'rom' + r.key, rom: r, name: r.name, bytes: romBytes(r), color: SYS[r.sys].color, tag: SYS[r.sys].tag });
     }
-    if (st.nwas.length) {
-      out.push({ key: '_menu', name: 'Mes jeux', bytes: mjFlash(), color: '#3a3a3c' });
-      for (const g of st.nwas)
-        out.push({ key: 'nwa' + g.key, name: g.name, bytes: g.flash, color: nwaColor(g), tag: g.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() });
-    }
+    for (const g of st.nwas)
+      out.push({ key: 'nwa' + g.key, name: g.name, bytes: g.flash, color: hex(g.theme[0]), icon: g.iconUrl, tag: g.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() });
     return out;
   }
   const usedBytes = () => items().reduce((s, it) => s + it.bytes, 0);
@@ -390,13 +367,14 @@
       c.style.background = '#3a3a40';
       c.dataset.tip = g.name + '|' + size(g.flash) + ' · double-click to rename';
       const lab = c.appendChild(el('span', 'label'));
-      lab.style.background = nwaColor(g);
-      lab.textContent = g.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase();
+      lab.style.background = g.iconUrl ? 'url(' + g.iconUrl + ') center / cover' : hex(g.theme[0]);
+      lab.style.imageRendering = 'pixelated';
+      lab.textContent = g.iconUrl ? '' : g.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase();
       c.appendChild(el('span', 'x')).innerHTML =
         '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
       c.addEventListener('click', () => { st.nwas = st.nwas.filter((x) => x !== g); render(); });
       c.addEventListener('dblclick', () => {
-        const n = prompt('Name in the menu', g.name);
+        const n = prompt('Name in NumPlay', g.name);
         if (n && n.trim()) { g.name = n.trim().slice(0, NL - 1); render(); }
       });
       box.appendChild(c);
@@ -410,14 +388,15 @@
       if (bytes.length < 52 || bytes[0] !== 0x7f || bytes[1] !== 0x45 || bytes[2] !== 0x4c || bytes[3] !== 0x46 || bytes[16] !== 1) {
         toast(f.name + " isn't an object .nwa (ELF relocatable), skipped"); continue;
       }
-      const name = f.name.replace(/\.nwa$/i, '').replace(/[_-]/g, ' ').replace(/"/g, '').slice(0, NL - 1);
+      let info;
+      try { info = niInfo(bytes); } catch (x) { toast(f.name + ' ' + x.message + ', skipped'); continue; }
+      if (!info.main) { toast(f.name + ' has no main, skipped'); continue; }
+      const base = f.name.replace(/\.nwa$/i, '').replace(/[_-]/g, ' ').replace(/"/g, '');
+      const name = (/^[\x20-\x7e]{2,}$/.test(info.title) ? info.title : base).slice(0, NL - 1);
       if (st.nwas.some((g) => g.name === name && g.bytes.length === bytes.length)) continue;
-      const g = { key: ++nwaKey, name, bytes, flash: flashSize(bytes), ram: ramSize(bytes) };
+      const g = { key: ++nwaKey, name, bytes, flash: flashSize(bytes) + 4096, rgba: info.rgba, iconUrl: niIconUrl(info.rgba) };
+      g.theme = niTheme(info.rgba, g.key);
       st.nwas.push(g);
-      const over = total(ordered()) - capacity();
-      if (over > 0) { st.nwas.pop(); bump($('#nwa-drop'), 'shake'); overflow(over); continue; }
-      const rover = ramNeed() - (kit.ramLimit || 148928);
-      if (rover > 0) { st.nwas.pop(); bump($('#nwa-drop'), 'shake'); toast(f.name + ' needs ' + size(rover) + ' more RAM than the calculator has (untick big games, or remove a .nwa)'); continue; }
     }
     render();
   }
@@ -565,7 +544,7 @@
     let h = location.hash.slice(1);
     if (!h) h = store('numplay-studio2') || '';
     const p = new URLSearchParams(h);
-    const known = kit.games.filter((g) => g !== rg && g.id !== 'mesjeux').sort((a, b) => (a.xl - b.xl) || ((a.rank || 99) - (b.rank || 99))).map((g) => g.id);
+    const known = kit.games.filter((g) => g !== rg).sort((a, b) => (a.xl - b.xl) || ((a.rank || 99) - (b.rank || 99))).map((g) => g.id);
     const saved = (store('numplay-order2') || '').split(',').filter((id) => known.includes(id));
     const linked = p.has('games') ? p.get('games').split(',').filter((id) => known.includes(id)) : null;
     // the order: the link's picks first, in its order, then the rest as last time, then the kit's
@@ -769,37 +748,498 @@
     return at;
   }
 
-  // Your .nwa objects, as they go inside NumPlay: main renamed game_N_main, the keyboard and the heap pointed at
-  // NumPlay's (as the Makefile does for the big games), every other symbol hidden; the table of names the "Mes jeux"
-  // menu reads (mj_table); and stand-ins for the numbers the menu has but you don't (it knows 100 games).
-  async function prepareNwas() {
-    const t = await loadTools(), enc = new TextEncoder();
-    const asc = (x) => Array.from(x).map((c) => c.charCodeAt(0) >= 32 && c.charCodeAt(0) < 127 ? c : '?').join('').slice(0, NL - 1);
-    const tab = new Uint8Array(4 + MAXN * NL);
-    tab[0] = st.nwas.length;
-    st.nwas.forEach((g, i) => tab.set(enc.encode(asc(g.name)), 4 + i * NL));
-    const files = { 'nwa_tab.o': elfObject([{ name: '.rodata.mj_table', sym: 'mj_table', data: tab, align: 4 }]) };
-    const names = ['nwa_tab.o'];
-    const stubs = [];
-    for (let n = st.nwas.length + 1; n <= MAXN; n++) stubs.push({ name: '.rodata.mj_stub' + n, sym: 'game_' + n + '_main', data: new Uint8Array(4), align: 4 });
-    if (stubs.length) { files['nwa_stubs.o'] = elfObject(stubs); names.push('nwa_stubs.o'); }
-    for (let i = 0; i < st.nwas.length; i++) {
-      const n = i + 1;
-      const a = await run(t.oc, ['--redefine-sym', 'main=game_' + n + '_main',
-        '--redefine-sym', 'eadk_keyboard_scan=np_keyboard_scan', '--redefine-sym', 'eadk_event_get=np_event_get',
-        '--redefine-sym', '_heap_start=np_mesjeux_heap', '--redefine-sym', '_sbrk=np_sbrk',
-        'in.o', 'mid.o'], { 'in.o': st.nwas[i].bytes });
-      if (a.code) throw new Error(a.log || 'objcopy ' + a.code);
-      const b = await run(t.oc, ['--keep-global-symbol=game_' + n + '_main',
-        '--rename-section', '.rodata.eadk_app_name=.rodata.junk_name_' + n,
-        '--rename-section', '.rodata.eadk_api_level=.rodata.junk_level_' + n,
-        '--rename-section', '.rodata.eadk_app_icon=.rodata.junk_icon_' + n,
-        'mid.o', 'out.o'], { 'mid.o': a.m.FS.readFile('mid.o') });
-      if (b.code) throw new Error(b.log || 'objcopy ' + b.code);
-      files['nwa_' + n + '.o'] = b.m.FS.readFile('out.o');
-      names.push('nwa_' + n + '.o');
+  // ===== Your own .nwa games, as real games of NumPlay =====
+  // What the kit's build does for a big game made from its own .nwa (Makefile, tools/npmodule.py, tools/gen_games.py),
+  // here in the browser: the game's RAM goes into NumPlay's shared arena (so RAM never adds up), it gets its own
+  // entry in the launcher's table, its own block of flash, its own card.
+  const NI_HEAD = 0x3147504E, NI_TAIL = 0x444E4550;
+  const NI_MODULE_LD = `SECTIONS {
+  /DISCARD/ : {
+    *(.rodata.eadk_app_name) *(.rodata.eadk_app_icon) *(.rodata.eadk_api_level)
+    *(.ARM.exidx*) *(.ARM.extab*) *(.comment) *(.eh_frame*) *(.note*) *(.debug*)
+    *(.init_array*) *(.fini_array*) *(.preinit_array*)
+  }
+  .text : {
+    *(.text .text.* .rodata .rodata.* .glue_7 .glue_7t .vfp11_veneer .v4_bx)
+  }
+  .data : { *(.data .data.*) }
+  .bss : { *(.bss .bss.* COMMON) }
+}
+`;
+  const niCstr = (a, o) => { let n = o; while (n < a.length && a[n]) n++; return new TextDecoder().decode(a.subarray(o, n)); };
+
+  // reads a 32-bit little-endian ARM relocatable ELF
+  function niParse(b) {
+    if (b.length < 52 || b[0] !== 0x7f || b[1] !== 0x45 || b[2] !== 0x4c || b[3] !== 0x46 || b[4] !== 1 || b[5] !== 1) throw new Error("isn't an ELF file");
+    const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    if (v.getUint16(16, true) !== 1 || v.getUint16(18, true) !== 40) throw new Error("isn't an object .nwa (ARM relocatable ELF)");
+    const e = { flags: v.getUint32(0x24, true), secs: [], syms: [] };
+    const shoff = v.getUint32(0x20, true), shentsize = v.getUint16(0x2e, true), shnum = v.getUint16(0x30, true), shstrndx = v.getUint16(0x32, true);
+    for (let i = 0; i < shnum; i++) {
+      const o = shoff + i * shentsize;
+      const s = { nameOff: v.getUint32(o, true), type: v.getUint32(o + 4, true), flags: v.getUint32(o + 8, true), off: v.getUint32(o + 16, true),
+        size: v.getUint32(o + 20, true), link: v.getUint32(o + 24, true), info: v.getUint32(o + 28, true), align: v.getUint32(o + 32, true) };
+      s.data = s.type === 8 ? new Uint8Array(0) : b.slice(s.off, s.off + s.size);
+      e.secs.push(s);
     }
-    return { files, names };
+    const shstr = e.secs[shstrndx].data;
+    for (const s of e.secs) s.name = niCstr(shstr, s.nameOff);
+    const symtabs = e.secs.map((s, i) => [s, i]).filter(([s]) => s.type === 2);
+    if (symtabs.length !== 1) throw new Error('expected one symbol table');
+    const [st, sti] = symtabs[0];
+    e.symtabIndex = sti;
+    const strtab = e.secs[st.link].data;
+    const sv = new DataView(st.data.buffer, st.data.byteOffset, st.data.byteLength);
+    for (let k = 0; k < st.data.length / 16; k++) {
+      const info = st.data[16 * k + 12];
+      e.syms.push({ name: niCstr(strtab, sv.getUint32(16 * k, true)), value: sv.getUint32(16 * k + 4, true), size: sv.getUint32(16 * k + 8, true),
+        bind: info >> 4, type: info & 15, other: st.data[16 * k + 13], shndx: sv.getUint16(16 * k + 14, true) });
+    }
+    return e;
+  }
+  // the REL relocations of section `target`: [offset, type, symbol index]
+  function niRels(e, target) {
+    const out = [];
+    for (const s of e.secs) {
+      if (s.type === 9 && s.info === target) {
+        const dv = new DataView(s.data.buffer, s.data.byteOffset, s.data.byteLength);
+        for (let k = 0; k < s.data.length / 8; k++) { const info = dv.getUint32(8 * k + 4, true); out.push([dv.getUint32(8 * k, true), info & 255, info >>> 8]); }
+      } else if (s.type === 4 && s.info === target) throw new Error('RELA relocations are not supported');
+    }
+    return out;
+  }
+
+  // writes a relocatable ARM ELF. secs: { name, type, flags, align, data | size, relocs: [[offset, type, symbol]] };
+  // syms: { name, value, size, bind (0 local, 1 global, 2 weak), type, sec (a section above; none: undefined), abs }
+  function niElf(flags, secs, syms) {
+    const enc = new TextEncoder();
+    const locals = syms.filter((s) => !s.bind), globals = syms.filter((s) => s.bind);
+    const order = [null].concat(locals, globals);
+    const symIndex = new Map(order.map((s, i) => [s, i]));
+    const rels = secs.map((s, i) => [s, i]).filter(([s]) => s.relocs && s.relocs.length);
+    const symtabI = 1 + secs.length + rels.length;
+    const strtab = [0], strOff = new Map();
+    const addStr = (t) => {
+      if (!t) return 0;
+      if (strOff.has(t)) return strOff.get(t);
+      const o = strtab.length;
+      strOff.set(t, o);
+      for (const c of enc.encode(t)) strtab.push(c);
+      strtab.push(0);
+      return o;
+    };
+    const symtab = new Uint8Array(16 * order.length), sv = new DataView(symtab.buffer);
+    order.forEach((s, i) => {
+      if (!s) return;
+      sv.setUint32(16 * i, addStr(s.name), true);
+      sv.setUint32(16 * i + 4, s.value || 0, true);
+      sv.setUint32(16 * i + 8, s.size || 0, true);
+      symtab[16 * i + 12] = (s.bind << 4) | (s.type || 0);
+      symtab[16 * i + 13] = s.other || 0;
+      sv.setUint16(16 * i + 14, s.abs ? 0xFFF1 : s.sec ? secs.indexOf(s.sec) + 1 : 0, true);
+    });
+    const parts = secs.map((s) => ({ name: s.name, type: s.type, flags: s.flags, link: 0, info: 0, align: s.align || 1, entsize: 0,
+      data: s.data || null, size: s.data ? s.data.length : s.size }));
+    for (const [s, i] of rels) {
+      const d = new Uint8Array(8 * s.relocs.length), dv = new DataView(d.buffer);
+      s.relocs.forEach(([off, type, sym], k) => {
+        if (!symIndex.has(sym)) throw new Error('relocation against an unknown symbol');
+        dv.setUint32(8 * k, off, true); dv.setUint32(8 * k + 4, ((symIndex.get(sym) << 8) | type) >>> 0, true);
+      });
+      parts.push({ name: '.rel' + s.name, type: 9, flags: 0x40, link: symtabI, info: i + 1, align: 4, entsize: 8, data: d, size: d.length });
+    }
+    parts.push({ name: '.symtab', type: 2, flags: 0, link: symtabI + 1, info: 1 + locals.length, align: 4, entsize: 16, data: symtab, size: symtab.length });
+    parts.push({ name: '.strtab', type: 3, flags: 0, link: 0, info: 0, align: 1, entsize: 0, data: Uint8Array.from(strtab), size: strtab.length });
+    const shstr = [0], nameOff = [];
+    for (const p of parts.concat([{ name: '.shstrtab' }])) {
+      nameOff.push(shstr.length);
+      for (const c of enc.encode(p.name)) shstr.push(c);
+      shstr.push(0);
+    }
+    parts.push({ name: '.shstrtab', type: 3, flags: 0, link: 0, info: 0, align: 1, entsize: 0, data: Uint8Array.from(shstr), size: shstr.length });
+    let at = 52;
+    for (const p of parts) {
+      at = (at + 3) & ~3;
+      p.off = at;
+      if (p.type !== 8) at += p.size;
+    }
+    const shoff = (at + 3) & ~3, nsh = parts.length + 1;
+    const b = new Uint8Array(shoff + 40 * nsh), v = new DataView(b.buffer);
+    b.set([0x7f, 0x45, 0x4c, 0x46, 1, 1, 1], 0);
+    v.setUint16(16, 1, true); v.setUint16(18, 40, true); v.setUint32(20, 1, true); v.setUint32(32, shoff, true); v.setUint32(36, flags >>> 0, true);
+    v.setUint16(40, 52, true); v.setUint16(46, 40, true); v.setUint16(48, nsh, true); v.setUint16(50, nsh - 1, true);
+    parts.forEach((p, i) => {
+      if (p.type !== 8 && p.data) b.set(p.data, p.off);
+      const o = shoff + 40 * (i + 1);
+      v.setUint32(o, nameOff[i], true); v.setUint32(o + 4, p.type, true); v.setUint32(o + 8, p.flags, true);
+      v.setUint32(o + 16, p.off, true); v.setUint32(o + 20, p.size, true); v.setUint32(o + 24, p.link, true);
+      v.setUint32(o + 28, p.info, true); v.setUint32(o + 32, p.align, true); v.setUint32(o + 36, p.entsize, true);
+    });
+    return b;
+  }
+
+  // tools/npmodule.py: the game linked with module.ld (one .text, .data, .bss) becomes a module. Its RAM is not
+  // allocated any more: what pointed into its .data, .bss or heap points into NumPlay's arena (np_arena, which the
+  // kit's arena.o defines), at the offsets gen_games.py gives a game: .data first, then .bss, then the heap.
+  // opt.symbols: as the python tool, with np_<game>_data and np_<game>_bss left to the linker (for the tests).
+  function niModule(bytes, g, index, opt = {}) {
+    const e = niParse(bytes);
+    const fail = (m) => { throw new Error(m); };
+    const byName = {};
+    e.secs.forEach((s, i) => {
+      if (s.flags & 2) {
+        if (!['.text', '.data', '.bss'].includes(s.name)) fail('unexpected allocated section ' + s.name);
+        byName[s.name] = i;
+      }
+    });
+    if (byName['.text'] === undefined) fail('no .text section');
+    const textI = byName['.text'], dataI = byName['.data'], bssI = byName['.bss'];
+    const text = e.secs[textI], data = dataI !== undefined ? e.secs[dataI] : null, bss = bssI !== undefined ? e.secs[bssI] : null;
+    const dataSize = data ? data.size : 0, bssSize = bss ? bss.size : 0;
+    const bssOff = (dataSize + 7) & ~7, heapOff = (bssOff + bssSize + 7) & ~7;
+    const ramAlign = Math.max(8, data ? data.align : 0, bss ? bss.align : 0);
+    const base = `.rodata.np.${index}.${g}`;
+    const code = { name: base, type: 1, flags: 6, align: Math.max(4, text.align), data: null, relocs: [] };
+    const init = { name: base + '.init', type: 1, flags: 2, align: data ? Math.max(4, data.align) : 4, data: null, relocs: [] };
+    const outSecs = [code, init];
+    const attrs = e.secs.find((s) => s.type === 0x70000003);
+    if (attrs) outSecs.push({ name: '.ARM.attributes', type: 0x70000003, flags: 0, align: 1, data: attrs.data });
+    const syms = [];
+    const sym = (o) => { const s = Object.assign({ name: '', value: 0, size: 0, bind: 0, type: 0, other: 0 }, o); syms.push(s); return s; };
+    const codeSec = sym({ type: 3, sec: code }), initSec = sym({ type: 3, sec: init });
+    const remap = new Map(), ramSym = new Map();
+    const undefinedSyms = new Map();
+    let entry = null;
+    const heapName = `np_${g}_heap`;
+    e.syms.forEach((s, k) => {
+      if (k === 0) return;
+      const sh = s.shndx;
+      if (s.type === 3) {
+        if (sh === textI) remap.set(k, codeSec);
+        else if (sh === dataI) ramSym.set(k, ['data', 0]);
+        else if (sh === bssI) ramSym.set(k, ['bss', 0]);
+        return;
+      }
+      if (s.type === 4) return;
+      if (dataI !== undefined && sh === dataI) { ramSym.set(k, ['data', s.value]); return; }
+      if (bssI !== undefined && sh === bssI) { ramSym.set(k, ['bss', s.value]); return; }
+      if (sh === 0) {
+        if (s.bind === 0) return;
+        if (!opt.symbols && s.name === heapName) { ramSym.set(k, ['heap', 0]); return; }
+        if (!undefinedSyms.has(s.name)) undefinedSyms.set(s.name, { name: s.name, value: 0, size: 0, bind: s.bind, type: 0, other: 0 });
+        return;
+      }
+      if (sh === textI) {
+        const n = Object.assign({}, s, { sec: code });
+        if (s.name === 'main' && s.bind !== 0) {
+          n.name = `np_${g}_main`; n.bind = 1; n.other = 0; entry = n; remap.set(k, n);
+        } else {
+          n.bind = 0; n.other = 0; syms.push(n); remap.set(k, n);
+        }
+        return;
+      }
+      if (sh === 0xFFF1) { const n = Object.assign({}, s, { bind: 0, abs: true }); syms.push(n); remap.set(k, n); return; }
+      fail(`symbol ${s.name} defined in unexpected section ${sh}`);
+    });
+    if (!entry) fail('entry symbol main not found');
+    syms.push(entry);
+    const initSym = sym({ name: `np_${g}_init`, size: dataSize, bind: 1, type: 1, sec: init });
+    const ramIndex = {};
+    if (opt.symbols) {
+      ramIndex.data = sym({ name: `np_${g}_data`, bind: 1 });
+      ramIndex.bss = sym({ name: `np_${g}_bss`, bind: 1 });
+    } else {
+      ramIndex.data = ramIndex.bss = ramIndex.heap = sym({ name: 'np_arena', bind: 1 });
+    }
+    const undOut = new Map();
+    for (const [name, n] of undefinedSyms) { const x = Object.assign({}, n); syms.push(x); undOut.set(name, x); }
+    e.syms.forEach((s, k) => { if (k && s.shndx === 0 && s.bind !== 0 && s.type !== 3 && undOut.has(s.name)) remap.set(k, undOut.get(s.name)); });
+    const regionBase = opt.symbols ? { data: 0, bss: 0, heap: 0 } : { data: 0, bss: bssOff, heap: heapOff };
+    const convert = (target, blob, out) => {
+      blob = blob.slice();
+      const dv = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
+      for (const [off, typ, si] of niRels(e, target)) {
+        if (ramSym.has(si)) {
+          const [region, value] = ramSym.get(si);
+          if (typ !== 2) fail(`relocation type ${typ} at 0x${off.toString(16)} points into RAM; only ABS32 is handled`);
+          const add = value + regionBase[region];
+          if (add) dv.setUint32(off, (dv.getUint32(off, true) + add) >>> 0, true);
+          out.relocs.push([off, typ, ramIndex[region]]);
+        } else if (remap.has(si)) out.relocs.push([off, typ, remap.get(si)]);
+        else fail(`relocation at 0x${off.toString(16)} uses an unsupported symbol (${e.syms[si].name})`);
+      }
+      out.data = blob;
+    };
+    convert(textI, text.data, code);
+    if (data) convert(dataI, data.data, init); else init.data = new Uint8Array(0);
+    for (const s of e.secs) if (s.type === 9 && s.info !== textI && s.info !== dataI && (e.secs[s.info].flags & 2)) fail(`relocations for unexpected section ${e.secs[s.info].name}`);
+    return { obj: niElf(e.flags, outSecs, syms), code: code.data.length, data: dataSize, bss: bssSize, ramAlign, bssOff, heapOff };
+  }
+
+  // the little objects around a module: its entry in the launcher's table, the marks around its block of flash, its card
+  const niPut32 = (d, o, v) => { d[o] = v & 255; d[o + 1] = (v >>> 8) & 255; d[o + 2] = (v >>> 16) & 255; d[o + 3] = (v >>> 24) & 255; };
+  function niEntry(g, index, mod, info) {
+    // np_game_t of launcher/src/np.h, as tools/gen_games.py fills it (the calculator's layout, 80 bytes)
+    const enc = new TextEncoder();
+    const strs = [info.id, info.title, info.tagline].map((s) => enc.encode(s + '\0'));
+    const sdata = new Uint8Array(strs.reduce((a, s) => a + s.length, 0));
+    const soff = [];
+    let at = 0;
+    strs.forEach((s) => { soff.push(at); sdata.set(s, at); at += s.length; });
+    const table = { name: `.rodata.np_games.${index}`, type: 1, flags: 2, align: 4, data: new Uint8Array(80), relocs: [] };
+    const str = { name: `.rodata.np.str.${g}`, type: 1, flags: 2, align: 1, data: sdata };
+    const lists = { name: `.rodata.np.lists.${g}`, type: 1, flags: 2, align: 4, data: new Uint8Array(8) };
+    const syms = [], mk = (o) => { const s = Object.assign({ name: '', value: 0, size: 0, bind: 0, type: 0 }, o); syms.push(s); return s; };
+    const sTab = mk({ type: 3, sec: table }), sStr = mk({ type: 3, sec: str }), sLists = mk({ type: 3, sec: lists });
+    const und = (n) => mk({ name: n, bind: 1 });
+    const begin = und(`np_${g}_begin`), end = und(`np_${g}_end`), main = und(`np_${g}_main`), init = und(`np_${g}_init`),
+      shots = und(`np_${g}_shots`), arena = und('np_arena');
+    const d = table.data, r = table.relocs;
+    const ptr = (off, sym, add) => { niPut32(d, off, add || 0); r.push([off, 2, sym]); };
+    ptr(0, sStr, soff[0]); ptr(4, sStr, soff[1]); ptr(8, sStr, soff[2]);              // id, title, tagline (credit: none)
+    niPut32(d, 16, info.top); niPut32(d, 20, info.bottom); niPut32(d, 24, info.accent);
+    ptr(28, begin); ptr(32, end); ptr(36, main);
+    ptr(40, arena, 0); ptr(44, init); niPut32(d, 48, mod.data);                        // data, data_init, data_size
+    ptr(52, arena, mod.bssOff); niPut32(d, 56, mod.bss);                               // bss, bss_size
+    ptr(60, shots); d[64] = 1;                                                         // shots, nshots
+    ptr(68, sLists, 0); ptr(72, sLists, 4);                                            // records, progress (none)
+    niPut32(d, 76, 0);                                                                 // heap: the least RAM after its own
+    return niElf(0, [table, str, lists], syms);
+  }
+  function niMarks(g, index) {
+    const w = (v) => { const d = new Uint8Array(4); niPut32(d, 0, v); return d; };
+    return niElf(0, [
+      { name: `.rodata.np.${index}.${g}.0head`, type: 1, flags: 2, align: 4, data: w(NI_HEAD) },
+      { name: `.rodata.np.${index}.${g}.zztail`, type: 1, flags: 2, align: 4, data: w(NI_TAIL) },
+    ], []);
+  }
+  // np_shot_t: w, h, ncolors, zsize, palette, z (the palette's RGB565 colours, then the DEFLATE of w*h palette indices)
+  function niShots(g, index, card) {
+    const pal = card.palette.length * 2, total = 20 + pal + card.z.length;
+    const d = new Uint8Array(total), dv = new DataView(d.buffer);
+    dv.setUint16(0, card.w, true); dv.setUint16(2, card.h, true); dv.setUint16(4, card.palette.length, true); dv.setUint32(8, card.z.length, true);
+    dv.setUint32(12, 20, true); dv.setUint32(16, 20 + pal, true);
+    card.palette.forEach((c, i) => dv.setUint16(20 + 2 * i, c, true));
+    d.set(card.z, 20 + pal);
+    const sec = { name: `.rodata.np.${index}.${g}.shots`, type: 1, flags: 2, align: 4, data: d, relocs: [] };
+    const secSym = { name: '', value: 0, size: 0, bind: 0, type: 3, sec };
+    sec.relocs.push([12, 2, secSym], [16, 2, secSym]);
+    return niElf(0, [sec], [secSym, { name: `np_${g}_shots`, value: 0, size: total, bind: 1, type: 1, sec }]);
+  }
+  // stand-ins, weak, for the C library's system calls a game's own libc may leave undefined, and a main
+  // that calls the game's (renamed nwa_main) with no arguments:  push {r3, lr}; movs r0,#0; movs r1,#0; bl nwa_main; pop {r3, pc}
+  function niStub() {
+    const th = [];
+    const fn = (name, ...ops) => { th.push([name, ops]); };
+    fn('_close', 0x2000, 0x3801, 0x4770);   // movs r0,#0; subs r0,#1; bx lr   (-1)
+    fn('_fstat', 0x2000, 0x3801, 0x4770);
+    fn('_lseek', 0x2000, 0x3801, 0x4770);
+    fn('_read', 0x2000, 0x3801, 0x4770);
+    fn('_kill', 0x2000, 0x3801, 0x4770);
+    fn('_isatty', 0x2000, 0x4770);          // 0
+    fn('_getpid', 0x2001, 0x4770);          // 1
+    fn('_write', 0x4610, 0x4770);           // mov r0, r2 (the count); bx lr
+    const total = th.reduce((a, [, o]) => a + 2 * o.length, 0) + 12;
+    const d = new Uint8Array((total + 3) & ~3), dv = new DataView(d.buffer);
+    const sec = { name: '.text', type: 1, flags: 6, align: 4, data: d, relocs: [] };
+    const syms = [{ name: '', value: 0, size: 0, bind: 0, type: 3, sec }];
+    let at = 0;
+    for (const [name, ops] of th) {
+      ops.forEach((o, i) => dv.setUint16(at + 2 * i, o, true));
+      syms.push({ name, value: at | 1, size: 2 * ops.length, bind: 2, type: 2, sec });
+      at += 2 * ops.length;
+    }
+    [0xB508, 0x2000, 0x2100, 0xF7FF, 0xFFFE, 0xBD08].forEach((o, i) => dv.setUint16(at + 2 * i, o, true));
+    syms.push({ name: 'main', value: at | 1, size: 12, bind: 1, type: 2, sec });
+    const callee = { name: 'nwa_main', bind: 1, type: 0 };
+    syms.push(callee);
+    sec.relocs.push([at + 6, 10, callee]);  // R_ARM_THM_CALL
+    return niElf(0, [sec], syms);
+  }
+
+  // the icon inside a .nwa: nwlink's LZ4 block of 55 x 56 RGB565 pixels
+  function niLz4(src, size) {
+    const out = new Uint8Array(size);
+    let i = 0, o = 0;
+    while (i < src.length) {
+      const t = src[i++];
+      let lit = t >> 4;
+      if (lit === 15) { let b; do { b = src[i++]; lit += b; } while (b === 255); }
+      for (let k = 0; k < lit; k++) out[o++] = src[i++];
+      if (i >= src.length) break;
+      const off = src[i] | (src[i + 1] << 8); i += 2;
+      let m = t & 15;
+      if (m === 15) { let b; do { b = src[i++]; m += b; } while (b === 255); }
+      m += 4;
+      for (let k = 0; k < m; k++) { out[o] = out[o - off]; o++; }
+    }
+    if (o !== size) throw new Error('icon size');
+    return out;
+  }
+  // what the Studio shows of a .nwa: its name, its icon (RGBA, 55 x 56) if it has one, and whether it has a main
+  function niInfo(bytes) {
+    const e = niParse(bytes);
+    const sec = (n) => e.secs.find((s) => s.name === n);
+    const nm = sec('.rodata.eadk_app_name'), ic = sec('.rodata.eadk_app_icon');
+    let main = false;
+    for (const s of e.syms) if (s.name === 'main' && s.bind === 1 && s.shndx !== 0) main = true;
+    let rgba = null;
+    try {
+      if (ic) {
+        const raw = niLz4(ic.data, 55 * 56 * 2);
+        rgba = new Uint8ClampedArray(55 * 56 * 4);
+        for (let p = 0; p < 55 * 56; p++) {
+          const c = raw[2 * p] | (raw[2 * p + 1] << 8);
+          rgba[4 * p] = ((c >> 11) * 255 / 31) | 0; rgba[4 * p + 1] = (((c >> 5) & 63) * 255 / 63) | 0; rgba[4 * p + 2] = ((c & 31) * 255 / 31) | 0; rgba[4 * p + 3] = 255;
+        }
+      }
+    } catch (x) { rgba = null; }
+    return { title: nm ? niCstr(nm.data, 0).trim() : '', rgba, main };
+  }
+  // 0xRRGGBB colours of a game's card, from its icon's: [top, bottom, accent]
+  function niTheme(rgba, seed) {
+    let r = 0, g = 0, b = 0, n = 0;
+    if (rgba) for (let p = 0; p < rgba.length; p += 4) if (!(rgba[p] > 235 && rgba[p + 1] > 235 && rgba[p + 2] > 235)) { r += rgba[p]; g += rgba[p + 1]; b += rgba[p + 2]; n++; }
+    if (!n) { const h = (seed * 47) % 360; return niHls(h / 360, 0.42, 0.55).map((c, i) => c); }
+    return niHls(...niRgb2hl(r / n / 255, g / n / 255, b / n / 255));
+  }
+  function niRgb2hl(r, g, b) {
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0;
+    if (d) h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    const l = (mx + mn) / 2, s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+    return [h / 6, Math.max(0.45, s)];
+  }
+  function niHls(h, s = 0.55) {
+    const f = (ll) => {
+      const a = s * Math.min(ll, 1 - ll), k = (n) => { const t = (n + h * 12) % 12; return ll - a * Math.max(-1, Math.min(t - 3, 9 - t, 1)); };
+      return ((Math.round(k(0) * 255) << 16) | (Math.round(k(8) * 255) << 8) | Math.round(k(4) * 255)) >>> 0;
+    };
+    return [f(0.42), f(0.12), f(0.72)];
+  }
+  // median-cut: the `n` colours that stand for an RGBA picture, and each pixel's index
+  function niQuantize(rgba, n) {
+    const px = [];
+    for (let p = 0; p < rgba.length; p += 4) px.push([rgba[p], rgba[p + 1], rgba[p + 2]]);
+    let boxes = [px.map((_, i) => i)];
+    const range = (bx) => {
+      const lo = [255, 255, 255], hi = [0, 0, 0];
+      for (const i of bx) for (let c = 0; c < 3; c++) { lo[c] = Math.min(lo[c], px[i][c]); hi[c] = Math.max(hi[c], px[i][c]); }
+      return [0, 1, 2].map((c) => hi[c] - lo[c]);
+    };
+    while (boxes.length < n) {
+      let best = -1, bc = 0, bv = 0;
+      boxes.forEach((bx, i) => { const rg = range(bx); const m = Math.max(...rg); if (bx.length > 1 && m > bv) { bv = m; best = i; bc = rg.indexOf(m); } });
+      if (best < 0) break;
+      const bx = boxes[best].slice().sort((a, b) => px[a][bc] - px[b][bc]), half = bx.length >> 1;
+      boxes.splice(best, 1, bx.slice(0, half), bx.slice(half));
+    }
+    const pal = boxes.map((bx) => [0, 1, 2].map((c) => Math.round(bx.reduce((a, i) => a + px[i][c], 0) / bx.length)));
+    const idx = new Uint8Array(px.length);
+    const cache = new Map();
+    px.forEach((q, i) => {
+      const key = q[0] << 16 | q[1] << 8 | q[2];
+      let k = cache.get(key);
+      if (k === undefined) {
+        let bd = 1e9; k = 0;
+        pal.forEach((c, j) => { const d = (c[0] - q[0]) ** 2 + (c[1] - q[1]) ** 2 + (c[2] - q[2]) ** 2; if (d < bd) { bd = d; k = j; } });
+        cache.set(key, k);
+      }
+      idx[i] = k;
+    });
+    return { palette: pal.map((c) => ((c[0] & 0xF8) << 8) | ((c[1] & 0xFC) << 3) | (c[2] >> 3)), idx };
+  }
+  async function niDeflate(bytes) {
+    const s = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(s).arrayBuffer());
+  }
+
+  // the size of a card (the picture of a game in the launcher): that of the kit's own, read off one of its games
+  let niCardDims = null;
+  async function niCardSize() {
+    if (niCardDims) return niCardDims;
+    const tries = ['sudoku'].concat(kit.games.filter((g) => !g.xl && g.id !== 'sudoku').slice(0, 4).map((g) => g.id));
+    for (const id of tries) {
+      try {
+        const e = niParse(await fetchObj(objPath(id)));
+        const s = e.secs.find((x) => /\.shots$/.test(x.name));
+        if (!s || s.data.length < 6) continue;
+        const dv = new DataView(s.data.buffer, s.data.byteOffset, s.data.byteLength);
+        const w = dv.getUint16(0, true), h = dv.getUint16(2, true);
+        if (w >= 16 && w <= 400 && h >= 16 && h <= 400) return (niCardDims = { w, h });
+      } catch (x) { /* (the next one) */ }
+    }
+    return (niCardDims = { w: 160, h: 120 });
+  }
+  function niIconUrl(rgba) {
+    if (!rgba) return null;
+    const c = el('canvas'); c.width = 55; c.height = 56;
+    c.getContext('2d').putImageData(new ImageData(rgba, 55, 56), 0, 0);
+    return c.toDataURL('image/png');
+  }
+  async function niMakeCard(g, w, h) {
+    const cv = el('canvas'); cv.width = w; cv.height = h;
+    const c = cv.getContext('2d');
+    const col = (v) => '#' + v.toString(16).padStart(6, '0');
+    const gr = c.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, col(g.theme[0])); gr.addColorStop(1, col(g.theme[1]));
+    c.fillStyle = gr; c.fillRect(0, 0, w, h);
+    if (g.rgba) {
+      const ic = el('canvas'); ic.width = 55; ic.height = 56;
+      ic.getContext('2d').putImageData(new ImageData(g.rgba, 55, 56), 0, 0);
+      const s = Math.floor(h * 0.56), iw = Math.round(s * 55 / 56);
+      c.imageSmoothingEnabled = false;
+      c.drawImage(ic, Math.round((w - iw) / 2), Math.round(h * 0.08), iw, s);
+    }
+    let fs = Math.max(8, Math.floor(h * 0.13));
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = col(g.theme[2]);
+    do { c.font = 'bold ' + fs + 'px sans-serif'; fs--; } while (c.measureText(g.name).width > w - 8 && fs > 6);
+    c.fillText(g.name, w / 2, Math.round(h * 0.88));
+    const q = niQuantize(c.getImageData(0, 0, w, h).data, 16);
+    return { w, h, palette: q.palette, z: await niDeflate(q.idx) };
+  }
+
+  // Your .nwa games, ready to be linked into NumPlay: for each, its module, its entry, its marks and its card, and
+  // what numplay.ld needs (its block of flash, its place in the table)
+  async function importNwas() {
+    const t = await loadTools();
+    const files = {}, names = [], entries = [], blocks = [];
+    const dims = await niCardSize();
+    const stub = niStub();
+    for (let i = 0; i < st.nwas.length; i++) {
+      const g = st.nwas[i], id = 'dyn' + (i + 1), ix = 'x' + (i + 1);
+      const bad = (what, r) => Object.assign(new Error(g.name + ': ' + what + (r && r.log ? ' (' + r.log.trim().split('\n').slice(-2).join(' ') + ')' : '')), { ni: true });
+      try {
+        let r = await run(t.oc, ['--redefine-sym', 'main=nwa_main', 'in.o', 'a.o'], { 'in.o': g.bytes });
+        if (r.code) throw bad('objcopy', r);
+        const merged = { 'a.o': r.m.FS.readFile('a.o'), 'stub.o': stub, 'module.ld': NI_MODULE_LD };
+        r = await run(t.ld, ['-r', '-d', '-z', 'noexecstack', '--force-group-allocation', '-T', 'module.ld', 'a.o', 'stub.o', '-o', 'm1.o'], merged);
+        if (r.code && /unrecogni[sz]ed|unknown option|invalid option/i.test(r.log))  // (an older ld: no such option)
+          r = await run(t.ld, ['-r', '-d', '-z', 'noexecstack', '-T', 'module.ld', 'a.o', 'stub.o', '-o', 'm1.o'], merged);
+        if (r.code) throw bad('ld', r);
+        r = await run(t.oc, ['--keep-global-symbol=main',
+          '--redefine-sym', 'eadk_keyboard_scan=np_keyboard_scan', '--redefine-sym', 'eadk_event_get=np_event_get',
+          '--redefine-sym', 'eadk_display_draw_string=np_display_draw_string',
+          '--redefine-sym', '_heap_start=np_' + id + '_heap', '--redefine-sym', '_sbrk=np_sbrk',
+          'm1.o', 'm2.o'], { 'm1.o': r.m.FS.readFile('m1.o') });
+        if (r.code) throw bad('objcopy', r);
+        const mod = niModule(r.m.FS.readFile('m2.o'), id, ix);
+        const card = await niMakeCard(g, dims.w, dims.h);
+        files[id + '.o'] = mod.obj;
+        files[id + '_entry.o'] = niEntry(id, 'zz' + (i + 1), mod, { id, title: g.name, tagline: 'Your .nwa', top: g.theme[0], bottom: g.theme[1], accent: g.theme[2] });
+        files[id + '_marks.o'] = niMarks(id, ix);
+        files[id + '_shots.o'] = niShots(id, ix, card);
+        names.push(id + '.o', id + '_entry.o', id + '_marks.o', id + '_shots.o');
+        entries.push('KEEP(*(.rodata.np_games.zz' + (i + 1) + '))');
+        const p = '.rodata.np.' + ix + '.' + id;
+        blocks.push(['  ' + p + ' : {', '    np_' + id + '_begin = .;', '    KEEP(*(' + p + '.0head))', '    *(' + p + ')', '    *(' + p + '.init)',
+          '    KEEP(*(' + p + '.shots))', '    KEEP(*(' + p + '.zztail))', '    np_' + id + '_end = .;', '  }'].join('\n') + '\n');
+      } catch (e) {
+        if (e.ni) throw e;
+        throw Object.assign(new Error(g.name + ': ' + e.message), { ni: true });
+      }
+    }
+    return { files, names, entries, blocks };
   }
 
   async function build() {
@@ -810,15 +1250,7 @@
     const sel = ordered();
     const roms = rg && st.roms.length;
     if (roms) sel.push(rg.id);
-    // your .nwa games: the kit's "Mes jeux" is the last tile, and their objects join the link
-    let nw = null;
-    if (st.nwas.length) {
-      if (!game('mesjeux')) throw new Error("The kit has no Mes jeux yet, try again in a few minutes");
-      const need = ramNeed();
-      if (need > (k.ramLimit || 148928)) throw new Error("That's " + size(need - (k.ramLimit || 148928)) + ' more than the calculator\'s RAM holds');
-      nw = await prepareNwas();
-      sel.push('mesjeux');
-    }
+    const dyn = st.nwas.length ? await importNwas() : null;
     const lang = st.lang === 'en' ? '' : st.lang + '/';
     const iconObj = st.app.icon === 'custom' && custom ? Promise.resolve(custom.obj) : fetchObj('variants/' + st.app.icon + '-icon.o');
     const [t, base, arena, icon, ...objs] = await Promise.all([loadTools(), fetchObj(lang + 'base.o'), fetchObj(lang + 'arena.o'), iconObj]
@@ -830,18 +1262,15 @@
       files['roms.o'] = romObject(romTable(st.roms));
       args.push('roms.o');
     }
-    if (nw) {
-      Object.assign(files, nw.files);
-      args.push(...nw.names);
-    }
+    if (dyn) { Object.assign(files, dyn.files); args.push(...dyn.names); }
     // the launcher shows the games in the order of their entries: yours, not the kit's
-    const entries = sel.map((id) => 'KEEP(*(.rodata.np_games.' + String((k.byId[id] || byId[id]).index).padStart(2, '0') + '))').join('\n    ');
+    const entries = sel.map((id) => 'KEEP(*(.rodata.np_games.' + String((k.byId[id] || byId[id]).index).padStart(2, '0') + '))').concat(dyn ? dyn.entries : []).join('\n    ');
     const head = k.script.head.replace('KEEP(*(SORT_BY_NAME(.rodata.np_games.*)))', entries);
     // ...and the games' blocks in the kit's order: NumPlay's own games first, in the app area, then the big ones,
     // which find the calculator's files past it too (Enlarged Extra Apps)
     const block = (id) => k.script.blocks[id] || kit.script.blocks[id];
     const index = (id) => (k.byId[id] || byId[id]).index;
-    files['numplay.ld'] = head + sel.slice().sort((a, b) => index(a) - index(b)).map(block).join('') + k.script.tail;
+    files['numplay.ld'] = head + sel.slice().sort((a, b) => index(a) - index(b)).map(block).join('') + (dyn ? dyn.blocks.join('') : '') + k.script.tail;
     const l = await run(t.ld, args.concat(['-o', 'out.nwa']), files);
     if (l.code) throw new Error(l.log || 'ld ' + l.code);
     const s = await run(t.oc, ['--strip-unneeded', 'in.nwa', 'out.nwa'], { 'in.nwa': l.m.FS.readFile('out.nwa') });
@@ -870,7 +1299,7 @@
       if (sheet) openSheet(out.extra && out.extra.length ? out.file + ' and ' + out.extra[0].file : out.file);
     } catch (e) {
       console.error(e);
-      toast(/more than/.test(e.message) ? e.message : solo() ? "Couldn't get " + game(solo()).alone.file + ', try again' : "Couldn't make NumPlay.nwa, try again");
+      toast(/more than/.test(e.message) || e.ni ? e.message : solo() ? "Couldn't get " + game(solo()).alone.file + ', try again' : "Couldn't make NumPlay.nwa, try again");
     } finally {
       btn.classList.remove('busy');
       if (key) key.classList.remove('down');
@@ -1760,7 +2189,7 @@
       '<svg class="b-tick" viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
       '<svg class="b-plus" viewBox="0 0 12 12"><path d="M6 2.5v7M2.5 6h7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>';
     for (const g of kit.games) {
-      if (g === rg || g.id === 'mesjeux') continue;
+      if (g === rg) continue;
       const b = el('button', 'app off', { type: 'button', 'aria-label': g.title, 'aria-pressed': 'false', 'data-id': g.id });
       b.appendChild(el('img', '', { src: KIT + 'icons/' + g.id + '.png', alt: '', draggable: 'false' }));
       b.insertAdjacentHTML('beforeend', badge);
