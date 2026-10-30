@@ -251,7 +251,7 @@
       b.dataset.tip = g.title + '|' + (alone(id) ? size(game(id).alone.size) + ', on its own' : size(flash(id)) +
         (g.xl && st.lang !== 'en' ? ' · in English' : '') + ' · drag to move');
     }
-    for (const box of [$('#small'), $('#big')]) {
+    for (const box of [$('#small'), $('#big'), $('#ia')]) {
       const want2 = st.order.map((id) => buttons.get(id)).filter((b) => b && b.parentNode === box);
       if ([...box.children].some((c, i) => c !== want2[i])) for (const b of want2) box.appendChild(b);
     }
@@ -461,8 +461,9 @@
     }
   }
   function commitOrder() {
-    const small = [...$('#small').children].map((b) => b.dataset.id), big = [...$('#big').children].map((b) => b.dataset.id);
-    st.order = small.concat(big, st.order.filter((id) => !small.includes(id) && !big.includes(id)));
+    const small = [...$('#small').children].map((b) => b.dataset.id), big = [...$('#big').children].map((b) => b.dataset.id),
+      ia = [...$('#ia').children].map((b) => b.dataset.id);
+    st.order = small.concat(big, ia, st.order.filter((id) => !small.includes(id) && !big.includes(id) && !ia.includes(id)));
     render();
   }
   // The slot under the pointer comes from where the slots were when the drag began (they don't
@@ -1982,7 +1983,7 @@
     try {
       let n = sessionStorage.getItem('numplay-stars');
       if (!n) {
-        const r = await fetch('https://api.github.com/repos/Mason363/NumPlay');
+        const r = await fetch('https://api.github.com/repos/Banane-3000/NumPlay');
         if (!r.ok) return;
         n = String((await r.json()).stargazers_count);
         sessionStorage.setItem('numplay-stars', n);
@@ -2197,7 +2198,9 @@
       if (c) { const j = JSON.parse(c); custom = { url: j.url, obj: Uint8Array.from(atob(j.obj), (x) => x.charCodeAt(0)) }; }
     } catch (e) { custom = null; }
 
-    const small = $('#small'), big = $('#big');
+    const small = $('#small'), big = $('#big'), ia = $('#ia');
+    // the AI games (Aelyx, Matrices, STMG IA) have their own row
+    const IA_ID = /^(aelyx|matrices|stmgia)/;
     const badge = '<span class="badge" aria-hidden="true">' +
       '<svg class="b-tick" viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
       '<svg class="b-plus" viewBox="0 0 12 12"><path d="M6 2.5v7M2.5 6h7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>';
@@ -2216,11 +2219,13 @@
       b.addEventListener('focus', () => showPreview(g.id));
       b.addEventListener('contextmenu', (e) => { if (holding || e.pointerType === 'touch') e.preventDefault(); });
       b.addEventListener('blur', () => hidePreview(120));
-      (g.xl ? big : small).appendChild(b);
+      (IA_ID.test(g.id) ? ia : g.xl ? big : small).appendChild(b);
       buttons.set(g.id, b);
     }
     sortable(small);
     sortable(big);
+    sortable(ia);
+    ia.previousElementSibling.hidden = ia.hidden = !ia.children.length;
     fitGrid();
     addEventListener('resize', () => requestAnimationFrame(fitGrid));
     if (document.fonts) document.fonts.ready.then(fitGrid);
