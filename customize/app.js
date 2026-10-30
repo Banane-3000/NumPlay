@@ -359,6 +359,16 @@
     render();
   }
 
+  // (the page's own text says the .nwa go into a second app, Multijeux: they go into NumPlay)
+  function niFixText() {
+    const fix = () => {
+      const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let n = w.nextNode(); n; n = w.nextNode())
+        if (/Multijeux|deuxi[eè]me application|second app/i.test(n.nodeValue)) n.nodeValue = st.lang === 'fr' ? '.nwa · dans NumPlay, avec les autres jeux' : '.nwa · inside NumPlay, with the other games';
+    };
+    fix();
+    new MutationObserver(fix).observe(document.body, { childList: true, subtree: true, characterData: true });
+  }
   function renderNwaCarts() {
     const box = $('#nwa-carts');
     box.textContent = '';
@@ -978,7 +988,7 @@
 
   // the little objects around a module: its entry in the launcher's table, the marks around its block of flash, its card
   const niPut32 = (d, o, v) => { d[o] = v & 255; d[o + 1] = (v >>> 8) & 255; d[o + 2] = (v >>> 16) & 255; d[o + 3] = (v >>> 24) & 255; };
-  function niEntry(g, index, mod, info) {
+  function niEntry(g, index, mod, info, flags = 0) {
     // np_game_t of launcher/src/np.h, as tools/gen_games.py fills it (the calculator's layout, 80 bytes)
     const enc = new TextEncoder();
     const strs = [info.id, info.title, info.tagline].map((s) => enc.encode(s + '\0'));
@@ -1004,17 +1014,17 @@
     ptr(60, shots); d[64] = 1;                                                         // shots, nshots
     ptr(68, sLists, 0); ptr(72, sLists, 4);                                            // records, progress (none)
     niPut32(d, 76, 0);                                                                 // heap: the least RAM after its own
-    return niElf(0, [table, str, lists], syms);
+    return niElf(flags, [table, str, lists], syms);
   }
-  function niMarks(g, index) {
+  function niMarks(g, index, flags = 0) {
     const w = (v) => { const d = new Uint8Array(4); niPut32(d, 0, v); return d; };
-    return niElf(0, [
+    return niElf(flags, [
       { name: `.rodata.np.${index}.${g}.0head`, type: 1, flags: 2, align: 4, data: w(NI_HEAD) },
       { name: `.rodata.np.${index}.${g}.zztail`, type: 1, flags: 2, align: 4, data: w(NI_TAIL) },
     ], []);
   }
   // np_shot_t: w, h, ncolors, zsize, palette, z (the palette's RGB565 colours, then the DEFLATE of w*h palette indices)
-  function niShots(g, index, card) {
+  function niShots(g, index, card, flags = 0) {
     const pal = card.palette.length * 2, total = 20 + pal + card.z.length;
     const d = new Uint8Array(total), dv = new DataView(d.buffer);
     dv.setUint16(0, card.w, true); dv.setUint16(2, card.h, true); dv.setUint16(4, card.palette.length, true); dv.setUint32(8, card.z.length, true);
@@ -1024,11 +1034,11 @@
     const sec = { name: `.rodata.np.${index}.${g}.shots`, type: 1, flags: 2, align: 4, data: d, relocs: [] };
     const secSym = { name: '', value: 0, size: 0, bind: 0, type: 3, sec };
     sec.relocs.push([12, 2, secSym], [16, 2, secSym]);
-    return niElf(0, [sec], [secSym, { name: `np_${g}_shots`, value: 0, size: total, bind: 1, type: 1, sec }]);
+    return niElf(flags, [sec], [secSym, { name: `np_${g}_shots`, value: 0, size: total, bind: 1, type: 1, sec }]);
   }
   // stand-ins, weak, for the C library's system calls a game's own libc may leave undefined, and a main
   // that calls the game's (renamed nwa_main) with no arguments:  push {r3, lr}; movs r0,#0; movs r1,#0; bl nwa_main; pop {r3, pc}
-  function niStub() {
+  function niStub(flags = 0) {
     const th = [];
     const fn = (name, ...ops) => { th.push([name, ops]); };
     fn('_close', 0x2000, 0x3801, 0x4770);   // movs r0,#0; subs r0,#1; bx lr   (-1)
@@ -1054,7 +1064,7 @@
     const callee = { name: 'nwa_main', bind: 1, type: 0 };
     syms.push(callee);
     sec.relocs.push([at + 6, 10, callee]);  // R_ARM_THM_CALL
-    return niElf(0, [sec], syms);
+    return niElf(flags, [sec], syms);
   }
 
   // the icon inside a .nwa: nwlink's LZ4 block of 55 x 56 RGB565 pixels
@@ -1205,11 +1215,14 @@
     const t = await loadTools();
     const files = {}, names = [], entries = [], blocks = [];
     const dims = await niCardSize();
-    const stub = niStub();
+    // ld refuses objects whose EABI version differs: ours get the kit's (what its base.o has), the stub the game's
+    const baseObj = await fetchObj((st.lang === 'en' ? '' : st.lang + '/') + 'base.o');
+    const kitFlags = new DataView(baseObj.buffer, baseObj.byteOffset, baseObj.byteLength).getUint32(36, true);
     for (let i = 0; i < st.nwas.length; i++) {
       const g = st.nwas[i], id = 'dyn' + (i + 1), ix = 'x' + (i + 1);
       const bad = (what, r) => Object.assign(new Error(g.name + ': ' + what + (r && r.log ? ' (' + r.log.trim().split('\n').slice(-2).join(' ') + ')' : '')), { ni: true });
       try {
+        const stub = niStub(new DataView(g.bytes.buffer, g.bytes.byteOffset, g.bytes.byteLength).getUint32(36, true));
         let r = await run(t.oc, ['--redefine-sym', 'main=nwa_main', 'in.o', 'a.o'], { 'in.o': g.bytes });
         if (r.code) throw bad('objcopy', r);
         const merged = { 'a.o': r.m.FS.readFile('a.o'), 'stub.o': stub, 'module.ld': NI_MODULE_LD };
@@ -1226,9 +1239,9 @@
         const mod = niModule(r.m.FS.readFile('m2.o'), id, ix);
         const card = await niMakeCard(g, dims.w, dims.h);
         files[id + '.o'] = mod.obj;
-        files[id + '_entry.o'] = niEntry(id, 'zz' + (i + 1), mod, { id, title: g.name, tagline: 'Your .nwa', top: g.theme[0], bottom: g.theme[1], accent: g.theme[2] });
-        files[id + '_marks.o'] = niMarks(id, ix);
-        files[id + '_shots.o'] = niShots(id, ix, card);
+        files[id + '_entry.o'] = niEntry(id, 'zz' + (i + 1), mod, { id, title: g.name, tagline: 'Your .nwa', top: g.theme[0], bottom: g.theme[1], accent: g.theme[2] }, kitFlags);
+        files[id + '_marks.o'] = niMarks(id, ix, kitFlags);
+        files[id + '_shots.o'] = niShots(id, ix, card, kitFlags);
         names.push(id + '.o', id + '_entry.o', id + '_marks.o', id + '_shots.o');
         entries.push('KEEP(*(.rodata.np_games.zz' + (i + 1) + '))');
         const p = '.rodata.np.' + ix + '.' + id;
@@ -2273,6 +2286,7 @@
       });
     }
     $('#nwa-file').addEventListener('change', (e) => { addNwas([...e.target.files]); e.target.value = ''; });
+    niFixText();
     tips();
     if (lightFromStart()) buildFlat();
     else { build3d(); depth(); watchFrames(); }
